@@ -26,6 +26,7 @@ dirs = "5.0.0"
 diesel = { version = "2.0.3", features = ["sqlite"] }
 libsqlite3-sys = { version = ">=0.17.2, <0.26.0", features = ["bundled"] }
 youtube_dl = "0.8.0"
+diesel_migrations = { version = "2.1.0", features = ["sqlite"] }
 # sqlx = { version = "0.6.3", features = ["sqlite", "runtime-async-std"] }
 # ffmpeg-next = "6.0.0"
 
