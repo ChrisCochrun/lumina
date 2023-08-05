@@ -38,5 +38,6 @@ CREATE TABLE IF NOT EXISTS 'presentations' (
 'title' TEXT NOT NULL,
 'filePath' TEXT NOT NULL,
 pageCount INTEGER DEFAULT 1,
+html BOOLEAN NOT NULL DEFAULT 0,
 PRIMARY KEY(id)
 );
