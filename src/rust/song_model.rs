@@ -95,9 +95,11 @@ mod song_model {
         #[qinvokable]
         pub fn setup(mut self: Pin<&mut Self>) {
             let db = &mut self.as_mut().get_db();
+            run_migrations(db);
+
             let results = songs
                 .load::<crate::models::Song>(db)
-                .expect("Error loading songs");
+                .expect("NO TABLE?????????????");
             self.as_mut().set_highest_id(0);
 
             println!("SHOWING SONGS");
