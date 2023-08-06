@@ -51,6 +51,7 @@ Item {
         anchors.fill: parent
         imageSource: SlideObj.imageBackground
         webSource: SlideObj.html
+        htmlVisible: SlideObj.html.endsWith(".html")
         videoSource: presentationWindow.visible ? SlideObj.videoBackground : ""
         audioSource: SlideObj.audio
         text: SlideObj.text
