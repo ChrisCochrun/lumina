@@ -49,9 +49,9 @@ Item {
     Presenter.Slide {
         id: presentationSlide
         anchors.fill: parent
-        imageSource: SlideObj.imageBackground
-        webSource: SlideObj.html
-        htmlVisible: SlideObj.html.endsWith(".html")
+        imageSource: SlideObj.imageBackground.endsWith(".html") ? "" : SlideObj.imageBackground
+        webSource: SlideObj.imageBackground.endsWith(".html") ? SlideObj.imageBackground : ""
+        htmlVisible: SlideObj.imageBackground.endsWith(".html")
         videoSource: presentationWindow.visible ? SlideObj.videoBackground : ""
         audioSource: SlideObj.audio
         text: SlideObj.text

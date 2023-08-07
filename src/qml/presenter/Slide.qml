@@ -179,7 +179,7 @@ Item {
             visible: htmlVisible
             onLoadingChanged: {
                 if (loadRequest.status == 2)
-                    showPassiveNotification("YAHOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!!");
+                    showPassiveNotification("yahoo?");
             }
         }
     }
