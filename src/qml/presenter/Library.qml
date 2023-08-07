@@ -338,12 +338,17 @@ Item {
     function addPres(url) {
         console.log(pdf.status);
         let pageCount = 1;
-        pdf.source = url;
-        while (pdf.status != 2) {
-            console.log(pdf.status);
-            console.log("PAGECOUNT: " + pdf.pageCount);
-            pageCount = pdf.pageCount;
-        }
+
+        if (url.endsWith(".pdf")) {
+            pdf.source = url;
+            while (pdf.status != 2) {
+                console.log(pdf.status);
+                console.log("PAGECOUNT: " + pdf.pageCount);
+                pageCount = pdf.pageCount;
+            }
+        } else
+            pageCount = 1;
+
         presProxyModel.presentationModel.newItem(url, pageCount);
         selectedLibrary = "presentation";
         presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count() - 1;
@@ -377,10 +382,7 @@ Item {
         }
         if (presexts.includes(extension))
         {
-            if (file.endsWith(".html")) {
-                web.url = file;
-            } else
-                addPres(file);
+            addPres(file);
         }
         
     }

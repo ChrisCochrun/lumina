@@ -128,6 +128,7 @@ Item {
                 Layout.alignment: Qt.AlignCenter
                 url: isHtml ? presentation.filePath : ""
                 visible: isHtml
+                settings.playbackRequiresUserGesture: false
             }
             RowLayout {
                 Layout.fillWidth: true;

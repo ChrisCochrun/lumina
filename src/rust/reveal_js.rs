@@ -20,7 +20,7 @@ pub fn count_slides_and_fragments(html_file_path: &str) -> i32 {
 
     let total = num_slides + num_fragments;
     println!(
-        "SLIDE_NUMBERS: {:?}, {:?}, {:?}",
+        "SLIDE_NUMBERS: slides: {:?}, fragments: {:?}, total: {:?}",
         num_slides, num_fragments, total
     );
 
