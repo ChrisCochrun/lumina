@@ -9,12 +9,16 @@
 
 Need to handle the error and create the database in case it doesn't exist with the proper setup.
 
-*** TODO Let's copy it from the old comp to test
-*** TODO Research diesel's ability to build the database for me
-*** TODO Choose function to use
-*** TODO Find proper error loading path that is earliest
-*** TODO Create database
-*** TODO Load rest of app
+*** DONE Let's copy it from the old comp to test
+*** DONE Research diesel's ability to build the database for me
+*** DONE Choose function to use
+I've got diesel migrations to work and can essentially use that to initialize the database for me.
+*** DONE Find proper error loading path that is earliest
+I think songs are loaded first
+*** DONE Create database
+Simply having diesel load the database creates one if there isn't one there
+*** DONE Load rest of app
+Once the migration is done, the rest just loads since it's in the setup function of the songs.
 ** TODO Figure out qml hot reload
 https://www.reddit.com/r/QtFramework/comments/11plifj/qhot_now_with_qt6_support/
 ** TODO Switch to using rust only deletion functions.
@@ -79,6 +83,8 @@ This still needs ported to Rust. It'll be the hardest of the library models sinc
 This needs to get ported to rust so that I can start adding more features to it soon. This is a blocker for the start and end times I believe
 
 This is now a much higher priority since I need to get this done before a lot of other things are even possible. Video times and presentation indexes will probably rely on this.
+
+Maybe the first approach is to scan through the rest of the C++ code and see what I can easily move to rust fast. Things like moving items are a more involved set of steps.
 *** TODO Deployment
 - [ ] Linux
   Need to figure out if I can use Nix to deploy in various fashions. Maybe I'll need to handcraft my own things for Arch, flatpak, and or snap.
