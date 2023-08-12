@@ -7,6 +7,8 @@ mod settings {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qurl.h");
+        type QUrl = cxx_qt_lib::QUrl;
     }
 
     #[derive(Clone)]
@@ -17,7 +19,7 @@ mod settings {
         #[qproperty]
         sound_effect: QString,
         #[qproperty]
-        last_save_file: QString,
+        last_save_file: QUrl,
     }
 
     impl Default for Settings {
@@ -25,7 +27,7 @@ mod settings {
             Self {
                 screen: QString::from(""),
                 sound_effect: QString::from(""),
-                last_save_file: QString::from(""),
+                last_save_file: QUrl::from(""),
             }
         }
     }
@@ -54,7 +56,7 @@ mod settings {
                 let sf = config.get("General", "lastSaveFile");
                 println!("{:?}", sf);
                 if let Some(s) = sf {
-                    self.set_last_save_file(QString::from(&s));
+                    self.set_last_save_file(QUrl::from(&s));
                     println!("{s}");
                 } else {
                     println!("error loading last save file");

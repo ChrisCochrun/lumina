@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
   QScopedPointer<SlideyMod> slideMod(new SlideyMod);
   QScopedPointer<File> filemanager(new File);
   // QScopedPointer<QQuickView> preswin(new QQuickView);
-  QScopedPointer<ServiceItemModel> serviceItemModel(new ServiceItemModel);
+  QScopedPointer<ServiceItemMod> serviceItemModel(new ServiceItemMod);
   QScopedPointer<SlideObj> slideobject(new SlideObj);
 
   Settings *settings = new Settings;
@@ -169,19 +169,19 @@ int main(int argc, char *argv[])
                    slideModel.get(),
                    SLOT(addItemFromService(const int&, const ServiceItem&)));
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemModel::itemAddedRust,
+                   &ServiceItemMod::itemAdded,
                    slideMod.get(),
                    &SlideyMod::addItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemModel::itemInsertedRust,
+                   &ServiceItemMod::itemInserted,
                    slideMod.get(),
                    &SlideyMod::insertItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemModel::rowMovedRust,
+                   &ServiceItemMod::itemMoved,
                    slideMod.get(),
                    &SlideyMod::moveItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemModel::rowRemovedRust,
+                   &ServiceItemMod::itemRemoved,
                    slideMod.get(),
                    &SlideyMod::removeItemFromService);
   // QObject::connect(serviceItemModel.get(),
@@ -193,12 +193,12 @@ int main(int argc, char *argv[])
                    slideMod.get(),
                    SLOT(activate(int)));
 
-  if (!serviceItemModel.get()->loadLastSaved()) {
+  if (!serviceItemModel.get()->load(settings->getLastSaveFile())) {
     qDebug() << "Last saved file is missing or there isn't a last saved file.";
     serviceItemModel.get()->addItem("Black", "image",
                                     "qrc:/assets/black.jpg",
                                     "image", QStringList(""),
-                                    "", "", 0, 1, false);
+                                    "", "", 0, 1, false, 0, 0);
   }
 
   // apparently mpv needs this class set

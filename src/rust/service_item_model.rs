@@ -95,9 +95,21 @@ mod service_item_model {
         SelectedChanged,
         ItemInserted {
             index: &'a i32,
+            item: &'a QMap_QString_QVariant,
         },
         ItemAdded {
             index: &'a i32,
+            item: &'a QMap_QString_QVariant,
+        },
+        ItemRemoved {
+            index: &'a i32,
+            item: &'a QMap_QString_QVariant,
+        },
+        ItemMoved {
+            source_index: &'a i32,
+            dest_index: &'a i32,
+            // index: &'a i32,
+            item: &'a QMap_QString_QVariant,
         },
     }
 
@@ -120,7 +132,11 @@ mod service_item_model {
 
     // use crate::video_thumbnail;
     // use image::{ImageBuffer, Rgba};
-    use std::path::PathBuf;
+    use dirs;
+    use std::fs;
+    use std::io::{self, Write};
+    use std::path::{Path, PathBuf};
+    use std::str;
     impl qobject::ServiceItemMod {
         #[qinvokable]
         pub fn clear(mut self: Pin<&mut Self>) {
@@ -150,9 +166,9 @@ mod service_item_model {
             mut self: Pin<&mut Self>,
             name: QString,
             ty: QString,
-            text: QStringList,
             background: QString,
             background_type: QString,
+            text: QStringList,
             audio: QString,
             font: QString,
             font_size: i32,
@@ -333,7 +349,11 @@ mod service_item_model {
 
         #[qinvokable]
         pub fn load(mut self: Pin<&mut Self>, file: QUrl) -> bool {
-            todo!();
+            // todo!();
+            println!("THE LAST SAVE FILE ISSSSS: {file}");
+            let lf = PathBuf::from(file.to_local_file().unwrap_or_default().to_string());
+            println!("{:?}", lf);
+            false
         }
 
         #[qinvokable]
