@@ -1,4 +1,4 @@
-#+TITLE: Church Presenter
+#+TITLE: Lumina
 #+AUTHOR: Chris Cochrun
 
 * Introduction
