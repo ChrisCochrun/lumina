@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 #[cxx_qt::bridge]
 mod service_item_model {
     unsafe extern "C++" {
@@ -23,7 +24,7 @@ mod service_item_model {
     }
 
     #[cxx_qt::qobject]
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct ServiceItm {
         #[qproperty]
         name: QString,
@@ -133,10 +134,13 @@ mod service_item_model {
     // use crate::video_thumbnail;
     // use image::{ImageBuffer, Rgba};
     use dirs;
+    use serde_json::{Deserializer, Serializer, Value};
     use std::fs;
-    use std::io::{self, Write};
+    use std::io::{self, Read, Write};
     use std::path::{Path, PathBuf};
     use std::str;
+    use tar::{Archive, Builder};
+    use zstd::{Decoder, Encoder};
     impl qobject::ServiceItemMod {
         #[qinvokable]
         pub fn clear(mut self: Pin<&mut Self>) {
@@ -351,8 +355,27 @@ mod service_item_model {
         pub fn load(mut self: Pin<&mut Self>, file: QUrl) -> bool {
             // todo!();
             println!("THE LAST SAVE FILE ISSSSS: {file}");
-            let lf = PathBuf::from(file.to_local_file().unwrap_or_default().to_string());
+            let lf = fs::File::open(file.to_local_file().unwrap_or_default().to_string()).unwrap();
             println!("{:?}", lf);
+            let dec = Decoder::new(lf).unwrap();
+            let mut tar = Archive::new(dec);
+            for file in tar.entries().unwrap() {
+                let mut file = file.unwrap();
+                // Inspect metadata about the file
+                println!("{:?}", file.header().path().unwrap());
+                println!("{:?}", file.header().size().unwrap());
+
+                if file.header().path().unwrap().to_str().unwrap() == "servicelist.json" {
+                    println!("THIS ONE HERE CAPTAIN!");
+
+                    let mut s = String::new();
+                    file.read_to_string(&mut s);
+                    println!("{:?}", s);
+                    let ds: Value = serde_json::from_str(&s).unwrap();
+                    println!("{:?}", ds);
+                }
+                // // files implement the Read trait
+            }
             false
         }
 
