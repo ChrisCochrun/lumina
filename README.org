@@ -23,7 +23,7 @@ First get the source code
 
 Then into the root directory.
 #+BEGIN_SRC
-cd church-presenter
+cd lumina
 #+END_SRC
 
 Then build.
@@ -33,13 +33,13 @@ cmake -B build/ . && make --dir build/
 
 Then run.
 #+BEGIN_SRC
-./build/bin/presenter
+./build/bin/lumina
 #+END_SRC
 
 ** Nix
 If you are using nix to develop with, which I would suggest since that will make sure all the appropriate dependencies are installed, you'll need to do the following:
 #+begin_src 
-cd church-presenter
+cd lumina
 nix develop
 #+end_src
 
@@ -47,7 +47,7 @@ This drops you into a shell with all the right dependencies.
 
 *If you have direnv*
 #+begin_src sh
-cd church-presenter
+cd lumina
 direnv allow
 #+end_src
 

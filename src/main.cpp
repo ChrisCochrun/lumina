@@ -107,21 +107,21 @@ int main(int argc, char *argv[])
   QGuiApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("video-display")));
   QtWebEngine::initialize();
   QGuiApplication app(argc, argv);
-  KLocalizedString::setApplicationDomain("librepresenter");
-  KAboutData aboutData("librepresenter", i18n("Libre Presenter"), "0.1",
+  KLocalizedString::setApplicationDomain("lumina");
+  KAboutData aboutData("lumina", i18n("lumina"), "0.1",
                        i18n("A church presentation app built with KDE tech."),
                        KAboutLicense::GPL_V3,
                        i18n("Copyright 2017 Bar Foundation"), QString(),
                        "https://www.foo-the-app.net");
   // overwrite default-generated values of organizationDomain & desktopFileName
   aboutData.setOrganizationDomain("tfcconnection.org");
-  aboutData.setDesktopFileName("org.tfcconnection.librepresenter");
+  aboutData.setDesktopFileName("org.tfcconnection.lumina");
  
   // set the application metadata
   KAboutData::setApplicationData(aboutData);
-  QCoreApplication::setOrganizationName(QStringLiteral("librepresenter"));
+  QCoreApplication::setOrganizationName(QStringLiteral("lumina"));
   QCoreApplication::setOrganizationDomain(QStringLiteral("tfcconnection.org"));
-  QCoreApplication::setApplicationName(QStringLiteral("Libre Presenter"));
+  QCoreApplication::setApplicationName(QStringLiteral("lumina"));
   // qSetMessagePattern("[%{type} %{time h:m:s ap}: %{function} in %{file}]: %{message}\n");
 
 #ifdef Q_OS_WINDOWS

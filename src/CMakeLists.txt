@@ -1,7 +1,7 @@
 
-add_executable(presenter main.cpp resources.qrc)
+add_executable(lumina main.cpp resources.qrc)
 
-target_sources(presenter
+target_sources(lumina
  PRIVATE
  main.cpp resources.qrc
  cpp/songsqlmodel.cpp cpp/songsqlmodel.h
@@ -19,9 +19,9 @@ target_sources(presenter
  cpp/framedecoder.h cpp/framedecoder.cpp
 )
 
-target_compile_options (presenter PUBLIC -fexceptions)
+target_compile_options (lumina PUBLIC -fexceptions)
 
-target_link_libraries(presenter PRIVATE
+target_link_libraries(lumina PRIVATE
     ${AVUTIL_LIBRARIES}
     ${AVFILTER_LIBRARIES}
     ${AVFORMAT_LIBRARIES}

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(presenter)
+project(lumina)
 set(APP_NAME ${PROJECT_NAME})
 
 include(FeatureSummary)
@@ -59,7 +59,7 @@ if(NOT Corrosion_FOUND)
 endif()
 
 add_subdirectory(src)
-set(CRATE libre-presenter)
+set(CRATE liblumina)
 
 # Corrosion creates a CMake target with the same name as the crate.
 corrosion_import_crate(MANIFEST_PATH Cargo.toml CRATES ${CRATE})
