@@ -401,7 +401,7 @@ mod slide_model {
         ) {
             println!("add rust slide {:?}", index);
             let ty = service_item
-                .get(&QString::from("type"))
+                .get(&QString::from("ty"))
                 .unwrap_or(QVariant::from(&QString::from("")))
                 .value::<QString>();
 
