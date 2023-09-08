@@ -68,7 +68,7 @@ Item {
         anchors.topMargin: Kirigami.Units.smallSpacing
         anchors.rightMargin: Kirigami.Units.smallSpacing * 2
         elide: Text.ElideRight
-        text: ServiceItemModel.getItem(serviceItemId).name
+        text: ServiceItemC.getRust(serviceItemId, ServiceItemModel).name
         font.bold: true
     }
 

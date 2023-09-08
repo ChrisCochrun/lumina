@@ -146,7 +146,8 @@ Controls.Page {
     SlideHelper { id: slideHelper }
 
     function changeServiceItem(index) {
-        const item = ServiceItemModel.getItem(index);
+        console.log("change-service-item: " + index);
+        const item = ServiceItemC.getRust(index, ServiceItemModel);
         currentServiceItem = index;
         const slideId = SlideModel.findSlideIdFromServItm(index);
         currentSlide = slideId;
@@ -198,7 +199,7 @@ Controls.Page {
         /* SlideMod.activate(index); */
         presentation.textIndex = 0;
         console.log("Slide changed to: ", item.imageBackground);
-        activeServiceItem = ServiceItemModel.getItem(currentServiceItem).name;
+        activeServiceItem = ServiceItemC.getRust(currentServiceItem, ServiceItemModel).name;
     }
 
     function loopVideo() {
