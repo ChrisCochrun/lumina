@@ -36,7 +36,7 @@ mod settings {
         #[qinvokable]
         pub fn print_sound(self: Pin<&mut Self>) {
             let mut config = Ini::new();
-            let _map = config.load("~/.config/librepresenter/Libre Presenter.conf");
+            let _map = config.load("~/.config/lumina/lumina.conf");
 
             println!("{}", self.sound_effect());
         }
@@ -47,8 +47,8 @@ mod settings {
             let home = dirs::config_dir();
             println!("{:?}", home);
             if let Some(mut conf) = home {
-                conf.push("librepresenter");
-                conf.push("Libre Presenter.conf");
+                conf.push("lumina");
+                conf.push("lumina.conf");
                 let _map = config.load(conf);
 
                 println!("{:?}", config);
