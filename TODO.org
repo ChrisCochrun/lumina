@@ -4,6 +4,8 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Consider converting diesel to raw sqlx instead
+From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries
 ** TODO Database doesn't exist we crash :bug:
 [[file:~/dev/church-presenter/src/rust/song_model.rs::.expect("Error loading songs");]]
 
