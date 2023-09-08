@@ -9,6 +9,8 @@
 #include <qobjectdefs.h>
 #include <qsize.h>
 
+#include "cxx-qt-gen/service_item_model.cxxqt.h"
+
 class ServiceItemModel : public QAbstractListModel {
   Q_OBJECT
 
@@ -49,47 +51,12 @@ public:
   // Helper methods
   void addItem(ServiceItem *item);
   void insertItem(const int &index, ServiceItem *item);
-  // Q_INVOKABLE void addItem(const QString &name, const QString &type);
-  // // Q_INVOKABLE void addItem(const QString &name, const QString &type,
-  // //                          const QString &background);
-  // Q_INVOKABLE void addItem(const QString &name, const QString &type,
-  //                          const QString &background,
-  //                          const QString &backgroundType);
-  // Q_INVOKABLE void addItem(const QString &name, const QString &type,
-  //                          const QString &background,
-  //                          const QString &backgroundType,
-  //                          const QStringList &text);
-  // Q_INVOKABLE void addItem(const QString &name, const QString &type,
-  //                          const QString &background,
-  //                          const QString &backgroundType,
-  //                          const QStringList &text, const QString &audio);
-  // Q_INVOKABLE void addItem(const QString &name, const QString &type,
-  //                          const QString &background,
-  //                          const QString &backgroundType,
-  //                          const QStringList &text, const QString &audio,
-  //                          const QString &font, const int &fontSize);
   Q_INVOKABLE void addItem(const QString &name, const QString &type,
                            const QString &background,
                            const QString &backgroundType,
                            const QStringList &text, const QString &audio,
                            const QString &font, const int &fontSize,
                            const int &slideNumber, const bool &loop);
-  // Q_INVOKABLE void insertItem(const int &index, const QString &name,
-  //                             const QString &type);
-  // Q_INVOKABLE void insertItem(const int &index, const QString &name,
-  //                             const QString &type, const QString &background,
-  //                             const QString &backgroundType);
-  // Q_INVOKABLE void insertItem(const int &index, const QString &name,
-  //                             const QString &type, const QString &background,
-  //                             const QString &backgroundType, const QStringList &text);
-  // Q_INVOKABLE void insertItem(const int &index, const QString &name,
-  //                             const QString &type, const QString &background,
-  //                             const QString &backgroundType, const QStringList &text,
-  //                             const QString &audio);
-  // Q_INVOKABLE void insertItem(const int &index, const QString &name,
-  //                             const QString &type, const QString &background,
-  //                             const QString &backgroundType, const QStringList &text,
-  //                             const QString &audio, const QString &font, const int &fontSize);
   Q_INVOKABLE void insertItem(const int &index, const QString &name,
                               const QString &type, const QString &background,
                               const QString &backgroundType, const QStringList &text,
@@ -106,6 +73,7 @@ public:
   Q_INVOKABLE bool activate(int id);
   Q_INVOKABLE bool deactivate(int id);
   Q_INVOKABLE QVariantMap getItem(int index) const;
+  Q_INVOKABLE QVariantMap getRust(int index, ServiceItemMod *rustModel) const;
   Q_INVOKABLE QVariantList getItems();
   Q_INVOKABLE void clearAll();
 

@@ -25,6 +25,7 @@
 #include <QImage>
 
 #include "cxx-qt-gen/slide_model.cxxqt.h"
+#include "cxx-qt-gen/service_item_model.cxxqt.h"
 
 ServiceItemModel::ServiceItemModel(QObject *parent)
     : QAbstractListModel(parent) {
@@ -391,6 +392,11 @@ bool ServiceItemModel::moveUp(int id) {
   }
 
   return false;
+}
+
+QVariantMap ServiceItemModel::getRust(int index, ServiceItemMod *rustModel) const {
+  QVariantMap item = rustModel->getItem(index);
+  return item;
 }
 
 QVariantMap ServiceItemModel::getItem(int index) const {

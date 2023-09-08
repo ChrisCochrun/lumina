@@ -97,6 +97,7 @@ static void connectToDatabase() {
     qFatal("Cannot open database: %s", qPrintable(db.lastError().text()));
     QFile::remove(dbName);
   }
+  qDebug() << "Finished connecting to db";
 
 }
 
@@ -149,6 +150,7 @@ int main(int argc, char *argv[])
   QScopedPointer<File> filemanager(new File);
   // QScopedPointer<QQuickView> preswin(new QQuickView);
   QScopedPointer<ServiceItemMod> serviceItemModel(new ServiceItemMod);
+  QScopedPointer<ServiceItemModel> serviceItemC(new ServiceItemModel);
   QScopedPointer<SlideObj> slideobject(new SlideObj);
 
   Settings *settings = new Settings;
@@ -225,6 +227,8 @@ int main(int argc, char *argv[])
   qmlRegisterType<SlideObject>("org.presenter", 1, 0, "SlideHelper");
   qmlRegisterSingletonInstance("org.presenter", 1, 0,
                                "ServiceItemModel", serviceItemModel.get());
+  qmlRegisterSingletonInstance("org.presenter", 1, 0,
+                               "ServiceItemC", serviceItemC.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideModel", slideModel.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideMod", slideMod.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideObject", slideobject.get());
@@ -237,10 +241,13 @@ int main(int argc, char *argv[])
 
   connectToDatabase();
 
+  qDebug() << "Starting engine";
   QQmlApplicationEngine engine;
+  qDebug() << app.allWindows();
 
   engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
   engine.load(QUrl(QStringLiteral("qrc:qml/main.qml")));
+  qDebug() << "Engine loaded";
   // engine.load(QUrl(QStringLiteral("qrc:qml/presenter/PresentationWindow.qml")));
 
   qDebug() << app.topLevelWindows();
