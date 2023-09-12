@@ -3,9 +3,11 @@ mod service_item_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray =
+            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
@@ -153,14 +155,21 @@ mod service_item_model {
 
         #[qinvokable]
         pub fn remove_item(mut self: Pin<&mut Self>, index: i32) {
-            if index < 0 || (index as usize) >= self.service_items().len() {
+            if index < 0
+                || (index as usize) >= self.service_items().len()
+            {
                 return;
             }
 
             unsafe {
+                self.as_mut().begin_remove_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut()
-                    .begin_remove_rows(&QModelIndex::default(), index, index);
-                self.as_mut().service_items_mut().remove(index as usize);
+                    .service_items_mut()
+                    .remove(index as usize);
                 self.as_mut().end_remove_rows();
             }
         }
@@ -200,13 +209,19 @@ mod service_item_model {
             self.as_mut().add_service_item(&service_item);
         }
 
-        fn add_service_item(mut self: Pin<&mut Self>, service_item: &ServiceItm) {
+        fn add_service_item(
+            mut self: Pin<&mut Self>,
+            service_item: &ServiceItm,
+        ) {
             let index = self.as_ref().service_items().len() as i32;
             println!("{:?}", service_item);
             let service_item = service_item.clone();
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().service_items_mut().push(service_item);
                 self.as_mut().end_insert_rows();
             }
@@ -250,11 +265,18 @@ mod service_item_model {
             self.as_mut().insert_service_item(&service_item, index);
         }
 
-        fn insert_service_item(mut self: Pin<&mut Self>, service_item: &ServiceItm, id: i32) {
+        fn insert_service_item(
+            mut self: Pin<&mut Self>,
+            service_item: &ServiceItm,
+            id: i32,
+        ) {
             let service_item = service_item.clone();
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), id, id);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    id,
+                    id,
+                );
                 self.as_mut()
                     .service_items_mut()
                     .insert(id as usize, service_item);
@@ -263,7 +285,10 @@ mod service_item_model {
         }
 
         #[qinvokable]
-        pub fn get_item(self: Pin<&mut Self>, index: i32) -> QMap_QString_QVariant {
+        pub fn get_item(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> QMap_QString_QVariant {
             println!("{index}");
             let mut map = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
@@ -272,7 +297,9 @@ mod service_item_model {
             }
             let rn = self.as_ref().role_names();
             let rn_iter = rn.iter();
-            if let Some(service_item) = self.rust().service_items.get(index as usize) {
+            if let Some(service_item) =
+                self.rust().service_items.get(index as usize)
+            {
                 for i in rn_iter {
                     map.insert(
                         QString::from(&i.1.to_string()),
@@ -299,31 +326,52 @@ mod service_item_model {
         }
 
         #[qinvokable]
-        pub fn move_down(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn move_down(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             todo!();
         }
 
         #[qinvokable]
         pub fn select(mut self: Pin<&mut Self>, index: i32) -> bool {
             let rc = self.as_ref().count() - 1;
-            let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
-            let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
+            let tl =
+                &self.as_ref().index(0, 0, &QModelIndex::default());
+            let br =
+                &self.as_ref().index(rc, 0, &QModelIndex::default());
             let mut vector_roles = QVector_i32::default();
             vector_roles.append(self.get_role(Role::SelectedRole));
-            for service_item in self.as_mut().service_items_mut().iter_mut() {
+            for service_item in
+                self.as_mut().service_items_mut().iter_mut()
+            {
                 // println!("service_item is deactivating {:?}", i);
                 service_item.selected = false;
             }
-            if let Some(service_item) = self.as_mut().service_items_mut().get_mut(index as usize) {
+            if let Some(service_item) = self
+                .as_mut()
+                .service_items_mut()
+                .get_mut(index as usize)
+            {
                 println!("selecting-item: {:?}", index);
-                println!("service_item_title: {:?}", service_item.name);
-                println!("service_item_background: {:?}", service_item.background);
+                println!(
+                    "service_item_title: {:?}",
+                    service_item.name
+                );
+                println!(
+                    "service_item_background: {:?}",
+                    service_item.background
+                );
                 println!(
                     "service_item_background_type: {:?}",
                     service_item.background_type
                 );
                 service_item.selected = true;
-                self.as_mut().emit_data_changed(tl, br, &vector_roles);
+                self.as_mut().emit_data_changed(
+                    tl,
+                    br,
+                    &vector_roles,
+                );
                 // We use this signal generated by our signals enum to tell QML that
                 // the selected service_item has changed which is used to reposition views.
                 self.as_mut().emit_selected_changed();
@@ -334,31 +382,55 @@ mod service_item_model {
         }
 
         #[qinvokable]
-        pub fn select_items(mut self: Pin<&mut Self>, items: QMap_QString_QVariant) -> bool {
+        pub fn select_items(
+            mut self: Pin<&mut Self>,
+            items: QMap_QString_QVariant,
+        ) -> bool {
             todo!();
         }
 
         #[qinvokable]
-        pub fn activate(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn activate(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             let rc = self.as_ref().count() - 1;
-            let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
-            let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
+            let tl =
+                &self.as_ref().index(0, 0, &QModelIndex::default());
+            let br =
+                &self.as_ref().index(rc, 0, &QModelIndex::default());
             let mut vector_roles = QVector_i32::default();
             vector_roles.append(self.get_role(Role::ActiveRole));
-            for service_item in self.as_mut().service_items_mut().iter_mut() {
+            for service_item in
+                self.as_mut().service_items_mut().iter_mut()
+            {
                 // println!("service_item is deactivating {:?}", i);
                 service_item.active = false;
             }
-            if let Some(service_item) = self.as_mut().service_items_mut().get_mut(index as usize) {
+            if let Some(service_item) = self
+                .as_mut()
+                .service_items_mut()
+                .get_mut(index as usize)
+            {
                 println!("service_item is activating {:?}", index);
-                println!("service_item_title: {:?}", service_item.name);
-                println!("service_item_background: {:?}", service_item.background);
+                println!(
+                    "service_item_title: {:?}",
+                    service_item.name
+                );
+                println!(
+                    "service_item_background: {:?}",
+                    service_item.background
+                );
                 println!(
                     "service_item_background_type: {:?}",
                     service_item.background_type
                 );
                 service_item.active = true;
-                self.as_mut().emit_data_changed(tl, br, &vector_roles);
+                self.as_mut().emit_data_changed(
+                    tl,
+                    br,
+                    &vector_roles,
+                );
                 // We use this signal generated by our signals enum to tell QML that
                 // the active service_item has changed which is used to reposition views.
                 self.as_mut().emit_active_changed();
@@ -369,87 +441,244 @@ mod service_item_model {
         }
 
         #[qinvokable]
-        pub fn deactivate(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn deactivate(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             todo!();
+            let rc = self.as_ref().count() - 1;
+            let tl =
+                &self.as_ref().index(0, 0, &QModelIndex::default());
+            let br =
+                &self.as_ref().index(rc, 0, &QModelIndex::default());
+            let mut vector_roles = QVector_i32::default();
+            vector_roles.append(self.get_role(Role::ActiveRole));
+            if let Some(service_item) = self
+                .as_mut()
+                .service_items_mut()
+                .get_mut(index as usize)
+            {
+                println!("service_item is activating {:?}", index);
+                println!(
+                    "service_item_title: {:?}",
+                    service_item.name
+                );
+                println!(
+                    "service_item_background: {:?}",
+                    service_item.background
+                );
+                println!(
+                    "service_item_background_type: {:?}",
+                    service_item.background_type
+                );
+                service_item.active = false;
+                self.as_mut().emit_data_changed(
+                    tl,
+                    br,
+                    &vector_roles,
+                );
+                // We use this signal generated by our signals enum to tell QML that
+                // the active service_item has changed which is used to reposition views.
+                self.as_mut().emit_active_changed();
+                true
+            } else {
+                false
+            }
         }
 
         #[qinvokable]
         pub fn save(mut self: Pin<&mut Self>, file: QUrl) -> bool {
-            todo!();
+            println!("file is: {file}");
+            let lfr = fs::File::open(
+                file.to_local_file().unwrap_or_default().to_string(),
+            );
+            if let Ok(lf) = &lfr {
+                println!("archive: {:?}", lf);
+                let encoder = Encoder::new(lf, 22).unwrap();
+                let mut tar = Builder::new(encoder);
+                true
+            } else {
+                false
+            }
         }
 
         #[qinvokable]
         pub fn load(mut self: Pin<&mut Self>, file: QUrl) -> bool {
-            // todo!();
             println!("file is: {file}");
-            let lfr = fs::File::open(file.to_local_file().unwrap_or_default().to_string());
-            if let Ok(lf) = lfr {
-                println!("{:?}", lf);
+            let lfr = fs::File::open(
+                file.to_local_file().unwrap_or_default().to_string(),
+            );
+
+            let mut datadir = dirs::data_dir().unwrap();
+            datadir.push("lumina");
+            datadir.push("temp");
+            println!("datadir: {:?}", datadir);
+            fs::create_dir_all(&datadir);
+
+            if let Ok(lf) = &lfr {
+                println!("archive: {:?}", lf);
                 let dec = Decoder::new(lf).unwrap();
                 let mut tar = Archive::new(dec);
-                for file in tar.entries().unwrap() {
-                    let mut file = file.unwrap();
-                    // Inspect metadata about the file
-                    println!("filename: {:?}", file.header().path().unwrap());
-                    println!("size: {:?}", file.header().size().unwrap());
-
-                    if file.header().path().unwrap().to_str().unwrap() == "servicelist.json" {
-                        println!("THIS ONE HERE CAPTAIN!");
-
-                        let mut s = String::new();
-                        file.read_to_string(&mut s);
-                        let ds: Value = serde_json::from_str(&s).unwrap();
-                        for obj in ds.as_array().unwrap() {
-                            println!("objname: {:?}", obj.get("name").unwrap().as_str().unwrap());
-                            println!("objtype: {:?}", obj.get("type").unwrap().as_str().unwrap());
-                            let name = QString::from(obj.get("name").unwrap().as_str().unwrap());
-                            let ty = QString::from(obj.get("type").unwrap().as_str().unwrap());
-                            // both audio and background will need to know if
-                            // it exists on disk, if not use the flat version
-                            let audio = QString::from(obj.get("audio").unwrap().as_str().unwrap());
-                            let background =
-                                QString::from(obj.get("background").unwrap().as_str().unwrap());
-                            let background_type =
-                                QString::from(obj.get("backgroundType").unwrap().as_str().unwrap());
-                            let font = QString::from(obj.get("font").unwrap().as_str().unwrap());
-                            let font_size = obj.get("fontSize").unwrap().as_i64().unwrap() as i32;
-                            let looping = obj.get("loop").unwrap().as_bool().unwrap();
-                            let slide_count =
-                                obj.get("slideNumber").unwrap().as_i64().unwrap() as i32;
-                            let mut video_start_time = f32::default();
-                            if let Some(video_start_value) = obj.get("video_start_time") {
-                                video_start_time = video_start_value.as_f64().unwrap() as f32;
-                            }
-                            let mut video_end_time = f32::default();
-                            if let Some(video_end_value) = obj.get("video_end_time") {
-                                video_end_time = video_end_value.as_f64().unwrap() as f32;
-                            }
-                            let text_array = obj.get("text").unwrap().as_array().unwrap();
-                            let mut text_list = QList_QString::default();
-                            for txt in text_array {
-                                text_list.append(QString::from(txt.as_str().unwrap()));
-                            }
-                            let text = QStringList::from(&text_list);
-
-                            let service_item = ServiceItm {
-                                name,
-                                ty,
-                                text,
-                                background,
-                                background_type,
-                                audio,
-                                font,
-                                font_size,
-                                slide_count,
-                                looping,
-                                video_start_time,
-                                video_end_time,
-                                ..Default::default()
-                            };
-                            self.as_mut().add_service_item(&service_item);
-                        }
-                        println!("Loaded Service: {:?}", ds);
+                for mut file in
+                    tar.entries().unwrap().filter_map(|e| e.ok())
+                {
+                    let mut file_path = datadir.clone();
+                    file_path.push(file.path().unwrap());
+                    // Inspect metadata about each file
+                    println!("filename: {:?}", file.path().unwrap());
+                    println!("size: {:?}", file.size());
+                    if !file_path.exists() {
+                        file.unpack_in(&datadir);
                     }
+                }
+
+                let mut service_path = datadir.clone();
+                service_path.push("servicelist.json");
+                // let mut service_list =
+                //     fs::File::open(service_path).unwrap();
+
+                let mut s = fs::read_to_string(service_path).unwrap();
+                // service_list.read_to_string(&mut s);
+                let ds: Value = serde_json::from_str(&s).unwrap();
+                for obj in ds.as_array().unwrap() {
+                    println!(
+                        "objname: {:?}",
+                        obj.get("name").unwrap().as_str().unwrap()
+                    );
+                    println!(
+                        "objtype: {:?}",
+                        obj.get("type").unwrap().as_str().unwrap()
+                    );
+                    let name = QString::from(
+                        obj.get("name").unwrap().as_str().unwrap(),
+                    );
+                    let ty = QString::from(
+                        obj.get("type").unwrap().as_str().unwrap(),
+                    );
+                    // both audio and background will need to know if
+                    // it exists on disk, if not use the flat version
+                    let audio_string =
+                        obj.get("audio").unwrap().as_str().unwrap();
+                    let mut audio;
+
+                    if !Path::new(&audio_string).exists() {
+                        println!("#$#$#$#$#$#");
+                        println!("The audio doesn't exist");
+                        println!("#$#$#$#$#$#");
+                        let string = obj
+                            .get("flatAudio")
+                            .unwrap()
+                            .as_str()
+                            .unwrap();
+                        println!("before_audio_str: {:?}", string);
+                        let mut audio_path = datadir.clone();
+                        audio_path.push(string);
+                        // Needed to ensure QML images and mpv will find the audio
+                        let mut final_string =
+                            audio_path.to_str().unwrap().to_owned();
+                        final_string.insert_str(0, "file://");
+                        audio = QString::from(&final_string);
+                        println!("after_audio_str: {:?}", string);
+                    } else {
+                        audio = QString::from(audio_string);
+                    }
+
+                    let bgstr = obj
+                        .get("background")
+                        .unwrap()
+                        .as_str()
+                        .unwrap();
+                    let mut background;
+
+                    // lets test to see if the background exists on disk.
+                    // if not we can use the flat version
+                    if !Path::new(&bgstr).exists() {
+                        println!("#$#$#$#$#$#");
+                        println!("The background doesn't exist");
+                        println!("#$#$#$#$#$#");
+                        let string = obj
+                            .get("flatBackground")
+                            .unwrap()
+                            .as_str()
+                            .unwrap();
+                        println!("before_bgstr: {:?}", string);
+                        let mut bgpath = datadir.clone();
+                        bgpath.push(string);
+                        // Needed to ensure QML images and mpv will find the background
+                        let mut final_string =
+                            bgpath.to_str().unwrap().to_owned();
+                        final_string.insert_str(0, "file://");
+                        background = QString::from(&final_string);
+                        println!("after_bgstr: {:?}", string);
+                    } else {
+                        background = QString::from(bgstr);
+                    }
+                    println!("realbg: {:?}", background);
+
+                    let background_type = QString::from(
+                        obj.get("backgroundType")
+                            .unwrap()
+                            .as_str()
+                            .unwrap(),
+                    );
+                    let font = QString::from(
+                        obj.get("font").unwrap().as_str().unwrap(),
+                    );
+                    let font_size = obj
+                        .get("fontSize")
+                        .unwrap()
+                        .as_i64()
+                        .unwrap()
+                        as i32;
+                    let looping =
+                        obj.get("loop").unwrap().as_bool().unwrap();
+                    let slide_count =
+                        obj.get("slideNumber")
+                            .unwrap()
+                            .as_i64()
+                            .unwrap() as i32;
+                    let mut video_start_time = f32::default();
+                    if let Some(video_start_value) =
+                        obj.get("video_start_time")
+                    {
+                        video_start_time =
+                            video_start_value.as_f64().unwrap()
+                                as f32;
+                    }
+                    let mut video_end_time = f32::default();
+                    if let Some(video_end_value) =
+                        obj.get("video_end_time")
+                    {
+                        video_end_time =
+                            video_end_value.as_f64().unwrap() as f32;
+                    }
+                    let text_array =
+                        obj.get("text").unwrap().as_array().unwrap();
+                    let mut text_list = QList_QString::default();
+                    for txt in text_array {
+                        text_list.append(QString::from(
+                            txt.as_str().unwrap(),
+                        ));
+                    }
+                    let text = QStringList::from(&text_list);
+
+                    let service_item = ServiceItm {
+                        name,
+                        ty,
+                        text,
+                        background,
+                        background_type,
+                        audio,
+                        font,
+                        font_size,
+                        slide_count,
+                        looping,
+                        video_start_time,
+                        video_end_time,
+                        ..Default::default()
+                    };
+                    self.as_mut().add_service_item(&service_item);
+                    println!("Loaded Service: {:?}", ds);
                     // // files implement the Read trait
                 }
                 true
@@ -496,7 +725,9 @@ mod service_item_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_insert_rows(self: Pin<&mut qobject::ServiceItemMod>);
+        unsafe fn end_insert_rows(
+            self: Pin<&mut qobject::ServiceItemMod>,
+        );
 
         unsafe fn begin_remove_rows(
             self: Pin<&mut qobject::ServiceItemMod>,
@@ -504,16 +735,25 @@ mod service_item_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_remove_rows(self: Pin<&mut qobject::ServiceItemMod>);
+        unsafe fn end_remove_rows(
+            self: Pin<&mut qobject::ServiceItemMod>,
+        );
 
-        unsafe fn begin_reset_model(self: Pin<&mut qobject::ServiceItemMod>);
-        unsafe fn end_reset_model(self: Pin<&mut qobject::ServiceItemMod>);
+        unsafe fn begin_reset_model(
+            self: Pin<&mut qobject::ServiceItemMod>,
+        );
+        unsafe fn end_reset_model(
+            self: Pin<&mut qobject::ServiceItemMod>,
+        );
     }
 
     #[cxx_qt::inherit]
     unsafe extern "C++" {
         #[cxx_name = "canFetchMore"]
-        fn base_can_fetch_more(self: &qobject::ServiceItemMod, parent: &QModelIndex) -> bool;
+        fn base_can_fetch_more(
+            self: &qobject::ServiceItemMod,
+            parent: &QModelIndex,
+        ) -> bool;
 
         fn index(
             self: &qobject::ServiceItemMod,
@@ -527,13 +767,17 @@ mod service_item_model {
     impl qobject::ServiceItemMod {
         #[qinvokable(cxx_override)]
         fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-            if let Some(service_item) = self.service_items().get(index.row() as usize) {
+            if let Some(service_item) =
+                self.service_items().get(index.row() as usize)
+            {
                 return match role {
                     0 => QVariant::from(&service_item.name),
                     1 => QVariant::from(&service_item.ty),
                     2 => QVariant::from(&service_item.audio),
                     3 => QVariant::from(&service_item.background),
-                    4 => QVariant::from(&service_item.background_type),
+                    4 => {
+                        QVariant::from(&service_item.background_type)
+                    }
                     5 => QVariant::from(&service_item.text),
                     6 => QVariant::from(&service_item.font),
                     7 => QVariant::from(&service_item.font_size),
@@ -541,8 +785,12 @@ mod service_item_model {
                     9 => QVariant::from(&service_item.active),
                     10 => QVariant::from(&service_item.selected),
                     11 => QVariant::from(&service_item.looping),
-                    12 => QVariant::from(&service_item.video_start_time),
-                    13 => QVariant::from(&service_item.video_end_time),
+                    12 => {
+                        QVariant::from(&service_item.video_start_time)
+                    }
+                    13 => {
+                        QVariant::from(&service_item.video_end_time)
+                    }
                     _ => QVariant::default(),
                 };
             }
@@ -562,17 +810,33 @@ mod service_item_model {
             roles.insert(0, cxx_qt_lib::QByteArray::from("name"));
             roles.insert(1, cxx_qt_lib::QByteArray::from("ty"));
             roles.insert(2, cxx_qt_lib::QByteArray::from("audio"));
-            roles.insert(3, cxx_qt_lib::QByteArray::from("background"));
-            roles.insert(4, cxx_qt_lib::QByteArray::from("backgroundType"));
+            roles.insert(
+                3,
+                cxx_qt_lib::QByteArray::from("background"),
+            );
+            roles.insert(
+                4,
+                cxx_qt_lib::QByteArray::from("backgroundType"),
+            );
             roles.insert(5, cxx_qt_lib::QByteArray::from("text"));
             roles.insert(6, cxx_qt_lib::QByteArray::from("font"));
             roles.insert(7, cxx_qt_lib::QByteArray::from("fontSize"));
-            roles.insert(8, cxx_qt_lib::QByteArray::from("slideCount"));
+            roles.insert(
+                8,
+                cxx_qt_lib::QByteArray::from("slideCount"),
+            );
             roles.insert(9, cxx_qt_lib::QByteArray::from("active"));
-            roles.insert(10, cxx_qt_lib::QByteArray::from("selected"));
+            roles
+                .insert(10, cxx_qt_lib::QByteArray::from("selected"));
             roles.insert(11, cxx_qt_lib::QByteArray::from("looping"));
-            roles.insert(12, cxx_qt_lib::QByteArray::from("videoStartTime"));
-            roles.insert(13, cxx_qt_lib::QByteArray::from("videoEndTime"));
+            roles.insert(
+                12,
+                cxx_qt_lib::QByteArray::from("videoStartTime"),
+            );
+            roles.insert(
+                13,
+                cxx_qt_lib::QByteArray::from("videoEndTime"),
+            );
             roles
         }
 
