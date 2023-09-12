@@ -3,34 +3,15 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
+* Tasks [65%] [40/61]
 ** TODO Consider converting diesel to raw sqlx instead
 From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries
-** TODO Database doesn't exist we crash :bug:
-[[file:~/dev/church-presenter/src/rust/song_model.rs::.expect("Error loading songs");]]
-
-Need to handle the error and create the database in case it doesn't exist with the proper setup.
-
-*** DONE Let's copy it from the old comp to test
-*** DONE Research diesel's ability to build the database for me
-*** DONE Choose function to use
-I've got diesel migrations to work and can essentially use that to initialize the database for me.
-*** DONE Find proper error loading path that is earliest
-I think songs are loaded first
-*** DONE Create database
-Simply having diesel load the database creates one if there isn't one there
-*** DONE Load rest of app
-Once the migration is done, the rest just loads since it's in the setup function of the songs.
 ** TODO Figure out qml hot reload
 https://www.reddit.com/r/QtFramework/comments/11plifj/qhot_now_with_qt6_support/
 ** TODO Switch to using rust only deletion functions.
 [[file:~/dev/church-presenter/src/qml/presenter/Library.qml::videoProxyModel.deleteVideos(rows)]]
 
 For this to work I'll need to use a vector of indexes. Somehow I'll need to figure out what QML can pass to Rust and then cycle through all of them and remove each item.
-** TODO RENAME TO LUMINA
-"Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
-
-Let's rename everything to that.
 ** TODO Start planning out what a 1.0 release would look like and decide how to get there :roadmap:
 A 1.0 release may be achievable soon as long as I can figure out what is good to have in and what isn't. Then figure out what outstanding bugs and odd workflows exist and fix them. Then figure out deploying the package to various distros, windows, and mac.
 
@@ -89,6 +70,13 @@ This is now a much higher priority since I need to get this done before a lot of
 Maybe the first approach is to scan through the rest of the C++ code and see what I can easily move to rust fast. Things like moving items are a more involved set of steps.
 
 Start with select, deselect, select_items, and deactivate. Then either move onto save or move things...
+- [-] Select
+- [-] Activate
+- [ ] Deselect
+- [ ] Select Items
+- [ ] Deactivate
+- [X] Load
+- [ ] Save
 *** TODO Deployment
 - [ ] Linux
   Need to figure out if I can use Nix to deploy in various fashions. Maybe I'll need to handcraft my own things for Arch, flatpak, and or snap.
@@ -151,11 +139,30 @@ https://discourse.nixos.org/t/developing-kirigami-applications/19947/17
 This thread helped a lot
 
 
+** DONE RENAME TO LUMINA
+"Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
+
+Let's rename everything to that.
 ** DONE Need to test on other wayland compositors but Hyprland doesn't show the presentation window. :bug:
 Quite by accident, I discovered how I may be able to fix this bug. Even though in QML I cannot show the window on demand, apparently in C++ I can still do it. So I will attempt to show the window by subclassing QQuickView in Rust and assign it's source through a QML file that is the PresentationWindow.qml
 
 FIXED!
 
+** DONE Database doesn't exist we crash                               :bug:
+[[file:~/dev/church-presenter/src/rust/song_model.rs::.expect("Error loading songs");]]
+
+Need to handle the error and create the database in case it doesn't exist with the proper setup.
+
+*** DONE Let's copy it from the old comp to test
+*** DONE Research diesel's ability to build the database for me
+*** DONE Choose function to use
+I've got diesel migrations to work and can essentially use that to initialize the database for me.
+*** DONE Find proper error loading path that is earliest
+I think songs are loaded first
+*** DONE Create database
+Simply having diesel load the database creates one if there isn't one there
+*** DONE Load rest of app
+Once the migration is done, the rest just loads since it's in the setup function of the songs.
 ** DONE [#A] new_song method                                  :feature:bug:
 [[file:~/dev/church-presenter/src/rust/song_model.rs::todo!();]]
 ** DONE [#A] Make things not rely on my own machine.                  :bug:
