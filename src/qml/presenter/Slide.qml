@@ -204,8 +204,8 @@ Item {
     }
 
     function playAudio() {
-        showPassiveNotification("Audio should change");
         audio.loadFile(audioSource.toString());
+        showPassiveNotification("Audio should change");
     }
 
     function stopAudio() {
