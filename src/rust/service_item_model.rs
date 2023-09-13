@@ -136,7 +136,7 @@ mod service_item_model {
     // use crate::video_thumbnail;
     // use image::{ImageBuffer, Rgba};
     use dirs;
-    use serde_json::{Deserializer, Serializer, Value};
+    use serde_json::{json, Deserializer, Map, Serializer, Value};
     use std::io::{self, Read, Write};
     use std::path::{Path, PathBuf};
     use std::str;
@@ -485,7 +485,6 @@ mod service_item_model {
                 false
             }
         }
-
         #[qinvokable]
         pub fn save(mut self: Pin<&mut Self>, file: QUrl) -> bool {
             println!("file is: {file}");
@@ -496,6 +495,34 @@ mod service_item_model {
                 println!("archive: {:?}", lf);
                 let encoder = Encoder::new(lf, 22).unwrap();
                 let mut tar = Builder::new(encoder);
+                let items = self.service_items();
+                let mut service_json = Value::default();
+
+                for item in items {
+                    let text_list = QList_QString::from(&item.text);
+                    let mut text_vec = Vec::<String>::default();
+
+                    let flat_background = item.background.to_string();
+                    let flat_audio = item.audio.to_string();
+
+                    for (index, line) in text_list.iter().enumerate()
+                    {
+                        text_vec.insert(index, line.to_string())
+                    }
+
+                    let service_json = json!({"name".to_owned(): Value::from(item.name.to_string()),
+                        "type".to_owned(): Value::from(item.ty.to_string()),
+                        "audio".to_owned(): Value::from(item.audio.to_string()),
+                        "background".to_owned(): Value::from(item.background.to_string()),
+                        "backgroundType".to_owned(): Value::from(item.background_type.to_string()),
+                        "font".to_owned(): Value::from(item.font.to_string()),
+                        "fontSize".to_owned(): Value::from(item.font_size),
+                        "flatAudio".to_owned(): Value::from(flat_audio),
+                        "flatBackground".to_owned(): Value::from(flat_background),
+                        "loop".to_owned(): Value::from(item.looping),
+                        "slideNumber".to_owned(): Value::from(item.slide_count),
+                        "text".to_owned(): Value::from(text_vec)});
+                }
                 true
             } else {
                 false
