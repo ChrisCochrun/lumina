@@ -3,9 +3,11 @@ mod slide_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray =
+            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
@@ -107,20 +109,36 @@ mod slide_model {
     use std::thread;
     impl qobject::SlideyMod {
         #[qinvokable]
-        pub fn add_video_thumbnail(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn add_video_thumbnail(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.get_role(Role::VideoThumbnailRole));
+            vector_roles
+                .append(self.get_role(Role::VideoThumbnailRole));
 
-            let model_index = &self.index(index, 0, &QModelIndex::default());
-            if let Some(slide) = self.as_mut().slides_mut().get_mut(index as usize) {
+            let model_index =
+                &self.index(index, 0, &QModelIndex::default());
+            if let Some(slide) =
+                self.as_mut().slides_mut().get_mut(index as usize)
+            {
                 if !slide.video_background.is_empty() {
-                    let path = PathBuf::from(slide.video_background.to_string());
-                    let video = QString::from(ffmpeg::bg_from_video(&path).to_str().unwrap())
-                        .insert(0, &QString::from("file://"))
-                        .to_owned();
+                    let path = PathBuf::from(
+                        slide.video_background.to_string(),
+                    );
+                    let video = QString::from(
+                        ffmpeg::bg_from_video(&path)
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .insert(0, &QString::from("file://"))
+                    .to_owned();
                     slide.video_thumbnail = video;
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                 }
             }
             true
@@ -149,7 +167,9 @@ mod slide_model {
                     self.as_mut().remove_item(i as i32);
                     println!("Removing-slide: {:?}", i);
                 } else if slide.service_item_id > index {
-                    if let Some(slide) = self.as_mut().slides_mut().get_mut(i) {
+                    if let Some(slide) =
+                        self.as_mut().slides_mut().get_mut(i)
+                    {
                         println!("changing-serviceid-of: {:?}", i);
                         println!(
                             "changing-serviceid-fromandto: {:?}-{:?}",
@@ -169,8 +189,11 @@ mod slide_model {
             }
 
             unsafe {
-                self.as_mut()
-                    .begin_remove_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_remove_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().slides_mut().remove(index as usize);
                 self.as_mut().end_remove_rows();
             }
@@ -183,8 +206,11 @@ mod slide_model {
             let slide = slide.clone();
 
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().slides_mut().push(slide);
                 self.as_mut().end_insert_rows();
             }
@@ -199,14 +225,23 @@ mod slide_model {
             // self.as_mut().add_video_thumbnail(index);
         }
 
-        fn insert_slide(mut self: Pin<&mut Self>, slide: &Slidey, index: i32) {
+        fn insert_slide(
+            mut self: Pin<&mut Self>,
+            slide: &Slidey,
+            index: i32,
+        ) {
             let mut slide = slide.clone();
             slide.slide_index = index;
 
             unsafe {
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
-                self.as_mut().slides_mut().insert(index as usize, slide);
+                    .slides_mut()
+                    .insert(index as usize, slide);
                 self.as_mut().end_insert_rows();
             }
             let thread = self.qt_thread();
@@ -226,7 +261,7 @@ mod slide_model {
             service_item: &QMap_QString_QVariant,
         ) {
             let ty = service_item
-                .get(&QString::from("type"))
+                .get(&QString::from("ty"))
                 .unwrap_or(QVariant::from(&QString::from("")))
                 .value::<QString>();
 
@@ -248,7 +283,8 @@ mod slide_model {
                 .value::<QStringList>()
                 .unwrap_or_default();
 
-            let text_vec = Vec::<QString>::from(&QList_QString::from(&textlist));
+            let text_vec =
+                Vec::<QString>::from(&QList_QString::from(&textlist));
             // let vec_slize: &[usize] = &text_vec;
 
             let mut slide = Slidey::default();
@@ -337,7 +373,9 @@ mod slide_model {
 
             // We need to move all the current slides service_item_id's up by one.
             let slides_iter = self.as_mut().slides_mut().iter_mut();
-            for slide in slides_iter.filter(|x| x.service_item_id >= index) {
+            for slide in
+                slides_iter.filter(|x| x.service_item_id >= index)
+            {
                 slide.service_item_id += 1;
             }
 
@@ -348,6 +386,7 @@ mod slide_model {
                     slide.video_background = QString::from("");
                     slide.slide_index = 0;
                     self.as_mut().insert_slide(&slide, slide_index);
+                    println!("Item added in rust model!");
                 }
                 Some(ty) if ty == QString::from("song") => {
                     let count = text_vec.len();
@@ -362,13 +401,20 @@ mod slide_model {
                         slide.slide_count = count as i32;
                         slide.slide_index = i as i32;
                         if background_type == QString::from("image") {
-                            slide.image_background = background.clone();
-                            slide.video_background = QString::from("");
+                            slide.image_background =
+                                background.clone();
+                            slide.video_background =
+                                QString::from("");
                         } else {
-                            slide.video_background = background.clone();
-                            slide.image_background = QString::from("");
+                            slide.video_background =
+                                background.clone();
+                            slide.image_background =
+                                QString::from("");
                         }
-                        self.as_mut().insert_slide(&slide, slide_index + i as i32);
+                        self.as_mut().insert_slide(
+                            &slide,
+                            slide_index + i as i32,
+                        );
                     }
                 }
                 Some(ty) if ty == QString::from("video") => {
@@ -384,7 +430,10 @@ mod slide_model {
                         slide.image_background = background.clone();
                         slide.video_background = QString::from("");
                         slide.slide_index = i;
-                        self.as_mut().insert_slide(&slide, slide_index + i as i32);
+                        self.as_mut().insert_slide(
+                            &slide,
+                            slide_index + i as i32,
+                        );
                     }
                 }
                 _ => println!("It's somethign else!"),
@@ -423,7 +472,8 @@ mod slide_model {
                 .value::<QStringList>()
                 .unwrap_or_default();
 
-            let text_vec = Vec::<QString>::from(&QList_QString::from(&textlist));
+            let text_vec =
+                Vec::<QString>::from(&QList_QString::from(&textlist));
             // let vec_slize: &[usize] = &text_vec;
 
             let mut slide = Slidey::default();
@@ -517,11 +567,15 @@ mod slide_model {
                         slide.slide_count = text_vec.len() as i32;
                         slide.slide_index = i as i32;
                         if background_type == QString::from("image") {
-                            slide.image_background = background.clone();
-                            slide.video_background = QString::from("");
+                            slide.image_background =
+                                background.clone();
+                            slide.video_background =
+                                QString::from("");
                         } else {
-                            slide.video_background = background.clone();
-                            slide.image_background = QString::from("");
+                            slide.video_background =
+                                background.clone();
+                            slide.image_background =
+                                QString::from("");
                         }
                         self.as_mut().add_slide(&slide);
                     }
@@ -617,18 +671,28 @@ mod slide_model {
             unsafe {
                 self.as_mut().begin_reset_model();
             }
-            self.as_mut()
-                .move_items(first_slide as usize, dest_slide as usize, count as usize);
+            self.as_mut().move_items(
+                first_slide as usize,
+                dest_slide as usize,
+                count as usize,
+            );
 
             if count > 1 {
                 if move_down {
                     for (i, slide) in slides_iter
                         .clone()
                         .enumerate()
-                        .filter(|x| x.0 >= (first_slide + dest_count) as usize)
-                        .filter(|x| x.0 < (first_slide + dest_count + count) as usize)
+                        .filter(|x| {
+                            x.0 >= (first_slide + dest_count) as usize
+                        })
+                        .filter(|x| {
+                            x.0 < (first_slide + dest_count + count)
+                                as usize
+                        })
                     {
-                        if let Some(slide) = self.as_mut().slides_mut().get_mut(i) {
+                        if let Some(slide) =
+                            self.as_mut().slides_mut().get_mut(i)
+                        {
                             println!(
                                 "rust: these ones right here officer. from {:?} to {:?}",
                                 slide.service_item_id, destination_index
@@ -641,9 +705,13 @@ mod slide_model {
                         .clone()
                         .enumerate()
                         .filter(|x| x.0 >= dest_slide as usize)
-                        .filter(|x| x.0 < (dest_slide + count) as usize)
+                        .filter(|x| {
+                            x.0 < (dest_slide + count) as usize
+                        })
                     {
-                        if let Some(slide) = self.as_mut().slides_mut().get_mut(i) {
+                        if let Some(slide) =
+                            self.as_mut().slides_mut().get_mut(i)
+                        {
                             println!(
                                 "rust: these ones right here officer. from {:?} to {:?}",
                                 slide.service_item_id, destination_index
@@ -653,7 +721,11 @@ mod slide_model {
                     }
                 }
             } else {
-                if let Some(slide) = self.as_mut().slides_mut().get_mut(dest_slide as usize) {
+                if let Some(slide) = self
+                    .as_mut()
+                    .slides_mut()
+                    .get_mut(dest_slide as usize)
+                {
                     println!(
                         "rust: this one right here officer. {:?} from {:?} to {:?}",
                         slide.slide_index, slide.service_item_id, destination_index
@@ -665,11 +737,17 @@ mod slide_model {
             if move_down {
                 for (i, slide) in slides_iter
                     .enumerate()
-                    .filter(|x| x.0 < (first_slide + dest_count) as usize)
-                    .filter(|x| x.1.service_item_id <= destination_index)
+                    .filter(|x| {
+                        x.0 < (first_slide + dest_count) as usize
+                    })
+                    .filter(|x| {
+                        x.1.service_item_id <= destination_index
+                    })
                     .filter(|x| x.1.service_item_id >= source_index)
                 {
-                    if let Some(slide) = self.as_mut().slides_mut().get_mut(i) {
+                    if let Some(slide) =
+                        self.as_mut().slides_mut().get_mut(i)
+                    {
                         println!(
                             "rust-switching-service: {:?} to {:?}",
                             slide.service_item_id,
@@ -682,11 +760,17 @@ mod slide_model {
             } else {
                 for (i, slide) in slides_iter
                     .enumerate()
-                    .filter(|x| x.0 >= (dest_slide as usize + count as usize))
-                    .filter(|x| x.1.service_item_id >= destination_index)
+                    .filter(|x| {
+                        x.0 >= (dest_slide as usize + count as usize)
+                    })
+                    .filter(|x| {
+                        x.1.service_item_id >= destination_index
+                    })
                     .filter(|x| x.1.service_item_id <= source_index)
                 {
-                    if let Some(slide) = self.as_mut().slides_mut().get_mut(i) {
+                    if let Some(slide) =
+                        self.as_mut().slides_mut().get_mut(i)
+                    {
                         println!(
                             "rust-switching-service-of: {:?} to {:?}",
                             slide.service_item_id,
@@ -717,20 +801,29 @@ mod slide_model {
             unsafe {
                 self.as_mut().begin_reset_model();
                 if source_index < dest_index {
-                    let move_amount = dest_index - source_index - count + 1;
+                    let move_amount =
+                        dest_index - source_index - count + 1;
                     // println!("rust-move_amount: {:?}", move_amount);
-                    self.as_mut().slides_mut()[source_index..=dest_index].rotate_right(move_amount);
+                    self.as_mut().slides_mut()
+                        [source_index..=dest_index]
+                        .rotate_right(move_amount);
                 } else {
-                    let move_amount = end_slide - dest_index - count + 1;
+                    let move_amount =
+                        end_slide - dest_index - count + 1;
                     println!("rust-move_amount: {:?}", move_amount);
-                    self.as_mut().slides_mut()[dest_index..=end_slide].rotate_left(move_amount);
+                    self.as_mut().slides_mut()
+                        [dest_index..=end_slide]
+                        .rotate_left(move_amount);
                 }
                 self.as_mut().end_reset_model();
             }
         }
 
         #[qinvokable]
-        pub fn get_item(self: Pin<&mut Self>, index: i32) -> QMap_QString_QVariant {
+        pub fn get_item(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> QMap_QString_QVariant {
             println!("{index}");
             let mut qvariantmap = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
@@ -739,7 +832,9 @@ mod slide_model {
             }
             let rn = self.as_ref().role_names();
             let rn_iter = rn.iter();
-            if let Some(slide) = self.rust().slides.get(index as usize) {
+            if let Some(slide) =
+                self.rust().slides.get(index as usize)
+            {
                 for i in rn_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),
@@ -751,23 +846,40 @@ mod slide_model {
         }
 
         #[qinvokable]
-        pub fn activate(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn activate(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             let rc = self.as_ref().count() - 1;
-            let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
-            let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
+            let tl =
+                &self.as_ref().index(0, 0, &QModelIndex::default());
+            let br =
+                &self.as_ref().index(rc, 0, &QModelIndex::default());
             let mut vector_roles = QVector_i32::default();
             vector_roles.append(self.get_role(Role::ActiveRole));
             for slide in self.as_mut().slides_mut().iter_mut() {
                 // println!("slide is deactivating {:?}", i);
                 slide.active = false;
             }
-            if let Some(slide) = self.as_mut().slides_mut().get_mut(index as usize) {
+            if let Some(slide) =
+                self.as_mut().slides_mut().get_mut(index as usize)
+            {
                 println!("slide is activating {:?}", index);
                 println!("slide-title: {:?}", slide.service_item_id);
-                println!("slide-image-background: {:?}", slide.image_background);
-                println!("slide-video-background: {:?}", slide.video_background);
+                println!(
+                    "slide-image-background: {:?}",
+                    slide.image_background
+                );
+                println!(
+                    "slide-video-background: {:?}",
+                    slide.video_background
+                );
                 slide.active = true;
-                self.as_mut().emit_data_changed(tl, br, &vector_roles);
+                self.as_mut().emit_data_changed(
+                    tl,
+                    br,
+                    &vector_roles,
+                );
                 // We use this signal generated by our signals enum to tell QML that
                 // the active slide has changed which is used to reposition views.
                 self.as_mut().emit_active_changed();
@@ -810,14 +922,19 @@ mod slide_model {
         );
         unsafe fn end_remove_rows(self: Pin<&mut qobject::SlideyMod>);
 
-        unsafe fn begin_reset_model(self: Pin<&mut qobject::SlideyMod>);
+        unsafe fn begin_reset_model(
+            self: Pin<&mut qobject::SlideyMod>,
+        );
         unsafe fn end_reset_model(self: Pin<&mut qobject::SlideyMod>);
     }
 
     #[cxx_qt::inherit]
     unsafe extern "C++" {
         #[cxx_name = "canFetchMore"]
-        fn base_can_fetch_more(self: &qobject::SlideyMod, parent: &QModelIndex) -> bool;
+        fn base_can_fetch_more(
+            self: &qobject::SlideyMod,
+            parent: &QModelIndex,
+        ) -> bool;
 
         fn index(
             self: &qobject::SlideyMod,
@@ -831,7 +948,9 @@ mod slide_model {
     impl qobject::SlideyMod {
         #[qinvokable(cxx_override)]
         fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-            if let Some(slide) = self.slides().get(index.row() as usize) {
+            if let Some(slide) =
+                self.slides().get(index.row() as usize)
+            {
                 return match role {
                     0 => QVariant::from(&slide.ty),
                     1 => QVariant::from(&slide.text),
@@ -868,21 +987,52 @@ mod slide_model {
             roles.insert(0, cxx_qt_lib::QByteArray::from("type"));
             roles.insert(1, cxx_qt_lib::QByteArray::from("text"));
             roles.insert(2, cxx_qt_lib::QByteArray::from("audio"));
-            roles.insert(3, cxx_qt_lib::QByteArray::from("imageBackground"));
-            roles.insert(4, cxx_qt_lib::QByteArray::from("videoBackground"));
-            roles.insert(5, cxx_qt_lib::QByteArray::from("hTextAlignment"));
-            roles.insert(6, cxx_qt_lib::QByteArray::from("vTextAlignment"));
+            roles.insert(
+                3,
+                cxx_qt_lib::QByteArray::from("imageBackground"),
+            );
+            roles.insert(
+                4,
+                cxx_qt_lib::QByteArray::from("videoBackground"),
+            );
+            roles.insert(
+                5,
+                cxx_qt_lib::QByteArray::from("hTextAlignment"),
+            );
+            roles.insert(
+                6,
+                cxx_qt_lib::QByteArray::from("vTextAlignment"),
+            );
             roles.insert(7, cxx_qt_lib::QByteArray::from("font"));
             roles.insert(8, cxx_qt_lib::QByteArray::from("fontSize"));
-            roles.insert(9, cxx_qt_lib::QByteArray::from("serviceItemId"));
-            roles.insert(10, cxx_qt_lib::QByteArray::from("slideIndex"));
-            roles.insert(11, cxx_qt_lib::QByteArray::from("imageCount"));
+            roles.insert(
+                9,
+                cxx_qt_lib::QByteArray::from("serviceItemId"),
+            );
+            roles.insert(
+                10,
+                cxx_qt_lib::QByteArray::from("slideIndex"),
+            );
+            roles.insert(
+                11,
+                cxx_qt_lib::QByteArray::from("imageCount"),
+            );
             roles.insert(12, cxx_qt_lib::QByteArray::from("active"));
-            roles.insert(13, cxx_qt_lib::QByteArray::from("selected"));
+            roles
+                .insert(13, cxx_qt_lib::QByteArray::from("selected"));
             roles.insert(14, cxx_qt_lib::QByteArray::from("looping"));
-            roles.insert(15, cxx_qt_lib::QByteArray::from("videoThumbnail"));
-            roles.insert(16, cxx_qt_lib::QByteArray::from("videoStartTime"));
-            roles.insert(17, cxx_qt_lib::QByteArray::from("videoEndTime"));
+            roles.insert(
+                15,
+                cxx_qt_lib::QByteArray::from("videoThumbnail"),
+            );
+            roles.insert(
+                16,
+                cxx_qt_lib::QByteArray::from("videoStartTime"),
+            );
+            roles.insert(
+                17,
+                cxx_qt_lib::QByteArray::from("videoEndTime"),
+            );
             roles
         }
 
