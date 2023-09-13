@@ -10,9 +10,11 @@ mod video_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray =
+            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
@@ -111,22 +113,32 @@ mod video_model {
         }
 
         #[qinvokable]
-        pub fn remove_item(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn remove_item(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             if index < 0 || (index as usize) >= self.videos().len() {
                 return false;
             }
             let db = &mut self.as_mut().get_db();
 
-            let video_id = self.videos().get(index as usize).unwrap().id;
+            let video_id =
+                self.videos().get(index as usize).unwrap().id;
 
-            let result = delete(videos.filter(id.eq(video_id))).execute(db);
+            let result =
+                delete(videos.filter(id.eq(video_id))).execute(db);
 
             match result {
                 Ok(_i) => {
                     unsafe {
+                        self.as_mut().begin_remove_rows(
+                            &QModelIndex::default(),
+                            index,
+                            index,
+                        );
                         self.as_mut()
-                            .begin_remove_rows(&QModelIndex::default(), index, index);
-                        self.as_mut().videos_mut().remove(index as usize);
+                            .videos_mut()
+                            .remove(index as usize);
                         self.as_mut().end_remove_rows();
                     }
                     println!("removed-item-at-index: {:?}", video_id);
@@ -142,26 +154,32 @@ mod video_model {
 
         fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
             let mut data = dirs::data_local_dir().unwrap();
-            data.push("librepresenter");
+            data.push("lumina");
             data.push("library-db.sqlite3");
             let mut db_url = String::from("sqlite://");
             db_url.push_str(data.to_str().unwrap());
             println!("DB: {:?}", db_url);
 
-            SqliteConnection::establish(&db_url)
-                .unwrap_or_else(|_| panic!("error connecting to {}", db_url))
+            SqliteConnection::establish(&db_url).unwrap_or_else(
+                |_| panic!("error connecting to {}", db_url),
+            )
         }
 
         #[qinvokable]
         pub fn new_item(mut self: Pin<&mut Self>, url: QUrl) {
             println!("LETS INSERT THIS SUCKER!");
             let file_path = PathBuf::from(url.path().to_string());
-            let name = file_path.file_stem().unwrap().to_str().unwrap();
+            let name =
+                file_path.file_stem().unwrap().to_str().unwrap();
             let video_id = self.rust().highest_id + 1;
             let video_title = QString::from(name);
             let video_path = url.to_qstring();
 
-            if self.as_mut().add_item(video_id, video_title, video_path) {
+            if self.as_mut().add_item(
+                video_id,
+                video_title,
+                video_path,
+            ) {
                 println!("filename: {:?}", name);
                 self.as_mut().set_highest_id(video_id);
             } else {
@@ -219,15 +237,21 @@ mod video_model {
             let index = self.as_ref().videos().len() as i32;
             println!("{:?}", video);
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().videos_mut().push(video);
                 self.as_mut().end_insert_rows();
             }
         }
 
         #[qinvokable]
-        pub fn get_item(self: Pin<&mut Self>, index: i32) -> QMap_QString_QVariant {
+        pub fn get_item(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> QMap_QString_QVariant {
             println!("{index}");
             let mut qvariantmap = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
@@ -236,7 +260,9 @@ mod video_model {
             }
             let role_names = self.as_ref().role_names();
             let role_names_iter = role_names.iter();
-            if let Some(video) = self.rust().videos.get(index as usize) {
+            if let Some(video) =
+                self.rust().videos.get(index as usize)
+            {
                 for i in role_names_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),
@@ -261,10 +287,19 @@ mod video_model {
         }
 
         #[qinvokable]
-        pub fn update_loop(mut self: Pin<&mut Self>, index: i32, loop_value: bool) -> bool {
+        pub fn update_loop(
+            mut self: Pin<&mut Self>,
+            index: i32,
+            loop_value: bool,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::LoopingRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::LoopingRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
             println!("rust-video: {:?}", index);
             println!("rust-loop: {:?}", loop_value);
 
@@ -283,8 +318,11 @@ mod video_model {
                         video.looping = loop_value.clone();
                         println!("rust-video: {:?}", video.title);
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     println!("rust-looping: {:?}", loop_value);
                     true
                 }
@@ -299,8 +337,13 @@ mod video_model {
             updated_end_time: f32,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::EndTimeRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::EndTimeRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(videos.filter(id.eq(index)))
@@ -316,8 +359,11 @@ mod video_model {
                     {
                         video.end_time = updated_end_time.clone();
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     println!("rust-end-time: {:?}", updated_end_time);
                     true
                 }
@@ -332,8 +378,13 @@ mod video_model {
             updated_start_time: f32,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::StartTimeRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::StartTimeRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(videos.filter(id.eq(index)))
@@ -349,9 +400,15 @@ mod video_model {
                     {
                         video.start_time = updated_start_time.clone();
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
-                    println!("rust-start-time: {:?}", updated_start_time);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
+                    println!(
+                        "rust-start-time: {:?}",
+                        updated_start_time
+                    );
                     true
                 }
                 Err(_e) => false,
@@ -359,10 +416,19 @@ mod video_model {
         }
 
         #[qinvokable]
-        pub fn update_title(mut self: Pin<&mut Self>, index: i32, updated_title: QString) -> bool {
+        pub fn update_title(
+            mut self: Pin<&mut Self>,
+            index: i32,
+            updated_title: QString,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::TitleRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::TitleRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(videos.filter(id.eq(index)))
@@ -380,8 +446,11 @@ mod video_model {
                         println!("rust-title: {:?}", video.title);
                     }
                     // TODO this seems to not be updating in the actual list
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     // self.as_mut().emit_title_changed();
                     println!("rust-title: {:?}", updated_title);
                     true
@@ -391,10 +460,19 @@ mod video_model {
         }
 
         #[qinvokable]
-        pub fn update_path(mut self: Pin<&mut Self>, index: i32, updated_path: QString) -> bool {
+        pub fn update_path(
+            mut self: Pin<&mut Self>,
+            index: i32,
+            updated_path: QString,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::PathRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::PathRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(videos.filter(id.eq(index)))
@@ -411,8 +489,11 @@ mod video_model {
                         video.path = updated_path.clone();
                         println!("rust-title: {:?}", video.title);
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     println!("rust-path: {:?}", updated_path);
                     true
                 }
@@ -430,7 +511,9 @@ mod video_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_insert_rows(self: Pin<&mut qobject::VideoModel>);
+        unsafe fn end_insert_rows(
+            self: Pin<&mut qobject::VideoModel>,
+        );
 
         unsafe fn begin_remove_rows(
             self: Pin<&mut qobject::VideoModel>,
@@ -438,16 +521,25 @@ mod video_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_remove_rows(self: Pin<&mut qobject::VideoModel>);
+        unsafe fn end_remove_rows(
+            self: Pin<&mut qobject::VideoModel>,
+        );
 
-        unsafe fn begin_reset_model(self: Pin<&mut qobject::VideoModel>);
-        unsafe fn end_reset_model(self: Pin<&mut qobject::VideoModel>);
+        unsafe fn begin_reset_model(
+            self: Pin<&mut qobject::VideoModel>,
+        );
+        unsafe fn end_reset_model(
+            self: Pin<&mut qobject::VideoModel>,
+        );
     }
 
     #[cxx_qt::inherit]
     unsafe extern "C++" {
         #[cxx_name = "canFetchMore"]
-        fn base_can_fetch_more(self: &qobject::VideoModel, parent: &QModelIndex) -> bool;
+        fn base_can_fetch_more(
+            self: &qobject::VideoModel,
+            parent: &QModelIndex,
+        ) -> bool;
 
         fn index(
             self: &qobject::VideoModel,
@@ -461,7 +553,9 @@ mod video_model {
     impl qobject::VideoModel {
         #[qinvokable(cxx_override)]
         fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-            if let Some(video) = self.videos().get(index.row() as usize) {
+            if let Some(video) =
+                self.videos().get(index.row() as usize)
+            {
                 return match role {
                     0 => QVariant::from(&video.id),
                     1 => QVariant::from(&video.title),
@@ -488,7 +582,8 @@ mod video_model {
             roles.insert(0, cxx_qt_lib::QByteArray::from("id"));
             roles.insert(1, cxx_qt_lib::QByteArray::from("title"));
             roles.insert(2, cxx_qt_lib::QByteArray::from("filePath"));
-            roles.insert(3, cxx_qt_lib::QByteArray::from("startTime"));
+            roles
+                .insert(3, cxx_qt_lib::QByteArray::from("startTime"));
             roles.insert(4, cxx_qt_lib::QByteArray::from("endTime"));
             roles.insert(5, cxx_qt_lib::QByteArray::from("loop"));
             roles

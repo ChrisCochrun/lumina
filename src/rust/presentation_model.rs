@@ -12,9 +12,11 @@ mod presentation_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray =
+            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
@@ -115,26 +117,45 @@ mod presentation_model {
         }
 
         #[qinvokable]
-        pub fn remove_item(mut self: Pin<&mut Self>, index: i32) -> bool {
-            if index < 0 || (index as usize) >= self.presentations().len() {
+        pub fn remove_item(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
+            if index < 0
+                || (index as usize) >= self.presentations().len()
+            {
                 return false;
             }
             let db = &mut self.as_mut().get_db();
 
-            let presentation_id = self.presentations().get(index as usize).unwrap().id;
+            let presentation_id =
+                self.presentations().get(index as usize).unwrap().id;
 
-            let result = delete(presentations.filter(id.eq(presentation_id))).execute(db);
+            let result =
+                delete(presentations.filter(id.eq(presentation_id)))
+                    .execute(db);
 
             match result {
                 Ok(_i) => {
                     unsafe {
+                        self.as_mut().begin_remove_rows(
+                            &QModelIndex::default(),
+                            index,
+                            index,
+                        );
                         self.as_mut()
-                            .begin_remove_rows(&QModelIndex::default(), index, index);
-                        self.as_mut().presentations_mut().remove(index as usize);
+                            .presentations_mut()
+                            .remove(index as usize);
                         self.as_mut().end_remove_rows();
                     }
-                    println!("removed-item-at-index: {:?}", presentation_id);
-                    println!("new-Vec: {:?}", self.as_mut().presentations());
+                    println!(
+                        "removed-item-at-index: {:?}",
+                        presentation_id
+                    );
+                    println!(
+                        "new-Vec: {:?}",
+                        self.as_mut().presentations()
+                    );
                     true
                 }
                 Err(_e) => {
@@ -146,26 +167,33 @@ mod presentation_model {
 
         fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
             let mut data = dirs::data_local_dir().unwrap();
-            data.push("librepresenter");
+            data.push("lumina");
             data.push("library-db.sqlite3");
             let mut db_url = String::from("sqlite://");
             db_url.push_str(data.to_str().unwrap());
             println!("DB: {:?}", db_url);
 
-            SqliteConnection::establish(&db_url)
-                .unwrap_or_else(|_| panic!("error connecting to {}", db_url))
+            SqliteConnection::establish(&db_url).unwrap_or_else(
+                |_| panic!("error connecting to {}", db_url),
+            )
         }
 
         #[qinvokable]
-        pub fn new_item(mut self: Pin<&mut Self>, url: QUrl, new_page_count: i32) {
+        pub fn new_item(
+            mut self: Pin<&mut Self>,
+            url: QUrl,
+            new_page_count: i32,
+        ) {
             println!("LETS INSERT THIS SUCKER!");
             let file_path = PathBuf::from(url.path().to_string());
-            let name = file_path.file_stem().unwrap().to_str().unwrap();
+            let name =
+                file_path.file_stem().unwrap().to_str().unwrap();
             let presentation_id = self.rust().highest_id + 1;
             let presentation_title = QString::from(name);
             let presentation_path = url.to_qstring();
             println!("{:?}", file_path.extension().unwrap());
-            let presentation_html = file_path.extension().unwrap() == std::ffi::OsStr::new(".html");
+            let presentation_html = file_path.extension().unwrap()
+                == std::ffi::OsStr::new(".html");
 
             if self.as_mut().add_item(
                 presentation_id,
@@ -194,8 +222,12 @@ mod presentation_model {
             // println!("{:?}", db);
             let mut actual_page_count = new_page_count;
             if presentation_html {
-                let actual_path = presentation_path.clone().to_string();
-                actual_page_count = reveal_js::count_slides_and_fragments(actual_path.trim());
+                let actual_path =
+                    presentation_path.clone().to_string();
+                actual_page_count =
+                    reveal_js::count_slides_and_fragments(
+                        actual_path.trim(),
+                    );
             }
 
             let presentation = self::Presentation {
@@ -231,19 +263,28 @@ mod presentation_model {
             }
         }
 
-        fn add_presentation(mut self: Pin<&mut Self>, presentation: self::Presentation) {
+        fn add_presentation(
+            mut self: Pin<&mut Self>,
+            presentation: self::Presentation,
+        ) {
             let index = self.as_ref().presentations().len() as i32;
             println!("{:?}", presentation);
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().presentations_mut().push(presentation);
                 self.as_mut().end_insert_rows();
             }
         }
 
         #[qinvokable]
-        pub fn get_item(self: Pin<&mut Self>, index: i32) -> QMap_QString_QVariant {
+        pub fn get_item(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> QMap_QString_QVariant {
             println!("{index}");
             let mut qvariantmap = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
@@ -252,7 +293,9 @@ mod presentation_model {
             }
             let role_names = self.as_ref().role_names();
             let role_names_iter = role_names.iter();
-            if let Some(presentation) = self.rust().presentations.get(index as usize) {
+            if let Some(presentation) =
+                self.rust().presentations.get(index as usize)
+            {
                 for i in role_names_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),
@@ -264,10 +307,19 @@ mod presentation_model {
         }
 
         #[qinvokable]
-        pub fn update_title(mut self: Pin<&mut Self>, index: i32, updated_title: QString) -> bool {
+        pub fn update_title(
+            mut self: Pin<&mut Self>,
+            index: i32,
+            updated_title: QString,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::TitleRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::TitleRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(presentations.filter(id.eq(index)))
@@ -281,12 +333,19 @@ mod presentation_model {
                         .iter_mut()
                         .filter(|x| x.id == index)
                     {
-                        presentation.title = updated_title.to_string();
-                        println!("rust-title: {:?}", presentation.title);
+                        presentation.title =
+                            updated_title.to_string();
+                        println!(
+                            "rust-title: {:?}",
+                            presentation.title
+                        );
                     }
                     // TODO this seems to not be updating in the actual list
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     // self.as_mut().emit_title_changed();
                     println!("rust-title: {:?}", updated_title);
                     true
@@ -302,8 +361,13 @@ mod presentation_model {
             updated_page_count: i32,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::PageCountRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::PageCountRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(presentations.filter(id.eq(index)))
@@ -318,13 +382,22 @@ mod presentation_model {
                         .filter(|x| x.id == index)
                     {
                         presentation.page_count = updated_page_count;
-                        println!("rust-page_count: {:?}", presentation.page_count);
+                        println!(
+                            "rust-page_count: {:?}",
+                            presentation.page_count
+                        );
                     }
                     // TODO this seems to not be updating in the actual list
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     // self.as_mut().emit_page_count_changed();
-                    println!("rust-page_count: {:?}", updated_page_count);
+                    println!(
+                        "rust-page_count: {:?}",
+                        updated_page_count
+                    );
                     true
                 }
                 Err(_e) => false,
@@ -352,7 +425,9 @@ mod presentation_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_insert_rows(self: Pin<&mut qobject::PresentationModel>);
+        unsafe fn end_insert_rows(
+            self: Pin<&mut qobject::PresentationModel>,
+        );
 
         unsafe fn begin_remove_rows(
             self: Pin<&mut qobject::PresentationModel>,
@@ -360,16 +435,25 @@ mod presentation_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_remove_rows(self: Pin<&mut qobject::PresentationModel>);
+        unsafe fn end_remove_rows(
+            self: Pin<&mut qobject::PresentationModel>,
+        );
 
-        unsafe fn begin_reset_model(self: Pin<&mut qobject::PresentationModel>);
-        unsafe fn end_reset_model(self: Pin<&mut qobject::PresentationModel>);
+        unsafe fn begin_reset_model(
+            self: Pin<&mut qobject::PresentationModel>,
+        );
+        unsafe fn end_reset_model(
+            self: Pin<&mut qobject::PresentationModel>,
+        );
     }
 
     #[cxx_qt::inherit]
     unsafe extern "C++" {
         #[cxx_name = "canFetchMore"]
-        fn base_can_fetch_more(self: &qobject::PresentationModel, parent: &QModelIndex) -> bool;
+        fn base_can_fetch_more(
+            self: &qobject::PresentationModel,
+            parent: &QModelIndex,
+        ) -> bool;
 
         fn index(
             self: &qobject::PresentationModel,
@@ -383,11 +467,17 @@ mod presentation_model {
     impl qobject::PresentationModel {
         #[qinvokable(cxx_override)]
         fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-            if let Some(presentation) = self.presentations().get(index.row() as usize) {
+            if let Some(presentation) =
+                self.presentations().get(index.row() as usize)
+            {
                 return match role {
                     0 => QVariant::from(&presentation.id),
-                    1 => QVariant::from(&QString::from(&presentation.title)),
-                    2 => QVariant::from(&QString::from(&presentation.path)),
+                    1 => QVariant::from(&QString::from(
+                        &presentation.title,
+                    )),
+                    2 => QVariant::from(&QString::from(
+                        &presentation.path,
+                    )),
                     3 => QVariant::from(&presentation.html),
                     4 => QVariant::from(&presentation.page_count),
                     _ => QVariant::default(),
@@ -410,7 +500,8 @@ mod presentation_model {
             roles.insert(1, cxx_qt_lib::QByteArray::from("title"));
             roles.insert(2, cxx_qt_lib::QByteArray::from("filePath"));
             roles.insert(3, cxx_qt_lib::QByteArray::from("html"));
-            roles.insert(4, cxx_qt_lib::QByteArray::from("pageCount"));
+            roles
+                .insert(4, cxx_qt_lib::QByteArray::from("pageCount"));
             roles
         }
 

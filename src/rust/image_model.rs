@@ -10,9 +10,11 @@ mod image_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray =
+            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
@@ -106,22 +108,32 @@ mod image_model {
         }
 
         #[qinvokable]
-        pub fn remove_item(mut self: Pin<&mut Self>, index: i32) -> bool {
+        pub fn remove_item(
+            mut self: Pin<&mut Self>,
+            index: i32,
+        ) -> bool {
             if index < 0 || (index as usize) >= self.images().len() {
                 return false;
             }
             let db = &mut self.as_mut().get_db();
 
-            let image_id = self.images().get(index as usize).unwrap().id;
+            let image_id =
+                self.images().get(index as usize).unwrap().id;
 
-            let result = delete(images.filter(id.eq(image_id))).execute(db);
+            let result =
+                delete(images.filter(id.eq(image_id))).execute(db);
 
             match result {
                 Ok(_i) => {
                     unsafe {
+                        self.as_mut().begin_remove_rows(
+                            &QModelIndex::default(),
+                            index,
+                            index,
+                        );
                         self.as_mut()
-                            .begin_remove_rows(&QModelIndex::default(), index, index);
-                        self.as_mut().images_mut().remove(index as usize);
+                            .images_mut()
+                            .remove(index as usize);
                         self.as_mut().end_remove_rows();
                     }
                     println!("removed-item-at-index: {:?}", image_id);
@@ -137,26 +149,32 @@ mod image_model {
 
         fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
             let mut data = dirs::data_local_dir().unwrap();
-            data.push("librepresenter");
+            data.push("lumina");
             data.push("library-db.sqlite3");
             let mut db_url = String::from("sqlite://");
             db_url.push_str(data.to_str().unwrap());
             println!("DB: {:?}", db_url);
 
-            SqliteConnection::establish(&db_url)
-                .unwrap_or_else(|_| panic!("error connecting to {}", db_url))
+            SqliteConnection::establish(&db_url).unwrap_or_else(
+                |_| panic!("error connecting to {}", db_url),
+            )
         }
 
         #[qinvokable]
         pub fn new_item(mut self: Pin<&mut Self>, url: QUrl) {
             println!("LETS INSERT THIS SUCKER!");
             let file_path = PathBuf::from(url.path().to_string());
-            let name = file_path.file_stem().unwrap().to_str().unwrap();
+            let name =
+                file_path.file_stem().unwrap().to_str().unwrap();
             let image_id = self.rust().highest_id + 1;
             let image_title = QString::from(name);
             let image_path = url.to_qstring();
 
-            if self.as_mut().add_item(image_id, image_title, image_path) {
+            if self.as_mut().add_item(
+                image_id,
+                image_title,
+                image_path,
+            ) {
                 println!("filename: {:?}", name);
                 self.as_mut().set_highest_id(image_id);
             } else {
@@ -205,18 +223,30 @@ mod image_model {
             let index = self.as_ref().images().len() as i32;
             println!("{:?}", image);
             unsafe {
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), index, index);
+                self.as_mut().begin_insert_rows(
+                    &QModelIndex::default(),
+                    index,
+                    index,
+                );
                 self.as_mut().images_mut().push(image);
                 self.as_mut().end_insert_rows();
             }
         }
 
         #[qinvokable]
-        pub fn update_title(mut self: Pin<&mut Self>, index: i32, updated_title: QString) -> bool {
+        pub fn update_title(
+            mut self: Pin<&mut Self>,
+            index: i32,
+            updated_title: QString,
+        ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::TitleRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::TitleRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(images.filter(id.eq(index)))
@@ -233,8 +263,11 @@ mod image_model {
                         image.title = updated_title.clone();
                         println!("rust-title: {:?}", image.title);
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     true
                 }
                 Err(_e) => false,
@@ -248,8 +281,13 @@ mod image_model {
             updated_file_path: QString,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
-            vector_roles.append(self.as_ref().get_role(Role::PathRole));
-            let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+            vector_roles
+                .append(self.as_ref().get_role(Role::PathRole));
+            let model_index = &self.as_ref().index(
+                index,
+                0,
+                &QModelIndex::default(),
+            );
 
             let db = &mut self.as_mut().get_db();
             let result = update(images.filter(id.eq(index)))
@@ -266,8 +304,11 @@ mod image_model {
                         image.path = updated_file_path.clone();
                         println!("rust-title: {:?}", image.path);
                     }
-                    self.as_mut()
-                        .emit_data_changed(model_index, model_index, &vector_roles);
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
                     true
                 }
                 Err(_e) => false,
@@ -275,7 +316,10 @@ mod image_model {
         }
 
         #[qinvokable]
-        pub fn get_item(self: Pin<&mut Self>, index: i32) -> QMap_QString_QVariant {
+        pub fn get_item(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> QMap_QString_QVariant {
             println!("{index}");
             let mut qvariantmap = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
@@ -284,7 +328,9 @@ mod image_model {
             }
             let role_names = self.as_ref().role_names();
             let role_names_iter = role_names.iter();
-            if let Some(image) = self.rust().images.get(index as usize) {
+            if let Some(image) =
+                self.rust().images.get(index as usize)
+            {
                 for i in role_names_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),
@@ -314,7 +360,9 @@ mod image_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_insert_rows(self: Pin<&mut qobject::ImageModel>);
+        unsafe fn end_insert_rows(
+            self: Pin<&mut qobject::ImageModel>,
+        );
 
         unsafe fn begin_remove_rows(
             self: Pin<&mut qobject::ImageModel>,
@@ -322,16 +370,25 @@ mod image_model {
             first: i32,
             last: i32,
         );
-        unsafe fn end_remove_rows(self: Pin<&mut qobject::ImageModel>);
+        unsafe fn end_remove_rows(
+            self: Pin<&mut qobject::ImageModel>,
+        );
 
-        unsafe fn begin_reset_model(self: Pin<&mut qobject::ImageModel>);
-        unsafe fn end_reset_model(self: Pin<&mut qobject::ImageModel>);
+        unsafe fn begin_reset_model(
+            self: Pin<&mut qobject::ImageModel>,
+        );
+        unsafe fn end_reset_model(
+            self: Pin<&mut qobject::ImageModel>,
+        );
     }
 
     #[cxx_qt::inherit]
     unsafe extern "C++" {
         #[cxx_name = "canFetchMore"]
-        fn base_can_fetch_more(self: &qobject::ImageModel, parent: &QModelIndex) -> bool;
+        fn base_can_fetch_more(
+            self: &qobject::ImageModel,
+            parent: &QModelIndex,
+        ) -> bool;
 
         fn index(
             self: &qobject::ImageModel,
@@ -345,7 +402,9 @@ mod image_model {
     impl qobject::ImageModel {
         #[qinvokable(cxx_override)]
         fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-            if let Some(image) = self.images().get(index.row() as usize) {
+            if let Some(image) =
+                self.images().get(index.row() as usize)
+            {
                 return match role {
                     0 => QVariant::from(&image.id),
                     1 => QVariant::from(&image.title),
