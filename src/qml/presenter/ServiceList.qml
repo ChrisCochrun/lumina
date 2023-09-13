@@ -289,7 +289,7 @@ Item {
                             }
                             Kirigami.Action {
                                 text: "delete"
-                                onTriggered: removeItems()
+                                onTriggered: removeItem(index)
                             }
                         }
                     }

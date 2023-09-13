@@ -693,11 +693,12 @@ mod service_item_model {
                     } else {
                         looping = false;
                     }
-                    let slide_count =
-                        obj.get("slideNumber")
-                            .unwrap()
-                            .as_i64()
-                            .unwrap() as i32;
+                    let slide_count;
+                    if let Some(sc) = obj.get("slideNumber") {
+                        slide_count = sc.as_i64().unwrap() as i32;
+                    } else {
+                        slide_count = i32::default();
+                    }
                     let mut video_start_time = f32::default();
                     if let Some(video_start_value) =
                         obj.get("video_start_time")
