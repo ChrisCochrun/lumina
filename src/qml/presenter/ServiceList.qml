@@ -557,8 +557,8 @@ Item {
             const image = imageProxyModel.getImage(itemID);
             console.log("adding: " + image.title + " of type " + type);
             ServiceItemModel.insertItem(index, image.title,
-                                        type, image.filePath,
-                                        "image", "", "",
+                                        "", type, image.filePath,
+                                        "image", "",
                                         "", 0, 0, false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
@@ -567,8 +567,8 @@ Item {
             const video = videoProxyModel.getVideo(itemID);
             console.log("adding: " + video.title + " of type " + type);
             ServiceItemModel.insertItem(index, video.title,
-                                        type, video.filePath,
-                                        "video", "", "",
+                                        "", type, video.filePath,
+                                        "video", "",
                                         "", 0, 0, video.loop, video.startTime, video.endTime);
             serviceItemList.forceLayout()
             return;
@@ -581,8 +581,8 @@ Item {
                         " of type " + type +
                         " with " + lyrics.length + " slides");
             ServiceItemModel.insertItem(index, song.title,
-                                        type, song.background,
-                                        song.backgroundType, lyrics,
+                                        lyrics, type, song.background,
+                                        song.backgroundType, 
                                         song.audio, song.font, song.fontSize,
                                         lyrics.length, true, 0.0, 0.0);
             serviceItemList.forceLayout()
@@ -594,8 +594,8 @@ Item {
                         " of type " + type +
                         " with " + pres.pageCount + " slides");
             ServiceItemModel.insertItem(index, pres.title,
-                                        type, pres.filePath,
-                                        "image", "",
+                                        "", type, pres.filePath,
+                                        "image",
                                         "", "", 0, pres.pageCount, false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;

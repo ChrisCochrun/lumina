@@ -260,6 +260,13 @@ mod slide_model {
             index: i32,
             service_item: &QMap_QString_QVariant,
         ) {
+            for (key, data) in service_item.iter() {
+                println!(
+                    "{:?}: {:?}",
+                    key,
+                    data.value_or_default::<QString>()
+                );
+            }
             let ty = service_item
                 .get(&QString::from("ty"))
                 .unwrap_or(QVariant::from(&QString::from("")))
@@ -386,7 +393,7 @@ mod slide_model {
                     slide.video_background = QString::from("");
                     slide.slide_index = 0;
                     self.as_mut().insert_slide(&slide, slide_index);
-                    println!("Item added in rust model!");
+                    println!("Image added to slide model!");
                 }
                 Some(ty) if ty == QString::from("song") => {
                     let count = text_vec.len();
@@ -439,7 +446,7 @@ mod slide_model {
                 _ => println!("It's somethign else!"),
             };
 
-            println!("Item added in rust model!");
+            println!("Item added in slide model!");
         }
 
         #[qinvokable]
