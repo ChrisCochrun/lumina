@@ -72,7 +72,7 @@ Item {
             onEntered: (drag) => {
                 if (drag.keys[0] === "library") {
                     dropHighlightLine.visible = true;
-                    var lastItem = serviceItemList.itemAtIndex(ServiceItemModel.rowCount() - 1);
+                    var lastItem = serviceItemList.itemAtIndex(ServiceItemModel.count() - 1);
                     dropHighlightLine.y = lastItem.y + lastItem.height;
                 }
             }
@@ -559,7 +559,7 @@ Item {
             ServiceItemModel.insertItem(index, image.title,
                                         type, image.filePath,
                                         "image", "", "",
-                                        "", 0, 0, false);
+                                        "", 0, 0, false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }
@@ -569,7 +569,7 @@ Item {
             ServiceItemModel.insertItem(index, video.title,
                                         type, video.filePath,
                                         "video", "", "",
-                                        "", 0, 0, video.loop);
+                                        "", 0, 0, video.loop, video.startTime, video.endTime);
             serviceItemList.forceLayout()
             return;
         }
@@ -584,7 +584,7 @@ Item {
                                         type, song.background,
                                         song.backgroundType, lyrics,
                                         song.audio, song.font, song.fontSize,
-                                        lyrics.length, true);
+                                        lyrics.length, true, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }
@@ -596,7 +596,7 @@ Item {
             ServiceItemModel.insertItem(index, pres.title,
                                         type, pres.filePath,
                                         "image", "",
-                                        "", "", 0, pres.pageCount, false);
+                                        "", "", 0, pres.pageCount, false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }
@@ -614,7 +614,7 @@ Item {
             ServiceItemModel.addItem(image.title,
                                      type, image.filePath,
                                      "image", "", "",
-                                     "", 0, 0, false);
+                                     "", 0, 0, false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }
@@ -624,7 +624,7 @@ Item {
             ServiceItemModel.addItem(video.title,
                                      type, video.filePath,
                                      "video", "", "",
-                                     "", 0, 0, video.loop);
+                                     "", 0, 0, video.loop, video.startTime, video.endTime);
             serviceItemList.forceLayout()
             return;
         }
@@ -638,7 +638,7 @@ Item {
                                      type, song.background,
                                      song.backgroundType, lyrics,
                                      song.audio, song.font, song.fontSize,
-                                     lyrics.length, true);
+                                     lyrics.length, true, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }
@@ -651,7 +651,7 @@ Item {
                                      type, pres.filePath,
                                      "image", "",
                                      "", "", 0, pres.pageCount,
-                                     false);
+                                     false, 0.0, 0.0);
             serviceItemList.forceLayout()
             return;
         }

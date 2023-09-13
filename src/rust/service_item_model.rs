@@ -487,9 +487,9 @@ mod service_item_model {
         }
         #[qinvokable]
         pub fn save(mut self: Pin<&mut Self>, file: QUrl) -> bool {
-            println!("file is: {file}");
-            let lfr = fs::File::open(
-                file.to_local_file().unwrap_or_default().to_string(),
+            println!("rust-save-file: {file}");
+            let lfr = fs::File::create(
+                &file.to_local_file().unwrap_or_default().to_string(),
             );
             if let Ok(lf) = &lfr {
                 println!("archive: {:?}", lf);
@@ -502,8 +502,36 @@ mod service_item_model {
                     let text_list = QList_QString::from(&item.text);
                     let mut text_vec = Vec::<String>::default();
 
-                    let flat_background = item.background.to_string();
-                    let flat_audio = item.audio.to_string();
+                    let flat_background_path =
+                        PathBuf::from(item.background.to_string());
+                    let flat_background_name =
+                        flat_background_path.file_name();
+                    let flat_background;
+                    match flat_background_name {
+                        Some(name) => {
+                            flat_background = name.to_str().unwrap()
+                        }
+                        _ => {
+                            println!(
+                                "save-background: no background"
+                            );
+                            flat_background = "";
+                        }
+                    }
+
+                    let flat_audio_path =
+                        PathBuf::from(item.audio.to_string());
+                    let flat_audio_name = flat_audio_path.file_name();
+                    let flat_audio;
+                    match flat_audio_name {
+                        Some(name) => {
+                            flat_audio = name.to_str().unwrap()
+                        }
+                        _ => {
+                            println!("save-audio: no audio");
+                            flat_audio = "";
+                        }
+                    }
 
                     for (index, line) in text_list.iter().enumerate()
                     {
@@ -522,9 +550,11 @@ mod service_item_model {
                         "loop".to_owned(): Value::from(item.looping),
                         "slideNumber".to_owned(): Value::from(item.slide_count),
                         "text".to_owned(): Value::from(text_vec)});
+                    println!("{service_json}");
                 }
                 true
             } else {
+                println!("rust-save-file-failed: {:?}", lfr);
                 false
             }
         }
