@@ -172,6 +172,8 @@ mod service_item_model {
                     .remove(index as usize);
                 self.as_mut().end_remove_rows();
             }
+            let item = self.as_mut().get_item(index);
+            self.as_mut().emit_item_removed(&index, &item);
         }
 
         #[qinvokable]
