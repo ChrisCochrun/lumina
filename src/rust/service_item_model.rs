@@ -285,7 +285,7 @@ mod service_item_model {
                 self.as_mut().end_insert_rows();
             }
             let item = self.as_mut().get_item(id);
-            self.as_mut().emit_item_removed(&index, &item);
+            self.as_mut().emit_item_removed(&id, &item);
         }
 
         #[qinvokable]
