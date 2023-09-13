@@ -687,8 +687,12 @@ mod service_item_model {
                         .as_i64()
                         .unwrap()
                         as i32;
-                    let looping =
-                        obj.get("loop").unwrap().as_bool().unwrap();
+                    let looping;
+                    if let Some(lp) = obj.get("loop") {
+                        looping = lp.as_bool().unwrap();
+                    } else {
+                        looping = false;
+                    }
                     let slide_count =
                         obj.get("slideNumber")
                             .unwrap()
