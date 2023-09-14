@@ -508,10 +508,19 @@ mod service_item_model {
                         .collect();
                 s.insert_str(0, "temp_");
                 temp_dir.push(s);
-                fs::create_dir_all(&temp_dir);
+                match fs::create_dir_all(&temp_dir) {
+                    Ok(f) => {
+                        println!("created_temp_dir: {:?}", &temp_dir)
+                    }
+                    Err(e) => println!("{e}"),
+                }
                 let mut temp_service_file = temp_dir.clone();
                 temp_service_file.push("serviceitems.json");
-                fs::File::create(&temp_service_file);
+                match fs::File::create(&temp_service_file) {
+                    Ok(f) => println!("created: {:?}", f),
+                    Err(e) => println!("{e}"),
+                }
+                let mut service_json: Vec<Value> = vec![];
 
                 for item in items {
                     let text_list = QList_QString::from(&item.text);
@@ -536,13 +545,16 @@ mod service_item_model {
                     let mut temp_bg_path = temp_dir.clone();
                     temp_bg_path.push(flat_background);
                     match fs::copy(&background_path, temp_bg_path) {
-                        Ok(s) => println!("Background file copied"),
-                        _ => println!("Failed"),
+                        Ok(s) => println!(
+                            "background-copied: of size: {:?}",
+                            s
+                        ),
+                        Err(e) => println!("{e}"),
                     }
 
-                    let flat_audio_path =
+                    let audio_path =
                         PathBuf::from(item.audio.to_string());
-                    let flat_audio_name = flat_audio_path.file_name();
+                    let flat_audio_name = audio_path.file_name();
                     let flat_audio;
                     match flat_audio_name {
                         Some(name) => {
@@ -553,13 +565,21 @@ mod service_item_model {
                             flat_audio = "";
                         }
                     }
+                    let mut temp_aud_path = temp_dir.clone();
+                    temp_aud_path.push(flat_audio);
+                    match fs::copy(&audio_path, temp_aud_path) {
+                        Ok(s) => {
+                            println!("audio-copied: of size: {:?}", s)
+                        }
+                        Err(e) => println!("{e}"),
+                    }
 
                     for (index, line) in text_list.iter().enumerate()
                     {
                         text_vec.insert(index, line.to_string())
                     }
 
-                    let service_json = json!({"name".to_owned(): Value::from(item.name.to_string()),
+                    let item_json = json!({"name".to_owned(): Value::from(item.name.to_string()),
                         "type".to_owned(): Value::from(item.ty.to_string()),
                         "audio".to_owned(): Value::from(item.audio.to_string()),
                         "background".to_owned(): Value::from(item.background.to_string()),
@@ -571,8 +591,13 @@ mod service_item_model {
                         "loop".to_owned(): Value::from(item.looping),
                         "slideNumber".to_owned(): Value::from(item.slide_count),
                         "text".to_owned(): Value::from(text_vec)});
-                    println!("{service_json}");
+                    println!("item-json: {item_json}");
+                    service_json.push(item_json);
                 }
+                let mut writer =
+                    io::BufWriter::new(temp_service_file);
+                serde_json::to_writer(writer, &service_json);
+
                 true
             } else {
                 println!("rust-save-file-failed: {:?}", lfr);
