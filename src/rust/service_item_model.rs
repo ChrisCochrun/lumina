@@ -138,6 +138,7 @@ mod service_item_model {
     use dirs;
     use serde_json::{json, Deserializer, Map, Serializer, Value};
     use std::io::{self, Read, Write};
+    use std::iter;
     use std::path::{Path, PathBuf};
     use std::str;
     use std::{fs, println};
@@ -500,7 +501,17 @@ mod service_item_model {
                 let encoder = Encoder::new(lf, 22).unwrap();
                 let mut tar = Builder::new(encoder);
                 let items = self.service_items();
-                let mut service_json = Value::default();
+                let mut temp_dir = dirs::data_dir().unwrap();
+                let mut s: String =
+                    iter::repeat_with(fastrand::alphanumeric)
+                        .take(5)
+                        .collect();
+                s.insert_str(0, "temp_");
+                temp_dir.push(s);
+                fs::create_dir_all(&temp_dir);
+                let mut temp_service_file = temp_dir.clone();
+                temp_service_file.push("serviceitems.json");
+                fs::File::create(&temp_service_file);
 
                 for item in items {
                     let text_list = QList_QString::from(&item.text);
