@@ -517,10 +517,10 @@ mod service_item_model {
                     let text_list = QList_QString::from(&item.text);
                     let mut text_vec = Vec::<String>::default();
 
-                    let flat_background_path =
+                    let background_path =
                         PathBuf::from(item.background.to_string());
                     let flat_background_name =
-                        flat_background_path.file_name();
+                        &background_path.file_name();
                     let flat_background;
                     match flat_background_name {
                         Some(name) => {
@@ -532,6 +532,12 @@ mod service_item_model {
                             );
                             flat_background = "";
                         }
+                    }
+                    let mut temp_bg_path = temp_dir.clone();
+                    temp_bg_path.push(flat_background);
+                    match fs::copy(&background_path, temp_bg_path) {
+                        Ok(s) => println!("Background file copied"),
+                        _ => println!("Failed"),
                     }
 
                     let flat_audio_path =
