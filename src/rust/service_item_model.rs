@@ -502,6 +502,7 @@ mod service_item_model {
                 let mut tar = Builder::new(encoder);
                 let items = self.service_items();
                 let mut temp_dir = dirs::data_dir().unwrap();
+                temp_dir.push("lumina");
                 let mut s: String =
                     iter::repeat_with(fastrand::alphanumeric)
                         .take(5)
@@ -512,28 +513,32 @@ mod service_item_model {
                     Ok(f) => {
                         println!("created_temp_dir: {:?}", &temp_dir)
                     }
-                    Err(e) => println!("{e}"),
+                    Err(e) => println!("temp-dir-error: {e}"),
                 }
                 let mut temp_service_file = temp_dir.clone();
                 temp_service_file.push("serviceitems.json");
-                match fs::File::create(&temp_service_file) {
-                    Ok(f) => println!("created: {:?}", f),
-                    Err(e) => println!("{e}"),
-                }
                 let mut service_json: Vec<Value> = vec![];
 
                 for item in items {
                     let text_list = QList_QString::from(&item.text);
                     let mut text_vec = Vec::<String>::default();
 
-                    let background_path =
-                        PathBuf::from(item.background.to_string());
+                    let background_path = PathBuf::from(
+                        item.background.to_string().split_off(7),
+                    );
+                    println!("bg_path: {:?}", background_path);
                     let flat_background_name =
                         &background_path.file_name();
                     let flat_background;
                     match flat_background_name {
                         Some(name) => {
-                            flat_background = name.to_str().unwrap()
+                            println!("bg: {:?}", &name);
+                            if name.to_str().unwrap() != "temp" {
+                                flat_background =
+                                    name.to_str().unwrap()
+                            } else {
+                                flat_background = "";
+                            }
                         }
                         _ => {
                             println!(
@@ -544,21 +549,28 @@ mod service_item_model {
                     }
                     let mut temp_bg_path = temp_dir.clone();
                     temp_bg_path.push(flat_background);
-                    match fs::copy(&background_path, temp_bg_path) {
+                    match fs::copy(&background_path, &temp_bg_path) {
                         Ok(s) => println!(
                             "background-copied: of size: {:?}",
                             s
                         ),
-                        Err(e) => println!("{e}"),
+                        Err(e) => println!("bg-copy-error: {e}"),
                     }
 
-                    let audio_path =
-                        PathBuf::from(item.audio.to_string());
+                    let audio_path = PathBuf::from(
+                        item.audio.to_string().split_off(7),
+                    );
+                    println!("audio_path: {:?}", audio_path);
                     let flat_audio_name = audio_path.file_name();
                     let flat_audio;
                     match flat_audio_name {
                         Some(name) => {
-                            flat_audio = name.to_str().unwrap()
+                            println!("audio: {:?}", &name);
+                            if name.to_str().unwrap() != "temp" {
+                                flat_audio = name.to_str().unwrap()
+                            } else {
+                                flat_audio = "";
+                            }
                         }
                         _ => {
                             println!("save-audio: no audio");
@@ -571,7 +583,7 @@ mod service_item_model {
                         Ok(s) => {
                             println!("audio-copied: of size: {:?}", s)
                         }
-                        Err(e) => println!("{e}"),
+                        Err(e) => println!("audio-copy-error: {e}"),
                     }
 
                     for (index, line) in text_list.iter().enumerate()
@@ -594,11 +606,40 @@ mod service_item_model {
                     println!("item-json: {item_json}");
                     service_json.push(item_json);
                 }
-                let mut writer =
-                    io::BufWriter::new(temp_service_file);
-                serde_json::to_writer(writer, &service_json);
-
-                true
+                println!("{:?}", &temp_service_file);
+                match fs::File::create(&temp_service_file) {
+                    Ok(o) => println!("created: {:?}", o),
+                    Err(e) => println!(
+                        "error-creating-service-file: {:?}",
+                        e
+                    ),
+                }
+                match fs::File::options()
+                    .write(true)
+                    .read(true)
+                    .open(&temp_service_file)
+                {
+                    Ok(service_file) => match serde_json::to_writer(
+                        service_file,
+                        &service_json,
+                    ) {
+                        Ok(e) => {
+                            println!("json: file written");
+                            true
+                        }
+                        Err(e) => {
+                            println!("json: error: {:?}", e);
+                            false
+                        }
+                    },
+                    Err(e) => {
+                        println!(
+                            "json: service_file isn't open: {:?}",
+                            e
+                        );
+                        false
+                    }
+                }
             } else {
                 println!("rust-save-file-failed: {:?}", lfr);
                 false
