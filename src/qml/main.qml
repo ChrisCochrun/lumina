@@ -152,7 +152,7 @@ Kirigami.ApplicationWindow {
                 Labs.MenuItem {
                     text: qsTr("Save As...")
                     shortcut: "Ctrl+Shift+S"
-                    onTriggered: saveAs()
+                    onTriggered: saveFileDialog.open()
                 }
                 Labs.MenuSeparator { }
                 Labs.MenuItem {

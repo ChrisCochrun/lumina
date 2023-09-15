@@ -498,7 +498,7 @@ mod service_item_model {
             );
             if let Ok(lf) = &lfr {
                 println!("archive: {:?}", lf);
-                let encoder = Encoder::new(lf, 22).unwrap();
+                let encoder = Encoder::new(lf, 3).unwrap();
                 let mut tar = Builder::new(encoder);
                 let items = self.service_items();
                 let mut temp_dir = dirs::data_dir().unwrap();
@@ -619,19 +619,45 @@ mod service_item_model {
                     .read(true)
                     .open(&temp_service_file)
                 {
-                    Ok(service_file) => match serde_json::to_writer(
-                        service_file,
-                        &service_json,
-                    ) {
-                        Ok(e) => {
-                            println!("json: file written");
-                            true
+                    Ok(service_file) => {
+                        match serde_json::to_writer(
+                            service_file,
+                            &service_json,
+                        ) {
+                            Ok(e) => {
+                                println!("json: file written");
+                                match tar
+                                    .append_dir_all("./", &temp_dir)
+                                {
+                                    Ok(i) => {
+                                        println!("idk");
+
+                                        match tar.finish() {
+                                            Ok(i) => {
+                                                println!("tar-written: {:?}", &lf);
+                                                true
+                                            }
+                                            Err(e) => {
+                                                println!(
+                                                    "tar-error: {:?}",
+                                                    e
+                                                );
+                                                false
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!("err: {:?}", e);
+                                        false
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("json: error: {:?}", e);
+                                false
+                            }
                         }
-                        Err(e) => {
-                            println!("json: error: {:?}", e);
-                            false
-                        }
-                    },
+                    }
                     Err(e) => {
                         println!(
                             "json: service_file isn't open: {:?}",
