@@ -115,7 +115,7 @@ Kirigami.ApplicationWindow {
             Controls.Label {
                 Layout.alignment: Qt.AlignRight
                 Layout.rightMargin: Kirigami.Units.smallSpacing * 2
-                text: "Total Service Items: " + ServiceItemModel.rowCount()
+                text: "Total Service Items: " + ServiceItemModel.count()
             }
             Controls.Label {
                 Layout.alignment: Qt.AlignRight

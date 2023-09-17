@@ -382,10 +382,10 @@ Item {
                 contextType: "2d"
                 renderStrategy: Canvas.Threaded
                 onPaint: {
-                    console.log(Kirigami.Theme.hoverColor.name());
+                    console.log(Kirigami.Theme.hoverColor);
                     var ctx = getContext("2d");
                     ctx.fillRule = Qt.OddEvenFill
-                    ctx.fillStyle = Kirigami.Theme.hoverColor.rgb();
+                    ctx.fillStyle = Kirigami.Theme.hoverColor;
                     ctx.rotate(30);
                     ctx.transform(0.8, 0, 0, 0.8, 0, 30)
                     ctx.path = tearDropPath;
@@ -452,7 +452,7 @@ Item {
             id: serviceToolBar
             Layout.fillWidth: true
             opacity: 1.0
-            display: Button.IconOnly
+            display: Controls.Button.IconOnly
             actions: [
                 Kirigami.Action {
                     text: "Up"
