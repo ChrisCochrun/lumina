@@ -76,7 +76,7 @@ Start with select, deselect, select_items, and deactivate. Then either move onto
 - [ ] Select Items
 - [ ] Deactivate
 - [X] Load
-- [ ] Save
+- [X] Save
 *** TODO Deployment
 - [ ] Linux
   Need to figure out if I can use Nix to deploy in various fashions. Maybe I'll need to handcraft my own things for Arch, flatpak, and or snap.
