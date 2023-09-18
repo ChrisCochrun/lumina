@@ -324,7 +324,7 @@ mod service_item_model {
         ) -> bool {
             let model_index =
                 self.index(source_index, 0, &QModelIndex::default());
-            let parent = model_index.parent();
+            // let parent = model_index.parent();
             let source_id = source_index as usize;
             let dest_id = dest_index as usize;
             let count = count as usize;
@@ -566,8 +566,12 @@ mod service_item_model {
                     let text_list = QList_QString::from(&item.text);
                     let mut text_vec = Vec::<String>::default();
 
+                    let bg_string_path = item.background.to_string();
                     let background_path = PathBuf::from(
-                        item.background.to_string().split_off(7),
+                        bg_string_path
+                            .to_string()
+                            .strip_prefix("file://")
+                            .unwrap_or(""),
                     );
                     println!("bg_path: {:?}", background_path);
                     let flat_background_name =
@@ -600,8 +604,11 @@ mod service_item_model {
                         Err(e) => println!("bg-copy-error: {e}"),
                     }
 
+                    let audio_path_str = item.audio.to_string();
                     let audio_path = PathBuf::from(
-                        item.audio.to_string().split_off(7),
+                        audio_path_str
+                            .strip_prefix("file://")
+                            .unwrap_or(""),
                     );
                     println!("audio_path: {:?}", audio_path);
                     let flat_audio_name = audio_path.file_name();
