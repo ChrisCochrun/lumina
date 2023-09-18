@@ -66,6 +66,7 @@ public:
   Q_INVOKABLE void removeItem(int index);
   Q_INVOKABLE void removeItems();
   Q_INVOKABLE bool moveRows(int sourceIndex, int destIndex, int count);
+  Q_INVOKABLE bool moveRowsRust(int source, int dest, int count, ServiceItemMod *rustModel);
   Q_INVOKABLE bool moveDown(int index);
   Q_INVOKABLE bool moveUp(int index);
   Q_INVOKABLE bool select(int id);

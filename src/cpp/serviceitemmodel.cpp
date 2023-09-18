@@ -394,6 +394,21 @@ bool ServiceItemModel::moveUp(int id) {
   return false;
 }
 
+bool ServiceItemModel::moveRowsRust(int source, int dest, int count, ServiceItemMod *rustModel) {
+  const QModelIndex parent = index(source).parent();
+  const bool isMoveDown = dest > source;
+
+  if (!beginMoveRows(parent, source, source + count - 1,
+                     parent, dest)) {
+    qDebug() << "Can't move rows";
+    return false;
+  }
+    
+  const bool moved = rustModel->moveRows(source, dest, count);
+  endMoveRows();
+  return moved;
+}
+
 QVariantMap ServiceItemModel::getRust(int index, ServiceItemMod *rustModel) const {
   QVariantMap item = rustModel->getItem(index);
   return item;
