@@ -38,6 +38,7 @@ fastrand = "2.0.0"
 # and compiles it together with the Rust static library
 [build-dependencies]
 cxx-qt-build = "0.5.3"
+qt-build-utils = "0.5.3"
 
 # [dependencies.confy]
 # features = ["yaml_conf"]
