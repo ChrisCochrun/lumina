@@ -238,7 +238,7 @@ FocusScope {
                     width: Kirigami.Units.gridUnit * 10
                     height: Kirigami.Units.gridUnit / 4
                     y: Kirigami.Units.gridUnit * 7.35
-                    x: previewSlidesList.currentItem.x
+                    x: 0
                     radius: 5
                     color: Kirigami.Theme.negativeTextColor
 
