@@ -3,7 +3,12 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [65%] [40/61]
+* Tasks [0%] [0/0]
+** TODO Adding move rows to service list
+[[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
+Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
+
+All that said, the real solution is to figure out how to get beginMoveRows to compile for rust, until then, implementing some wrapper functions and using beginResetModel instead will work for move_up and move_down.
 ** TODO Consider converting diesel to raw sqlx instead
 From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries
 ** TODO Figure out qml hot reload
