@@ -4,6 +4,10 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Delete temp folder
+[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
+** TODO Update the last save file
+[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
 ** TODO Adding move rows to service list
 [[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
 Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
