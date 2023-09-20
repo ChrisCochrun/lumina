@@ -13,7 +13,8 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
     data_dir.push("librepresenter");
     data_dir.push("thumbnails");
     if !data_dir.exists() {
-        fs::create_dir(&data_dir).expect("Could not create thumbnails dir");
+        fs::create_dir(&data_dir)
+            .expect("Could not create thumbnails dir");
     }
     let mut screenshot = data_dir.clone();
     screenshot.push(video.file_name().unwrap());
@@ -46,8 +47,10 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
                 }
             }
             let hours: i32 = hours.parse().unwrap_or_default();
-            let mut minutes: i32 = minutes.parse().unwrap_or_default();
-            let mut seconds: i32 = seconds.parse().unwrap_or_default();
+            let mut minutes: i32 =
+                minutes.parse().unwrap_or_default();
+            let mut seconds: i32 =
+                seconds.parse().unwrap_or_default();
             minutes += hours * 60;
             seconds += minutes * 60;
             at_second = seconds / 5;

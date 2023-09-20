@@ -1,3 +1,5 @@
+// The purpose of this file is to provide validation
+// of whether or not a file exists
 #[cxx_qt::bridge]
 mod file_helper {
     use cxx_qt_lib::QVariantValue;
@@ -55,7 +57,8 @@ mod file_helper {
             let _file_string = file_string.strip_prefix("file://");
             match _file_string {
                 None => {
-                    let _exists = Path::new(&file.to_string()).exists();
+                    let _exists =
+                        Path::new(&file.to_string()).exists();
                     println!("{file} exists? {_exists}");
                     _exists
                 }

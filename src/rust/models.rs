@@ -1,8 +1,11 @@
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{
+    embed_migrations, EmbeddedMigrations, MigrationHarness,
+};
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/rust/migrations");
+pub const MIGRATIONS: EmbeddedMigrations =
+    embed_migrations!("src/rust/migrations");
 
 pub fn run_migrations(conn: &mut SqliteConnection) -> bool {
     conn.run_pending_migrations(MIGRATIONS).unwrap();

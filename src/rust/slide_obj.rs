@@ -8,7 +8,8 @@ mod slide_obj {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
         include!("cxx-qt-lib/qmap.h");
-        type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
+        type QMap_QString_QVariant =
+            cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
     }
@@ -87,7 +88,11 @@ mod slide_obj {
 
     impl qobject::SlideObj {
         #[qinvokable]
-        pub fn change_slide(mut self: Pin<&mut Self>, item: QMap_QString_QVariant, index: i32) {
+        pub fn change_slide(
+            mut self: Pin<&mut Self>,
+            item: QMap_QString_QVariant,
+            index: i32,
+        ) {
             println!("## Slide Details ##");
             let text = item
                 .get(&QString::from("text"))
@@ -126,10 +131,15 @@ mod slide_obj {
             let image_background = item
                 .get(&QString::from("imageBackground"))
                 .unwrap_or(QVariant::from(&QString::from("")));
-            if let Some(image_background) = image_background.value::<QString>() {
-                if &image_background != self.as_ref().image_background() {
+            if let Some(image_background) =
+                image_background.value::<QString>()
+            {
+                if &image_background
+                    != self.as_ref().image_background()
+                {
                     println!("image-bg: {image_background}");
-                    self.as_mut().set_image_background(image_background);
+                    self.as_mut()
+                        .set_image_background(image_background);
                 }
             } else {
                 println!("image-bg: empty");
@@ -137,17 +147,22 @@ mod slide_obj {
             let video_background = item
                 .get(&QString::from("videoBackground"))
                 .unwrap_or(QVariant::from(&QString::from("")));
-            if let Some(video_background) = video_background.value::<QString>() {
-                if &video_background != self.as_ref().video_background() {
+            if let Some(video_background) =
+                video_background.value::<QString>()
+            {
+                if &video_background
+                    != self.as_ref().video_background()
+                {
                     println!("video-bg: {video_background}");
-                    self.as_mut().set_video_background(video_background);
+                    self.as_mut()
+                        .set_video_background(video_background);
                 }
             } else {
                 println!("video-bg: empty");
             }
-            let font = item
-                .get(&QString::from("font"))
-                .unwrap_or(QVariant::from(&QString::from("Quicksand")));
+            let font = item.get(&QString::from("font")).unwrap_or(
+                QVariant::from(&QString::from("Quicksand")),
+            );
             if let Some(font) = font.value::<QString>() {
                 if &font != self.as_ref().font() {
                     println!("font: {font}");
@@ -159,10 +174,16 @@ mod slide_obj {
             let vtext_alignment = item
                 .get(&QString::from("verticalTextAlignment"))
                 .unwrap_or(QVariant::from(&QString::from("center")));
-            if let Some(vtext_alignment) = vtext_alignment.value::<QString>() {
-                if &vtext_alignment != self.as_ref().vtext_alignment() {
-                    println!("vertical-text-align: {vtext_alignment}");
-                    self.as_mut().set_vtext_alignment(vtext_alignment);
+            if let Some(vtext_alignment) =
+                vtext_alignment.value::<QString>()
+            {
+                if &vtext_alignment != self.as_ref().vtext_alignment()
+                {
+                    println!(
+                        "vertical-text-align: {vtext_alignment}"
+                    );
+                    self.as_mut()
+                        .set_vtext_alignment(vtext_alignment);
                 }
             } else {
                 println!("vertical-text-align: empty");
@@ -170,10 +191,16 @@ mod slide_obj {
             let htext_alignment = item
                 .get(&QString::from("horizontalTextAlignment"))
                 .unwrap_or(QVariant::from(&QString::from("center")));
-            if let Some(htext_alignment) = htext_alignment.value::<QString>() {
-                if &htext_alignment != self.as_ref().htext_alignment() {
-                    println!("horizontal-text-align: {htext_alignment}");
-                    self.as_mut().set_htext_alignment(htext_alignment);
+            if let Some(htext_alignment) =
+                htext_alignment.value::<QString>()
+            {
+                if &htext_alignment != self.as_ref().htext_alignment()
+                {
+                    println!(
+                        "horizontal-text-align: {htext_alignment}"
+                    );
+                    self.as_mut()
+                        .set_htext_alignment(htext_alignment);
                 }
             } else {
                 println!("horizontal-text-align: empty");
@@ -197,7 +224,8 @@ mod slide_obj {
                     println!("looping: {looping}");
                     self.as_mut().set_looping(looping);
                     let lp = looping;
-                    self.as_mut().emit(Signals::LoopChanged { looping: &lp });
+                    self.as_mut()
+                        .emit(Signals::LoopChanged { looping: &lp });
                 }
             } else {
                 println!("looping: empty")
@@ -230,18 +258,25 @@ mod slide_obj {
                 println!("New slide index = {}", int);
                 self.as_mut().set_slide_index(int);
             };
-            self.as_mut().emit(Signals::SlideChanged { slide: &index });
+            self.as_mut()
+                .emit(Signals::SlideChanged { slide: &index });
             println!("## Slide End ##");
         }
 
         #[qinvokable]
-        pub fn next(mut self: Pin<&mut Self>, next_item: QMap_QString_QVariant) -> bool {
+        pub fn next(
+            mut self: Pin<&mut Self>,
+            next_item: QMap_QString_QVariant,
+        ) -> bool {
             let new_id = self.as_ref().slide_index() + 1;
             self.as_mut().change_slide(next_item, new_id);
             true
         }
         #[qinvokable]
-        pub fn previous(mut self: Pin<&mut Self>, prev_item: QMap_QString_QVariant) -> bool {
+        pub fn previous(
+            mut self: Pin<&mut Self>,
+            prev_item: QMap_QString_QVariant,
+        ) -> bool {
             let new_id = self.as_ref().slide_index() - 1;
             self.as_mut().change_slide(prev_item, new_id);
             true
