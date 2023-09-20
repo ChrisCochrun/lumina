@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Mikhail Zolotukhin <mail@gikari.com>
+# SPDX-FileCopyrightText: Chris Cochrun <chris@cochrun.xyz>
 # SPDX-License-Identifier: MIT
 
 MAKEFLAGS += --always-make
