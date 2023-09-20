@@ -3,7 +3,13 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [65%] [42/64]
+* Tasks [0%] [0/0]
+** TODO Need to use a better logging systems so things stop getting confusingly lost
+[[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
+** TODO Need to work on all warnings and errors to cleanup logs
+[[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
+** TODO Seems that updating songs aren't reflected well
+[[file:~/dev/lumina/src/rust/song_model.rs::updated_background.to_string();]]
 ** DONE Delete temp folder
 [[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
 ** DONE Update the last save file
