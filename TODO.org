@@ -3,10 +3,10 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [64%] [41/64]
+* Tasks [65%] [42/64]
 ** DONE Delete temp folder
 [[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
-** TODO Update the last save file
+** DONE Update the last save file
 [[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
 ** TODO Adding move rows to service list
 [[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
