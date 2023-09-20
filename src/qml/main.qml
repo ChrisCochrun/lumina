@@ -222,7 +222,6 @@ Kirigami.ApplicationWindow {
         title: "Pick a Sound Effect"
         folder: shortcuts.home
         /* fileMode: FileDialog.SaveFile */
-        /* defaultSuffix: ".pres" */
         selectExisting: true
         onAccepted: {
             soundEffect = loadFileDialog.fileUrl;
@@ -253,6 +252,8 @@ Kirigami.ApplicationWindow {
 
     function save(file) {
         const saved = mainPage.serviceItems.save(file);
+        saved ? RSettings.setSaveFile(file)
+            : console.log("File: " + file + " wasn't saved");
         saved ? showPassiveNotification("SAVED! " + file)
             : showPassiveNotification("FAILED!");
     }
