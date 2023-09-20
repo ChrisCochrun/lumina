@@ -685,6 +685,9 @@ mod service_item_model {
                                         match tar.finish() {
                                             Ok(i) => {
                                                 println!("tar-written: {:?}", &lf);
+                                                fs::remove_dir_all(
+                                                    &temp_dir,
+                                                );
                                                 true
                                             }
                                             Err(e) => {
@@ -692,18 +695,23 @@ mod service_item_model {
                                                     "tar-error: {:?}",
                                                     e
                                                 );
+                                                fs::remove_dir_all(
+                                                    &temp_dir,
+                                                );
                                                 false
                                             }
                                         }
                                     }
                                     Err(e) => {
                                         println!("err: {:?}", e);
+                                        fs::remove_dir_all(&temp_dir);
                                         false
                                     }
                                 }
                             }
                             Err(e) => {
                                 println!("json: error: {:?}", e);
+                                fs::remove_dir_all(&temp_dir);
                                 false
                             }
                         }
@@ -713,6 +721,7 @@ mod service_item_model {
                             "json: service_file isn't open: {:?}",
                             e
                         );
+                        fs::remove_dir_all(&temp_dir);
                         false
                     }
                 }
@@ -733,6 +742,7 @@ mod service_item_model {
             datadir.push("lumina");
             datadir.push("temp");
             println!("datadir: {:?}", datadir);
+            fs::remove_dir_all(&datadir);
             fs::create_dir_all(&datadir);
 
             if let Ok(lf) = &lfr {
@@ -753,7 +763,7 @@ mod service_item_model {
                 }
 
                 let mut service_path = datadir.clone();
-                service_path.push("servicelist.json");
+                service_path.push("serviceitems.json");
                 // let mut service_list =
                 //     fs::File::open(service_path).unwrap();
 
@@ -780,6 +790,7 @@ mod service_item_model {
                     let audio_string =
                         obj.get("audio").unwrap().as_str().unwrap();
                     let mut audio;
+                    println!("audio_on_disk: {audio_string}");
 
                     if !Path::new(&audio_string).exists() {
                         println!("#$#$#$#$#$#");
@@ -790,15 +801,27 @@ mod service_item_model {
                             .unwrap()
                             .as_str()
                             .unwrap();
-                        println!("before_audio_str: {:?}", string);
-                        let mut audio_path = datadir.clone();
-                        audio_path.push(string);
-                        // Needed to ensure QML images and mpv will find the audio
-                        let mut final_string =
-                            audio_path.to_str().unwrap().to_owned();
-                        final_string.insert_str(0, "file://");
-                        audio = QString::from(&final_string);
-                        println!("after_audio_str: {:?}", string);
+                        if !string.is_empty() {
+                            println!(
+                                "before_audio_str: {:?}",
+                                string
+                            );
+                            let mut audio_path = datadir.clone();
+                            audio_path.push(string);
+                            // Needed to ensure QML images and mpv will find the audio
+                            let mut final_string = audio_path
+                                .to_str()
+                                .unwrap()
+                                .to_owned();
+                            final_string.insert_str(0, "file://");
+                            audio = QString::from(&final_string);
+                            println!(
+                                "after_audio_str: {:?}",
+                                final_string
+                            );
+                        } else {
+                            audio = QString::default();
+                        }
                     } else {
                         audio = QString::from(audio_string);
                     }
@@ -809,10 +832,13 @@ mod service_item_model {
                         .as_str()
                         .unwrap();
                     let mut background;
+                    println!("background_on_disk: {bgstr}");
+                    let bgpath =
+                        bgstr.strip_prefix("file://").unwrap_or("");
 
                     // lets test to see if the background exists on disk.
                     // if not we can use the flat version
-                    if !Path::new(&bgstr).exists() {
+                    if !Path::new(&bgpath).exists() {
                         println!("#$#$#$#$#$#");
                         println!("The background doesn't exist");
                         println!("#$#$#$#$#$#");
@@ -821,15 +847,22 @@ mod service_item_model {
                             .unwrap()
                             .as_str()
                             .unwrap();
-                        println!("before_bgstr: {:?}", string);
-                        let mut bgpath = datadir.clone();
-                        bgpath.push(string);
-                        // Needed to ensure QML images and mpv will find the background
-                        let mut final_string =
-                            bgpath.to_str().unwrap().to_owned();
-                        final_string.insert_str(0, "file://");
-                        background = QString::from(&final_string);
-                        println!("after_bgstr: {:?}", string);
+                        if !string.is_empty() {
+                            println!("before_bgstr: {:?}", string);
+                            let mut bgpath = datadir.clone();
+                            bgpath.push(string);
+                            // Needed to ensure QML images and mpv will find the background
+                            let mut final_string =
+                                bgpath.to_str().unwrap().to_owned();
+                            final_string.insert_str(0, "file://");
+                            background = QString::from(&final_string);
+                            println!(
+                                "after_bgstr: {:?}",
+                                final_string
+                            );
+                        } else {
+                            background = QString::default();
+                        }
                     } else {
                         background = QString::from(bgstr);
                     }
