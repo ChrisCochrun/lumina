@@ -56,7 +56,7 @@ mkShell rec {
     rust-analyzer
     corrosion
   ];
-  
+
   # cargoDeps = rustPlatform.importCargoLock {
   #   lockFile = ./Cargo.lock;
   # };
@@ -66,6 +66,8 @@ mkShell rec {
   CMAKE_C_COMPILER = "${gcc}/bin/gcc";
   CMAKE_CXX_COMPILER = "${gcc}/bin/g++";
   # QT_SCALE_FACTOR = 1;
+  # QT_PLUGIN_PATH="${QT_PLUGIN_PATH/':''/nix/store/85jx8w2nh1ln4kb0hf3dc6ky0dh6ri24-lightly-qt-0.4.1/lib/qt-5.15.9/plugins'':'/':'}"
+    # QML2_IMPORT_PATH=${QML2_IMPORT_PATH/':''/run/current-system/sw/lib/qt-5.15.10/qml'':'/':'}
 
   # This creates the proper qt env so that plugins are found right.
   shellHook = ''
@@ -74,5 +76,6 @@ mkShell rec {
     makeQtWrapper "/bin/sh" "$setQtEnvironment" "''${qtWrapperArgs[@]}"
     sed "/^exec/d" -i "$setQtEnvironment"
     source "$setQtEnvironment"
+    export QT_PLUGIN_PATH="$QT_PLUGIN_PATH:/nix/store/85jx8w2nh1ln4kb0hf3dc6ky0dh6ri24-lightly-qt-0.4.1/lib/qt-5.15.9/plugins"
   '';
 }

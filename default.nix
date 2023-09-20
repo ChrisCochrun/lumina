@@ -35,8 +35,8 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "libre-presenter";
-  pname = "libre-presenter";
+  name = "lumina";
+  pname = "lumina";
   version = "0.0.1";
 
   __noChroot = true;
@@ -109,7 +109,7 @@ stdenv.mkDerivation rec {
   '';
 
   meta = with lib; {
-    name = "Libre Presenter";
+    name = "Lumina";
     description = "A church presentation software made with QT/QML";
     homepage = "";
     license = licenses.gpl3;
