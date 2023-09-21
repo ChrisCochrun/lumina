@@ -44,7 +44,10 @@ Kirigami.ApplicationWindow {
                 text: qsTr("Save")
                 onTriggered: saveFileDialog.open()
             }
-            Controls.MenuItem { text: qsTr("Save As...") }
+            Controls.MenuItem {
+                text: qsTr("Save As...")
+                onTriggered: save()
+            }
             Controls.MenuSeparator { }
             Controls.MenuItem { text: qsTr("Quit") }
         }
@@ -147,12 +150,12 @@ Kirigami.ApplicationWindow {
                 Labs.MenuItem {
                     text: qsTr("Save")
                     shortcut: "Ctrl+S"
-                    onTriggered: saveFileDialog.open()
+                    onTriggered: fileHelper.saveFile()
                 }
                 Labs.MenuItem {
                     text: qsTr("Save As...")
                     shortcut: "Ctrl+Shift+S"
-                    onTriggered: saveFileDialog.open()
+                    onTriggered: fileHelper.saveFile()
                 }
                 Labs.MenuSeparator { }
                 Labs.MenuItem {
@@ -250,7 +253,8 @@ Kirigami.ApplicationWindow {
         settingsSheet.open()
     }
 
-    function save(file) {
+    function save() {
+        const file = fileHelper.saveFile();
         const saved = mainPage.serviceItems.save(file);
         saved ? RSettings.setSaveFile(file)
             : console.log("File: " + file + " wasn't saved");
