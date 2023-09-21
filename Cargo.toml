@@ -31,6 +31,7 @@ tar = "0.4.40"
 zstd = "0.12.4"
 serde_json = "1.0.104"
 fastrand = "2.0.0"
+rfd = { version = "0.12.0", features = ["xdg-portal", "glib-sys", "gobject-sys", "gtk-sys"], default-features = false }
 # sqlx = { version = "0.6.3", features = ["sqlite", "runtime-async-std"] }
 # ffmpeg-next = "6.0.0"
 
