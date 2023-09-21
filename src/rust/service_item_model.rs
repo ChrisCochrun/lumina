@@ -114,6 +114,7 @@ mod service_item_model {
             // index: &'a i32,
             item: &'a QMap_QString_QVariant,
         },
+        Cleared {},
     }
 
     enum Role {
@@ -147,11 +148,13 @@ mod service_item_model {
     impl qobject::ServiceItemMod {
         #[qinvokable]
         pub fn clear(mut self: Pin<&mut Self>) {
+            println!("CLEARING ALL ITEMS");
             unsafe {
                 self.as_mut().begin_reset_model();
                 self.as_mut().service_items_mut().clear();
                 self.as_mut().end_reset_model();
             }
+            self.emit(Signals::Cleared {});
         }
 
         #[qinvokable]
@@ -734,6 +737,7 @@ mod service_item_model {
 
         #[qinvokable]
         pub fn load(mut self: Pin<&mut Self>, file: QUrl) -> bool {
+            self.as_mut().clear();
             println!("file is: {file}");
             let lfr = fs::File::open(
                 file.to_local_file().unwrap_or_default().to_string(),

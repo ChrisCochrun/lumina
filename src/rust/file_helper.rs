@@ -91,5 +91,25 @@ mod file_helper {
                 QUrl::default()
             }
         }
+
+        #[qinvokable]
+        pub fn load_file(self: Pin<&mut Self>) -> QUrl {
+            let file = FileDialog::new()
+                .set_title("Load Presentation")
+                .pick_file();
+            if let Some(file) = file {
+                println!("loading-file: {:?}", file);
+                let mut string =
+                    String::from(file.to_str().unwrap_or(""));
+                if string.is_empty() {
+                    QUrl::default()
+                } else {
+                    string.insert_str(0, "file://");
+                    QUrl::from(string.as_str())
+                }
+            } else {
+                QUrl::default()
+            }
+        }
     }
 }

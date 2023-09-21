@@ -186,6 +186,10 @@ int main(int argc, char *argv[])
                    &ServiceItemMod::itemRemoved,
                    slideMod.get(),
                    &SlideyMod::removeItemFromService);
+  QObject::connect(serviceItemModel.get(),
+                   &ServiceItemMod::cleared,
+                   slideMod.get(),
+                   &SlideyMod::clear);
   // QObject::connect(serviceItemModel.get(),
   //                  SIGNAL(allRemoved()),
   //                  slideMod.get(),

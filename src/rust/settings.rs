@@ -24,6 +24,8 @@ mod settings {
         sound_effect: QString,
         #[qproperty]
         last_save_file: QUrl,
+        #[qproperty]
+        loaded_file: QUrl,
     }
 
     impl Default for Settings {
@@ -33,6 +35,7 @@ mod settings {
                 screen: QString::from(""),
                 sound_effect: QString::from(""),
                 last_save_file: QUrl::from(""),
+                loaded_file: QUrl::from(""),
             }
         }
     }
@@ -62,7 +65,10 @@ mod settings {
                             .get("General", "lastSaveFile");
                         println!("{:?}", sf);
                         if let Some(s) = sf {
-                            self.set_last_save_file(QUrl::from(&s));
+                            self.as_mut()
+                                .set_last_save_file(QUrl::from(&s));
+                            self.as_mut()
+                                .set_loaded_file(QUrl::from(&s));
                             println!("{s}");
                         } else {
                             println!("error loading last save file");

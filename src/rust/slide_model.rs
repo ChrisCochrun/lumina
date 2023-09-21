@@ -146,6 +146,7 @@ mod slide_model {
 
         #[qinvokable]
         pub fn clear(mut self: Pin<&mut Self>) {
+            println!("CLEARING ALL SLIDES");
             unsafe {
                 self.as_mut().begin_reset_model();
                 self.as_mut().slides_mut().clear();

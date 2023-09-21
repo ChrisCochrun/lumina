@@ -39,14 +39,17 @@ Kirigami.ApplicationWindow {
         Controls.Menu {
             title: qsTr("File")
             Controls.MenuItem { text: qsTr("New...") }
-            Controls.MenuItem { text: qsTr("Open...") }
+            Controls.MenuItem {
+                text: qsTr("Open...")
+                onTriggered: load()
+            }
             Controls.MenuItem {
                 text: qsTr("Save")
-                onTriggered: saveFileDialog.open()
+                onTriggered: save()
             }
             Controls.MenuItem {
                 text: qsTr("Save As...")
-                onTriggered: save()
+                onTriggered: saveAs()
             }
             Controls.MenuSeparator { }
             Controls.MenuItem { text: qsTr("Quit") }
@@ -130,7 +133,7 @@ Kirigami.ApplicationWindow {
 
     Loader {
         id: menuLoader
-        active: Kirigami.Settings.hasPlatformMenuBar
+        active: true
         sourceComponent: globalMenuComponent
         onLoaded: console.log("Loaded global menu")
     }
@@ -145,17 +148,17 @@ Kirigami.ApplicationWindow {
                 Labs.MenuItem {
                     text: qsTr("Open...")
                     shortcut: "Ctrl+O"
-                    onTriggered: loadFileDialog.open()
+                    onTriggered: load()
                 }
                 Labs.MenuItem {
                     text: qsTr("Save")
                     shortcut: "Ctrl+S"
-                    onTriggered: fileHelper.saveFile()
+                    onTriggered: save()
                 }
                 Labs.MenuItem {
                     text: qsTr("Save As...")
                     shortcut: "Ctrl+Shift+S"
-                    onTriggered: fileHelper.saveFile()
+                    onTriggered: saveAs()
                 }
                 Labs.MenuSeparator { }
                 Labs.MenuItem {
@@ -254,6 +257,7 @@ Kirigami.ApplicationWindow {
     }
 
     function save() {
+        const saveFile = RSettings.lastSaveFile;
         const file = fileHelper.saveFile();
         const saved = mainPage.serviceItems.save(file);
         saved ? RSettings.setSaveFile(file)
@@ -263,15 +267,22 @@ Kirigami.ApplicationWindow {
     }
 
     function saveAs() {
-        
+        const file = fileHelper.saveFile();
+        const saved = mainPage.serviceItems.save(file);
+        saved ? RSettings.setSaveFile(file)
+            : console.log("File: " + file + " wasn't saved");
+        saved ? showPassiveNotification("SAVED! " + file)
+            : showPassiveNotification("FAILED!");
     }
 
-    function load(file) {
+    function load() {
+        const file = fileHelper.loadFile();
         const loaded = mainPage.serviceItems.load(file);
         loaded ? showPassiveNotification("Loaded: " + file)
             : showPassiveNotification("FAILED!");
-        /* console.log("Number of items: " + loaded.length); */
-        /* console.log(loaded[0].audio); */
+        loaded ? RSettings.loadFile = file
+            : showPassiveNotification("Didn't set loadfile!");
+        showPassiveNotification(RSettings.loadFile);
     }
 
     Component.onCompleted: {
