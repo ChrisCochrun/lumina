@@ -536,9 +536,10 @@ mod service_item_model {
         #[qinvokable]
         pub fn save(mut self: Pin<&mut Self>, file: QUrl) -> bool {
             println!("rust-save-file: {file}");
-            let lfr = fs::File::create(
-                &file.to_local_file().unwrap_or_default().to_string(),
-            );
+            let path =
+                file.to_local_file().unwrap_or_default().to_string();
+            println!("path: {:?}", path);
+            let lfr = fs::File::create(&path);
             if let Ok(lf) = &lfr {
                 println!("archive: {:?}", lf);
                 let encoder = Encoder::new(lf, 3).unwrap();

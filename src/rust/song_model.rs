@@ -6,7 +6,6 @@ mod song_model {
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
     use std::collections::HashMap;
-    use std::path::{Path, PathBuf};
 
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
