@@ -3,6 +3,7 @@
 #[cxx_qt::bridge]
 mod file_helper {
     use cxx_qt_lib::QVariantValue;
+    use rfd::FileDialog;
     use std::path::Path;
 
     unsafe extern "C++" {
@@ -67,6 +68,27 @@ mod file_helper {
                     println!("{file} exists? {exists}");
                     exists
                 }
+            }
+        }
+
+        #[qinvokable]
+        pub fn save_file(self: Pin<&mut Self>) -> QUrl {
+            let file = FileDialog::new()
+                .set_file_name("NVTFC.pres")
+                .set_title("Save Presentation")
+                .save_file();
+            if let Some(file) = file {
+                println!("saving-file: {:?}", file);
+                let mut string =
+                    String::from(file.to_str().unwrap_or(""));
+                if string.is_empty() {
+                    QUrl::default()
+                } else {
+                    string.insert_str(0, "file://");
+                    QUrl::from(string.as_str())
+                }
+            } else {
+                QUrl::default()
             }
         }
     }
