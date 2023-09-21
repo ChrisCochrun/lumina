@@ -4,6 +4,16 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Rename SlideEditor.qml to SongEditorSlideList.qml
+[[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Item {]]
+** TODO Build a slide_editor.rs
+[[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Presenter.Slide {]]
+
+This file can house all the logic for the editor and propogate the changes to the Slide.qml better. This way it can talk more directly to the song_model if done properly.
+
+This could also help to separate more concerns in Rust and allow me to fix some small problems from the complications of Rust to C++ to QML. Maybe I can setup the changes to certain data pieces more cleanly this way.
+
+Need to experiment with it more.
 ** TODO Need to use a better logging systems so things stop getting confusingly lost
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
 ** TODO Need to work on all warnings and errors to cleanup logs
