@@ -54,18 +54,18 @@ mod file_helper {
         #[qinvokable]
         pub fn validate(self: Pin<&mut Self>, file: QUrl) -> bool {
             let file_string = file.to_string();
-            let _file_string = file_string.strip_prefix("file://");
-            match _file_string {
-                None => {
-                    let _exists =
-                        Path::new(&file.to_string()).exists();
-                    println!("{file} exists? {_exists}");
-                    _exists
-                }
+            let file_string = file_string.strip_prefix("file://");
+            match file_string {
                 Some(file) => {
-                    let _exists = Path::new(&file).exists();
-                    println!("{file} exists? {_exists}");
-                    _exists
+                    let exists = Path::new(&file).exists();
+                    println!("{file} exists? {exists}");
+                    exists
+                }
+                None => {
+                    let exists =
+                        Path::new(&file.to_string()).exists();
+                    println!("{file} exists? {exists}");
+                    exists
                 }
             }
         }
