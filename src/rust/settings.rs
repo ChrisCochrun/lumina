@@ -12,6 +12,8 @@ mod settings {
         type QUrl = cxx_qt_lib::QUrl;
     }
 
+    // In order for settings to save to the ini file,
+    // I'll need to create my own setting functions I think.
     #[derive(Clone)]
     #[cxx_qt::qobject]
     pub struct Settings {
