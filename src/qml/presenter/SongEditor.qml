@@ -335,8 +335,8 @@ Item {
                 Controls.SplitView.preferredWidth: 700
                 Controls.SplitView.minimumWidth: 300
 
-                Presenter.SlideEditor {
-                    id: slideEditor
+                Presenter.SongEditorSlideList {
+                    id: songList
                     imageBackground: song.backgroundType === "image" ? song.background : ""
                     videoBackground: song.backgroundType === "video" ? song.background : ""
                     Layout.preferredWidth: 500
@@ -420,7 +420,7 @@ Item {
         changeSlideFont("Noto Sans", true);
         changeSlideFontSize(50, true)
         changeSlideText(songProxyModel.modelIndex(index).row);
-        slideEditor.loadVideo();
+        songList.loadVideo();
         console.log("New song with ID: " + song.id);
     }
 
@@ -434,7 +434,7 @@ Item {
         changeSlideFont(song.font, true);
         changeSlideFontSize(song.fontSize, true)
         changeSlideText(songProxyModel.modelIndex(index).row);
-        slideEditor.loadVideo();
+        songList.loadVideo();
         console.log("Changing to song: " + song.title + " with ID: " + song.id);
     }
 
@@ -477,13 +477,13 @@ Item {
         console.log("changed background");
         /* if (backgroundType === "image") { */
         /*     //todo */
-        /*     slideEditor.videoBackground = ""; */
-        /*     slideEditor.imageBackground = background; */
+        /*     songList.videoBackground = ""; */
+        /*     songList.imageBackground = background; */
         /* } else { */
         /*     //todo */
-        /*     slideEditor.imageBackground = ""; */
-        /*     slideEditor.videoBackground = background; */
-        /*     slideEditor.loadVideo(); */
+        /*     songList.imageBackground = ""; */
+        /*     songList.videoBackground = background; */
+        /*     songList.loadVideo(); */
         /* } */
     }
 
@@ -514,19 +514,19 @@ Item {
         switch (alignment) {
         case "left" :
             hAlignmentBox.currentIndex = 0;
-            slideEditor.hTextAlignment = Text.AlignLeft;
+            songList.hTextAlignment = Text.AlignLeft;
             break;
         case "center" :
             hAlignmentBox.currentIndex = 1;
-            slideEditor.hTextAlignment = Text.AlignHCenter;
+            songList.hTextAlignment = Text.AlignHCenter;
             break;
         case "right" :
             hAlignmentBox.currentIndex = 2;
-            slideEditor.hTextAlignment = Text.AlignRight;
+            songList.hTextAlignment = Text.AlignRight;
             break;
         case "justify" :
             hAlignmentBox.currentIndex = 3;
-            slideEditor.hTextAlignment = Text.AlignJustify;
+            songList.hTextAlignment = Text.AlignJustify;
             break;
         }
     }
@@ -535,15 +535,15 @@ Item {
         switch (alignment) {
         case "top" :
             vAlignmentBox.currentIndex = 0;
-            slideEditor.vTextAlignment = Text.AlignTop;
+            songList.vTextAlignment = Text.AlignTop;
             break;
         case "center" :
             vAlignmentBox.currentIndex = 1;
-            slideEditor.vTextAlignment = Text.AlignVCenter;
+            songList.vTextAlignment = Text.AlignVCenter;
             break;
         case "bottom" :
             vAlignmentBox.currentIndex = 2;
-            slideEditor.vTextAlignment = Text.AlignBottom;
+            songList.vTextAlignment = Text.AlignBottom;
             break;
         }
     }
@@ -552,23 +552,23 @@ Item {
         const fontIndex = fontBox.find(font);
         if (updateBox)
             fontBox.currentIndex = fontIndex;
-        slideEditor.font = font;
+        songList.font = font;
     }
 
     function changeSlideFontSize(fontSize, updateBox) {
         if (updateBox)
             fontSizeBox.value = fontSize;
-        slideEditor.fontSize = fontSize;
+        songList.fontSize = fontSize;
     }
 
     function changeSlideText(id) {
         /* console.log("Here are the verses: " + verses); */
         const verses = songProxyModel.getLyricList(id);
-        verses.forEach(slideEditor.appendVerse);
-        /* slideEditor.loadVideo(); */
+        verses.forEach(songList.appendVerse);
+        /* songList.loadVideo(); */
     }
 
     function clearSlides() {
-        slideEditor.clear()
+        songList.clear()
     }
 }
