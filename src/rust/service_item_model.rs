@@ -138,6 +138,7 @@ mod service_item_model {
     // use image::{ImageBuffer, Rgba};
     use dirs;
     use serde_json::{json, Deserializer, Map, Serializer, Value};
+    use std::ffi::{OsStr, OsString};
     use std::io::{self, Read, Write};
     use std::iter;
     use std::path::{Path, PathBuf};
@@ -764,6 +765,33 @@ mod service_item_model {
                     println!("size: {:?}", file.size());
                     if !file_path.exists() {
                         file.unpack_in(&datadir);
+                    }
+                }
+
+                // older save files use servicelist.json instead of serviceitems.json
+                // Let's check to see if that's the case and change it's name in the
+                // temp dir.
+                for mut file in fs::read_dir(datadir.clone())
+                    .unwrap()
+                    .filter(|f| {
+                        f.as_ref()
+                            .map(|e| {
+                                String::from(
+                                    e.file_name().to_str().unwrap(),
+                                )
+                            })
+                            .unwrap_or(String::from(""))
+                            == "servicelist.json"
+                    })
+                {
+                    let mut service_path = datadir.clone();
+                    service_path.push("serviceitems.json");
+                    match fs::rename(
+                        file.unwrap().path(),
+                        service_path,
+                    ) {
+                        Ok(i) => println!("We did it captain"),
+                        Err(e) => println!("error: {:?}", e),
                     }
                 }
 
