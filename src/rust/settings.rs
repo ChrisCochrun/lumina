@@ -3,7 +3,6 @@ mod settings {
 
     use configparser::ini::Ini;
     use dirs;
-    use std::error::Error;
     use std::path::PathBuf;
 
     unsafe extern "C++" {

@@ -1,7 +1,6 @@
 #[cxx_qt::bridge]
 mod image_model {
     use crate::image_model::image_model::Image;
-    use crate::models::*;
     use crate::schema::images::dsl::*;
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};

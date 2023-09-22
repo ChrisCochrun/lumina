@@ -2,7 +2,6 @@
 // of whether or not a file exists
 #[cxx_qt::bridge]
 mod file_helper {
-    use cxx_qt_lib::QVariantValue;
     use rfd::FileDialog;
     use std::path::Path;
 
