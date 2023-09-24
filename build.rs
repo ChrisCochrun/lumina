@@ -11,7 +11,7 @@ fn main() {
         .file("src/rust/image_model.rs")
         .file("src/rust/video_model.rs")
         .file("src/rust/presentation_model.rs")
-        .file("src/rust/song_model.rs")
+        .file("src/rust/songs/song_model.rs")
         .file("src/rust/ytdl.rs")
         .build();
 }

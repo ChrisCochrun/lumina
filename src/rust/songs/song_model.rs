@@ -1,8 +1,8 @@
 #[cxx_qt::bridge]
-mod song_model {
+pub mod song_model {
     use crate::models::*;
     use crate::schema::songs::dsl::*;
-    use crate::song_model::song_model::Song;
+    use crate::songs::song_model::song_model::Song;
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
     use std::collections::HashMap;
