@@ -1,7 +1,14 @@
 mod db {
     use diesel::{Connection, SqliteConnection};
     use dirs::data_local_dir;
-    use sqlx::Connection;
+    use sqlx::{Error, SqliteConnection as SqlxConn};
+
+    pub enum Model {
+        Songs,
+        Presentations,
+        Videos,
+        Images,
+    }
 
     fn get_db() -> SqliteConnection {
         let mut data = data_local_dir().unwrap();
@@ -16,12 +23,18 @@ mod db {
         })
     }
 
-    async fn get_items(items: &str) -> String {
-        let conn = sqlx::SqliteConnection::connect(
-            "/home/chris/.local/share/lumina/library-db.sqlite3",
-        );
-        let select = sqlx::query_as("SELECT $1")
-            .bind(items)
-            .fetch_all(&mut conn).await?;
-    }
+    // async fn get_items(model: Model) -> Result<(), Error> {
+    //     let conn = SqlxConn::connect(
+    //         "/home/chris/.local/share/lumina/library-db.sqlite3",
+    //     );
+    //     match model {
+    //         Songs => {
+    //             let select = sqlx::query_as("SELECT $1")
+    //                 .bind("songs")
+    //                 .fetch_all(&mut conn).await?;
+    //         }
+    //     }
+
+    //     Ok(());
+    // }
 }
