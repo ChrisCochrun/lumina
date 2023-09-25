@@ -3,8 +3,8 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
-** TODO Rename SlideEditor.qml to SongEditorSlideList.qml
+* Tasks [62%] [43/69]
+** DONE Rename SlideEditor.qml to SongEditorSlideList.qml
 [[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Item {]]
 ** TODO Build a slide_editor.rs
 [[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Presenter.Slide {]]
