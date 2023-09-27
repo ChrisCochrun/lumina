@@ -245,7 +245,7 @@ Item {
                                     }
                                     else if ((mouse.button === Qt.LeftButton) &&
                                              (mouse.modifiers === Qt.ShiftModifier)) {
-                                        selectItems(index);
+                                        ServiceItemModel.selectItems(index);
                                     } else {
                                         serviceItemList.currentIndex = index;
                                         ServiceItemModel.select(index);
@@ -658,23 +658,5 @@ Item {
         default: return;
         }
         serviceItemList.forceLayout()
-    }
-
-    function selectItems(index) {
-        if (index === serviceItemList.currentIndex)
-            return;
-        var arr = [];
-        if (index > serviceItemList.currentIndex) {
-            for (let i = serviceItemList.currentIndex; i < index + 1; i++) {
-                arr.push(i);
-                console.log("Select all these here items..." + arr);
-            }
-        } else {
-            for (let i = serviceItemList.currentIndex; i > index - 1; i--) {
-                arr.push(i);
-                console.log("Select all these here items..." + arr);
-            }
-        }
-        ServiceItemModel.selectItems(index);
     }
 }
