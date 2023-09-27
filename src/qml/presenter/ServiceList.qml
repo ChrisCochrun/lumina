@@ -675,6 +675,6 @@ Item {
                 console.log("Select all these here items..." + arr);
             }
         }
-        ServiceItemModel.selectItems(arr);
+        ServiceItemModel.selectItems(index);
     }
 }

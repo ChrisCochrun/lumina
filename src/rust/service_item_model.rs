@@ -145,6 +145,7 @@ mod service_item_model {
     use std::str;
     use std::{fs, println};
     use tar::{Archive, Builder};
+    use tracing::{debug, debug_span, error, info, instrument};
     use zstd::{Decoder, Encoder};
     impl qobject::ServiceItemMod {
         #[qinvokable]
@@ -436,9 +437,45 @@ mod service_item_model {
         #[qinvokable]
         pub fn select_items(
             mut self: Pin<&mut Self>,
-            items: QMap_QString_QVariant,
+            final_index: i32,
         ) -> bool {
-            todo!();
+            if let Some((current_index, current_item)) = self
+                .as_ref()
+                .service_items()
+                .iter()
+                .filter(|i| i.selected)
+                .enumerate()
+                .next()
+            {
+                // Here we will need to branch to get the selected items
+                debug!(first_item = ?current_index);
+                debug!(final_item = final_index);
+                if final_index == current_index {
+                    false
+                }
+
+                let lower = final_index > current_index;
+                if lower {
+                    let selected = self
+                        .as_mut()
+                        .service_items_mut()
+                        .iter_mut()
+                        .enumerate()
+                        .filter(|i| {
+                            i.0 >= current_index
+                                && i.0 <= final_index as usize
+                        })
+                        .map(|i| i.1.selected = true);
+                }
+
+                true
+            } else {
+                // Here let's branch to select from the first item to the
+                // final item. Since we don't know which one is selected,
+                // assume that the first one is "selected"
+                error!("ERROR: couldn't find first selected item");
+                false
+            }
         }
 
         #[qinvokable]
