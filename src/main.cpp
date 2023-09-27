@@ -60,6 +60,7 @@
 #include "cxx-qt-gen/song_model.cxxqt.h"
 #include "cxx-qt-gen/video_model.cxxqt.h"
 #include "cxx-qt-gen/image_model.cxxqt.h"
+#include "cxx-qt-gen/utilities.cxxqt.h"
 // #include "cxx-qt-gen/image_model.cxxqt.h"
 
 static QWindow *windowFromEngine(QQmlApplicationEngine *engine)
@@ -145,6 +146,7 @@ int main(int argc, char *argv[])
   // setup of app specific commandline args
 
   //Need to instantiate our slide
+  QScopedPointer<Utils> utils(new Utils);
   QScopedPointer<SlideModel> slideModel(new SlideModel);
   QScopedPointer<SlideyMod> slideMod(new SlideyMod);
   QScopedPointer<File> filemanager(new File);
@@ -198,6 +200,8 @@ int main(int argc, char *argv[])
                    SIGNAL(slideChanged(int)),
                    slideMod.get(),
                    SLOT(activate(int)));
+
+  utils.get()->setup();
 
   if (!serviceItemModel.get()->load(settings->getLastSaveFile())) {
     qDebug() << "Last saved file is missing or there isn't a last saved file.";

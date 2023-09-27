@@ -13,5 +13,6 @@ fn main() {
         .file("src/rust/presentation_model.rs")
         .file("src/rust/songs/song_model.rs")
         .file("src/rust/ytdl.rs")
+        .file("src/rust/utils.rs")
         .build();
 }
