@@ -28,7 +28,7 @@ mod ytdl {
 
     impl qobject::Ytdl {
         #[qinvokable]
-        pub fn get_video(
+       pub fn get_video(
             mut self: Pin<&mut Self>,
             url: QUrl,
         ) -> bool {
@@ -46,7 +46,8 @@ mod ytdl {
                     println!("{:?}", data_dir);
                     self.as_mut().set_loading(true);
                     let thread = self.qt_thread();
-                    thread::spawn(move || {
+                    let runtime = tokio::runtime::Runtime::new().unwrap();
+                    runtime.spawn(async move {
                         let url = url.to_string();
                         let output_dirs = data_dir.to_str().unwrap();
                         println!("{output_dirs}");
@@ -93,5 +94,7 @@ mod ytdl {
                 }
             }
         }
+
+        async fn dl_video() {}
     }
 }
