@@ -79,6 +79,10 @@ Item {
                 presentationSlide.playVideo();
             pauseVideo();
         }
+        function onLoopingChanged() {
+            if(SlideObj.looping)
+                presentationSlide.loopVideo();
+        }
         function onAudioChanged() {
             if (presentationWindow.visible)
                 presentationSlide.playAudio();

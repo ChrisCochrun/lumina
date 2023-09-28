@@ -325,6 +325,10 @@ FocusScope {
             }
             playVideo();
         }
+        function onLoopingChanged() {
+            if(SlideObject.looping)
+                previewSlide.loopVideo();
+        }
         function onIsPlayingChanged() {
             if(SlideObject.isPlaying)
                 previewSlide.playVideo();
