@@ -859,8 +859,10 @@ pub mod song_model {
                     let mut verse_name = "";
                     debug!(verse = verse);
                     for word in keywords.clone() {
-                        let end_verse = verse.get(1..2).unwrap();
-                        let beg_verse = verse.get(0..1).unwrap();
+                        let end_verse =
+                            verse.get(1..2).unwrap_or_default();
+                        let beg_verse =
+                            verse.get(0..1).unwrap_or_default();
                         println!(
                             "verse: {:?}, beginning: {:?}, end: {:?}, word: {:?}",
                             verse, beg_verse, end_verse, word

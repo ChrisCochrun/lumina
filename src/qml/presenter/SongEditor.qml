@@ -208,6 +208,23 @@ Item {
                     text: song.vorder
                     padding: 10
                     onEditingFinished: updateVerseOrder(text);
+                    background: Rectangle {
+                        color: songVorderField.enabled ? Kirigami.Theme.backgroundColor :
+                            song.vorder.trim().length === 0 ?
+                            Kirigami.Theme.negativeBackgroundColor :
+                            Kirigami.Theme.backgroundColor
+                        implicitWidth: parent.width
+                        implicitHeight: parent.height
+                        radius: 10
+                        border.color: {
+                            if (song.vorder.trim().length === 0)
+                                return Kirigami.Theme.negativeTextColor
+                            else if (songVorderField.enabled)
+                                return Kirigami.Theme.highlightColor
+                            else
+                                return Kirigami.Theme.positiveColor
+                        }
+                    }
                 }
 
                 Controls.Label {
@@ -251,6 +268,18 @@ Item {
                             editorTimer.running = false;
                         }
                         onPressed: editorTimer.running = true
+                        background: Rectangle {
+                            color: Kirigami.Theme.backgroundColor
+                            implicitWidth: parent.width
+                            implicitHeight: parent.height
+                            radius: 10
+                            border.color: {
+                                if (songVorderField.enabled)
+                                    return Kirigami.Theme.highlightColor
+                                else
+                                    return Kirigami.Theme.positiveColor
+                            }
+                        }
                     }
                 }
 
@@ -325,7 +354,7 @@ Item {
                         Layout.fillHeight: true
                         text: "Audio"
                         icon.name: "folder-music-symbolic"
-                        onClicked: audioFileDialog.open()
+                        onClicked: updateAudioFile()
                     }
                 }
             }
@@ -465,7 +494,8 @@ Item {
         songProxyModel.songModel.updateVerseOrder(songIndex, vorder)
     }
 
-    function updateAudioFile(file) {
+    function updateAudioFile() {
+        const file = fileHelper.loadFile("Pick Audio");
         songProxyModel.songModel.updateAudio(songIndex, file);
     }
 

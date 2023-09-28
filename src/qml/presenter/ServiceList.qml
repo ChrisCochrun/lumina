@@ -263,7 +263,7 @@ Item {
                                 }
                             }
 
-                            Kirigami.ListItemDragHandle {
+                            Presenter.DragHandle {
                                 id: dragHandle
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter

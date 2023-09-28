@@ -276,7 +276,7 @@ Kirigami.ApplicationWindow {
     }
 
     function load() {
-        const file = fileHelper.loadFile();
+        const file = fileHelper.loadFile("Load Presentation");
         const loaded = mainPage.serviceItems.load(file);
         loaded ? showPassiveNotification("Loaded: " + file)
             : showPassiveNotification("FAILED!");

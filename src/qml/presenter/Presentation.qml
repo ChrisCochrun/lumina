@@ -107,6 +107,7 @@ FocusScope {
                     implicitHeight: Kirigami.Units.gridUnit * 10
                     anchors.right: previewSlide.left
                     anchors.verticalCenter: parent.verticalCenter
+                    color: "white"
                     MouseArea {
                         anchors.fill: parent
                         onPressed: previousSlideAction()
@@ -141,6 +142,7 @@ FocusScope {
                     implicitHeight: Kirigami.Units.gridUnit * 10
                     anchors.left: previewSlide.right
                     anchors.verticalCenter: parent.verticalCenter
+                    color: "white"
                     MouseArea {
                         anchors.fill: parent
                         onPressed: nextSlideAction()

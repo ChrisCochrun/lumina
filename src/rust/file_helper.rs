@@ -92,10 +92,12 @@ mod file_helper {
         }
 
         #[qinvokable]
-        pub fn load_file(self: Pin<&mut Self>) -> QUrl {
-            let file = FileDialog::new()
-                .set_title("Load Presentation")
-                .pick_file();
+        pub fn load_file(
+            self: Pin<&mut Self>,
+            title: QString,
+        ) -> QUrl {
+            let title = title.to_string();
+            let file = FileDialog::new().set_title(title).pick_file();
             if let Some(file) = file {
                 println!("loading-file: {:?}", file);
                 let mut string =
