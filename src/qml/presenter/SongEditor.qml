@@ -120,7 +120,7 @@ Item {
                             Layout.fillHeight: true
                             text: "Image"
                             icon.name: "folder-pictures-symbolic"
-                            onClicked: imageFileDialog.open() & backgroundTypePopup.close()
+                            onClicked: updateBackground("image") & backgroundTypePopup.close()
                         }
                     }
                 }
@@ -499,10 +499,11 @@ Item {
         songProxyModel.songModel.updateAudio(songIndex, file);
     }
 
-    function updateBackground(background, backgroundType) {
+    function updateBackground(backgroundType) {
         song.backgroundType = backgroundType;
-        song.background = background;
-        songProxyModel.songModel.updateBackground(songIndex, background);
+        const file = fileHelper.loadFile("Pick Background");
+        song.background = file;
+        songProxyModel.songModel.updateBackground(songIndex, file);
         songProxyModel.songModel.updateBackgroundType(songIndex, backgroundType);
         console.log("changed background");
         /* if (backgroundType === "image") { */

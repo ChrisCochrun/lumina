@@ -535,7 +535,11 @@ pub mod song_model {
                     {
                         song.background =
                             updated_background.to_string();
-                        println!("change: updated_background: {:?} model_index: {:?} roles: {:?}", updated_background, model_index, vector_roles.get(0));
+                        debug!(
+                            background = updated_background,
+                            model_index = model_index,
+                            roles = vector_roles.get(0)
+                        );
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
