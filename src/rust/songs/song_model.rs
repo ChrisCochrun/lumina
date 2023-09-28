@@ -6,6 +6,7 @@ pub mod song_model {
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
     use std::collections::HashMap;
+    use tracing::{debug, debug_span, error, info, instrument};
 
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
@@ -856,6 +857,7 @@ pub mod song_model {
 
                 for mut verse in vorder {
                     let mut verse_name = "";
+                    debug!(verse = verse);
                     for word in keywords.clone() {
                         let end_verse = verse.get(1..2).unwrap();
                         let beg_verse = verse.get(0..1).unwrap();
