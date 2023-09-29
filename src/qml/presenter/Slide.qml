@@ -181,6 +181,14 @@ Item {
                 if (loadRequest.status == 2)
                     showPassiveNotification("yahoo?");
             }
+
+            /* function moveToSlideIndex(index) { */
+            /*     web.runJavaScript(" */
+            /*     const index */
+            /*     for (let i = 0; i < index; i++) { */
+            /*         Reveal.next(); */
+            /*     }") */
+            /* } */
         }
     }
 

@@ -409,26 +409,26 @@ Item {
         }
     }
 
-    function addHtml(url) {
-        console.log("adding an html");
-        var pageCount = 1;
-        web.runJavaScript("Reveal.getSlides()", function(result) {
-            let str = '';
-            for (const [p, val] of Object.entries(result[0])) {
-                str += `${p}::${val}\n`;
-            }
-            console.log(str);
-            pageCount = result.length;
-            console.log(pageCount);
-            presProxyModel.presentationModel.newItem(url, pageCount);
-            selectedLibrary = "presentation";
-            presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count();
-            console.log(presProxyModel.getPresentation(presentationLibrary.libraryList.currentIndex));
-            const presentation = presProxyModel.getPresentation(presentationLibrary.libraryList.currentIndex);
-            showPassiveNotification("newest image: " + presentation.title);
-            if (!editMode)
-                editMode = true;
-            editSwitch("presentation", presentation);
-        });
-    }
+    /* function addHtml(url) { */
+    /*     console.log("adding an html"); */
+    /*     var pageCount = 1; */
+    /*     web.runJavaScript("Reveal.getSlides()", function(result) { */
+    /*         let str = ''; */
+    /*         for (const [p, val] of Object.entries(result[0])) { */
+    /*             str += `${p}::${val}\n`; */
+    /*         } */
+    /*         console.log(str); */
+    /*         pageCount = result.length; */
+    /*         console.log(pageCount); */
+    /*         presProxyModel.presentationModel.newItem(url, pageCount); */
+    /*         selectedLibrary = "presentation"; */
+    /*         presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count(); */
+    /*         console.log(presProxyModel.getPresentation(presentationLibrary.libraryList.currentIndex)); */
+    /*         const presentation = presProxyModel.getPresentation(presentationLibrary.libraryList.currentIndex); */
+    /*         showPassiveNotification("newest image: " + presentation.title); */
+    /*         if (!editMode) */
+    /*             editMode = true; */
+    /*         editSwitch("presentation", presentation); */
+    /*     }); */
+    /* } */
 }
