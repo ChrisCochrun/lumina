@@ -191,7 +191,7 @@ mod presentation_model {
                 file_path.file_stem().unwrap().to_str().unwrap();
             let presentation_id = self.rust().highest_id + 1;
             let presentation_title = QString::from(name);
-            let presentation_path = url.to_qstring();
+            let presentation_path = url;
             let presentation_html =
                 file_path.extension().unwrap() == "html";
             debug!(html = presentation_html, ?file_path, extension = ?file_path.extension());
@@ -215,7 +215,7 @@ mod presentation_model {
             mut self: Pin<&mut Self>,
             presentation_id: i32,
             presentation_title: QString,
-            presentation_path: QString,
+            presentation_path: QUrl,
             presentation_html: bool,
             new_page_count: i32,
         ) -> bool {
@@ -224,11 +224,11 @@ mod presentation_model {
             let mut actual_page_count = new_page_count;
             if presentation_html {
                 let actual_path = PathBuf::from(
-                    presentation_path.clone().to_string(),
+                    presentation_path.path().to_string(),
                 );
                 actual_page_count =
                     reveal_js::count_slides_and_fragments(
-                        &actual_path,
+                        actual_path,
                     );
             }
             debug!(

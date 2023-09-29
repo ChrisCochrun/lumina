@@ -1,5 +1,6 @@
 #[cxx_qt::bridge]
 mod slide_model {
+    use tracing::{debug, debug_span, error, info, instrument};
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -262,10 +263,11 @@ mod slide_model {
             service_item: &QMap_QString_QVariant,
         ) {
             for (key, data) in service_item.iter() {
-                println!(
-                    "{:?}: {:?}",
-                    key,
-                    data.value_or_default::<QString>()
+                debug!(
+                    ?key,
+                    data = data
+                        .value_or_default::<QString>()
+                        .to_string()
                 );
             }
             let ty = service_item
@@ -349,7 +351,7 @@ mod slide_model {
                 .value()
                 .unwrap_or(0);
             slide.slide_count = service_item
-                .get(&QString::from("slideNumber"))
+                .get(&QString::from("slideCount"))
                 .unwrap_or(QVariant::from(&1))
                 .value()
                 .unwrap_or(1);

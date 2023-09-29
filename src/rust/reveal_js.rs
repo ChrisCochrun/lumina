@@ -1,9 +1,9 @@
 // use dirs;
-use std::{fs::read_to_string, path::Path};
+use std::{fs::read_to_string, path::PathBuf};
 use tracing::{debug, debug_span, error, info, instrument};
 
-pub fn count_slides_and_fragments(html_file_path: Path) -> i32 {
-    debug!("Starting slide counter");
+pub fn count_slides_and_fragments(html_file_path: PathBuf) -> i32 {
+    debug!(path = ?html_file_path, "Starting slide counter");
     // Read the HTML file
     let html_content = read_to_string(html_file_path)
         .expect("Failed to read HTML file");
