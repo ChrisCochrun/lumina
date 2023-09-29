@@ -8,6 +8,7 @@ mod presentation_model {
     use diesel::{delete, insert_into, prelude::*, update};
     // use sqlx::Connection;
     use std::path::{Path, PathBuf};
+    use tracing::{debug, debug_span, error, info, instrument};
 
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
@@ -191,9 +192,9 @@ mod presentation_model {
             let presentation_id = self.rust().highest_id + 1;
             let presentation_title = QString::from(name);
             let presentation_path = url.to_qstring();
-            println!("{:?}", file_path.extension().unwrap());
-            let presentation_html = file_path.extension().unwrap()
-                == std::ffi::OsStr::new(".html");
+            let presentation_html =
+                file_path.extension().unwrap() == "html";
+            debug!(html = presentation_html, ?file_path, extension = ?file_path.extension());
 
             if self.as_mut().add_item(
                 presentation_id,
@@ -222,13 +223,18 @@ mod presentation_model {
             // println!("{:?}", db);
             let mut actual_page_count = new_page_count;
             if presentation_html {
-                let actual_path =
-                    presentation_path.clone().to_string();
+                let actual_path = PathBuf::from(
+                    presentation_path.clone().to_string(),
+                );
                 actual_page_count =
                     reveal_js::count_slides_and_fragments(
-                        actual_path.trim(),
+                        &actual_path,
                     );
             }
+            debug!(
+                page_count = actual_page_count,
+                html = presentation_html
+            );
 
             let presentation = self::Presentation {
                 id: presentation_id,

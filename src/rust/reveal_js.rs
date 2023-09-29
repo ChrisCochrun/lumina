@@ -1,7 +1,9 @@
 // use dirs;
-use std::fs::read_to_string;
+use std::{fs::read_to_string, path::Path};
+use tracing::{debug, debug_span, error, info, instrument};
 
-pub fn count_slides_and_fragments(html_file_path: &str) -> i32 {
+pub fn count_slides_and_fragments(html_file_path: Path) -> i32 {
+    debug!("Starting slide counter");
     // Read the HTML file
     let html_content = read_to_string(html_file_path)
         .expect("Failed to read HTML file");
@@ -21,9 +23,10 @@ pub fn count_slides_and_fragments(html_file_path: &str) -> i32 {
     }
 
     let total = num_slides + num_fragments;
-    println!(
-        "SLIDE_NUMBERS: slides: {:?}, fragments: {:?}, total: {:?}",
-        num_slides, num_fragments, total
+    debug!(
+        slides = num_slides,
+        fragments = num_fragments,
+        total = total
     );
 
     total as i32
