@@ -24,6 +24,7 @@
         <file>qml/presenter/Settings.qml</file>
         <file>qml/presenter/RangedSlider.qml</file>
         <file>qml/presenter/NewVideo.qml</file>
+        <file>qml/presenter/TextBackground.qml</file>
         <file>assets/parallel.jpg</file>
         <file>assets/black.jpg</file>
     </qresource>
