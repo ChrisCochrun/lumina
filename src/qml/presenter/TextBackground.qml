@@ -1,32 +1,31 @@
 import QtQuick 2.13
 import QtGraphicalEffects 1.15
+import org.kde.kirigami 2.13 as Kirigami
 
-Rectangle {
+Item {
     id: root
-    // Used for 
     property var control
-    property bool errorCondition
+    property bool errorCondition: false
+    implicitWidth: control.width
+    implicitHeight: control.height
 
-    color: Kirigami.Theme.backgroundColor
-    implicitWidth: parent.width
-    implicitHeight: parent.height
-    radius: 10
-    border.color: {
-        if (control.enabled)
-            return Kirigami.Theme.highlightColor
-        else if (errorCondition)
-            return Kirigami.Theme.negativeTextColor
-        else
-            return Kirigami.Theme.positiveColor
+    Rectangle {
+        id: rect
+        color: Kirigami.Theme.backgroundColor
+        anchors.fill: parent
+        radius: 10
+        border.color: control.activeFocus ? Kirigami.Theme.highlightColor : (errorCondition ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.backgroundColor)
     }
 
     DropShadow {
         id: shadow
-        source: root
-        horizontalOffset: 2
-        verticalOffset: 2
+        width: control.hovered || control.activeFocus ? parent.width : 0
+        height: control.hovered || control.activeFocus ? parent.height : 0
+        source: rect
+        horizontalOffset: control.hovered || control.activeFocus ? 2 : 0
+        verticalOffset: control.hovered || control.activeFocus ? 2 : 0
         radius: 3
-        samples: 8
-        color: "black"
+        samples: 16
+        color: "#AA000000"
     }
 }

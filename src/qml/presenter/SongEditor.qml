@@ -34,14 +34,21 @@ Item {
                     hoverEnabled: true
                     /* flat: true */
                     onActivated: updateFont(currentText)
+                    background: Presenter.TextBackground {
+                        control: fontBox
+                    }
                 }
                 Controls.SpinBox {
                     id: fontSizeBox
                     editable: true
                     from: 5
                     to: 150
+                    height: parent.height
                     hoverEnabled: true
                     onValueModified: updateFontSize(value)
+                    background: Presenter.TextBackground {
+                        control: fontSizeBox
+                    }
                 }
                 Controls.ComboBox {
                     id: hAlignmentBox
@@ -50,6 +57,9 @@ Item {
                     hoverEnabled: true
                     /* flat: true */
                     onActivated: updateHorizontalTextAlignment(currentText.toLowerCase());
+                    background: Presenter.TextBackground {
+                        control: hAlignmentBox
+                    }
                 }
                 Controls.ComboBox {
                     id: vAlignmentBox
@@ -58,6 +68,9 @@ Item {
                     hoverEnabled: true
                     /* flat: true */
                     onActivated: updateVerticalTextAlignment(currentText.toLowerCase());
+                    background: Presenter.TextBackground {
+                        control: vAlignmentBox
+                    }
                 }
                 Controls.ToolButton {
                     text: "B"
@@ -176,6 +189,10 @@ Item {
                     text: song.title
                     padding: 10
                     onEditingFinished: updateTitle(text);
+                    background: Presenter.TextBackground {
+                        control: songTitleField
+                        errorCondition: song.title.length === 0
+                    }
                 }
 
                 Controls.Label {
@@ -208,22 +225,9 @@ Item {
                     text: song.vorder
                     padding: 10
                     onEditingFinished: updateVerseOrder(text);
-                    background: Rectangle {
-                        color: songVorderField.enabled ? Kirigami.Theme.backgroundColor :
-                            song.vorder.trim().length === 0 ?
-                            Kirigami.Theme.negativeBackgroundColor :
-                            Kirigami.Theme.backgroundColor
-                        implicitWidth: parent.width
-                        implicitHeight: parent.height
-                        radius: 10
-                        border.color: {
-                            if (song.vorder.trim().length === 0)
-                                return Kirigami.Theme.negativeTextColor
-                            else if (songVorderField.enabled)
-                                return Kirigami.Theme.highlightColor
-                            else
-                                return Kirigami.Theme.positiveColor
-                        }
+                    background: Presenter.TextBackground {
+                        control: songVorderField
+                        errorCondition: song.vorder.length === 0
                     }
                 }
 
@@ -268,17 +272,8 @@ Item {
                             editorTimer.running = false;
                         }
                         onPressed: editorTimer.running = true
-                        background: Rectangle {
-                            color: Kirigami.Theme.backgroundColor
-                            implicitWidth: parent.width
-                            implicitHeight: parent.height
-                            radius: 10
-                            border.color: {
-                                if (songVorderField.enabled)
-                                    return Kirigami.Theme.highlightColor
-                                else
-                                    return Kirigami.Theme.positiveColor
-                            }
+                        background: Presenter.TextBackground {
+                            control: lyricsEditor
                         }
                     }
                 }
@@ -313,6 +308,9 @@ Item {
                     text: song.author
                     padding: 10
                     onEditingFinished: updateAuthor(text)
+                    background: Presenter.TextBackground {
+                        control: songAuthorField
+                    }
                 }
 
                 Controls.Label {
@@ -346,7 +344,9 @@ Item {
                         text: song.audio
                         padding: 10
                         onEditingFinished: showPassiveNotification(text)
-
+                        background: Presenter.TextBackground {
+                            control: songAudioField
+                        }
                     }
 
                     Controls.ToolButton {
@@ -355,6 +355,9 @@ Item {
                         text: "Audio"
                         icon.name: "folder-music-symbolic"
                         onClicked: updateAudioFile()
+                        /* background: Presenter.TextBackground { */
+                        /*     control: audioPickerButton */
+                        /* } */
                     }
                 }
             }

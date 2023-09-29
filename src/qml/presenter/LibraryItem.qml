@@ -135,6 +135,7 @@ ColumnLayout {
             width: parent.width
             display: Controls.Button.IconOnly
             visible: selectedLibrary == libraryType
+            rightPadding: 5
             actions: [
                 Kirigami.Action {
                     icon.name: "document-new"
@@ -150,6 +151,9 @@ ColumnLayout {
                         height: parent.height
                         width: parent.width - 40
                         onAccepted: proxyModel.setFilterRegularExpression(searchField.text)
+                        background: Presenter.TextBackground {
+                            control: searchField
+                        }
                     }
                 }
             ]

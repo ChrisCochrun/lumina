@@ -4,10 +4,12 @@ import QtQuick.Controls 2.15 as Controls
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
 import org.kde.kirigami 2.13 as Kirigami
+import "./" as Presenter
 
 Kirigami.ActionToolBar {
     id: root
     alignment: Qt.AlignRight
+    height: Kirigami.Units.gridUnit * 2.0
 
     Kirigami.Heading {
         text: "Presenter"
@@ -25,6 +27,9 @@ Kirigami.ActionToolBar {
                     anchors.centerIn: parent
                     width: parent.width / 3
                     onAccepted: showPassiveNotification(searchField.text, 3000)
+                    background: Presenter.TextBackground {
+                        control: searchField
+                    }
                 }
             }
         },
