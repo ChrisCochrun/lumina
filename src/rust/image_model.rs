@@ -4,7 +4,7 @@ mod image_model {
     use crate::schema::images::dsl::*;
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
 
     unsafe extern "C++" {
         include!(< QAbstractListModel >);

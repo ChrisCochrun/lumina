@@ -1,14 +1,13 @@
 #[cxx_qt::bridge]
 mod presentation_model {
-    use crate::models::*;
     use crate::presentation_model::presentation_model::Presentation;
     use crate::reveal_js;
     use crate::schema::presentations::dsl::*;
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
     // use sqlx::Connection;
-    use std::path::{Path, PathBuf};
-    use tracing::{debug, debug_span, error, info, instrument};
+    use std::path::PathBuf;
+    use tracing::debug;
 
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
@@ -228,7 +227,7 @@ mod presentation_model {
                 );
                 actual_page_count =
                     reveal_js::count_slides_and_fragments(
-                        actual_path,
+                        &actual_path,
                     );
             }
             debug!(
