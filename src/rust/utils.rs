@@ -1,4 +1,5 @@
 use time::macros::format_description;
+use tokio::runtime::Runtime;
 use tracing_subscriber::{
     fmt::{self, time::LocalTime},
     EnvFilter,
@@ -7,7 +8,6 @@ use tracing_subscriber::{
 mod db {
     use diesel::{Connection, SqliteConnection};
     use dirs::data_local_dir;
-    use sqlx::{Connection as SqlxConnection, Error};
 
     pub enum Model {
         Songs,

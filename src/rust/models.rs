@@ -38,19 +38,19 @@ pub struct Presentation {
     pub html: bool,
 }
 
-#[derive(Queryable)]
-pub struct Song {
-    pub id: i32,
-    pub title: String,
-    pub lyrics: Option<String>,
-    pub author: Option<String>,
-    pub ccli: Option<String>,
-    pub audio: Option<String>,
-    pub verse_order: Option<String>,
-    pub background: Option<String>,
-    pub background_type: Option<String>,
-    pub horizontal_text_alignment: Option<String>,
-    pub vertical_text_alignment: Option<String>,
-    pub font: Option<String>,
-    pub font_size: Option<i32>,
-}
+// #[derive(Queryable)]
+// pub struct Song {
+//     pub id: i32,
+//     pub title: String,
+//     pub lyrics: Option<String>,
+//     pub author: Option<String>,
+//     pub ccli: Option<String>,
+//     pub audio: Option<String>,
+//     pub verse_order: Option<String>,
+//     pub background: Option<String>,
+//     pub background_type: Option<String>,
+//     pub horizontal_text_alignment: Option<String>,
+//     pub vertical_text_alignment: Option<String>,
+//     pub font: Option<String>,
+//     pub font_size: Option<i32>,
+// }

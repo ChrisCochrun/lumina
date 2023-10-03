@@ -1,8 +1,8 @@
 #[cxx_qt::bridge]
 pub mod song_model {
-    use crate::models::*;
+    use crate::models::run_migrations;
     use crate::schema::songs::dsl::*;
-    use crate::songs::song_model::song_model::Song;
+    use crate::songs::song::Song;
     use diesel::sqlite::SqliteConnection;
     use diesel::{delete, insert_into, prelude::*, update};
     use std::collections::HashMap;
@@ -30,28 +30,11 @@ pub mod song_model {
         type QList_QString = cxx_qt_lib::QList<QString>;
     }
 
-    #[derive(Default, Clone, Debug)]
-    pub struct Song {
-        id: i32,
-        title: String,
-        lyrics: String,
-        author: String,
-        ccli: String,
-        audio: String,
-        verse_order: String,
-        background: String,
-        background_type: String,
-        horizontal_text_alignment: String,
-        vertical_text_alignment: String,
-        font: String,
-        font_size: i32,
-    }
-
     #[cxx_qt::qobject(base = "QAbstractListModel")]
     #[derive(Default, Debug)]
     pub struct SongModel {
         highest_id: i32,
-        songs: Vec<self::Song>,
+        songs: Vec<Song>,
     }
 
     #[cxx_qt::qsignals(SongModel)]
@@ -99,7 +82,7 @@ pub mod song_model {
             run_migrations(db);
 
             let results = songs
-                .load::<crate::models::Song>(db)
+                .load::<Song>(db)
                 .expect("NO TABLE?????????????");
             self.as_mut().set_highest_id(0);
 
@@ -116,28 +99,6 @@ pub mod song_model {
                 if self.as_mut().highest_id() < &song.id {
                     self.as_mut().set_highest_id(song.id);
                 }
-
-                let song = Song {
-                    id: song.id,
-                    title: song.title,
-                    lyrics: song.lyrics.unwrap_or_default(),
-                    author: song.author.unwrap_or_default(),
-                    ccli: song.ccli.unwrap_or_default(),
-                    audio: song.audio.unwrap_or_default(),
-                    verse_order: song.verse_order.unwrap_or_default(),
-                    background: song.background.unwrap_or_default(),
-                    background_type: song
-                        .background_type
-                        .unwrap_or_default(),
-                    horizontal_text_alignment: song
-                        .horizontal_text_alignment
-                        .unwrap_or_default(),
-                    vertical_text_alignment: song
-                        .vertical_text_alignment
-                        .unwrap_or_default(),
-                    font: song.font.unwrap_or_default(),
-                    font_size: song.font_size.unwrap_or_default(),
-                };
 
                 self.as_mut().add_song(song);
             }
@@ -327,7 +288,8 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.lyrics = updated_lyrics.to_string();
+                        song.lyrics =
+                            Some(updated_lyrics.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -368,7 +330,8 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.author = updated_author.to_string();
+                        song.author =
+                            Some(updated_author.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -409,7 +372,7 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.audio = updated_audio.to_string();
+                        song.audio = Some(updated_audio.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -450,7 +413,7 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.ccli = updated_ccli.to_string();
+                        song.ccli = Some(updated_ccli.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -492,7 +455,7 @@ pub mod song_model {
                         .get_mut(index as usize)
                     {
                         song.verse_order =
-                            updated_verse_order.to_string();
+                            Some(updated_verse_order.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -534,7 +497,7 @@ pub mod song_model {
                         .get_mut(index as usize)
                     {
                         song.background =
-                            updated_background.to_string();
+                            Some(updated_background.to_string());
                         debug!(
                             background = ?updated_background,
                             model_index = ?model_index,
@@ -586,7 +549,7 @@ pub mod song_model {
                         .get_mut(index as usize)
                     {
                         song.background_type =
-                            updated_background_type.to_string();
+                            Some(updated_background_type.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -631,9 +594,10 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.horizontal_text_alignment =
+                        song.horizontal_text_alignment = Some(
                             updated_horizontal_text_alignment
-                                .to_string();
+                                .to_string(),
+                        );
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -679,9 +643,10 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.vertical_text_alignment =
+                        song.vertical_text_alignment = Some(
                             updated_vertical_text_alignment
-                                .to_string();
+                                .to_string(),
+                        );
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -722,7 +687,7 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.font = updated_font.to_string();
+                        song.font = Some(updated_font.to_string());
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -763,7 +728,7 @@ pub mod song_model {
                         .songs_mut()
                         .get_mut(index as usize)
                     {
-                        song.font_size = updated_font_size;
+                        song.font_size = Some(updated_font_size);
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -816,89 +781,9 @@ pub mod song_model {
             }
             if let Some(song) = self.rust().songs.get(index as usize)
             {
-                if song.lyrics.is_empty() {
-                    return QStringList::default();
-                }
-                let raw_lyrics = song.lyrics.clone();
-                println!("raw-lyrics: {:?}", raw_lyrics);
-                let vorder: Vec<&str> =
-                    song.verse_order.split(' ').collect();
-                let keywords = vec![
-                    "Verse 1", "Verse 2", "Verse 3", "Verse 4",
-                    "Verse 5", "Verse 6", "Verse 7", "Verse 8",
-                    "Chorus 1", "Chorus 2", "Chorus 3", "Chorus 4",
-                    "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
-                    "Intro 1", "Intro 2", "Ending 1", "Ending 2",
-                    "Other 1", "Other 2", "Other 3", "Other 4",
-                ];
-                let mut first_item = true;
-
-                let mut lyric_map = HashMap::new();
-                let mut verse_title = String::from("");
-                let mut lyric = String::from("");
-                for (i, line) in raw_lyrics.split("\n").enumerate() {
-                    if keywords.contains(&line) {
-                        if i != 0 {
-                            println!("{verse_title}");
-                            println!("{lyric}");
-                            lyric_map.insert(verse_title, lyric);
-                            lyric = String::from("");
-                            verse_title = line.to_string();
-                            // println!("{line}");
-                            // println!("\n");
-                        } else {
-                            verse_title = line.to_string();
-                            // println!("{line}");
-                            // println!("\n");
-                        }
-                    } else {
-                        lyric.push_str(line);
-                        lyric.push_str("\n");
-                    }
-                }
-                lyric_map.insert(verse_title, lyric);
-                println!("da-map: {:?}", lyric_map);
-
-                for mut verse in vorder {
-                    let mut verse_name = "";
-                    debug!(verse = verse);
-                    for word in keywords.clone() {
-                        let end_verse =
-                            verse.get(1..2).unwrap_or_default();
-                        let beg_verse =
-                            verse.get(0..1).unwrap_or_default();
-                        println!(
-                            "verse: {:?}, beginning: {:?}, end: {:?}, word: {:?}",
-                            verse, beg_verse, end_verse, word
-                        );
-                        if word.starts_with(beg_verse)
-                            && word.ends_with(end_verse)
-                        {
-                            verse_name = word;
-                            println!("TITLE: {verse_name}");
-                            continue;
-                        }
-                    }
-                    if let Some(lyric) = lyric_map.get(verse_name) {
-                        if lyric.contains("\n\n") {
-                            let split_lyrics: Vec<&str> =
-                                lyric.split("\n\n").collect();
-                            for lyric in split_lyrics {
-                                if lyric == "" {
-                                    continue;
-                                }
-                                lyric_list
-                                    .append(QString::from(lyric));
-                            }
-                            continue;
-                        }
-                        lyric_list.append(QString::from(lyric));
-                    } else {
-                        println!("NOT WORKING!");
-                    };
-                }
-                for lyric in lyric_list.iter() {
-                    println!("da-list: {:?}", lyric);
+                let song_lyrics: Vec<String> = song.get_lyric_list();
+                for lyric in song_lyrics.iter() {
+                    lyric_list.append(QString::from(lyric))
                 }
             }
             QStringList::from(&lyric_list)
@@ -974,27 +859,59 @@ pub mod song_model {
                 return match role {
                     0 => QVariant::from(&song.id),
                     1 => QVariant::from(&QString::from(&song.title)),
-                    2 => QVariant::from(&QString::from(&song.lyrics)),
-                    3 => QVariant::from(&QString::from(&song.author)),
-                    4 => QVariant::from(&QString::from(&song.ccli)),
-                    5 => QVariant::from(&QString::from(&song.audio)),
+                    2 => QVariant::from(&QString::from(
+                        song.lyrics
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
+                    )),
+                    3 => QVariant::from(&QString::from(
+                        song.author
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
+                    )),
+                    4 => QVariant::from(&QString::from(
+                        song.ccli
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
+                    )),
+                    5 => QVariant::from(&QString::from(
+                        song.audio
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
+                    )),
                     6 => QVariant::from(&QString::from(
-                        &song.verse_order,
+                        song.verse_order
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
                     )),
                     7 => QVariant::from(&QString::from(
-                        &song.background,
+                        song.background
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
                     )),
                     8 => QVariant::from(&QString::from(
-                        &song.background_type,
+                        song.background_type
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
                     )),
                     9 => QVariant::from(&QString::from(
-                        &song.horizontal_text_alignment,
+                        song.horizontal_text_alignment
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
                     )),
                     10 => QVariant::from(&QString::from(
-                        &song.vertical_text_alignment,
+                        song.vertical_text_alignment
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
                     )),
-                    11 => QVariant::from(&QString::from(&song.font)),
-                    12 => QVariant::from(&song.font_size),
+                    11 => QVariant::from(&QString::from(
+                        song.font
+                            .as_ref()
+                            .unwrap_or(&String::from("")),
+                    )),
+                    12 => QVariant::from(
+                        &song.font_size.unwrap_or_default(),
+                    ),
                     _ => QVariant::default(),
                 };
             }
@@ -1053,34 +970,5 @@ pub mod song_model {
         pub fn count(&self) -> i32 {
             self.rust().songs.len() as i32
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cxx_qt_lib::QStringList; // Replace 'some_module' with the actual module where QModelIndex is defined.
-
-    #[test]
-    fn test_get_lyric_list() {
-        // Create a test instance of your struct (you might need to adjust this based on your actual struct).
-        let mut song_model = SongModel {
-            highest_id: 0,
-            songs: Vec::<song_model::Song>::new(),
-        };
-
-        // this sets up the songmodel with the database
-        // song_model.setup_wrapper(self);
-
-        // Call the get_lyric_list function with specific inputs.
-        let index = 0; // Replace with your desired test index.
-
-        let result = song_model.get_lyric_list(index);
-
-        // Define your expected result here. For simplicity, let's assume an empty QStringList.
-        let expected_result = QStringList::default();
-
-        // Compare the actual result with the expected result using an assertion.
-        assert_eq!(result, expected_result);
     }
 }
