@@ -1,10 +1,12 @@
 #[cxx_qt::bridge]
 pub mod song_model {
-    use crate::models::*;
-    use crate::schema::songs::dsl::*;
-    use crate::songs::song_model::song_model::Song;
-    use diesel::sqlite::SqliteConnection;
-    use diesel::{delete, insert_into, prelude::*, update};
+    // use crate::models::*;
+    // use crate::schema::songs::dsl::*;
+    use crate::songs::song::Song;
+    // use diesel::sqlite::SqliteConnection;
+    use sqlx::{SqliteConnection, Connection, Executor, query, query_as, Error};
+    // use diesel::{delete, insert_into, prelude::*, update};
+    use tokio::runtime::Runtime;
     use std::collections::HashMap;
     use tracing::{debug, debug_span, error, info, instrument};
 
@@ -30,28 +32,11 @@ pub mod song_model {
         type QList_QString = cxx_qt_lib::QList<QString>;
     }
 
-    #[derive(Default, Clone, Debug)]
-    pub struct Song {
-        id: i32,
-        title: String,
-        lyrics: String,
-        author: String,
-        ccli: String,
-        audio: String,
-        verse_order: String,
-        background: String,
-        background_type: String,
-        horizontal_text_alignment: String,
-        vertical_text_alignment: String,
-        font: String,
-        font_size: i32,
-    }
-
     #[cxx_qt::qobject(base = "QAbstractListModel")]
     #[derive(Default, Debug)]
     pub struct SongModel {
         highest_id: i32,
-        songs: Vec<self::Song>,
+        songs: Vec<Song>,
     }
 
     #[cxx_qt::qsignals(SongModel)]
@@ -95,52 +80,56 @@ pub mod song_model {
 
         #[qinvokable]
         pub fn setup(mut self: Pin<&mut Self>) {
-            let db = &mut self.as_mut().get_db();
-            run_migrations(db);
+            // run_migrations(db);
 
-            let results = songs
-                .load::<crate::models::Song>(db)
-                .expect("NO TABLE?????????????");
             self.as_mut().set_highest_id(0);
+            let thread = self.qt_thread();
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            let db = &mut self.as_mut().get_db();
+            let handle = tokio::spawn(async move {
+                let results: Vec<Song> = query_as("SELECT * FROM songs").fetch_all(db).await.unwrap();
+                for song in results {
+                    println!("{}", song.title);
+                    println!("{}", song.id);
+                    println!(
+                        "{}",
+                        song.background.clone().unwrap_or_default()
+                    );
+                    println!("--------------");
+                    if self.as_mut().highest_id() < &song.id {
+                        self.as_mut().set_highest_id(song.id);
+                    }
+
+                    let song = Song {
+                        id: song.id,
+                        title: song.title,
+                        lyrics: song.lyrics,
+                        author: song.author,
+                        ccli: song.ccli,
+                        audio: song.audio,
+                        verse_order: song.verse_order,
+                        background: song.background,
+                        background_type: song
+                            .background_type,
+                        horizontal_text_alignment: song
+                            .horizontal_text_alignment,
+                        vertical_text_alignment: song
+                            .vertical_text_alignment,
+                        font: song.font,
+                        font_size: song.font_size,
+                    };
+
+                    // thread.queue(move |mut song_model|
+                    //              song_model.as_mut().add_song(song);
+                    // )
+                };
+            });
+            // let results = songs
+            //     .load::<crate::models::Song>(db)
+            //     .expect("NO TABLE?????????????");
 
             println!("SHOWING SONGS");
             println!("--------------");
-            for song in results {
-                println!("{}", song.title);
-                println!("{}", song.id);
-                println!(
-                    "{}",
-                    song.background.clone().unwrap_or_default()
-                );
-                println!("--------------");
-                if self.as_mut().highest_id() < &song.id {
-                    self.as_mut().set_highest_id(song.id);
-                }
-
-                let song = Song {
-                    id: song.id,
-                    title: song.title,
-                    lyrics: song.lyrics.unwrap_or_default(),
-                    author: song.author.unwrap_or_default(),
-                    ccli: song.ccli.unwrap_or_default(),
-                    audio: song.audio.unwrap_or_default(),
-                    verse_order: song.verse_order.unwrap_or_default(),
-                    background: song.background.unwrap_or_default(),
-                    background_type: song
-                        .background_type
-                        .unwrap_or_default(),
-                    horizontal_text_alignment: song
-                        .horizontal_text_alignment
-                        .unwrap_or_default(),
-                    vertical_text_alignment: song
-                        .vertical_text_alignment
-                        .unwrap_or_default(),
-                    font: song.font.unwrap_or_default(),
-                    font_size: song.font_size.unwrap_or_default(),
-                };
-
-                self.as_mut().add_song(song);
-            }
             println!("--------------------------------------");
             println!("{:?}", self.as_mut().songs());
             println!("--------------------------------------");
@@ -159,8 +148,12 @@ pub mod song_model {
             let song_id =
                 self.songs().get(index as usize).unwrap().id;
 
-            let result =
-                delete(songs.filter(id.eq(song_id))).execute(db);
+            let handle = tokio::spawn(async move {
+                query!("DELETE {} FROM songs", song_id)
+            });
+
+            // let result =
+            //     delete(songs.filter(id.eq(song_id))).execute(db);
 
             match result {
                 Ok(_i) => {
@@ -186,7 +179,7 @@ pub mod song_model {
             }
         }
 
-        fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
+        async fn get_db(self: Pin<&mut Self>) -> Result<SqliteConnection, Error> {
             let mut data = dirs::data_local_dir().unwrap();
             data.push("lumina");
             data.push("library-db.sqlite3");
@@ -194,9 +187,7 @@ pub mod song_model {
             db_url.push_str(data.to_str().unwrap());
             println!("DB: {:?}", db_url);
 
-            SqliteConnection::establish(&db_url).unwrap_or_else(
-                |_| panic!("error connecting to {}", db_url),
-            )
+            SqliteConnection::connect(&db_url).await?
         }
 
         #[qinvokable]
@@ -245,7 +236,7 @@ pub mod song_model {
             }
         }
 
-        fn add_song(mut self: Pin<&mut Self>, song: self::Song) {
+        fn add_song(mut self: Pin<&mut Self>, song: Song) {
             let index = self.as_ref().songs().len() as i32;
             println!("{:?}", song);
             unsafe {
@@ -1056,31 +1047,31 @@ pub mod song_model {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cxx_qt_lib::QStringList; // Replace 'some_module' with the actual module where QModelIndex is defined.
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use cxx_qt_lib::QStringList; // Replace 'some_module' with the actual module where QModelIndex is defined.
 
-    #[test]
-    fn test_get_lyric_list() {
-        // Create a test instance of your struct (you might need to adjust this based on your actual struct).
-        let mut song_model = SongModel {
-            highest_id: 0,
-            songs: Vec::<song_model::Song>::new(),
-        };
+//     #[test]
+//     fn test_get_lyric_list() {
+//         // Create a test instance of your struct (you might need to adjust this based on your actual struct).
+//         let mut song_model = SongModel {
+//             highest_id: 0,
+//             songs: Vec::<song_model::Song>::new(),
+//         };
 
-        // this sets up the songmodel with the database
-        // song_model.setup_wrapper(self);
+//         // this sets up the songmodel with the database
+//         // song_model.setup_wrapper(self);
 
-        // Call the get_lyric_list function with specific inputs.
-        let index = 0; // Replace with your desired test index.
+//         // Call the get_lyric_list function with specific inputs.
+//         let index = 0; // Replace with your desired test index.
 
-        let result = song_model.get_lyric_list(index);
+//         let result = song_model.get_lyric_list(index);
 
-        // Define your expected result here. For simplicity, let's assume an empty QStringList.
-        let expected_result = QStringList::default();
+//         // Define your expected result here. For simplicity, let's assume an empty QStringList.
+//         let expected_result = QStringList::default();
 
-        // Compare the actual result with the expected result using an assertion.
-        assert_eq!(result, expected_result);
-    }
-}
+//         // Compare the actual result with the expected result using an assertion.
+//         assert_eq!(result, expected_result);
+//     }
+// }
