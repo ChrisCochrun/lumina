@@ -79,13 +79,12 @@ pub mod song_model {
         }
 
         #[qinvokable]
-        pub fn setup(mut self: Pin<&mut Self>) {
+        pub async fn setup(mut self: Pin<&mut Self>) {
             // run_migrations(db);
-
             self.as_mut().set_highest_id(0);
             let thread = self.qt_thread();
             let runtime = tokio::runtime::Runtime::new().unwrap();
-            let db = &mut self.as_mut().get_db();
+            let db = &mut self.as_mut().get_db().await.unwrap();
             let handle = tokio::spawn(async move {
                 let results: Vec<Song> = query_as("SELECT * FROM songs").fetch_all(db).await.unwrap();
                 for song in results {
