@@ -4,6 +4,10 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Fix updating things in the song editor
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
+** TODO Make saving file auto use the last save file and go from there
+[[file:~/dev/lumina/src/qml/main.qml::function save() {]]
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 ** TODO write a function for setting each slide to the appropriate index in html presentations
