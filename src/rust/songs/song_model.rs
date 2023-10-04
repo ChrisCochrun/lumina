@@ -4,10 +4,13 @@ pub mod song_model {
     // use crate::schema::songs::dsl::*;
     use crate::songs::song::Song;
     // use diesel::sqlite::SqliteConnection;
-    use sqlx::{SqliteConnection, Connection, Executor, query, query_as, Error};
+    use sqlx::{
+        query, query_as, Connection, Error, Executor,
+        SqliteConnection,
+    };
     // use diesel::{delete, insert_into, prelude::*, update};
+    use std::{collections::HashMap, sync::Arc};
     use tokio::runtime::Runtime;
-    use std::collections::HashMap;
     use tracing::{debug, debug_span, error, info, instrument};
 
     unsafe extern "C++" {
@@ -83,50 +86,65 @@ pub mod song_model {
             // run_migrations(db);
             self.as_mut().set_highest_id(0);
             let thread = self.qt_thread();
+            let mut db = self.as_mut().get_db().await;
             let runtime = tokio::runtime::Runtime::new().unwrap();
-            let db = &mut self.as_mut().get_db().await.unwrap();
-            let handle = tokio::spawn(async move {
-                let results: Vec<Song> = query_as("SELECT * FROM songs").fetch_all(db).await.unwrap();
-                for song in results {
-                    println!("{}", song.title);
-                    println!("{}", song.id);
-                    println!(
-                        "{}",
-                        song.background.clone().unwrap_or_default()
-                    );
-                    println!("--------------");
-                    if self.as_mut().highest_id() < &song.id {
-                        self.as_mut().set_highest_id(song.id);
+            let handle = runtime
+                .spawn(async move {
+                    let db = &mut db;
+                    let results: Vec<Song> =
+                        query_as("SELECT * FROM songs")
+                            .fetch_all(db)
+                            .await
+                            .unwrap();
+                    for song in results {
+                        println!("{}", song.title);
+                        println!("{}", song.id);
+                        println!(
+                            "{}",
+                            song.background
+                                .clone()
+                                .unwrap_or_default()
+                        );
+                        println!("--------------");
+                        thread.queue(move |mut song_model| {
+                            if song_model.as_mut().highest_id()
+                                < &song.id
+                            {
+                                song_model
+                                    .as_mut()
+                                    .set_highest_id(song.id);
+                            }
+                        });
+
+                        let song = Song {
+                            id: song.id,
+                            title: song.title,
+                            lyrics: song.lyrics,
+                            author: song.author,
+                            ccli: song.ccli,
+                            audio: song.audio,
+                            verse_order: song.verse_order,
+                            background: song.background,
+                            background_type: song.background_type,
+                            horizontal_text_alignment: song
+                                .horizontal_text_alignment,
+                            vertical_text_alignment: song
+                                .vertical_text_alignment,
+                            font: song.font,
+                            font_size: song.font_size,
+                        };
+
+                        // thread.queue(move |mut song_model|
+                        //              song_model.as_mut().add_song(song);
+                        // );
                     }
-
-                    let song = Song {
-                        id: song.id,
-                        title: song.title,
-                        lyrics: song.lyrics,
-                        author: song.author,
-                        ccli: song.ccli,
-                        audio: song.audio,
-                        verse_order: song.verse_order,
-                        background: song.background,
-                        background_type: song
-                            .background_type,
-                        horizontal_text_alignment: song
-                            .horizontal_text_alignment,
-                        vertical_text_alignment: song
-                            .vertical_text_alignment,
-                        font: song.font,
-                        font_size: song.font_size,
-                    };
-
-                    // thread.queue(move |mut song_model|
-                    //              song_model.as_mut().add_song(song);
-                    // )
-                };
-            });
+                })
+                .await;
+            // tokio::join!(handle);
             // let results = songs
             //     .load::<crate::models::Song>(db)
             //     .expect("NO TABLE?????????????");
-
+            // handle.await.unwrap();
             println!("SHOWING SONGS");
             println!("--------------");
             println!("--------------------------------------");
@@ -135,21 +153,27 @@ pub mod song_model {
         }
 
         #[qinvokable]
-        pub fn remove_item(
+        pub async fn remove_item(
             mut self: Pin<&mut Self>,
             index: i32,
         ) -> bool {
             if index < 0 || (index as usize) >= self.songs().len() {
                 return false;
             }
-            let db = &mut self.as_mut().get_db();
+            let mut db = self.as_mut().get_db().await;
 
             let song_id =
                 self.songs().get(index as usize).unwrap().id;
 
+            let mut result;
             let handle = tokio::spawn(async move {
-                query!("DELETE {} FROM songs", song_id)
-            });
+                let db = &mut db;
+                result =
+                    query!("DELETE FROM songs WHERE id=?", song_id)
+                        .execute(db)
+                        .await;
+            })
+            .await;
 
             // let result =
             //     delete(songs.filter(id.eq(song_id))).execute(db);
@@ -178,7 +202,7 @@ pub mod song_model {
             }
         }
 
-        async fn get_db(self: Pin<&mut Self>) -> Result<SqliteConnection, Error> {
+        async fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
             let mut data = dirs::data_local_dir().unwrap();
             data.push("lumina");
             data.push("library-db.sqlite3");
@@ -186,7 +210,7 @@ pub mod song_model {
             db_url.push_str(data.to_str().unwrap());
             println!("DB: {:?}", db_url);
 
-            SqliteConnection::connect(&db_url).await?
+            SqliteConnection::connect(&db_url).await
         }
 
         #[qinvokable]
@@ -964,27 +988,43 @@ pub mod song_model {
                 return match role {
                     0 => QVariant::from(&song.id),
                     1 => QVariant::from(&QString::from(&song.title)),
-                    2 => QVariant::from(&QString::from(&song.lyrics)),
-                    3 => QVariant::from(&QString::from(&song.author)),
-                    4 => QVariant::from(&QString::from(&song.ccli)),
-                    5 => QVariant::from(&QString::from(&song.audio)),
+                    2 => QVariant::from(&QString::from(
+                        &song.lyrics.unwrap_or_default(),
+                    )),
+                    3 => QVariant::from(&QString::from(
+                        &song.author.unwrap_or_default(),
+                    )),
+                    4 => QVariant::from(&QString::from(
+                        &song.ccli.unwrap_or_default(),
+                    )),
+                    5 => QVariant::from(&QString::from(
+                        &song.audio.unwrap_or_default(),
+                    )),
                     6 => QVariant::from(&QString::from(
-                        &song.verse_order,
+                        &song.verse_order.unwrap_or_default(),
                     )),
                     7 => QVariant::from(&QString::from(
-                        &song.background,
+                        &song.background.unwrap_or_default(),
                     )),
                     8 => QVariant::from(&QString::from(
-                        &song.background_type,
+                        &song.background_type.unwrap_or_default(),
                     )),
                     9 => QVariant::from(&QString::from(
-                        &song.horizontal_text_alignment,
+                        &song
+                            .horizontal_text_alignment
+                            .unwrap_or_default(),
                     )),
                     10 => QVariant::from(&QString::from(
-                        &song.vertical_text_alignment,
+                        &song
+                            .vertical_text_alignment
+                            .unwrap_or_default(),
                     )),
-                    11 => QVariant::from(&QString::from(&song.font)),
-                    12 => QVariant::from(&song.font_size),
+                    11 => QVariant::from(&QString::from(
+                        &song.font.unwrap_or_default(),
+                    )),
+                    12 => QVariant::from(
+                        &song.font_size.unwrap_or_default(),
+                    ),
                     _ => QVariant::default(),
                 };
             }
