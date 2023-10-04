@@ -5,11 +5,17 @@ pub mod song_model {
     use crate::songs::song::Song;
     // use diesel::sqlite::SqliteConnection;
     use sqlx::{
-        query, query_as, Connection, Error, Executor,
-        SqliteConnection,
+        query, query_as, sqlite::SqliteQueryResult, Connection,
+        Error, Executor, SqliteConnection,
     };
     // use diesel::{delete, insert_into, prelude::*, update};
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    };
     use tokio::runtime::Runtime;
     use tracing::{debug, debug_span, error, info, instrument};
 
@@ -86,7 +92,7 @@ pub mod song_model {
             // run_migrations(db);
             self.as_mut().set_highest_id(0);
             let thread = self.qt_thread();
-            let mut db = self.as_mut().get_db().await;
+            let mut db = self.as_mut().get_db().await.unwrap();
             let runtime = tokio::runtime::Runtime::new().unwrap();
             let handle = runtime
                 .spawn(async move {
@@ -134,9 +140,9 @@ pub mod song_model {
                             font_size: song.font_size,
                         };
 
-                        // thread.queue(move |mut song_model|
-                        //              song_model.as_mut().add_song(song);
-                        // );
+                        thread.queue(move |mut song_model| {
+                            song_model.as_mut().add_song(song);
+                        });
                     }
                 })
                 .await;
@@ -160,49 +166,53 @@ pub mod song_model {
             if index < 0 || (index as usize) >= self.songs().len() {
                 return false;
             }
-            let mut db = self.as_mut().get_db().await;
+            let mut db = self.as_mut().get_db().await.unwrap();
 
             let song_id =
                 self.songs().get(index as usize).unwrap().id;
 
-            let mut result;
+            let thread = self.qt_thread();
+            let success = false;
             let handle = tokio::spawn(async move {
                 let db = &mut db;
-                result =
+                let success = AtomicBool::from(success);
+                let result =
                     query!("DELETE FROM songs WHERE id=?", song_id)
                         .execute(db)
                         .await;
+
+                match result {
+                    Ok(_i) => {
+                        thread.queue(move |mut song_model| {
+                            song_model.as_mut().begin_remove_rows(
+                                &QModelIndex::default(),
+                                index,
+                                index,
+                            );
+                            song_model
+                                .as_mut()
+                                .songs_mut()
+                                .remove(index as usize);
+                            song_model.as_mut().end_remove_rows();
+                        });
+                        println!(
+                            "removed-item-at-index: {:?}",
+                            song_id
+                        );
+                        success.store(true, Ordering::Relaxed);
+                    }
+                    Err(e) => {
+                        error!(error = ?e);
+                    }
+                }
             })
             .await;
-
-            // let result =
-            //     delete(songs.filter(id.eq(song_id))).execute(db);
-
-            match result {
-                Ok(_i) => {
-                    unsafe {
-                        self.as_mut().begin_remove_rows(
-                            &QModelIndex::default(),
-                            index,
-                            index,
-                        );
-                        self.as_mut()
-                            .songs_mut()
-                            .remove(index as usize);
-                        self.as_mut().end_remove_rows();
-                    }
-                    println!("removed-item-at-index: {:?}", song_id);
-                    println!("new-Vec: {:?}", self.as_mut().songs());
-                    true
-                }
-                Err(_e) => {
-                    println!("Cannot connect to database");
-                    false
-                }
-            }
+            success
         }
 
-        async fn get_db(self: Pin<&mut Self>) -> SqliteConnection {
+        async fn get_db(
+            self: Pin<&mut Self>,
+        ) -> Result<SqliteConnection, Error> {
             let mut data = dirs::data_local_dir().unwrap();
             data.push("lumina");
             data.push("library-db.sqlite3");
@@ -214,10 +224,10 @@ pub mod song_model {
         }
 
         #[qinvokable]
-        pub fn new_song(mut self: Pin<&mut Self>) -> bool {
+        pub async fn new_song(mut self: Pin<&mut Self>) -> bool {
             let song_id = self.rust().highest_id + 1;
             let song_title = String::from("title");
-            let db = &mut self.as_mut().get_db();
+            let db = &mut self.as_mut().get_db().await.unwrap();
 
             let song = Song {
                 id: song_id,
@@ -225,38 +235,42 @@ pub mod song_model {
                 ..Default::default()
             };
 
-            let result = insert_into(songs)
-                .values((
-                    id.eq(&song_id),
-                    title.eq(&song_title),
-                    lyrics.eq(&song.lyrics),
-                    author.eq(&song.author),
-                    ccli.eq(&song.ccli),
-                    audio.eq(&song.audio),
-                    verse_order.eq(&song.verse_order),
-                    background.eq(&song.background),
-                    background_type.eq(&song.background_type),
-                    horizontal_text_alignment
-                        .eq(&song.horizontal_text_alignment),
-                    vertical_text_alignment
-                        .eq(&song.vertical_text_alignment),
-                    font.eq(&song.font),
-                    font_size.eq(&song.font_size),
-                ))
-                .execute(db);
-            println!("{:?}", result);
+            let success = false;
+            let handle = tokio::spawn(async move {
+                let result = query(
+                    "INSERT INTO songs
+                     VALUES (?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9 ?10 ?11 ?12 ?13)",
+                )
+                .bind(song.id)
+                .bind(song.title)
+                .bind(song.lyrics)
+                .bind(song.author)
+                .bind(song.ccli)
+                .bind(song.audio)
+                .bind(song.verse_order)
+                .bind(song.background)
+                .bind(song.background_type)
+                .bind(song.horizontal_text_alignment)
+                .bind(song.vertical_text_alignment)
+                .bind(song.font)
+                .bind(song.font_size)
+                .fetch_one(db)
+                .await;
+                debug!(query = result);
 
-            match result {
-                Ok(_i) => {
-                    self.as_mut().add_song(song);
-                    println!("{:?}", self.as_mut().songs());
-                    true
+                match result {
+                    Ok(_i) => {
+                        self.as_mut().add_song(song);
+                        println!("{:?}", self.as_mut().songs());
+                        true
+                    }
+                    Err(_e) => {
+                        println!("Cannot connect to database");
+                        false
+                    }
                 }
-                Err(_e) => {
-                    println!("Cannot connect to database");
-                    false
-                }
-            }
+            });
+            success
         }
 
         fn add_song(mut self: Pin<&mut Self>, song: Song) {
