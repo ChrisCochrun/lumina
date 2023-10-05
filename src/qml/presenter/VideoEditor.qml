@@ -111,6 +111,7 @@ Item {
                     source: videoPreview.isPlaying ? "media-pause" : "media-play"
                     Layout.preferredWidth: 25
                     Layout.preferredHeight: 25
+                    color: Kirigami.Theme.textColor
                     MouseArea {
                         anchors.fill: parent
                         onPressed: videoPreview.playPause()
@@ -205,9 +206,13 @@ Item {
                             text: "Start Time:"
                         }
                         Controls.TextField {
+                            id: startTimeField
                             Layout.preferredWidth: Kirigami.Units.gridUnit * 6
                             text: new Date(videoLengthSlider.firstVisualPosition * 1000).toISOString().slice(11, 19);
                             horizontalAlignment: TextInput.AlignHCenter
+                            background: Presenter.TextBackground {
+                                control: startTimeField
+                            }
                         }
                     }
 
@@ -217,9 +222,13 @@ Item {
                             text: "End Time:"
                         }
                         Controls.TextField {
+                            id: endTimeField
                             Layout.preferredWidth: Kirigami.Units.gridUnit * 6
                             text: new Date(videoLengthSlider.secondVisualPosition * 1000).toISOString().slice(11, 19);
                             horizontalAlignment: TextInput.AlignHCenter
+                            background: Presenter.TextBackground {
+                                control: endTimeField
+                            }
                         }
                     }
 
