@@ -37,7 +37,24 @@ Item {
                     background: Presenter.TextBackground {
                         control: fontBox
                     }
+
+                    indicator: Kirigami.Icon {
+                        anchors {right: parent.right
+                                 verticalCenter: parent.verticalCenter
+                                 rightMargin: 2}
+                        source: "arrow-down"
+                        rotation: fontBox.down ? 180 : 0
+                        color: fontBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
+                        
+                        Behavior on rotation {
+                            NumberAnimation {
+                                easing.type: Easing.OutCubic
+                                duration: 300
+                            }
+                        }
+                    }
                 }
+
                 Controls.SpinBox {
                     id: fontSizeBox
                     editable: true
@@ -60,6 +77,34 @@ Item {
                     background: Presenter.TextBackground {
                         control: hAlignmentBox
                     }
+
+                    indicator: Kirigami.Icon {
+                        anchors {right: parent.right
+                                 verticalCenter: parent.verticalCenter
+                                 rightMargin: 2}
+                        source: "arrow-down"
+                        rotation: hAlignmentBox.down ? 180 : 0
+                        color: hAlignmentBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
+                        
+                        Behavior on rotation {
+                            NumberAnimation {
+                                easing.type: Easing.OutCubic
+                                duration: 300
+                            }
+                        }
+                    }
+
+
+                    contentItem: Text {
+                        leftPadding: 0
+                        rightPadding: hAlignmentBox.indicator.width + hAlignmentBox.spacing
+
+                        text: hAlignmentBox.displayText
+                        font: hAlignmentBox.font
+                        color: hAlignmentBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor;
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
                 }
                 Controls.ComboBox {
                     id: vAlignmentBox
@@ -71,6 +116,34 @@ Item {
                     background: Presenter.TextBackground {
                         control: vAlignmentBox
                     }
+
+                    indicator: Kirigami.Icon {
+                        anchors {right: parent.right
+                                 verticalCenter: parent.verticalCenter
+                                 rightMargin: 2}
+                        source: "arrow-down"
+                        rotation: vAlignmentBox.down ? 180 : 0
+                        color: vAlignmentBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
+                        
+                        Behavior on rotation {
+                            NumberAnimation {
+                                easing.type: Easing.OutCubic
+                                duration: 300
+                            }
+                        }
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 0
+                        rightPadding: vAlignmentBox.indicator.width + vAlignmentBox.spacing
+
+                        text: vAlignmentBox.displayText
+                        font: vAlignmentBox.font
+                        color: vAlignmentBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor;
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+
                 }
                 Controls.ToolButton {
                     text: "B"
