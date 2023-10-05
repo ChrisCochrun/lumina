@@ -126,7 +126,8 @@ Item {
                             Layout.fillWidth: true
                             text: "Video"
                             icon.name: "emblem-videos-symbolic"
-                            onClicked: videoFileDialog.open() & backgroundTypePopup.close()
+                            onClicked: updateBackground("video") & backgroundTypePopup.close()
+                            hoverEnabled: true
                         }
                         Controls.ToolButton {
                             Layout.fillWidth: true
@@ -134,6 +135,7 @@ Item {
                             text: "Image"
                             icon.name: "folder-pictures-symbolic"
                             onClicked: updateBackground("image") & backgroundTypePopup.close()
+                            hoverEnabled: true
                         }
                     }
                 }
@@ -355,6 +357,7 @@ Item {
                         text: "Audio"
                         icon.name: "folder-music-symbolic"
                         onClicked: updateAudioFile()
+                        hoverEnabled: true
                         /* background: Presenter.TextBackground { */
                         /*     control: audioPickerButton */
                         /* } */
@@ -498,13 +501,13 @@ Item {
     }
 
     function updateAudioFile() {
-        const file = fileHelper.loadFile("Pick Audio");
+        const file = fileHelper.loadFile("Pick Audio", "audio");
         songProxyModel.songModel.updateAudio(songIndex, file);
     }
 
     function updateBackground(backgroundType) {
         song.backgroundType = backgroundType;
-        const file = fileHelper.loadFile("Pick Background");
+        const file = fileHelper.loadFile("Pick Background", backgroundType);
         song.background = file;
         songProxyModel.songModel.updateBackground(songIndex, file);
         songProxyModel.songModel.updateBackgroundType(songIndex, backgroundType);

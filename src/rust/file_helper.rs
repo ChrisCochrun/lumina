@@ -4,6 +4,7 @@
 mod file_helper {
     use rfd::FileDialog;
     use std::path::Path;
+    use tracing::{debug, debug_span, error, info, instrument};
 
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
@@ -95,9 +96,33 @@ mod file_helper {
         pub fn load_file(
             self: Pin<&mut Self>,
             title: QString,
+            filter: QString,
         ) -> QUrl {
+            let video_filters = [
+                "mp4", "webm", "avi", "mkv", "MP4", "WEBM", "AVI",
+                "MKV",
+            ];
+            let image_filters = [
+                "jpg", "png", "gif", "jpeg", "JPG", "PNG", "webp",
+                "gif",
+            ];
+            let audio_filters = ["mp3", "opus", "ogg", "flac", "wav"];
             let title = title.to_string();
-            let file = FileDialog::new().set_title(title).pick_file();
+            let filter = filter.to_string();
+            let mut file = FileDialog::new().set_title(title);
+            match filter.as_str() {
+                "video" => {
+                    file = file.add_filter(filter, &video_filters);
+                }
+                "image" => {
+                    file = file.add_filter(filter, &image_filters);
+                }
+                "audio" => {
+                    file = file.add_filter(filter, &audio_filters);
+                }
+                _ => debug!("nothing"),
+            };
+            let file = file.pick_file();
             if let Some(file) = file {
                 println!("loading-file: {:?}", file);
                 let mut string =
