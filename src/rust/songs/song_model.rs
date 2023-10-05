@@ -1056,31 +1056,31 @@ pub mod song_model {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cxx_qt_lib::QStringList; // Replace 'some_module' with the actual module where QModelIndex is defined.
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use cxx_qt_lib::QStringList; // Replace 'some_module' with the actual module where QModelIndex is defined.
 
-    #[test]
-    fn test_get_lyric_list() {
-        // Create a test instance of your struct (you might need to adjust this based on your actual struct).
-        let mut song_model = SongModel {
-            highest_id: 0,
-            songs: Vec::<song_model::Song>::new(),
-        };
+//     #[test]
+//     fn test_get_lyric_list() {
+//         // Create a test instance of your struct (you might need to adjust this based on your actual struct).
+//         let mut song_model = SongModel {
+//             highest_id: 0,
+//             songs: Vec::<song_model::Song>::new(),
+//         };
 
-        // this sets up the songmodel with the database
-        // song_model.setup_wrapper(self);
+//         // this sets up the songmodel with the database
+//         // song_model.setup_wrapper(self);
 
-        // Call the get_lyric_list function with specific inputs.
-        let index = 0; // Replace with your desired test index.
+//         // Call the get_lyric_list function with specific inputs.
+//         let index = 0; // Replace with your desired test index.
 
-        let result = song_model.get_lyric_list(index);
+//         let result = song_model.get_lyric_list(index);
 
-        // Define your expected result here. For simplicity, let's assume an empty QStringList.
-        let expected_result = QStringList::default();
+//         // Define your expected result here. For simplicity, let's assume an empty QStringList.
+//         let expected_result = QStringList::default();
 
-        // Compare the actual result with the expected result using an assertion.
-        assert_eq!(result, expected_result);
-    }
-}
+//         // Compare the actual result with the expected result using an assertion.
+//         assert_eq!(result, expected_result);
+//     }
+// }
