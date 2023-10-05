@@ -33,12 +33,16 @@ Item {
                     text: "Title:"
                 }
                 Controls.TextField {
+                    id: titleId
                     implicitWidth: 300
                     hoverEnabled: true
                     placeholderText: "Song Title..."
                     text: video.title
                     padding: 10
                     onEditingFinished: updateTitle(text);
+                    background: Presenter.TextBackground {
+                        control: titleId
+                    }
                 }
 
                 Controls.CheckBox {

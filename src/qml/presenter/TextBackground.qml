@@ -14,7 +14,8 @@ Item {
         color: Kirigami.Theme.backgroundColor
         anchors.fill: parent
         radius: 10
-        border.color: control.activeFocus ? Kirigami.Theme.highlightColor : (errorCondition ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.backgroundColor)
+        border.width: 0.5
+        border.color: control.activeFocus ? Kirigami.Theme.highlightColor : (errorCondition ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor)
     }
 
     DropShadow {

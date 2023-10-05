@@ -64,6 +64,7 @@ ColumnLayout {
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideLeft
             text: headerLabel
+            color: libraryMouseArea.containsMouse ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
         }
 
         Controls.Label {
@@ -72,7 +73,8 @@ ColumnLayout {
                      verticalCenter: libraryLabel.verticalCenter
                      leftMargin: 15}
             text: count
-            color: Kirigami.Theme.disabledTextColor
+            font.pointSize: 9
+            color: libraryMouseArea.containsMouse ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
         }
 
         Kirigami.Icon {
@@ -82,6 +84,7 @@ ColumnLayout {
                      rightMargin: 10}
             source: "arrow-down"
             rotation: selectedLibrary == libraryType ? 0 : 180
+            color: libraryMouseArea.containsMouse ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
 
             Behavior on rotation {
                 NumberAnimation {
@@ -92,7 +95,9 @@ ColumnLayout {
         }
 
         MouseArea {
+            id: libraryMouseArea
             anchors.fill: parent
+            hoverEnabled: true
             onClicked: {
                 if (selectedLibrary == libraryType)
                     selectedLibrary = ""
