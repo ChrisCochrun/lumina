@@ -222,6 +222,7 @@ int main(int argc, char *argv[])
   qmlRegisterType<ImageProxyModel>("org.presenter", 1, 0, "ImageProxyModel");
   qmlRegisterType<PresentationProxyModel>("org.presenter", 1, 0, "PresentationProxyModel");
   qmlRegisterType<SongModel>("org.presenter", 1, 0, "SongModel");
+  qmlRegisterType<SongEditor>("org.presenter", 1, 0, "SongEditor");
   qmlRegisterType<VideoModel>("org.presenter", 1, 0, "VideoModel");
   qmlRegisterType<ImageModel>("org.presenter", 1, 0, "ImageModel");
   qmlRegisterType<PresentationModel>("org.presenter", 1, 0, "PresentationModel");

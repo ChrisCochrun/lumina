@@ -144,6 +144,10 @@ Controls.Page {
     ServiceThing { id: serviceThing } 
     FileHelper { id: fileHelper } 
     SlideHelper { id: slideHelper }
+    SongEditor {
+        id: songEditor
+        songModel: songProxyModel.songModel()
+    }
 
     function changeServiceItem(index) {
         console.log("change-service-item: " + index);
