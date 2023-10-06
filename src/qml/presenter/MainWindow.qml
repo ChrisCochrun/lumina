@@ -259,7 +259,8 @@ Controls.Page {
                 currentWindow = presentation;
                 editMode = false;
                 refocusPresentation();
-                /* footerLeftString = presenting ? "Presenting..." : "Presentation Preview" */
+                footerFirstText = presenting ? "Presenting..." : "Presentation Preview";
+                footerSecondText = "";
             }
         } else {
             videoEditor.visible = false;
@@ -271,7 +272,8 @@ Controls.Page {
             currentWindow = presentation;
             editMode = false;
             refocusPresentation();
-            /* footerLeftString = presenting ? "Presenting..." : "Presentation Preview" */
+            footerFirstText = presenting ? "Presenting..." : "Presentation Preview"
+            footerSecondText = "";
         }
     }
 

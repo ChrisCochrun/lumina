@@ -225,14 +225,14 @@ Item {
                     height: parent.height
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 1
-                    color: Controls.SplitHandle.hovered ? Kirigami.Theme.hoverColor : Kirigami.Theme.backgroundColor
+                    color: parent.Controls.SplitHandle.hovered ? Kirigami.Theme.hoverColor : Kirigami.Theme.backgroundColor
                 }
             }
             
             ColumnLayout {
                 Controls.SplitView.fillHeight: true
                 Controls.SplitView.preferredWidth: 500
-                Controls.SplitView.minimumWidth: 500
+                Controls.SplitView.minimumWidth: 300
 
                 Controls.Label {
                     id: songTitleLabel
@@ -542,8 +542,10 @@ Item {
         changeSlideFont(song.font, true);
         changeSlideFontSize(song.fontSize, true)
         changeSlideText(songProxyModel.modelIndex(index).row);
-        songList.loadVideo();
         console.log("Changing to song: " + song.title + " with ID: " + song.id);
+        footerFirstText = "Song: ";
+        footerSecondText = song.title;
+        songList.loadVideo();
     }
 
     function updateLyrics(lyrics) {

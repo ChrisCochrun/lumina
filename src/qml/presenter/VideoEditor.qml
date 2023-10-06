@@ -56,6 +56,9 @@ Item {
                     padding: 10
                     checked: video.loop
                     onToggled: updateLoop(!video.loop)
+                    background: Presenter.TextBackground {
+                        control: loopCheckBox
+                    }
                 }
 
                 Controls.ToolSeparator {}
@@ -200,7 +203,7 @@ Item {
                     Layout.preferredWidth: parent.width
                     Layout.alignment: Qt.AlignLeft
 
-                    RowLayout {
+                    ColumnLayout {
                         Layout.alignment: Qt.AlignLeft
                         Controls.Label {
                             text: "Start Time:"
@@ -216,7 +219,7 @@ Item {
                         }
                     }
 
-                    RowLayout {
+                    ColumnLayout {
                         Layout.alignment: Qt.AlignRight
                         Controls.Label {
                             text: "End Time:"

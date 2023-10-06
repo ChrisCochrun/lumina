@@ -34,12 +34,47 @@ Item {
                     text: image.title
                     padding: 10
                     onEditingFinished: updateTitle(text);
+                    background: Presenter.TextBackground {
+                        control: imageTitleField
+                    }
                 }
 
                 Controls.ComboBox {
+                    id: layoutBox
                     model: ["Fill", "Crop", "Height", "Width"]
                     implicitWidth: 100
                     hoverEnabled: true
+                    background: Presenter.TextBackground {
+                        control: layoutBox
+                    }
+
+                    indicator: Kirigami.Icon {
+                        anchors {right: parent.right
+                                 verticalCenter: parent.verticalCenter
+                                 rightMargin: 2}
+                        source: "arrow-down"
+                        rotation: layoutBox.down ? 180 : 0
+                        color: layoutBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
+                        
+                        Behavior on rotation {
+                            NumberAnimation {
+                                easing.type: Easing.OutCubic
+                                duration: 300
+                            }
+                        }
+                    }
+
+
+                    contentItem: Text {
+                        leftPadding: 0
+                        rightPadding: layoutBox.indicator.width + layoutBox.spacing
+
+                        text: layoutBox.displayText
+                        font: layoutBox.font
+                        color: layoutBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor;
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
                 }
 
                 Controls.ToolSeparator {}
@@ -123,6 +158,8 @@ Item {
         let img = imageProxyModel.getImage(index);
         root.image = img;
         console.log(img.filePath.toString());
+        footerFirstText = "File path: ";
+        footerSecondText = image.filePath;
     }
 
     function updateTitle(text) {
