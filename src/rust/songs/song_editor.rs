@@ -10,12 +10,14 @@ mod song_editor {
         type QVariant = cxx_qt_lib::QVariant;
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qurl.h");
+        type QUrl = cxx_qt_lib::QUrl;
         include!("cxx-qt-lib/qstringlist.h");
         type QStringList = cxx_qt_lib::QStringList;
         include!("cxx-qt-lib/qlist.h");
         type QList_QString = cxx_qt_lib::QList<QString>;
         #[cxx_name = "SongModel"]
-        type SongModel = SongModel;
+        type CxxSongs = SongModel;
     }
 
     #[derive(Clone, Debug)]
@@ -48,14 +50,35 @@ mod song_editor {
         #[qproperty]
         font_size: i32,
         #[qproperty]
-        song_model: *mut SongModel,
+        song_model: *mut CxxSongs,
+    }
+
+    impl Default for SongEditor {
+        fn default() -> Self {
+            Self {
+                title: QString::default(),
+                lyrics: QString::default(),
+                author: QString::default(),
+                ccli: QString::default(),
+                audio: QUrl::default(),
+                verse_order: QString::default(),
+                verse_order_format: true,
+                background: QUrl::default(),
+                background_type: QString::default(),
+                horizontal_text_alignment: QString::default(),
+                vertical_text_alignment: QString::default(),
+                font: QString::default(),
+                font_size: 50,
+                song_model: std::ptr::null_mut(),
+            }
+        }
     }
 
     impl SongEditor {
         fn idk(mut self: Pin<&mut Self>) {
-            // let mut model = self.song_model().as_mut().unwrap();
-            // let pinned_model = Pin::new_unchecked(model);
-            // pinned_model.update_ccli(0, QString::from("idk"));
+            let mut model = self.song_model().as_mut().unwrap();
+            let pinned_model = Pin::new_unchecked(model);
+            pinned_model.update_ccli(0, QString::from("idk"));
             todo!();
         }
     }

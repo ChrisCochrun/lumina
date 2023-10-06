@@ -48,7 +48,6 @@
 #include "cpp/slideobject.h"
 
 // RUST
-// #include "cxx-qt-gen/my_object.cxxqt.h"
 #include "cxx-qt-gen/service_thing.cxxqt.h"
 #include "cxx-qt-gen/file_helper.cxxqt.h"
 #include "cxx-qt-gen/slide_obj.cxxqt.h"
@@ -61,7 +60,7 @@
 #include "cxx-qt-gen/video_model.cxxqt.h"
 #include "cxx-qt-gen/image_model.cxxqt.h"
 #include "cxx-qt-gen/utilities.cxxqt.h"
-// #include "cxx-qt-gen/image_model.cxxqt.h"
+#include "cxx-qt-gen/song_editor.cxxqt.h"
 
 static QWindow *windowFromEngine(QQmlApplicationEngine *engine)
 {
