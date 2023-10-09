@@ -49,6 +49,7 @@ mkShell rec {
     # yt-dlp
 
     # Rust tools
+    just
     clippy
     rustc
     cargo
