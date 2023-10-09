@@ -302,7 +302,7 @@ Item {
                     onEditingFinished: updateVerseOrder(text);
                     background: Presenter.TextBackground {
                         control: songVorderField
-                        errorCondition: song.vorder.length === 0
+                        errorCondition: song.verseOrderError
                     }
                 }
 
@@ -473,7 +473,19 @@ Item {
 
     function newSong(index) {
         clearSlides();
-        song = songProxyModel.getSong(index);
+        thisSong = songProxyModel.getSong(index);
+        songEditorModel.title = thisSong.title;
+        songEditorModel.lyrics = thisSong.lyrics;
+        songEditorModel.author = thisSong.author;
+        songEditorModel.ccli = thisSong.ccli;
+        songEditorModel.audio = thisSong.audio;
+        songEditorModel.verseOrder = thisSong.vorder;
+        songEditorModel.background = thisSong.background;
+        songEditorModel.backgroundType = thisSong.backgroundType;
+        songEditorModel.horizontalTextAlignment = thisSong.horizontalTextAlignment;
+        songEditorModel.verticalTextAlignment = thisSong.verticalTextAlignment;
+        songEditorModel.font = thisSong.font;
+        songEditorModel.fontSize = thisSong.fontSize;
 
         changeSlideHAlignment("Center");
         changeSlideVAlignment("Center");
@@ -485,32 +497,37 @@ Item {
     }
 
     function changeSong(index) {
-        clearSlides();
-        const updatedSong = songProxyModel.getSong(index);
-        console.log(updatedSong.verseOrder + " " + updatedSong.title);
-        songEditorModel.title = updatedSong.title;
-        songEditorModel.lyrics = updatedSong.lyrics;
-        songEditorModel.author = updatedSong.author;
-        songEditorModel.ccli = updatedSong.ccli;
-        songEditorModel.audio = updatedSong.audio;
-        songEditorModel.verseOrder = updatedSong.verseOrder;
-        songEditorModel.background = updatedSong.background;
-        songEditorModel.backgroundType = updatedSong.backgroundType;
-        songEditorModel.horizontalTextAlignment = updatedSong.horizontalTextAlignment;
-        songEditorModel.verticalTextAlignment = updatedSong.verticalTextAlignment;
-        songEditorModel.font = updatedSong.font;
-        songEditorModel.fontSize = updatedSong.fontSize;
-        songIndex = song.id;
+        if (songProxyModel.songModel.count === index)
+            newSong(index)
+        else {
+            clearSlides();
+            const updatedSong = songProxyModel.getSong(index);
+            console.log(updatedSong.vorder + " " + updatedSong.title + " " + updatedSong.audio);
+            songEditorModel.title = updatedSong.title;
+            songEditorModel.lyrics = updatedSong.lyrics;
+            songEditorModel.author = updatedSong.author;
+            songEditorModel.ccli = updatedSong.ccli;
+            songEditorModel.audio = updatedSong.audio;
+            songEditorModel.verseOrder = updatedSong.vorder;
+            songEditorModel.background = updatedSong.background;
+            songEditorModel.backgroundType = updatedSong.backgroundType;
+            songEditorModel.horizontalTextAlignment = updatedSong.horizontalTextAlignment;
+            songEditorModel.verticalTextAlignment = updatedSong.verticalTextAlignment;
+            songEditorModel.font = updatedSong.font;
+            songEditorModel.fontSize = updatedSong.fontSize;
+            songEditorModel.checkVerseOrder();
+            songIndex = updatedSong.id;
 
-        changeSlideHAlignment(song.horizontalTextAlignment);
-        changeSlideVAlignment(song.verticalTextAlignment);
-        changeSlideFont(song.font, true);
-        changeSlideFontSize(song.fontSize, true)
-        changeSlideText(songProxyModel.modelIndex(index).row);
-        console.log("Changing to song: " + song.title + " with ID: " + song.id);
-        footerFirstText = "Song: ";
-        footerSecondText = song.title;
-        songList.loadVideo();
+            changeSlideHAlignment(song.horizontalTextAlignment);
+            changeSlideVAlignment(song.verticalTextAlignment);
+            changeSlideFont(song.font, true);
+            changeSlideFontSize(song.fontSize, true)
+            changeSlideText(songProxyModel.modelIndex(index).row);
+            console.log("Changing to song: " + song.title + " with ID: " + song.id);
+            footerFirstText = "Song: ";
+            footerSecondText = song.title;
+            songList.loadVideo();
+        }
     }
 
     function updateLyrics(lyrics) {
@@ -537,6 +554,8 @@ Item {
     }
 
     function updateVerseOrder(vorder) {
+        songEditorModel.verseOrder = vorder;
+        songEditorModel.checkVerseOrder();
         songProxyModel.songModel.updateVerseOrder(songIndex, vorder)
     }
 

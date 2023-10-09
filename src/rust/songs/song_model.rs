@@ -793,7 +793,7 @@ pub mod song_model {
             let role_names_iter = role_names.iter();
             if let Some(song) = self.rust().songs.get(index as usize)
             {
-                debug!(song);
+                debug!(?song);
                 for i in role_names_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),

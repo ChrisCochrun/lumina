@@ -754,6 +754,7 @@ QStringList SongProxyModel::getLyricList(const int &row) {
 
 QVariantMap SongProxyModel::getSong(const int &row) {
   QVariantMap song = m_songModel->getItem(mapToSource(index(row, 0)).row());
+  qDebug() << song;
   return song;
 }
 
