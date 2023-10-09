@@ -353,5 +353,25 @@ or at least turns the entry above it into the same as itself while retaining it'
 ** DONE Fix file dialog using basic QT theme
 [[file:~/dev/church-presenter/src/qml/presenter/SongEditor.qml::FileDialog {]]
 
+* Thoughts
+I'm considering porting from using QML and CXX-QT to something like Iced or Slint and thus doing the entire app in a far more "Rust" way. The issues with this include:
+- Rewrite almost the entire thing
+- Most of the logic is fairly tied to the UI
+- Will be using the current state of the app for a long time until it's nearly feature parity
 
-* Inbox
+Having rewritten a lot of the logic once already to Rust, I think it'll go faster, but I'm afraid of continuing to have FOMO in picking a library that isn't quite up to snuff. Iced seems to be a good contender to be around for a while since System 76 is taking it on as their library to build COSMIC in. However, I just don't think I like the way you build UI's in Iced.
+
+Slint on the other hand is basically like QML but for Rust, which is the whole reason this project started. QML and therefore Slint, are perfect for designing UI's. It's a powerful Object Tree that the code will nearly tell you in it's form how the UI should look since objects are nested. Slint also seems a bit more finished.
+
+Slint is also GPL3. So that means its protected. Good for me, not for others. Iced seems to have more community backing. Slint does have a dual license though and that is a bit scary.
+
+I think I might just use Slint. Maybe it's easier to contribute to than CXX-QT?
+
+Let's also list the problems I've had with CXX-QT...
+- A lot of types that need to cross the boundary are specific to QT and therefore cause a lot of duplicated memory.
+- The specific QT types are different and not "Rust" like.
+- It's complicated to inherit from QT types to build models. And that's the only way to work with collections of data in QML. Models.
+- Some things listed in the docs just don't seem to compile.
+- APIs are changing. They are still trying to land on a model for how things should look to the user of the library.
+
+Slint and Iced both are a more nailed down API. However, QT is a far more mature system....

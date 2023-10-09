@@ -145,8 +145,8 @@ Controls.Page {
     FileHelper { id: fileHelper } 
     SlideHelper { id: slideHelper }
     SongEditor {
-        id: songEditor
-        songModel: songProxyModel.songModel()
+        id: songEditorModel
+        /* songModel: songProxyModel.songModel() */
     }
 
     function changeServiceItem(index) {

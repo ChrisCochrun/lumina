@@ -286,11 +286,11 @@ pub mod song_model {
                         .get_mut(index as usize)
                     {
                         song.title = updated_title.to_string();
-                        self.as_mut().emit(Signals::DataChanged {
-                            top_left: &model_index,
-                            bottom_right: &model_index,
-                            roles: &vector_roles,
-                        });
+                        self.as_mut().emit_data_changed(
+                            model_index,
+                            model_index,
+                            &vector_roles,
+                        );
                         self.as_mut().emit_title_changed();
                         true
                     } else {
@@ -793,6 +793,7 @@ pub mod song_model {
             let role_names_iter = role_names.iter();
             if let Some(song) = self.rust().songs.get(index as usize)
             {
+                debug!(song);
                 for i in role_names_iter {
                     qvariantmap.insert(
                         QString::from(&i.1.to_string()),

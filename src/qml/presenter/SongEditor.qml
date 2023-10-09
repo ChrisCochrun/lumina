@@ -10,7 +10,7 @@ Item {
     id: root
 
     property int songIndex
-    property var song 
+    property var song: songEditorModel
 
     GridLayout {
         id: mainLayout
@@ -445,8 +445,8 @@ Item {
 
                 Presenter.SongEditorSlideList {
                     id: songList
-                    imageBackground: song.backgroundType === "image" ? song.background : ""
-                    videoBackground: song.backgroundType === "video" ? song.background : ""
+                    imageBackground: songEditorModel.backgroundType === "image" ? songEditor.background : ""
+                    videoBackground: songEditorModel.backgroundType === "video" ? songEditor.background : ""
                     Layout.preferredWidth: 500
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -471,54 +471,6 @@ Item {
         }
     }
 
-    FileDialog {
-        id: audioFileDialog
-        title: "Please choose an audio file"
-        folder: shortcuts.home
-        selectMultiple: false
-        nameFilters: ["Audio files (*.mp3 *.flac *.wav *.opus *.MP3 *.FLAC *.WAV *.OPUS)"]
-        onAccepted: {
-            updateAudioFile(audioFileDialog.fileUrls[0]);
-            console.log("audio = " + audioFileDialog.fileUrls[0]);
-        }
-        onRejected: {
-            console.log("Canceled")
-        }
-
-    }
-
-    FileDialog {
-        id: videoFileDialog
-        title: "Please choose a background"
-        folder: shortcuts.home
-        selectMultiple: false
-        nameFilters: ["Video files (*.mp4 *.mkv *.mov *.wmv *.avi *.MP4 *.MOV *.MKV)"]
-        onAccepted: {
-            updateBackground(videoFileDialog.fileUrls[0], "video");
-            console.log("video background = " + videoFileDialog.fileUrls[0]);
-        }
-        onRejected: {
-            console.log("Canceled")
-        }
-
-    }
-
-    FileDialog {
-        id: imageFileDialog
-        title: "Please choose a background"
-        folder: shortcuts.home
-        selectMultiple: false
-        nameFilters: ["Image files (*.jpg *.jpeg *.png *.JPG *.JPEG *.PNG)"]
-        onAccepted: {
-            updateBackground(imageFileDialog.fileUrls[0], "image");
-            console.log("image background = " + imageFileDialog.fileUrls[0]);
-        }
-        onRejected: {
-            console.log("Canceled")
-        }
-
-    }
-
     function newSong(index) {
         clearSlides();
         song = songProxyModel.getSong(index);
@@ -534,7 +486,20 @@ Item {
 
     function changeSong(index) {
         clearSlides();
-        song = songProxyModel.getSong(index);
+        const updatedSong = songProxyModel.getSong(index);
+        console.log(updatedSong.verseOrder + " " + updatedSong.title);
+        songEditorModel.title = updatedSong.title;
+        songEditorModel.lyrics = updatedSong.lyrics;
+        songEditorModel.author = updatedSong.author;
+        songEditorModel.ccli = updatedSong.ccli;
+        songEditorModel.audio = updatedSong.audio;
+        songEditorModel.verseOrder = updatedSong.verseOrder;
+        songEditorModel.background = updatedSong.background;
+        songEditorModel.backgroundType = updatedSong.backgroundType;
+        songEditorModel.horizontalTextAlignment = updatedSong.horizontalTextAlignment;
+        songEditorModel.verticalTextAlignment = updatedSong.verticalTextAlignment;
+        songEditorModel.font = updatedSong.font;
+        songEditorModel.fontSize = updatedSong.fontSize;
         songIndex = song.id;
 
         changeSlideHAlignment(song.horizontalTextAlignment);
@@ -577,26 +542,17 @@ Item {
 
     function updateAudioFile() {
         const file = fileHelper.loadFile("Pick Audio", "audio");
+        songEditorModel.audio = file
         songProxyModel.songModel.updateAudio(songIndex, file);
     }
 
     function updateBackground(backgroundType) {
-        song.backgroundType = backgroundType;
+        songEditorModel.backgroundType = backgroundType;
         const file = fileHelper.loadFile("Pick Background", backgroundType);
-        song.background = file;
+        songEditorModel.background = file;
         songProxyModel.songModel.updateBackground(songIndex, file);
         songProxyModel.songModel.updateBackgroundType(songIndex, backgroundType);
         console.log("changed background");
-        /* if (backgroundType === "image") { */
-        /*     //todo */
-        /*     songList.videoBackground = ""; */
-        /*     songList.imageBackground = background; */
-        /* } else { */
-        /*     //todo */
-        /*     songList.imageBackground = ""; */
-        /*     songList.videoBackground = background; */
-        /*     songList.loadVideo(); */
-        /* } */
     }
 
 
@@ -674,7 +630,6 @@ Item {
     }
 
     function changeSlideText(id) {
-        /* console.log("Here are the verses: " + verses); */
         const verses = songProxyModel.getLyricList(id);
         verses.forEach(songList.appendVerse);
         /* songList.loadVideo(); */

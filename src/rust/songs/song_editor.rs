@@ -1,6 +1,5 @@
 #[cxx_qt::bridge]
-mod song_editor {
-    use crate::songs::song_model::qobject::SongModel;
+pub mod song_editor {
 
     unsafe extern "C++" {
         include!("cxx-qt-lib/qmap.h");
@@ -16,8 +15,8 @@ mod song_editor {
         type QStringList = cxx_qt_lib::QStringList;
         include!("cxx-qt-lib/qlist.h");
         type QList_QString = cxx_qt_lib::QList<QString>;
-        #[cxx_name = "SongModel"]
-        type CxxSongs = SongModel;
+        // #[cxx_name = "SongModel"]
+        // type CxxSongs = crate::songs::song_model::qobject::SongModel;
     }
 
     #[derive(Clone, Debug)]
@@ -49,8 +48,8 @@ mod song_editor {
         font: QString,
         #[qproperty]
         font_size: i32,
-        #[qproperty]
-        song_model: *mut CxxSongs,
+        // #[qproperty]
+        // song_model: *mut CxxSongs,
     }
 
     impl Default for SongEditor {
@@ -69,17 +68,50 @@ mod song_editor {
                 vertical_text_alignment: QString::default(),
                 font: QString::default(),
                 font_size: 50,
-                song_model: std::ptr::null_mut(),
+                // song_model: std::ptr::null_mut(),
             }
         }
     }
 
-    impl SongEditor {
+    impl qobject::SongEditor {
         fn idk(mut self: Pin<&mut Self>) {
-            let mut model = self.song_model().as_mut().unwrap();
-            let pinned_model = Pin::new_unchecked(model);
-            pinned_model.update_ccli(0, QString::from("idk"));
-            todo!();
+            // let mut model = self.song_model().as_mut().unwrap();
+            // let pinned_model = Pin::new_unchecked(model);
+            // pinned_model.update_ccli(0, QString::from("idk"));
+            todo!()
         }
+        // #[qinvokable]
+        // fn set_song(
+        //     mut self: Pin<&mut Self>,
+        //     title: QString,
+        //     lyrics: QString,
+        //     author: QString,
+        //     ccli: QString,
+        //     audio: QUrl,
+        //     verse_order: QString,
+        //     background: QUrl,
+        //     background_type: QString,
+        //     horizontal_text_alignment: QString,
+        //     vertical_text_alignment: QString,
+        //     font: QString,
+        //     font_size: i32,
+        // ) -> bool {
+        //     self.as_mut().set_title(title);
+        //     self.as_mut().set_lyrics(lyrics);
+        //     self.as_mut().set_author(author);
+        //     self.as_mut().set_ccli(ccli);
+        //     self.as_mut().set_audio(audio);
+        //     self.as_mut().set_verse_order(verse_order);
+        //     self.as_mut().set_background(background);
+        //     self.as_mut().set_background_type(background_type);
+        //     self.as_mut().set_horizontal_text_alignment(
+        //         horizontal_text_alignment,
+        //     );
+        //     self.as_mut()
+        //         .set_vertical_text_alignment(vertical_text_alignment);
+        //     self.as_mut().set_font(font);
+        //     self.as_mut().set_font_size(font_size);
+        //     true
+        // }
     }
 }
