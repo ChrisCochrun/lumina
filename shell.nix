@@ -6,6 +6,11 @@ mkShell rec {
   nativeBuildInputs = [
     gtk-layer-shell
     gtk3
+    vulkan-loader
+    wayland
+    wayland-protocols
+    libxkbcommon
+    pkg-config
   ];
 
   buildInputs = [
@@ -13,13 +18,12 @@ mkShell rec {
     stdenv
     gnumake
     gdb
-    pkg-config
     makeWrapper
-
+    vulkan-headers
     vulkan-loader
-    wayland
-    wayland-protocols
-    libxkbcommon
+    vulkan-tools
+    libGL
+
     # podofo
     mpv
     ffmpeg_5-full
