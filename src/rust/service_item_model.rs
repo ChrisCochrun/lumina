@@ -327,45 +327,52 @@ mod service_item_model {
             dest_index: i32,
             count: i32,
         ) -> bool {
+            debug!(
+                source = source_index,
+                dest = dest_index,
+                count = count
+            );
             let model_index =
                 self.index(source_index, 0, &QModelIndex::default());
-            // let parent = model_index.parent();
+            let parent = model_index.parent();
             let source_id = source_index as usize;
             let dest_id = dest_index as usize;
-            let count = count as usize;
-            let end_service_item = source_id + count - 1;
+            let cnt = count as usize;
+            let end_service_item = source_id + cnt - 1;
+            let dest_index = if source_index < dest_index {
+                dest_index + 1
+            } else {
+                dest_index
+            };
 
             println!("rust-end-service_item: {:?}", end_service_item);
             println!("rust-dest-service_item: {:?}", dest_index);
             unsafe {
                 // this function doesn't build
-                // self.as_mut().begin_move_rows(
-                //     &parent,
-                //     source_index,
-                //     source_index + count - 1,
-                //     &parent,
-                //     dest_index,
-                // );
-                self.as_mut().begin_reset_model();
+                self.as_mut().begin_move_rows(
+                    &parent,
+                    source_index,
+                    source_index + count - 1,
+                    &parent,
+                    dest_index,
+                );
 
                 if source_id < dest_id {
-                    let move_amount = dest_id - source_id - count + 1;
+                    let move_amount = dest_id - source_id - cnt + 1;
                     self.as_mut().service_items_mut()
                         [source_id..=dest_id]
                         .rotate_right(move_amount);
                     println!("rust-move_amount: {:?}", move_amount);
                 } else {
                     let move_amount =
-                        end_service_item - dest_id - count + 1;
+                        end_service_item - dest_id - cnt + 1;
                     println!("rust-move_amount: {:?}", move_amount);
                     self.as_mut().service_items_mut()
                         [dest_id..=end_service_item]
                         .rotate_left(move_amount);
                 }
 
-                // this function works, begin does not
-                // self.as_mut().end_move_rows();
-                self.as_mut().end_reset_model();
+                self.as_mut().end_move_rows();
                 let item = self.as_mut().get_item(dest_index);
                 self.as_mut().emit_item_moved(
                     &source_index,
@@ -1129,15 +1136,14 @@ mod service_item_model {
             self: Pin<&mut qobject::ServiceItemMod>,
         );
 
-        // cxx-qt can't build this function for some reason
-        // unsafe fn begin_move_rows(
-        //     self: Pin<&mut qobject::ServiceItemMod>,
-        //     source_parent: &QModelIndex,
-        //     source_first: i32,
-        //     source_last: i32,
-        //     destination_parent: &QModelIndex,
-        //     destination_child: i32,
-        // );
+        unsafe fn begin_move_rows(
+            self: Pin<&mut qobject::ServiceItemMod>,
+            source_parent: &QModelIndex,
+            source_first: i32,
+            source_last: i32,
+            destination_parent: &QModelIndex,
+            destination_child: i32,
+        ) -> bool;
 
         unsafe fn end_move_rows(
             self: Pin<&mut qobject::ServiceItemMod>,

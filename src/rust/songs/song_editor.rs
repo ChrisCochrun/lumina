@@ -88,9 +88,7 @@ pub mod song_editor {
             let split = vo.split(" ");
             debug!(verse_order = ?vo, iterator = ?split);
             for s in split {
-                if s.contains(",") {
-                    self.as_mut().set_verse_order_error(true);
-                } else if s.is_empty() {
+                if s.contains(",") || s.is_empty() {
                     self.as_mut().set_verse_order_error(true);
                 } else {
                     self.as_mut().set_verse_order_error(false);
