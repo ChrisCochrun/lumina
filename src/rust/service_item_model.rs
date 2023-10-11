@@ -24,6 +24,13 @@ mod service_item_model {
         type QUrl = cxx_qt_lib::QUrl;
     }
 
+    // extern "RustQt" {
+    //     #[qobject]
+    //     #[base = "QAbstractListModel"]
+    //     #[qml_element]
+    //     type ServiceItemModel = super::ServiceItemMod;
+    // }
+
     use serde::{Deserialize, Serialize};
     #[cxx_qt::qobject]
     #[derive(Clone, Debug)]
@@ -1130,15 +1137,6 @@ mod service_item_model {
         );
 
         // cxx-qt can't build this function for some reason
-        // unsafe fn begin_move_rows(
-        //     self: Pin<&mut qobject::ServiceItemMod>,
-        //     source_parent: &QModelIndex,
-        //     source_first: i32,
-        //     source_last: i32,
-        //     destination_parent: &QModelIndex,
-        //     destination_child: i32,
-        // );
-
         unsafe fn end_move_rows(
             self: Pin<&mut qobject::ServiceItemMod>,
         );
@@ -1168,6 +1166,17 @@ mod service_item_model {
             self: &qobject::ServiceItemMod,
             parent: &QModelIndex,
         ) -> bool;
+
+        #[cxx_name = "beginMoveRows"]
+        fn begin_move_rows(
+            self: Pin<&mut qobject::ServiceItemMod>,
+            #[cxx_name = "sourceParent"] source_parent: &QModelIndex,
+            #[cxx_name = "sourceFirst"] source_first: i32,
+            #[cxx_name = "sourceLast"] source_last: i32,
+            #[cxx_name = "destinationParent"]
+            destination_parent: &QModelIndex,
+            #[cxx_name = "desitnationChild"] destination_child: i32,
+        );
 
         fn index(
             self: &qobject::ServiceItemMod,

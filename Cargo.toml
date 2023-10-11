@@ -18,9 +18,9 @@ configparser = "3.0.2"
 serde = "1.0.152"
 serde_derive = "1.0.152"
 quote = "1.0.27"
-cxx = "1.0.83"
-cxx-qt = "0.5.3"
-cxx-qt-lib = "0.5.3"
+cxx = "1.0.95"
+cxx-qt = { git = "https://github.com/KDAB/cxx-qt" }
+cxx-qt-lib = { git = "https://github.com/KDAB/cxx-qt" }
 # home = "0.5.4"
 dirs = "5.0.0"
 diesel = { version = "2.0.3", features = ["sqlite"] }
@@ -42,8 +42,8 @@ time = { version = "0.3.29", features = ["formatting", "macros"] }
 # cxx-qt-build generates C++ code from the `#[cxx_qt::bridge]` module
 # and compiles it together with the Rust static library
 [build-dependencies]
-cxx-qt-build = "0.5.3"
-qt-build-utils = "0.5.3"
+cxx-qt-build = { git = "https://github.com/KDAB/cxx-qt" }
+qt-build-utils = { git = "https://github.com/KDAB/cxx-qt" }
 
 # [dependencies.confy]
 # features = ["yaml_conf"]
