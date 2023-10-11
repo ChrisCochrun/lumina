@@ -74,8 +74,8 @@ Item {
                 videoSource: root.videoBackground
                 hTextAlignment: root.hTextAlignment
                 vTextAlignment: root.vTextAlignment
-                chosenFont: font
-                textSize: fontSize
+                chosenFont: root.font
+                textSize: root.fontSize
                 preview: true
                 text: verse
                 implicitWidth: slideList.width
@@ -163,13 +163,13 @@ Item {
     }
 
     function loadVideo() {
-        showPassiveNotification("I'm loading the videos");
+        console.log("I'm loading the videos");
         for (var i = 0; i < slideList.count; ++i) {
             slideList.currentIndex = i;
             slideList.currentItem.representation.loadVideo();
             console.log(slideList.currentItem);
         }
-        showPassiveNotification("I loaded the videos");
+        console.log("I loaded the videos");
     }
 
     function clear() {

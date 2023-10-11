@@ -297,7 +297,7 @@ Item {
                     Layout.rightMargin: 20
 
                     placeholderText: "verse order..."
-                    text: song.vorder
+                    text: song.verseOrder
                     padding: 10
                     onEditingFinished: updateVerseOrder(text);
                     background: Presenter.TextBackground {
@@ -447,6 +447,10 @@ Item {
                     id: songList
                     imageBackground: songEditorModel.backgroundType === "image" ? songEditor.background : ""
                     videoBackground: songEditorModel.backgroundType === "video" ? songEditor.background : ""
+                    font: songEditorModel.font
+                    fontSize: songEditorModel.fontSize
+                    /* hTextAlignment: songEditorModel.horizontalTextAlignment */
+                    /* vTextAlignment: songEditorModel.verticalTextAlignment */
                     Layout.preferredWidth: 500
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -554,9 +558,9 @@ Item {
     }
 
     function updateVerseOrder(vorder) {
+        songProxyModel.songModel.updateVerseOrder(songIndex, vorder)
         songEditorModel.verseOrder = vorder;
         songEditorModel.checkVerseOrder();
-        songProxyModel.songModel.updateVerseOrder(songIndex, vorder)
     }
 
     function updateAudioFile() {
