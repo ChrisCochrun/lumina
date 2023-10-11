@@ -2,6 +2,10 @@
 // of whether or not a file exists
 #[cxx_qt::bridge]
 mod file_helper {
+    use rfd::FileDialog;
+    use std::path::Path;
+    use tracing::{debug, debug_span, error, info, instrument};
+
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -11,124 +15,127 @@ mod file_helper {
         type QVariant = cxx_qt_lib::QVariant;
     }
 
-    unsafe extern "RustQt" {
-        #[qobject]
-        #[qml_element]
-        #[qproperty(QString, name)]
-        #[qproperty(QString, file_path)]
-        type FileHelper = super::FileHelperRust;
+    #[derive(Clone)]
+    #[cxx_qt::qobject]
+    pub struct FileHelper {
+        #[qproperty]
+        name: QString,
+        #[qproperty]
+        file_path: QString,
+    }
+
+    impl Default for FileHelper {
+        fn default() -> Self {
+            Self {
+                name: QString::from(""),
+                file_path: QString::from(""),
+            }
+        }
+    }
+
+    impl qobject::FileHelper {
+        // #[qinvokable]
+        // pub fn save(self: Pin<&mut Self>, file: QUrl, service_list: QVariant) -> bool {
+        //     println!("{}", file);
+        //     match service_list.value() {
+        //         QVariantValue::<QString>(..) => println!("string"),
+        //         QVariantValue::<QUrl>(..) => println!("url"),
+        //         QVariantValue::<QDate>(..) => println!("date"),
+        //         _ => println!("QVariant is..."),
+        //     }
+        //     return true;
+        // }
 
         #[qinvokable]
-        fn validate(self: Pin<&mut FileHelper>, file: QUrl) -> bool;
+        pub fn load(self: Pin<&mut Self>, file: QUrl) -> Vec<String> {
+            println!("{file}");
+            vec!["hi".to_string()]
+        }
+
         #[qinvokable]
-        pub fn save_file(self: Pin<&mut FileHelper>) -> QUrl;
+        pub fn validate(self: Pin<&mut Self>, file: QUrl) -> bool {
+            let file_string = file.to_string();
+            let file_string = file_string.strip_prefix("file://");
+            match file_string {
+                Some(file) => {
+                    let exists = Path::new(&file).exists();
+                    println!("{file} exists? {exists}");
+                    exists
+                }
+                None => {
+                    let exists =
+                        Path::new(&file.to_string()).exists();
+                    println!("{file} exists? {exists}");
+                    exists
+                }
+            }
+        }
+
         #[qinvokable]
-        fn load_file(
-            self: Pin<&mut FileHelper>,
+        pub fn save_file(self: Pin<&mut Self>) -> QUrl {
+            let file = FileDialog::new()
+                .set_file_name("NVTFC.pres")
+                .set_title("Save Presentation")
+                .save_file();
+            if let Some(file) = file {
+                println!("saving-file: {:?}", file);
+                let mut string =
+                    String::from(file.to_str().unwrap_or(""));
+                if string.is_empty() {
+                    QUrl::default()
+                } else {
+                    string.insert_str(0, "file://");
+                    QUrl::from(string.as_str())
+                }
+            } else {
+                QUrl::default()
+            }
+        }
+
+        #[qinvokable]
+        pub fn load_file(
+            self: Pin<&mut Self>,
             title: QString,
             filter: QString,
-        ) -> QUrl;
-
-    }
-}
-
-use rfd::FileDialog;
-use std::path::Path;
-use tracing::{debug, debug_span, error, info, instrument};
-
-#[derive(Clone)]
-pub struct FileHelperRust {
-    name: QString,
-    file_path: QString,
-}
-
-impl Default for FileHelperRust {
-    fn default() -> Self {
-        Self {
-            name: QString::from(""),
-            file_path: QString::from(""),
-        }
-    }
-}
-
-impl ffi::FileHelperRust {
-    pub fn validate(self: Pin<&mut Self>, file: QUrl) -> bool {
-        let file_string = file.to_string();
-        let file_string = file_string.strip_prefix("file://");
-        match file_string {
-            Some(file) => {
-                let exists = Path::new(&file).exists();
-                println!("{file} exists? {exists}");
-                exists
-            }
-            None => {
-                let exists = Path::new(&file.to_string()).exists();
-                println!("{file} exists? {exists}");
-                exists
-            }
-        }
-    }
-
-    pub fn save_file(self: Pin<&mut Self>) -> QUrl {
-        let file = FileDialog::new()
-            .set_file_name("NVTFC.pres")
-            .set_title("Save Presentation")
-            .save_file();
-        if let Some(file) = file {
-            println!("saving-file: {:?}", file);
-            let mut string =
-                String::from(file.to_str().unwrap_or(""));
-            if string.is_empty() {
-                QUrl::default()
+        ) -> QUrl {
+            let video_filters = [
+                "mp4", "webm", "avi", "mkv", "MP4", "WEBM", "AVI",
+                "MKV",
+            ];
+            let image_filters = [
+                "jpg", "png", "gif", "jpeg", "JPG", "PNG", "webp",
+                "gif",
+            ];
+            let audio_filters = ["mp3", "opus", "ogg", "flac", "wav"];
+            let title = title.to_string();
+            let filter = filter.to_string();
+            let mut file = FileDialog::new().set_title(title);
+            match filter.as_str() {
+                "video" => {
+                    file = file.add_filter(filter, &video_filters);
+                }
+                "image" => {
+                    file = file.add_filter(filter, &image_filters);
+                }
+                "audio" => {
+                    file = file.add_filter(filter, &audio_filters);
+                }
+                _ => debug!("nothing"),
+            };
+            let file = file.pick_file();
+            if let Some(file) = file {
+                println!("loading-file: {:?}", file);
+                let mut string =
+                    String::from(file.to_str().unwrap_or(""));
+                if string.is_empty() {
+                    QUrl::default()
+                } else {
+                    string.insert_str(0, "file://");
+                    QUrl::from(string.as_str())
+                }
             } else {
-                string.insert_str(0, "file://");
-                QUrl::from(string.as_str())
-            }
-        } else {
-            QUrl::default()
-        }
-    }
-
-    pub fn load_file(
-        self: Pin<&mut Self>,
-        title: QString,
-        filter: QString,
-    ) -> QUrl {
-        let video_filters = [
-            "mp4", "webm", "avi", "mkv", "MP4", "WEBM", "AVI", "MKV",
-        ];
-        let image_filters = [
-            "jpg", "png", "gif", "jpeg", "JPG", "PNG", "webp", "gif",
-        ];
-        let audio_filters = ["mp3", "opus", "ogg", "flac", "wav"];
-        let title = title.to_string();
-        let filter = filter.to_string();
-        let mut file = FileDialog::new().set_title(title);
-        match filter.as_str() {
-            "video" => {
-                file = file.add_filter(filter, &video_filters);
-            }
-            "image" => {
-                file = file.add_filter(filter, &image_filters);
-            }
-            "audio" => {
-                file = file.add_filter(filter, &audio_filters);
-            }
-            _ => debug!("nothing"),
-        };
-        let file = file.pick_file();
-        if let Some(file) = file {
-            println!("loading-file: {:?}", file);
-            let mut string =
-                String::from(file.to_str().unwrap_or(""));
-            if string.is_empty() {
                 QUrl::default()
-            } else {
-                string.insert_str(0, "file://");
-                QUrl::from(string.as_str())
             }
-        } else {
-            QUrl::default()
         }
     }
 }
