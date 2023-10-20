@@ -115,6 +115,32 @@
 ;;     (description "This package provides a safe interop between Rust and C++.")
 ;;     (license (list license:expat license:asl2.0))))
 
+(define-public rust-youtube-dl-0.9
+  (package
+    (name "rust-youtube-dl")
+    (version "0.9.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (crate-uri "youtube_dl" version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1fas41jl0f2c3lmdfikvcqbagi5skg9mfnb8xa976p2l5fc1lygw"))))
+    (build-system cargo-build-system)
+    (arguments
+     `(#:cargo-inputs (("rust-log" ,rust-log-0.4)
+                       ("rust-reqwest" ,rust-reqwest-0.11)
+                       ("rust-serde" ,rust-serde-1)
+                       ("rust-serde-json" ,rust-serde-json-1)
+                       ("rust-tokio" ,rust-tokio-1)
+                       ("rust-wait-timeout" ,rust-wait-timeout-0.2))
+       #:cargo-development-inputs (("rust-env-logger" ,rust-env-logger-0.10)
+                                   ("rust-tempfile" ,rust-tempfile-3)
+                                   ("rust-tokio" ,rust-tokio-1))))
+    (home-page "https://github.com/GyrosOfWar/youtube-dl-rs")
+    (synopsis "Runs yt-dlp and parses its JSON output.")
+    (description "Runs yt-dlp and parses its JSON output.")
+    (license (list license:expat license:asl2.0))))
 
 (define-public lumina
   (package
@@ -135,10 +161,9 @@
                              mold
                              clazy
                              clang-toolchain
-                             mold
                              gdb
                              pkg-config
-                             qtfull
+                             qtbase-5
                              qttools-5
                              qt-creator
                              qtdeclarative-5
@@ -154,6 +179,7 @@
                              kcoreaddons
                              ki18n
                              sonnet
+                             just
                              ;; corrosion is needed for build and is yet to
                              ;; be packaged.
                              corrosion
@@ -161,8 +187,23 @@
                              `(,rust "out")
                              `(,rust "rustfmt")
                              `(,rust "cargo")
-                             ;; rust-analyzer
-                             rust-clippy-0.0))
+                             rust-analyzer
+                             rust-clippy-0.0
+                             rust-youtube-dl-0.9
+                             rust-configparser-3
+                             rust-serde-1
+                             rust-quote-1
+                             rust-cxx-1
+                             rust-dirs-5
+                             rust-diesel-1
+                             rust-diesel-migrations-1
+                             rust-tar-0.4
+                             rust-serde-json-1
+                             rust-fastrand-1
+                             rust-tokio-1
+                             rust-tracing-subscriber-0.3
+                             rust-tracing-0.1
+                             rust-time-0.3))
 
     (native-search-paths
      (list (search-path-specification
