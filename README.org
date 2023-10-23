@@ -28,12 +28,12 @@ cd lumina
 
 Then build.
 #+BEGIN_SRC
-cmake -B build/ . && make --dir build/
+just build
 #+END_SRC
 
 Then run.
 #+BEGIN_SRC
-./build/bin/lumina
+./bld/bin/lumina
 #+END_SRC
 
 ** Nix
