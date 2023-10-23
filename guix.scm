@@ -23,8 +23,10 @@
              (gnu packages pkg-config)
              (gnu packages kde-frameworks)
              (gnu packages kde)
+             (gnu packages python)
              (gnu packages video)
              (gnu packages cmake)
+             (gnu packages commencement)
              (gnu packages crates-io)
              (gnu services)
              (guix gexp)
@@ -32,6 +34,7 @@
              (guix git-download)
              (guix build-system qt)
              (guix build-system cmake)
+             (guix utils)
              ((guix licenses) #:prefix license:))
 
 (define this-directory
@@ -70,18 +73,33 @@
       (synopsis "Adding rust to cmake projects")
       (description "idk"))))
 
-(define-public qtfull
+(define lumina-declarative
   (package
-    (inherit qtbase-5)
-    (propagated-inputs (modify-inputs
-                        (package-inputs qtbase-5)
-                        (append
-                         qtdeclarative-5
-                         qtquickcontrols2-5
-                         qtx11extras
-                         qtwayland-5
-                         qtwebengine-5
-                         qttools-5)))))
+    (inherit qtdeclarative-5)
+    (name "qtdeclarative")
+    (arguments
+     (substitute-keyword-arguments (package-arguments qtsvg-5)
+       ((#:phases phases)
+        #~(modify-phases #$phases
+            (add-after 'build 'fix-qt5core-install-prefix
+              (lambda _
+                ;; The Qt5Core install prefix is set to qtbase, but qmlcachegen
+                ;; is provided by qtdeclarative-5.
+                (substitute*
+                    "lib/cmake/Qt5QuickCompiler/Qt5QuickCompilerConfig.cmake"
+                  (("\\$\\{_qt5Core_install_prefix\\}") #$output))
+
+               (substitute* "lib/headers"
+                 (("\\$\\$\\[QT_INSTALL_HEADERS\\]")
+                  "$$clean_path($$replace(dir, mkspecs/modules, ../../include/qt5))"))
+               (substitute* "lib"
+                 (("\\$\\$\\[QT_INSTALL_LIBS\\]")
+                  "$$clean_path($$replace(dir, mkspecs/modules, ../../lib))")
+                 (("\\$\\$\\[QT_HOST_LIBS\\]")
+                  "$$clean_path($$replace(dir, mkspecs/modules, ../../lib))"))
+               (substitute* "bin"
+                 (("\\$\\$\\[QT_INSTALL_BINS\\]")
+                  "$$clean_path($$replace(dir, mkspecs/modules, ../../bin))"))))))))))
 
 ;; (define-public rust-cxx-qt-1
 ;;   (package
@@ -115,32 +133,32 @@
 ;;     (description "This package provides a safe interop between Rust and C++.")
 ;;     (license (list license:expat license:asl2.0))))
 
-(define-public rust-youtube-dl-0.9
-  (package
-    (name "rust-youtube-dl")
-    (version "0.9.0")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (crate-uri "youtube_dl" version))
-       (file-name (string-append name "-" version ".tar.gz"))
-       (sha256
-        (base32 "1fas41jl0f2c3lmdfikvcqbagi5skg9mfnb8xa976p2l5fc1lygw"))))
-    (build-system cargo-build-system)
-    (arguments
-     `(#:cargo-inputs (("rust-log" ,rust-log-0.4)
-                       ("rust-reqwest" ,rust-reqwest-0.11)
-                       ("rust-serde" ,rust-serde-1)
-                       ("rust-serde-json" ,rust-serde-json-1)
-                       ("rust-tokio" ,rust-tokio-1)
-                       ("rust-wait-timeout" ,rust-wait-timeout-0.2))
-       #:cargo-development-inputs (("rust-env-logger" ,rust-env-logger-0.10)
-                                   ("rust-tempfile" ,rust-tempfile-3)
-                                   ("rust-tokio" ,rust-tokio-1))))
-    (home-page "https://github.com/GyrosOfWar/youtube-dl-rs")
-    (synopsis "Runs yt-dlp and parses its JSON output.")
-    (description "Runs yt-dlp and parses its JSON output.")
-    (license (list license:expat license:asl2.0))))
+;; (define-public rust-youtube-dl-0.9
+;;   (package
+;;     (name "rust-youtube-dl")
+;;     (version "0.9.0")
+;;     (source
+;;      (origin
+;;        (method url-fetch)
+;;        (uri (crate-uri "youtube_dl" version))
+;;        (file-name (string-append name "-" version ".tar.gz"))
+;;        (sha256
+;;         (base32 "1fas41jl0f2c3lmdfikvcqbagi5skg9mfnb8xa976p2l5fc1lygw"))))
+;;     (build-system cargo-build-system)
+;;     (arguments
+;;      `(#:cargo-inputs (("rust-log" ,rust-log-0.4)
+;;                        ("rust-reqwest" ,rust-reqwest-0.11)
+;;                        ("rust-serde" ,rust-serde-1)
+;;                        ("rust-serde-json" ,rust-serde-json-1)
+;;                        ("rust-tokio" ,rust-tokio-1)
+;;                        ("rust-wait-timeout" ,rust-wait-timeout-0.2))
+;;        #:cargo-development-inputs (("rust-env-logger" ,rust-env-logger-0.10)
+;;                                    ("rust-tempfile" ,rust-tempfile-3)
+;;                                    ("rust-tokio" ,rust-tokio-1))))
+;;     (home-page "https://github.com/GyrosOfWar/youtube-dl-rs")
+;;     (synopsis "Runs yt-dlp and parses its JSON output.")
+;;     (description "Runs yt-dlp and parses its JSON output.")
+;;     (license (list license:expat license:asl2.0))))
 
 (define-public lumina
   (package
@@ -148,11 +166,11 @@
     (version "0.0.1")
     (source source)
     (build-system qt-build-system)
-    (arguments `(#:phases
-                 (modify-phases %standard-phases
-                   (replace 'build
-                     (lambda* (#:key outputs #:allow-other-keys)
-                       (invoke "/bin/sh" "./build.sh" "-d"))))))
+    ;; (arguments `(#:phases
+    ;;              (modify-phases %standard-phases
+    ;;                (replace 'build
+    ;;                  (lambda* (#:key outputs #:allow-other-keys)
+    ;;                    (invoke "just" "build"))))))
 
     (inputs (list mpv
                   ffmpeg))
@@ -163,6 +181,7 @@
                              clang-toolchain
                              gdb
                              pkg-config
+                             lumina-declarative
                              qtbase-5
                              qttools-5
                              qt-creator
@@ -189,7 +208,7 @@
                              `(,rust "cargo")
                              rust-analyzer
                              rust-clippy-0.0
-                             rust-youtube-dl-0.9
+                             ;; rust-youtube-dl-0.9
                              rust-configparser-3
                              rust-serde-1
                              rust-quote-1
