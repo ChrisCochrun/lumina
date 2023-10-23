@@ -34,6 +34,7 @@ Item {
                     hoverEnabled: true
                     /* flat: true */
                     onActivated: updateFont(currentText)
+                    onAccepted: updateFont(currentText)
                     background: Presenter.TextBackground {
                         control: fontBox
                     }
@@ -445,8 +446,8 @@ Item {
 
                 Presenter.SongEditorSlideList {
                     id: songList
-                    imageBackground: songEditorModel.backgroundType === "image" ? songEditor.background : ""
-                    videoBackground: songEditorModel.backgroundType === "video" ? songEditor.background : ""
+                    imageBackground: songEditorModel.backgroundType === "image" ? song.background : ""
+                    videoBackground: songEditorModel.backgroundType === "video" ? song.background : ""
                     font: songEditorModel.font
                     fontSize: songEditorModel.fontSize
                     /* hTextAlignment: songEditorModel.horizontalTextAlignment */
@@ -543,6 +544,7 @@ Item {
 
     function updateTitle(title) {
         songProxyModel.songModel.updateTitle(songIndex, title)
+        song.title = title;
     }
 
     function updateAuthor(author) {
@@ -590,6 +592,7 @@ Item {
     }
 
     function updateFont(font) {
+        showPassiveNotification(font);
         changeSlideFont(font, false);
         songProxyModel.songModel.updateFont(songIndex, font);
         song.font = font;
