@@ -16,8 +16,8 @@ pub mod song_editor {
         type QStringList = cxx_qt_lib::QStringList;
         include!("cxx-qt-lib/qlist.h");
         type QList_QString = cxx_qt_lib::QList<QString>;
-        // #[cxx_name = "SongModel"]
-        // type CxxSongs = crate::songs::song_model::qobject::SongModel;
+        #[cxx_name = "SongModel"]
+        type CxxSongs = crate::songs::song_model::qobject::SongModel;
     }
 
     #[derive(Clone, Debug)]
@@ -49,8 +49,8 @@ pub mod song_editor {
         font: QString,
         #[qproperty]
         font_size: i32,
-        // #[qproperty]
-        // song_model: *mut CxxSongs,
+        #[qproperty]
+        song_model: *mut CxxSongs,
     }
 
     impl Default for SongEditor {
@@ -69,7 +69,7 @@ pub mod song_editor {
                 vertical_text_alignment: QString::default(),
                 font: QString::default(),
                 font_size: 50,
-                // song_model: std::ptr::null_mut(),
+                song_model: std::ptr::null_mut(),
             }
         }
     }
