@@ -8,7 +8,8 @@ This is an attempt at building a church presentation application in Qt/QML. QML 
 - Presents songs lyrics with image and video backgrounds
 - Use MPV as a rendering system for videos
 - Simple song creation with a powerful text parser
-- Present Slides
+- Present Slides (PDF) (PowerPoint and Impress are in not implemented yet)
+- Present Reveal.js slides
 - (Custom slide builder)
 - (an intuitive UI) - Still needs A LOT of polish
 
