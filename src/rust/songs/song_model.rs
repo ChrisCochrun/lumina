@@ -734,11 +734,7 @@ pub mod song_model {
                         false
                     }
                 }
-                Err(_e) => {
-
-                    debug!(?updated_font);
-                    false
-                }},
+                Err(_e) => false,
             }
         }
 
