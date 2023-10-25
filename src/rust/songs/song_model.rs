@@ -723,6 +723,7 @@ pub mod song_model {
                         .get_mut(index as usize)
                     {
                         song.font = updated_font.to_string();
+                        debug!(?updated_font);
                         self.as_mut().emit_data_changed(
                             model_index,
                             model_index,
@@ -733,7 +734,11 @@ pub mod song_model {
                         false
                     }
                 }
-                Err(_e) => false,
+                Err(_e) => {
+
+                    debug!(?updated_font);
+                    false
+                }},
             }
         }
 
@@ -783,7 +788,7 @@ pub mod song_model {
             self: Pin<&mut Self>,
             index: i32,
         ) -> QMap_QString_QVariant {
-            println!("{index}");
+            debug!(index);
             let mut qvariantmap = QMap_QString_QVariant::default();
             let idx = self.index(index, 0, &QModelIndex::default());
             if !idx.is_valid() {
