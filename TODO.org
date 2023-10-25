@@ -103,11 +103,11 @@ This is now a much higher priority since I need to get this done before a lot of
 Maybe the first approach is to scan through the rest of the C++ code and see what I can easily move to rust fast. Things like moving items are a more involved set of steps.
 
 Start with select, deselect, select_items, and deactivate. Then either move onto save or move things...
-- [-] Select
-- [-] Activate
-- [ ] Deselect
+- [X] Select
+- [X] Activate
+- [X] Deselect
 - [ ] Select Items
-- [ ] Deactivate
+- [X] Deactivate
 - [X] Load
 - [X] Save
 *** TODO Deployment
