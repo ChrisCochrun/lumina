@@ -259,43 +259,60 @@ pub mod song_model {
             }
         }
 
+        fn get_index(
+            mut self: Pin<&mut Self>,
+            song_id: i32,
+        ) -> usize {
+            self.as_ref()
+                .songs()
+                .iter()
+                .position(|x| x.id == song_id)
+                .unwrap()
+        }
+
         #[qinvokable]
         pub fn update_title(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_title: QString,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
             vector_roles
                 .append(self.as_ref().get_role(Role::TitleRole));
+            let index = self
+                .as_mut()
+                .songs()
+                .iter()
+                .position(|x| x.id == song_id)
+                .unwrap();
             let model_index = &self.as_ref().index(
-                index,
+                index as i32,
                 0,
                 &QModelIndex::default(),
             );
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(title.eq(updated_title.to_string()))
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
+                    debug!(_i, index);
+                    for song in self
                         .as_mut()
                         .songs_mut()
-                        .get_mut(index as usize)
+                        .iter_mut()
+                        .filter(|x| x.id == song_id)
                     {
+                        debug!(?song);
                         song.title = updated_title.to_string();
-                        self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
-                            &vector_roles,
-                        );
-                        self.as_mut().emit_title_changed();
-                        true
-                    } else {
-                        false
                     }
+                    self.as_mut().emit_data_changed(
+                        model_index,
+                        model_index,
+                        &vector_roles,
+                    );
+                    true
                 }
                 Err(_e) => false,
             }
@@ -304,7 +321,7 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_lyrics(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_lyrics: QString,
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
