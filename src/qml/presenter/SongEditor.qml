@@ -9,7 +9,7 @@ import "./" as Presenter
 Item {
     id: root
 
-    property int songIndex
+    property int songID
     property var song: songEditorModel
 
     GridLayout {
@@ -491,6 +491,7 @@ Item {
         songEditorModel.verticalTextAlignment = thisSong.verticalTextAlignment;
         songEditorModel.font = thisSong.font;
         songEditorModel.fontSize = thisSong.fontSize;
+        songID = thisSong.id;
 
         updateHorizontalTextAlignment("Center");
         updateVerticalTextAlignment("Center");
@@ -522,14 +523,14 @@ Item {
             song.font = updatedSong.font;
             song.fontSize = updatedSong.fontSize;
             song.checkVerseOrder();
-            songIndex = updatedSong.id;
+            songID = updatedSong.id;
 
             /* changeSlideHAlignment(song.horizontalTextAlignment); */
             /* changeSlideVAlignment(song.verticalTextAlignment); */
             /* changeSlideFont(song.font, true); */
             /* changeSlideFontSize(song.fontSize, true) */
             /* changeSlideText(songProxyModel.modelIndex(index).row); */
-            console.log("Changing to song: " + song.title + " with ID: " + songIndex);
+            console.log("Changing to song: " + song.title + " with ID: " + songID);
             footerFirstText = "Song: ";
             footerSecondText = song.title;
             songList.loadVideo();
@@ -537,31 +538,31 @@ Item {
     }
 
     function updateLyrics(lyrics) {
-        songProxyModel.songModel.updateLyrics(songIndex, lyrics);
+        songProxyModel.songModel.updateLyrics(songID, lyrics);
         /* songLyrics = lyrics; */
         clearSlides();
-        changeSlideText(songIndex);
+        changeSlideText(songID);
     }
 
     function updateTitle(title) {
-        songProxyModel.songModel.updateTitle(songIndex, title)
+        songProxyModel.songModel.updateTitle(songID, title)
         song.title = title;
     }
 
     function updateAuthor(author) {
-        songProxyModel.songModel.updateAuthor(songIndex, author)
+        songProxyModel.songModel.updateAuthor(songID, author)
     }
 
     function updateAudio(audio) {
-        songProxyModel.songModel.updateAudio(songIndex, audio)
+        songProxyModel.songModel.updateAudio(songID, audio)
     }
 
     function updateCcli(ccli) {
-        songProxyModel.songModel.updateCcli(songIndex, ccli)
+        songProxyModel.songModel.updateCcli(songID, ccli)
     }
 
     function updateVerseOrder(vorder) {
-        songProxyModel.songModel.updateVerseOrder(songIndex, vorder)
+        songProxyModel.songModel.updateVerseOrder(songID, vorder)
         songEditorModel.verseOrder = vorder;
         songEditorModel.checkVerseOrder();
     }
@@ -569,39 +570,39 @@ Item {
     function updateAudioFile() {
         const file = fileHelper.loadFile("Pick Audio", "audio");
         songEditorModel.audio = file
-        songProxyModel.songModel.updateAudio(songIndex, file);
+        songProxyModel.songModel.updateAudio(songID, file);
     }
 
     function updateBackground(backgroundType) {
         songEditorModel.backgroundType = backgroundType;
         const file = fileHelper.loadFile("Pick Background", backgroundType);
         songEditorModel.background = file;
-        songProxyModel.songModel.updateBackground(songIndex, file);
-        songProxyModel.songModel.updateBackgroundType(songIndex, backgroundType);
+        songProxyModel.songModel.updateBackground(songID, file);
+        songProxyModel.songModel.updateBackgroundType(songID, backgroundType);
         console.log("changed background");
     }
 
 
     function updateHorizontalTextAlignment(textAlignment) {
         changeSlideHAlignment(textAlignment);
-        songProxyModel.songModel.updateHorizontalTextAlignment(songIndex, textAlignment);
+        songProxyModel.songModel.updateHorizontalTextAlignment(songID, textAlignment);
     }
 
     function updateVerticalTextAlignment(textAlignment) {
         changeSlideVAlignment(textAlignment);
-        songProxyModel.songModel.updateVerticalTextAlignment(songIndex, textAlignment)
+        songProxyModel.songModel.updateVerticalTextAlignment(songID, textAlignment)
     }
 
     function updateFont(font) {
         showPassiveNotification(font);
         changeSlideFont(font, false);
-        songProxyModel.songModel.updateFont(songIndex, font);
+        songProxyModel.songModel.updateFont(songID, font);
         song.font = font;
     }
 
     function updateFontSize(fontSize) {
         changeSlideFontSize(fontSize, false);
-        songProxyModel.songModel.updateFontSize(songIndex, fontSize);
+        songProxyModel.songModel.updateFontSize(songID, fontSize);
         song.fontSize = fontSize;
     }
 
