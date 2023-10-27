@@ -259,15 +259,25 @@ pub mod song_model {
             }
         }
 
-        fn get_index(
+        fn get_indices(
             mut self: Pin<&mut Self>,
             song_id: i32,
-        ) -> usize {
-            self.as_ref()
+            role: Role,
+        ) -> (usize, QModelIndex, QVector_i32) {
+            let mut vector_roles = QVector_i32::default();
+            vector_roles.append(self.as_ref().get_role(role));
+            let index = self
+                .as_ref()
                 .songs()
                 .iter()
                 .position(|x| x.id == song_id)
-                .unwrap()
+                .unwrap();
+            let model_index = self.as_ref().index(
+                index as i32,
+                0,
+                &QModelIndex::default(),
+            );
+            (index, model_index, vector_roles)
         }
 
         #[qinvokable]
@@ -276,21 +286,8 @@ pub mod song_model {
             song_id: i32,
             updated_title: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::TitleRole));
-            let index = self
-                .as_mut()
-                .songs()
-                .iter()
-                .position(|x| x.id == song_id)
-                .unwrap();
-            let model_index = &self.as_ref().index(
-                index as i32,
-                0,
-                &QModelIndex::default(),
-            );
-
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::TitleRole);
             let db = &mut self.as_mut().get_db();
             let result = update(songs.filter(id.eq(song_id)))
                 .set(title.eq(updated_title.to_string()))
@@ -308,8 +305,8 @@ pub mod song_model {
                         song.title = updated_title.to_string();
                     }
                     self.as_mut().emit_data_changed(
-                        model_index,
-                        model_index,
+                        &model_index,
+                        &model_index,
                         &vector_roles,
                     );
                     true
@@ -324,17 +321,10 @@ pub mod song_model {
             song_id: i32,
             updated_lyrics: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::LyricsRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
-
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::LyricsRole);
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(lyrics.eq(updated_lyrics.to_string()))
                 .execute(db);
             match result {
@@ -346,8 +336,8 @@ pub mod song_model {
                     {
                         song.lyrics = updated_lyrics.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -362,20 +352,14 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_author(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_author: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::AuthorRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::AuthorRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(author.eq(updated_author.to_string()))
                 .execute(db);
             match result {
@@ -387,8 +371,8 @@ pub mod song_model {
                     {
                         song.author = updated_author.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -403,20 +387,14 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_audio(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_audio: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::AudioRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::AudioRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(audio.eq(updated_audio.to_string()))
                 .execute(db);
             match result {
@@ -428,8 +406,8 @@ pub mod song_model {
                     {
                         song.audio = updated_audio.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -444,20 +422,14 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_ccli(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_ccli: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::CcliRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::CcliRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(ccli.eq(updated_ccli.to_string()))
                 .execute(db);
             match result {
@@ -469,8 +441,8 @@ pub mod song_model {
                     {
                         song.ccli = updated_ccli.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -485,20 +457,15 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_verse_order(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_verse_order: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::VerseOrderRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) = self
+                .as_mut()
+                .get_indices(song_id, Role::VerseOrderRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(verse_order.eq(updated_verse_order.to_string()))
                 .execute(db);
             match result {
@@ -511,8 +478,8 @@ pub mod song_model {
                         song.verse_order =
                             updated_verse_order.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -527,20 +494,15 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_background(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_background: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::BackgroundRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) = self
+                .as_mut()
+                .get_indices(song_id, Role::BackgroundRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(background.eq(updated_background.to_string()))
                 .execute(db);
             match result {
@@ -558,8 +520,8 @@ pub mod song_model {
                             roles = vector_roles.get(0)
                         );
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         self.as_mut().emit_background_changed();
@@ -575,21 +537,15 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_background_type(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_background_type: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles.append(
-                self.as_ref().get_role(Role::BackgroundTypeRole),
-            );
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) = self
+                .as_mut()
+                .get_indices(song_id, Role::BackgroundTypeRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(
                     background_type
                         .eq(updated_background_type.to_string()),
@@ -605,8 +561,8 @@ pub mod song_model {
                         song.background_type =
                             updated_background_type.to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -621,22 +577,17 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_horizontal_text_alignment(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_horizontal_text_alignment: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles.append(
-                self.as_ref()
-                    .get_role(Role::HorizontalTextAlignmentRole),
-            );
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(
+                    song_id,
+                    Role::HorizontalTextAlignmentRole,
+                );
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(horizontal_text_alignment.eq(
                     updated_horizontal_text_alignment.to_string(),
                 ))
@@ -652,8 +603,8 @@ pub mod song_model {
                             updated_horizontal_text_alignment
                                 .to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -668,23 +619,18 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_vertical_text_alignment(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_vertical_text_alignment: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles.append(
-                self.as_ref()
-                    .get_role(Role::VerticalTextAlignmentRole),
-            );
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(
+                    song_id,
+                    Role::VerticalTextAlignmentRole,
+                );
 
             let db = &mut self.as_mut().get_db();
             let result =
-                update(songs.filter(id.eq(index)))
+                update(songs.filter(id.eq(song_id)))
                     .set(vertical_text_alignment.eq(
                         updated_vertical_text_alignment.to_string(),
                     ))
@@ -700,8 +646,8 @@ pub mod song_model {
                             updated_vertical_text_alignment
                                 .to_string();
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -716,20 +662,14 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_font(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_font: QString,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::FontRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) =
+                self.as_mut().get_indices(song_id, Role::FontRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(font.eq(updated_font.to_string()))
                 .execute(db);
             match result {
@@ -742,8 +682,8 @@ pub mod song_model {
                         song.font = updated_font.to_string();
                         debug!(?updated_font);
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
@@ -758,20 +698,15 @@ pub mod song_model {
         #[qinvokable]
         pub fn update_font_size(
             mut self: Pin<&mut Self>,
-            index: i32,
+            song_id: i32,
             updated_font_size: i32,
         ) -> bool {
-            let mut vector_roles = QVector_i32::default();
-            vector_roles
-                .append(self.as_ref().get_role(Role::FontSizeRole));
-            let model_index = &self.as_ref().index(
-                index,
-                0,
-                &QModelIndex::default(),
-            );
+            let (index, model_index, vector_roles) = self
+                .as_mut()
+                .get_indices(song_id, Role::FontSizeRole);
 
             let db = &mut self.as_mut().get_db();
-            let result = update(songs.filter(id.eq(index)))
+            let result = update(songs.filter(id.eq(song_id)))
                 .set(font_size.eq(updated_font_size))
                 .execute(db);
             match result {
@@ -783,8 +718,8 @@ pub mod song_model {
                     {
                         song.font_size = updated_font_size;
                         self.as_mut().emit_data_changed(
-                            model_index,
-                            model_index,
+                            &model_index,
+                            &model_index,
                             &vector_roles,
                         );
                         true
