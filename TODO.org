@@ -3,13 +3,17 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [60%] [44/73]
+* Tasks [0%] [0/0]
+** TODO Add a generate thumbnails function for reveal.js presentations
+[[file:~/dev/lumina/src/qml/presenter/MainWindow.qml::function getRevealThumbs(file) {]]
+
+This site is very helpful: https://html2canvas.hertzen.com/configuration/
+
+I could use html2canvas in order to render the file in a canvas and pick it's size. Then I could take images of a slide, check to see if there are more slides, take another after changing and so on. This will likely need to be a lengthy script and I'll need to toy with how to load both html2canvas and this script into the QML webengine
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
 
-** DONE Make saving file auto use the last save file and go from there
-[[file:~/dev/lumina/src/qml/main.qml::function save() {]]
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 ** TODO write a function for setting each slide to the appropriate index in html presentations
@@ -138,7 +142,7 @@ Both PDFs and reveal.js presentations think every slide is the first one. I need
 Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
 ** TODO [#A] Organize and layout structure of rust code       :maintenance:
 Since building a lot of the rust code felt more like an experiment, I've not kept it very well organized. I need to go through each model and rust module and organize them well and then decide what needs to be publicly available or not.
-** TODO find song on SongSelect :feature:
+** TODO find song on SongSelect or perhaps Genius Lyrics          :feature:
 This function will need to include parsing through the HTML of the results page. Finding the first "song-result", then "song-result-title", and inside that tag is the name. In the URL is the CCLI number.
 
 Lyrics will probably be better to grab from genius lyrics.
@@ -178,6 +182,8 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE Make saving file auto use the last save file and go from there
+[[file:~/dev/lumina/src/qml/main.qml::function save() {]]
 ** DONE Need to test on other wayland compositors but Hyprland doesn't show the presentation window. :bug:
 Quite by accident, I discovered how I may be able to fix this bug. Even though in QML I cannot show the window on demand, apparently in C++ I can still do it. So I will attempt to show the window by subclassing QQuickView in Rust and assign it's source through a QML file that is the PresentationWindow.qml
 
