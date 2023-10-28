@@ -247,10 +247,10 @@ Item {
     }
 
     function revealNext() {
-        // Need to check to see if there is a next item somehow?
+        web.runJavascript("Reveal.next()")
     }
 
     function revealPrev() {
-
+        web.runJavascript("Reveal.prev()")
     }
 }
