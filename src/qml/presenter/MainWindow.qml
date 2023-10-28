@@ -21,7 +21,10 @@ Controls.Page {
     property string currentText: presentation.text
     property int blurRadius: 0
 
-    /* property var video */
+    /* It's important to know that the INDEX is always the Index of the item
+       in the Vector in Rust code. So, we pass the index from library lists
+       around instead of here because getting the item requires us to use the
+       correct Index from the QAbstractListModel to get a QModelIndex.*/
     property int dragItemIndex
     property string dragItemTitle: ""
     property string dragItemType: ""
