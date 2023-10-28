@@ -3,6 +3,7 @@ import QtQuick.Dialogs 1.0
 import QtQuick.Controls 2.15 as Controls
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
+import QtWebEngine 1.10
 import org.kde.kirigami 2.13 as Kirigami
 import "./" as Presenter
 import org.presenter 1.0
@@ -18,6 +19,7 @@ Controls.Page {
     property int totalSlides: SlideMod.count()
     property url imageBackground: presentation.imageBackground
     property url videoBackground: presentation.vidBackground
+    property url webSource
     property string currentText: presentation.text
     property int blurRadius: 0
 
@@ -128,6 +130,22 @@ Controls.Page {
                 visible: libraryOpen ? true : false
             }
             
+        }
+    }
+
+    WebEngineView {
+        id: web
+        anchors.left: parent.right
+        url: "file:///home/chris/org/lessons/2023_24_3_noah_lesson.html"
+        visible: false
+        WebEngineScript {
+            name: "html2canvas"
+            sourceUrl: "file:///home/chris/dev/lumina/src/qml/presenter/html2canvas.min.js"
+        }
+        onLoadingChanged: {
+            if (loadRequest.status == 2)
+                showPassiveNotification("yahoo?");
+            getRevealThumbs("file:///home/chris/org/lessons/2023_24_3_noah_lesson.html");
         }
     }
 
@@ -309,5 +327,23 @@ Controls.Page {
     function refocusPresentation() {
         presentation.forceActiveFocus();
         presentation.focusTimer = true;
+    }
+
+    function getRevealThumbs(file) {
+        console.log(file);
+        webSource = file;
+        web.runJavaScript("
+import('./html2canvas.min.js').then((html2canvas) => {
+const screenshotTarget = document.body;
+
+html2canvas(screenshotTarget).then((canvas) => {
+    const base64image = canvas.toDataURL('image/png');
+    return base64image;
+});});", function(image) { console.log(image); });
+            /*     web.runJavaScript(" */
+            /*     const index */
+            /*     for (let i = 0; i < index; i++) { */
+            /*         Reveal.next(); */
+            /*     }") */
     }
 }
