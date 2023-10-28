@@ -258,28 +258,30 @@ Kirigami.ApplicationWindow {
 
     function save() {
         const saveFile = RSettings.lastSaveFile;
-        const file = fileHelper.saveFile();
-        const saved = mainPage.serviceItems.save(file);
-        saved ? RSettings.setSaveFile(file)
-            : console.log("File: " + file + " wasn't saved");
-        saved ? showPassiveNotification("SAVED! " + file)
-            : showPassiveNotification("FAILED!");
+        console.log(saveFile.toString());
+        let file = "";
+        saveFile.length === 0 ? file = fileHelper.saveFile() : file = saveFile;
+        finalSave(file);
     }
 
     function saveAs() {
         const file = fileHelper.saveFile();
+        finalSave(file);
+    }
+
+    function finalSave(file) {
         const saved = mainPage.serviceItems.save(file);
         saved ? RSettings.setSaveFile(file)
             : console.log("File: " + file + " wasn't saved");
         saved ? showPassiveNotification("SAVED! " + file)
-            : showPassiveNotification("FAILED!");
+            : showPassiveNotification("Didn't save file");
     }
 
     function load() {
         const file = fileHelper.loadFile("Load Presentation");
         const loaded = mainPage.serviceItems.load(file);
         loaded ? showPassiveNotification("Loaded: " + file)
-            : showPassiveNotification("FAILED!");
+            : showPassiveNotification("File wasn't loaded");
         loaded ? RSettings.loadFile = file
             : showPassiveNotification("Didn't set loadfile!");
         showPassiveNotification(RSettings.loadFile);

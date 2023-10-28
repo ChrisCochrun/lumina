@@ -3,12 +3,12 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [58%] [43/74]
+* Tasks [60%] [44/73]
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
 
-** TODO Make saving file auto use the last save file and go from there
+** DONE Make saving file auto use the last save file and go from there
 [[file:~/dev/lumina/src/qml/main.qml::function save() {]]
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
