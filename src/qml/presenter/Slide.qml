@@ -245,4 +245,12 @@ Item {
     function playVideo() {
         mpv.play();
     }
+
+    function revealNext() {
+        // Need to check to see if there is a next item somehow?
+    }
+
+    function revealPrev() {
+
+    }
 }
