@@ -551,10 +551,10 @@ Item {
         serviceItemList.forceLayout()
     }
 
-    function addItem(index, type, itemID) {
+    function addItem(index, type, itemIndex) {
         switch (type) {
         case 'image': {
-            const image = imageProxyModel.getImage(itemID);
+            const image = imageProxyModel.getImage(itemIndex);
             console.log("adding: " + image.title + " of type " + type);
             ServiceItemModel.insertItem(index, image.title,
                                         "", type, image.filePath,
@@ -564,7 +564,7 @@ Item {
             return;
         }
         case 'video': {
-            const video = videoProxyModel.getVideo(itemID);
+            const video = videoProxyModel.getVideo(itemIndex);
             console.log("adding: " + video.title + " of type " + type);
             ServiceItemModel.insertItem(index, video.title,
                                         "", type, video.filePath,
@@ -574,8 +574,8 @@ Item {
             return;
         }
         case 'song': {
-            const lyrics = songProxyModel.getLyricList(itemID);
-            const song = songProxyModel.getSong(itemID);
+            const lyrics = songProxyModel.getLyricList(itemIndex);
+            const song = songProxyModel.getSong(itemIndex);
             /* showPassiveNotification(song.title); */
             console.log("adding: " + song.title +
                         " of type " + type +
@@ -589,7 +589,7 @@ Item {
             return;
         }
         case 'presentation': {
-            const pres = presProxyModel.getPresentation(itemID);
+            const pres = presProxyModel.getPresentation(itemIndex);
             console.log("adding: " + pres.title +
                         " of type " + type +
                         " with " + pres.pageCount + " slides");
@@ -606,10 +606,10 @@ Item {
         /* totalServiceItems++; */
     }
 
-    function appendItem(type, itemID) {
+    function appendItem(type, itemIndex) {
         switch (type) {
         case 'image': {
-            const image = imageProxyModel.getImage(itemID);
+            const image = imageProxyModel.getImage(itemIndex);
             console.log("adding: " + image.title + " of type " + type);
             ServiceItemModel.addItem(image.title,
                                      type, image.filePath,
@@ -619,7 +619,7 @@ Item {
             return;
         }
         case 'video': {
-            const video = videoProxyModel.getVideo(itemID);
+            const video = videoProxyModel.getVideo(itemIndex);
             console.log("adding: " + video.title + " of type " + type);
             ServiceItemModel.addItem(video.title,
                                      type, video.filePath,
@@ -629,8 +629,8 @@ Item {
             return;
         }
         case 'song': {
-            const lyrics = songProxyModel.getLyricList(itemID);
-            const song = songProxyModel.getSong(itemID);
+            const lyrics = songProxyModel.getLyricList(itemIndex);
+            const song = songProxyModel.getSong(itemIndex);
             console.log("adding: " + song.title +
                         " of type " + type +
                         " with " + lyrics.length + " slides");
@@ -643,7 +643,7 @@ Item {
             return;
         }
         case 'presentation': {
-            const pres = presProxyModel.getPresentation(itemID);
+            const pres = presProxyModel.getPresentation(itemIndex);
             console.log("adding: " + pres.title +
                         " of type " + type +
                         " with " + pres.pageCount + " slides");
