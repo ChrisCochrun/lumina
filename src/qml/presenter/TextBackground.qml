@@ -11,10 +11,10 @@ Item {
 
     Rectangle {
         id: rect
-        color: Kirigami.Theme.backgroundColor
+        color: Qt.darker(Kirigami.Theme.backgroundColor, 1.2)
         anchors.fill: parent
         radius: 10
-        border.width: 0.5
+        border.width: control.activeFocus ? 0.5 : (errorCondition ? 0.5 : 0.0)
         border.color: control.activeFocus ? Kirigami.Theme.highlightColor : (errorCondition ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor)
     }
 
