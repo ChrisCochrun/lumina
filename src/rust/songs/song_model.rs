@@ -295,21 +295,20 @@ pub mod song_model {
             match result {
                 Ok(_i) => {
                     debug!(_i, index);
-                    for song in self
-                        .as_mut()
-                        .songs_mut()
-                        .iter_mut()
-                        .filter(|x| x.id == song_id)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         debug!(?song);
                         song.title = updated_title.to_string();
+                        self.as_mut().emit_data_changed(
+                            &model_index,
+                            &model_index,
+                            &vector_roles,
+                        );
+                        true
+                    } else {
+                        false
                     }
-                    self.as_mut().emit_data_changed(
-                        &model_index,
-                        &model_index,
-                        &vector_roles,
-                    );
-                    true
                 }
                 Err(_e) => false,
             }
@@ -329,10 +328,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.lyrics = updated_lyrics.to_string();
                         self.as_mut().emit_data_changed(
@@ -364,10 +361,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.author = updated_author.to_string();
                         self.as_mut().emit_data_changed(
@@ -399,10 +394,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.audio = updated_audio.to_string();
                         self.as_mut().emit_data_changed(
@@ -434,10 +427,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.ccli = updated_ccli.to_string();
                         self.as_mut().emit_data_changed(
@@ -470,10 +461,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.verse_order =
                             updated_verse_order.to_string();
@@ -507,10 +496,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.background =
                             updated_background.to_string();
@@ -553,10 +540,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.background_type =
                             updated_background_type.to_string();
@@ -594,10 +579,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.horizontal_text_alignment =
                             updated_horizontal_text_alignment
@@ -637,10 +620,8 @@ pub mod song_model {
                     .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.vertical_text_alignment =
                             updated_vertical_text_alignment
@@ -674,10 +655,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.font = updated_font.to_string();
                         debug!(?updated_font);
@@ -711,10 +690,8 @@ pub mod song_model {
                 .execute(db);
             match result {
                 Ok(_i) => {
-                    if let Some(song) = self
-                        .as_mut()
-                        .songs_mut()
-                        .get_mut(index as usize)
+                    if let Some(song) =
+                        self.as_mut().songs_mut().get_mut(index)
                     {
                         song.font_size = updated_font_size;
                         self.as_mut().emit_data_changed(
