@@ -50,14 +50,14 @@ Item {
             pdfIndex: model.slideIndex
 
         }
-        WebEngineView {
-            id: web
-            anchors.centerIn: parent
-            implicitWidth: height / 9 * 16
-            implicitHeight: parent.height - Kirigami.Units.smallSpacing * 2
-            url: model.imageBackground.endsWith(".html") ? model.imageBackground : ""
-            visible: model.imageBackground.endsWith(".html")
-        }
+        /* WebEngineView { */
+        /*     id: web */
+        /*     anchors.centerIn: parent */
+        /*     implicitWidth: height / 9 * 16 */
+        /*     implicitHeight: parent.height - Kirigami.Units.smallSpacing * 2 */
+        /*     url: model.imageBackground.endsWith(".html") ? model.imageBackground : "" */
+        /*     visible: model.imageBackground.endsWith(".html") */
+        /* } */
     }
 
     Controls.Label {
