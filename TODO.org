@@ -4,16 +4,16 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Find segfault in webengine
+[[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
+
+When moving service items around and thus slides, sometimes the WebEngineView causes a segfault
 ** TODO Add a generate thumbnails function for reveal.js presentations
 [[file:~/dev/lumina/src/qml/presenter/MainWindow.qml::function getRevealThumbs(file) {]]
 
 This site is very helpful: https://html2canvas.hertzen.com/configuration/
 
 I could use html2canvas in order to render the file in a canvas and pick it's size. Then I could take images of a slide, check to see if there are more slides, take another after changing and so on. This will likely need to be a lengthy script and I'll need to toy with how to load both html2canvas and this script into the QML webengine
-** TODO [#B] Fix updating things in the song editor
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
-The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
-
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 ** TODO write a function for setting each slide to the appropriate index in html presentations
@@ -30,9 +30,13 @@ This could also help to separate more concerns in Rust and allow me to fix some 
 Need to experiment with it more.
 ** TODO Need to use a better logging systems so things stop getting confusingly lost
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
-** TODO Need to work on all warnings and errors to cleanup logs
+*** TODO Need to work on all warnings and errors to cleanup logs
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
-** TODO Seems that updating songs aren't reflected well
+** TODO [#B] Fix updating things in the song editor
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
+The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
+
+*** TODO Seems that updating songs aren't reflected well
 [[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
 ** DONE Delete temp folder
 [[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
@@ -43,6 +47,8 @@ Need to experiment with it more.
 Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
 
 All that said, the real solution is to figure out how to get beginMoveRows to compile for rust, until then, implementing some wrapper functions and using beginResetModel instead will work for move_up and move_down.
+
+ALMOST DONE!! I only now need to figure out and fix whatever is happening to the seg fault that happens when moving things fast.
 ** TODO Consider converting diesel to raw sqlx instead
 From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries
 ** TODO Figure out qml hot reload
