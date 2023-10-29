@@ -339,14 +339,14 @@ mod service_item_model {
             let dest_id = dest_index as usize;
             let cnt = count as usize;
             let end_service_item = source_id + cnt - 1;
-            let dest_index = if source_index < dest_index {
+            let qt_dest_index = if source_index < dest_index {
                 dest_index + 1
             } else {
                 dest_index
             };
 
             println!("rust-end-service_item: {:?}", end_service_item);
-            println!("rust-dest-service_item: {:?}", dest_index);
+            println!("qt-dest-service_item: {:?}", qt_dest_index);
             unsafe {
                 // this function doesn't build
                 self.as_mut().begin_move_rows(
@@ -354,7 +354,7 @@ mod service_item_model {
                     source_index,
                     source_index + count - 1,
                     &parent,
-                    dest_index,
+                    qt_dest_index,
                 );
 
                 if source_id < dest_id {
