@@ -8,7 +8,11 @@
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
 
 When moving service items around and thus slides, sometimes the WebEngineView causes a segfault
-** TODO Add a generate thumbnails function for reveal.js presentations
+
+/Maybe I need to use a timer function before loading the WebView? That way while moving things around, we aren't loading anything and wait until moving is over?/
+
+ACTUALLY, if I can just generate thumbnails, I won't even need the WebEngineView in the PreviewSlideListDelegate anyway, which seems to fix it.
+*** TODO Add a generate thumbnails function for reveal.js presentations
 [[file:~/dev/lumina/src/qml/presenter/MainWindow.qml::function getRevealThumbs(file) {]]
 
 This site is very helpful: https://html2canvas.hertzen.com/configuration/
