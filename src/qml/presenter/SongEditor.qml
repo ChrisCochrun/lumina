@@ -217,22 +217,23 @@ Item {
         }
 
         Controls.SplitView {
+            id: songSplitView
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.columnSpan: 2
-            handle: Item{
+            handle: Item {
                 implicitWidth: 6
                 Rectangle {
                     height: parent.height
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 1
-                    color: parent.Controls.SplitHandle.hovered ? Kirigami.Theme.hoverColor : Kirigami.Theme.backgroundColor
+                    color: parent.Controls.SplitHandle.hovered ? Qt.lighter(Kirigami.Theme.backgroundColor, 1.5) : Qt.darker(Kirigami.Theme.backgroundColor, 1.5)
                 }
             }
             
             ColumnLayout {
                 Controls.SplitView.fillHeight: true
-                Controls.SplitView.preferredWidth: 500
+                Controls.SplitView.preferredWidth: 400
                 Controls.SplitView.minimumWidth: 300
 
                 Controls.Label {
@@ -494,9 +495,13 @@ Item {
         songID = thisSong.id;
 
         updateHorizontalTextAlignment("Center");
+        changeSlideHAlignment("Center");
         updateVerticalTextAlignment("Center");
+        changeSlideVAlignment("Center");
         updateFont("Noto Sans");
+        changeSlideFont("Noto Sans", true);
         updateFontSize(50);
+        changeSlideFontSize(50, true);
         updateLyrics("Lyrics");
         songList.loadVideo();
         console.log("New song with ID: " + song.id);
@@ -525,11 +530,11 @@ Item {
             song.checkVerseOrder();
             songID = updatedSong.id;
 
-            /* changeSlideHAlignment(song.horizontalTextAlignment); */
-            /* changeSlideVAlignment(song.verticalTextAlignment); */
-            /* changeSlideFont(song.font, true); */
-            /* changeSlideFontSize(song.fontSize, true) */
-            /* changeSlideText(songProxyModel.modelIndex(index).row); */
+            changeSlideHAlignment(song.horizontalTextAlignment);
+            changeSlideVAlignment(song.verticalTextAlignment);
+            changeSlideFont(song.font, true);
+            changeSlideFontSize(song.fontSize, true)
+            changeSlideText(songProxyModel.modelIndex(index).row);
             console.log("Changing to song: " + song.title + " with ID: " + songID);
             footerFirstText = "Song: ";
             footerSecondText = song.title;
