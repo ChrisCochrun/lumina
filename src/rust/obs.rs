@@ -18,21 +18,21 @@ impl Obs {
         Ok(())
     }
 
-    pub fn get_list(self) -> Result<Vec<String>, String> {
+    pub fn get_list(self) -> Result<Vec<String>, Box<dyn Error>> {
         let scenes = self.scenes.scenes.iter().map(|x| x.name).collect::<Vec<String>>();
         if scenes.len() > 0 {
             Ok(scenes)
         } else {
-            Err(format!("Scenes found: {}", scenes.len()))
+            Err(format!("Scenes found: {}", scenes.len()))?
         }
     }
 
-    pub fn set_scene(self, scene: String) -> Result<(), String> {
+    pub fn set_scene(self, scene: String) -> Result<(), Box<dyn Error>> {
         if let Some(scene) = self.scenes.scenes.iter().filter(|x| x.name == scene).next() {
             self.client.scenes().set_current_program_scene(scene.name.as_str()); 
             Ok(())
         } else {
-            Err("Couldn't set the scene".to_string())
+            Err("Couldn't set the scene".to_owned())?
         }
     }
 }
