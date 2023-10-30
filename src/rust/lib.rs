@@ -14,4 +14,5 @@ pub mod songs;
 pub mod video_model;
 pub mod ytdl;
 pub mod utils;
+pub mod obs;
 // mod video_thumbnail;
