@@ -4,6 +4,10 @@
 :END:
 
 * Tasks [0%] [0/0]
+** TODO Mouse needs to have resize shape when hovering controls
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
+** TODO When updating background, it isn't changed in the list
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateBackground(backgroundType) {]]
 ** TODO Find segfault in webengine
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
 
