@@ -3,19 +3,18 @@ use std::error::Error;
 use obws::Client;
 use obws::responses::scenes::Scenes;
 use tracing::debug;
+
 pub struct Obs {
     scenes: Scenes,
     client: Client,
 }
 
 impl Obs {
-    pub async fn setup(mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn new() -> Result<Self, Box<dyn Error>> {
         let client = Client::connect("localhost", 4455, Some("")).await?;
         let scene_list = client.scenes().list().await?;
         debug!(?scene_list);
-        self.scenes = scene_list;
-        self.client = client;
-        Ok(())
+        Ok(Self{scenes: scene_list, client})
     }
 
     pub fn get_list(self) -> Result<Vec<String>, Box<dyn Error>> {

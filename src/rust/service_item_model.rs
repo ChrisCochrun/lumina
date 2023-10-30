@@ -87,6 +87,7 @@ mod service_item_model {
     pub struct ServiceItemMod {
         id: i32,
         service_items: Vec<ServiceItm>,
+        obs: Obs,
     }
 
     #[cxx_qt::qsignals(ServiceItemMod)]
@@ -153,6 +154,10 @@ mod service_item_model {
 
     use crate::obs::Obs;
     impl qobject::ServiceItemMod {
+        pub fn setup(mut self: Pin<&mut Self>) {
+            todo!()
+        }
+
         #[qinvokable]
         pub fn clear(mut self: Pin<&mut Self>) {
             println!("CLEARING ALL ITEMS");
