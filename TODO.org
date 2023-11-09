@@ -3,9 +3,12 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
+* Tasks [58%] [44/75]
 ** TODO Mouse needs to have resize shape when hovering controls
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
+** TODO Add a way to interact with OBS
+The basic implementation is done. In order to make use of it in the odd broken QT way, i needed to implement clone on my stuct, but it worked out.
+*** DONE OBWS
 ** TODO When updating background, it isn't changed in the list
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateBackground(backgroundType) {]]
 ** TODO Find segfault in webengine

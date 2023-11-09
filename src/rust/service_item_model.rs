@@ -84,25 +84,30 @@ mod service_item_model {
     }
 
     #[cxx_qt::qobject(base = "QAbstractListModel")]
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     pub struct ServiceItemMod {
         id: i32,
         service_items: Vec<ServiceItm>,
-        obs: Obs,
+        // obs: Obs,
     }
 
-    impl Default for ServiceItemMod {
-        fn default() -> Self {
-            let obs = tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(async { Obs::new().await.ok().unwrap() });
-            Self {
-                id: 0,
-                service_items: Vec::new(),
-                obs,
-            }
-        }
-    }
+    // impl Default for ServiceItemMod {
+    //     fn default() -> Self {
+    //         let obs = tokio::runtime::Runtime::new()
+    //             .unwrap()
+    //             .block_on(async {
+    //                 match Obs::new().await {
+    //                     Ok(o) => o,
+    //                     Err(e) => error!(e),
+    //                 }
+    //             });
+    //         Self {
+    //             id: 0,
+    //             service_items: Vec::new(),
+    //             obs,
+    //         }
+    //     }
+    // }
 
     #[cxx_qt::qsignals(ServiceItemMod)]
     pub enum Signals<'a> {
@@ -600,7 +605,7 @@ mod service_item_model {
                 // println!("service_item is deactivating {:?}", i);
                 service_item.active = false;
             }
-            let obs = self.as_mut().obs_mut().clone();
+            // let obs = self.as_mut().obs_mut().clone();
 
             if let Some(service_item) = self
                 .as_mut()
@@ -612,7 +617,7 @@ mod service_item_model {
                        background = ?service_item.background,
                        background_type = ?service_item.background_type);
                 service_item.active = true;
-                obs.set_scene(service_item.obs_scene.to_string());
+                // obs.set_scene(service_item.obs_scene.to_string());
                 self.as_mut().emit_data_changed(
                     tl,
                     br,

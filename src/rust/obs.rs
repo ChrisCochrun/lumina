@@ -7,7 +7,7 @@ use tracing::debug;
 
 pub struct Obs {
     scenes: Scenes,
-    client: Client,
+    client: Option<Client>,
 }
 
 impl fmt::Debug for Obs {
@@ -23,7 +23,16 @@ impl Clone for Obs {
     fn clone(&self) -> Self {
         Self {
             scenes: self.scenes.clone(),
-            client: make_client(),
+            client: Some(make_client()),
+        }
+    }
+}
+
+impl Default for Obs {
+    fn default() -> Self {
+        Self {
+            scenes: Scenes::default(),
+            client: None,
         }
     }
 }
@@ -36,7 +45,7 @@ impl Obs {
         debug!(?scene_list);
         Ok(Self {
             scenes: scene_list,
-            client,
+            client: Some(client),
         })
     }
 
@@ -58,19 +67,24 @@ impl Obs {
         self,
         scene: String,
     ) -> Result<(), Box<dyn Error>> {
-        if let Some(scene) = self
-            .scenes
-            .scenes
-            .iter()
-            .filter(|x| x.name == scene)
-            .next()
-        {
-            self.client
-                .scenes()
-                .set_current_program_scene(scene.name.as_str());
-            Ok(())
+        if self.client.is_some() {
+            if let Some(scene) = self
+                .scenes
+                .scenes
+                .iter()
+                .filter(|x| x.name == scene)
+                .next()
+            {
+                self.client
+                    .unwrap()
+                    .scenes()
+                    .set_current_program_scene(scene.name.as_str());
+                Ok(())
+            } else {
+                Err("Couldn't set the scene".to_owned())?
+            }
         } else {
-            Err("Couldn't set the scene".to_owned())?
+            Err("There is no client".to_owned())?
         }
     }
 }
