@@ -233,7 +233,7 @@ mod slide_model {
             index: i32,
         ) {
             let mut slide = slide.clone();
-            slide.slide_index = index;
+            // slide.slide_index = index;
 
             unsafe {
                 self.as_mut().begin_insert_rows(
