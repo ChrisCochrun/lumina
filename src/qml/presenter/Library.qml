@@ -337,15 +337,14 @@ Item {
 
     function addPres(url) {
         console.log(pdf.status);
+        console.log("FILE IS: " + url);
         let pageCount = 1;
 
         if (url.endsWith(".pdf")) {
             pdf.source = url;
-            while (pdf.status != 2) {
-                console.log(pdf.status);
-                console.log("PAGECOUNT: " + pdf.pageCount);
-                pageCount = pdf.pageCount;
-            }
+            console.log(pdf.status);
+            console.log("PAGECOUNT: " + pdf.pageCount);
+            pageCount = pdf.pageCount;
         } else
             pageCount = 1;
 
