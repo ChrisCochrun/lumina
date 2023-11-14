@@ -9,6 +9,8 @@
 ** TODO Add a way to interact with OBS
 The basic implementation is done. In order to make use of it in the odd broken QT way, i needed to implement clone on my stuct, but it worked out.
 *** DONE OBWS
+*** TODO Need to create a way to track the obs scenes. Then render them as a model.
+Once the model of OBS scenes is created, we can select a scene to add it to the service item. Then hopefully activate will take that scene and set it inside obs when switching slides.
 ** TODO When updating background, it isn't changed in the list
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateBackground(backgroundType) {]]
 ** TODO Find segfault in webengine
