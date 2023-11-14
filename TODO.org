@@ -63,11 +63,11 @@ All that said, the real solution is to figure out how to get beginMoveRows to co
 
 ALMOST DONE!! I only now need to figure out and fix whatever is happening to the seg fault that happens when moving things fast.
 ** TODO Consider converting diesel to raw sqlx instead
-From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries
+From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries. The only issue is that my queries have been rather small. I only really need to select everything into the app and then run it from there. However, it could still be a consideration as things age. Perhaps when there are hundreds or even thousands of items in the database, it'll be more effective to use something like SQLx.
 ** TODO Figure out qml hot reload
 https://www.reddit.com/r/QtFramework/comments/11plifj/qhot_now_with_qt6_support/
 ** TODO Switch to using rust only deletion functions.
-[[file:~/dev/church-presenter/src/qml/presenter/Library.qml::videoProxyModel.deleteVideos(rows)]]
+[[file:~/dev/lumina/src/qml/presenter/Library.qml::videoProxyModel.deleteVideos(rows)]]
 
 For this to work I'll need to use a vector of indexes. Somehow I'll need to figure out what QML can pass to Rust and then cycle through all of them and remove each item.
 ** TODO Start planning out what a 1.0 release would look like and decide how to get there :roadmap:
@@ -96,7 +96,7 @@ Since moving to Rust, I'm going to include that all of the models except maybe t
 
 Others:
 - Multi Drag? Maybe...
-- Adding the ability to use Librepresenter in other wayland compositors - Need to address the QWindow problem.
+- Adding the ability to use Librepresenter in other wayland compositors - Need to address the QWindow problem. Fixed.
 *** DONE Major Bugs
 - ~Drag and Drop of ServiceList~
   this is fixed, but now I need to move the slides around as you change the serviceItemModel
