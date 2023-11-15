@@ -30,17 +30,38 @@ Item {
 
                 Controls.TextField {
                     id: presentationTitleField
-                    Layout.preferredWidth: 300
+                    implicitWidth: 300
                     placeholderText: "Title..."
                     text: presentation.title
                     padding: 10
                     onEditingFinished: updateTitle(text);
+                    background: Presenter.TextBackground {
+                        control: fontBox
+                    }
                 }
 
                 Controls.ComboBox {
                     model: ["PRESENTATIONS", "Center", "Right", "Justify"]
                     implicitWidth: 100
                     hoverEnabled: true
+                    background: Presenter.TextBackground {
+                        control: fontBox
+                    }
+                    indicator: Kirigami.Icon {
+                        anchors {right: parent.right
+                                 verticalCenter: parent.verticalCenter
+                                 rightMargin: 2}
+                        source: "arrow-down"
+                        rotation: fontBox.down ? 180 : 0
+                        color: fontBox.pressed ? Kirigami.Theme.focusColor : Kirigami.Theme.textColor
+                        
+                        Behavior on rotation {
+                            NumberAnimation {
+                                easing.type: Easing.OutCubic
+                                duration: 300
+                            }
+                        }
+                    }
                 }
                 Controls.ToolSeparator {}
                 Item { Layout.fillWidth: true }

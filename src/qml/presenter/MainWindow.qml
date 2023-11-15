@@ -208,10 +208,27 @@ Controls.Page {
     function changeSlide(index) {
         console.log("index grabbed: " + index);
         const item = SlideModel.getItemRust(index, SlideMod);
+        const isMoveDown = currentSlide < index;
         currentSlide = index;
         currentServiceItem = item.serviceItemId;
         console.log("index grabbed: " + index);
-        console.log(item);
+        console.log("html?: " + item.html);
+        console.log("type: " + item.type);
+        console.log("text: " + item.text);
+        console.log("slide_index: " + item.slideIndex);
+        console.log("slide_count: " + item.imageCount);
+        if (item.html) {
+            let index = item.slideIndex;
+            let count = item.imageCount;
+            if (index > 0 && index < count - 1) {
+                console.log("I should advance revealy");
+                if (isMoveDown)
+                    presentation.revealNext()
+                else
+                    presentation.revealPrev()
+                return
+            }
+        }
 
         /* presentation.stopVideo(); */
         /* pWindow.stopVideo(); */

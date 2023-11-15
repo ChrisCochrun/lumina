@@ -1,5 +1,6 @@
 #[cxx_qt::bridge]
 mod slide_model {
+    use cxx_qt_lib::CaseSensitivity;
     use tracing::{debug, debug_span, error, info, instrument};
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
@@ -48,6 +49,7 @@ mod slide_model {
         video_thumbnail: QString,
         video_start_time: f32,
         video_end_time: f32,
+        html: bool,
     }
 
     impl Default for Slidey {
@@ -71,6 +73,7 @@ mod slide_model {
                 video_thumbnail: QString::default(),
                 video_start_time: 0.0,
                 video_end_time: 0.0,
+                html: false,
             }
         }
     }
@@ -437,6 +440,12 @@ mod slide_model {
                 Some(ty) if ty == QString::from("presentation") => {
                     for i in 0..slide.slide_count {
                         slide.ty = ty.clone();
+                        if background.ends_with(
+                            &QString::from(".html"),
+                            CaseSensitivity::CaseInsensitive,
+                        ) {
+                            slide.html = true;
+                        }
                         slide.image_background = background.clone();
                         slide.video_background = QString::from("");
                         slide.slide_index = i;
@@ -978,6 +987,9 @@ mod slide_model {
                     13 => QVariant::from(&slide.selected),
                     14 => QVariant::from(&slide.looping),
                     15 => QVariant::from(&slide.video_thumbnail),
+                    16 => QVariant::from(&slide.video_start_time),
+                    17 => QVariant::from(&slide.video_end_time),
+                    18 => QVariant::from(&slide.html),
                     _ => QVariant::default(),
                 };
             }
@@ -1043,6 +1055,7 @@ mod slide_model {
                 17,
                 cxx_qt_lib::QByteArray::from("videoEndTime"),
             );
+            roles.insert(18, cxx_qt_lib::QByteArray::from("html"));
             roles
         }
 

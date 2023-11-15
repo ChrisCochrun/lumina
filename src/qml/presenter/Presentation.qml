@@ -413,4 +413,11 @@ FocusScope {
     function playAudio() {
     }
 
+    function revealNext() {
+        previewSlide.revealNext();
+    }
+
+    function revealPrev() {
+        previewSlide.revealPrev();
+    }
 }

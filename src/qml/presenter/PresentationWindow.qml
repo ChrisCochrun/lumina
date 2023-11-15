@@ -107,4 +107,12 @@ Item {
     function loopVideo() {
         presentationSlide.loopVideo();
     }
+
+    function revealNext() {
+        presentationSlide.revealNext();
+    }
+
+    function revealPrev() {
+        presentationSlide.revealPrev();
+    }
 }

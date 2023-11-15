@@ -177,6 +177,7 @@ Item {
             anchors.fill: parent
             url: webSource
             visible: htmlVisible
+            zoomFactor: preview ? 0.25 : 1.0
             onLoadingChanged: {
                 if (loadRequest.status == 2)
                     showPassiveNotification("yahoo?");
@@ -247,10 +248,10 @@ Item {
     }
 
     function revealNext() {
-        web.runJavascript("Reveal.next()")
+        web.runJavaScript("Reveal.next()")
     }
 
     function revealPrev() {
-        web.runJavascript("Reveal.prev()")
+        web.runJavaScript("Reveal.prev()")
     }
 }
