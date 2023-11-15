@@ -336,6 +336,9 @@ FocusScope {
                 previewSlide.playVideo();
             pauseVideo();
         }
+        function onRevealNext() {
+            previewSlide.revealNext();
+        }
     }
 
     Timer {

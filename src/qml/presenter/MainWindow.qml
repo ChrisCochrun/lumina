@@ -217,18 +217,18 @@ Controls.Page {
         console.log("text: " + item.text);
         console.log("slide_index: " + item.slideIndex);
         console.log("slide_count: " + item.imageCount);
-        if (item.html) {
-            let index = item.slideIndex;
-            let count = item.imageCount;
-            if (index > 0 && index < count - 1) {
-                console.log("I should advance revealy");
-                if (isMoveDown)
-                    presentation.revealNext()
-                else
-                    presentation.revealPrev()
-                return
-            }
-        }
+        /* if (item.html) { */
+        /*     let index = item.slideIndex; */
+        /*     let count = item.imageCount; */
+        /*     if (index > 0 && index < count - 1) { */
+        /*         console.log("I should advance revealy"); */
+        /*         if (isMoveDown) */
+        /*             presentation.revealNext() */
+        /*         else */
+        /*             presentation.revealPrev() */
+        /*         return */
+        /*     } */
+        /* } */
 
         /* presentation.stopVideo(); */
         /* pWindow.stopVideo(); */

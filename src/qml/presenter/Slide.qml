@@ -193,6 +193,18 @@ Item {
         }
     }
 
+    Connections {
+        target: SlideObject
+        function onRevealNext() {
+            console.log("revealNext")
+            web.runJavaScript("Reveal.next()")
+        }
+        function onRevealPrev() {
+            console.log("revealPrev")
+            web.runJavaScript("Reveal.prev()")
+        }
+    }
+
     function changeText(text) {
         lyrics.text = text
     }

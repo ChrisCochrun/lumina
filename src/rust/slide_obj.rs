@@ -4,6 +4,8 @@ mod slide_obj {
     // use std::path::Path;
     // use std::task::Context;
 
+    use tracing::debug;
+
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -14,6 +16,7 @@ mod slide_obj {
         type QVariant = cxx_qt_lib::QVariant;
     }
 
+    #[derive(Debug)]
     #[cxx_qt::qsignals(SlideObj)]
     pub enum Signals<'a> {
         PlayingChanged { is_playing: &'a bool },
@@ -21,6 +24,8 @@ mod slide_obj {
         SlideSizeChanged { slide_size: &'a i32 },
         SlideChanged { slide: &'a i32 },
         LoopChanged { looping: &'a bool },
+        RevealNext,
+        RevealPrev,
     }
 
     #[derive(Clone, Debug)]
@@ -93,6 +98,37 @@ mod slide_obj {
             item: QMap_QString_QVariant,
             index: i32,
         ) {
+            let icount_variant = item
+                .get(&QString::from("imageCount"))
+                .unwrap_or(QVariant::from(&1));
+            let count =
+                icount_variant.value::<i32>().unwrap_or_default();
+
+            let slindex = item
+                .get(&QString::from("slideIndex"))
+                .unwrap_or(QVariant::from(&0));
+            let slide_index =
+                slindex.value::<i32>().unwrap_or_default();
+
+            let html = item
+                .get(&QString::from("html"))
+                .unwrap_or(QVariant::from(&false));
+            if let Some(html) = html.value::<bool>() {
+                if html {
+                    debug!(?html, count, slide_index);
+                    if slide_index > 0 && slide_index < count - 1 {
+                        self.as_mut().emit(Signals::RevealNext);
+                        debug!(signal = ?Signals::RevealNext);
+                        return;
+                    }
+                    // } else if slide_index > 0 {
+                    //     self.as_mut().emit(Signals::RevealPrev);
+                    //     debug!(Signals::RevealNext);
+                    //     return;
+                    // }
+                }
+            }
+
             println!("## Slide Details ##");
             let text = item
                 .get(&QString::from("text"))
@@ -245,19 +281,11 @@ mod slide_obj {
             if let Some(int) = video_start_time.value::<f32>() {
                 self.as_mut().set_video_start_time(int)
             }
-            let icount = item
-                .get(&QString::from("imageCount"))
-                .unwrap_or(QVariant::from(&1));
-            if let Some(int) = icount.value::<i32>() {
-                self.as_mut().set_image_count(int);
-            }
-            let slindex = item
-                .get(&QString::from("slideIndex"))
-                .unwrap_or(QVariant::from(&0));
-            if let Some(int) = slindex.value::<i32>() {
-                println!("New slide index = {}", int);
-                self.as_mut().set_slide_index(int);
-            };
+
+            self.as_mut().set_image_count(count);
+
+            self.as_mut().set_slide_index(slide_index);
+
             self.as_mut()
                 .emit(Signals::SlideChanged { slide: &index });
             println!("## Slide End ##");
