@@ -98,6 +98,7 @@ mod slide_obj {
             item: QMap_QString_QVariant,
             index: i32,
         ) {
+            let current_index = self.as_ref().get_ref().slide_index();
             let icount_variant = item
                 .get(&QString::from("imageCount"))
                 .unwrap_or(QVariant::from(&1));
@@ -117,15 +118,16 @@ mod slide_obj {
                 if html {
                     debug!(?html, count, slide_index);
                     if slide_index > 0 && slide_index < count - 1 {
-                        self.as_mut().emit(Signals::RevealNext);
-                        debug!(signal = ?Signals::RevealNext);
-                        return;
+                        if current_index < &index {
+                            self.as_mut().emit(Signals::RevealNext);
+                            debug!(signal = ?Signals::RevealNext);
+                            return;
+                        } else if slide_index > 0 {
+                            self.as_mut().emit(Signals::RevealPrev);
+                            debug!(signal = ?Signals::RevealPrev);
+                            return;
+                        }
                     }
-                    // } else if slide_index > 0 {
-                    //     self.as_mut().emit(Signals::RevealPrev);
-                    //     debug!(Signals::RevealNext);
-                    //     return;
-                    // }
                 }
             }
 
