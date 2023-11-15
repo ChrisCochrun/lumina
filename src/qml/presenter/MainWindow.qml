@@ -207,13 +207,40 @@ Controls.Page {
 
     function changeSlide(index) {
         console.log("index grabbed: " + index);
+        const currentItem = SlideModel.getItemRust(currentServiceItem, SlideMod);
         const item = SlideModel.getItemRust(index, SlideMod);
         const isMoveDown = currentSlide < index;
+        console.log(item + " " + currentItem);
         currentSlide = index;
         currentServiceItem = item.serviceItemId;
+        console.log("index grabbed: " + index);
+        console.log("html?: " + item.html);
+        console.log("type: " + item.type);
+        console.log("text: " + item.text);
+        console.log("slide_index: " + item.slideIndex);
+        console.log("slide_count: " + item.imageCount);
+        /* if (item.html) { */
+        /*     let index = item.slideIndex; */
+        /*     let count = item.imageCount; */
+        /*     if (index > 0 && index < count - 1) { */
+        /*         console.log("I should advance revealy"); */
+        /*         if (isMoveDown) */
+        /*             presentation.revealNext() */
+        /*         else */
+        /*             presentation.revealPrev() */
+        /*         return */
+        /*     } */
+        /* } */
+
+        /* presentation.stopVideo(); */
+        /* pWindow.stopVideo(); */
+        /* presentation.itemType = item.type; */
         console.log("Time to start changing");
+
         ServiceItemModel.activate(currentServiceItem);
+        /* SlideObject.changeSlide(slide, slideId); */
         slideHelper.chngSlide(item, index, SlideObject);
+        /* SlideMod.activate(index); */
         presentation.textIndex = 0;
         console.log("Slide changed to: ", item.imageBackground);
         activeServiceItem = ServiceItemC.getRust(currentServiceItem, ServiceItemModel).name;
