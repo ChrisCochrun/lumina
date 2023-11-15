@@ -18,7 +18,8 @@ pub fn count_slides_and_fragments(html_file_path: &Path) -> i32 {
     let mut num_fragments = 0;
 
     for slide_html in slide_content.iter().skip(1) {
-        let fragments = slide_html.matches("fragment").count();
+        let fragments =
+            slide_html.matches("class=\"fragment").count();
         num_fragments += fragments;
     }
 
