@@ -865,6 +865,28 @@ mod slide_model {
         }
 
         #[qinvokable]
+        pub fn get_slide_from_service(
+            self: Pin<&mut Self>,
+            index: i32,
+        ) -> i32 {
+            let slides = self.slides().clone();
+            let slides_iter = slides.iter();
+            debug!(
+                service_item = index,
+                "Getting slide from this item"
+            );
+            let mut id = 0;
+            for (i, slide) in slides_iter
+                .filter(|slide| slide.service_item_id == index)
+                .enumerate()
+            {
+                id = i as i32;
+                break;
+            }
+            id
+        }
+
+        #[qinvokable]
         pub fn activate(
             mut self: Pin<&mut Self>,
             index: i32,
@@ -883,16 +905,21 @@ mod slide_model {
             if let Some(slide) =
                 self.as_mut().slides_mut().get_mut(index as usize)
             {
-                println!("slide is activating {:?}", index);
-                println!("slide-title: {:?}", slide.service_item_id);
-                println!(
-                    "slide-image-background: {:?}",
-                    slide.image_background
+                debug!(
+                    slide = index,
+                    service_item = slide.service_item_id,
+                    "This slide is activating"
                 );
-                println!(
-                    "slide-video-background: {:?}",
-                    slide.video_background
-                );
+                // println!("slide is activating {:?}", index);
+                // println!("slide-title: {:?}", slide.service_item_id);
+                // println!(
+                //     "slide-image-background: {:?}",
+                //     slide.image_background
+                // );
+                // println!(
+                //     "slide-video-background: {:?}",
+                //     slide.video_background
+                // );
                 slide.active = true;
                 self.as_mut().emit_data_changed(
                     tl,

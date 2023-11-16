@@ -341,6 +341,15 @@ FocusScope {
         }
     }
 
+    /* Connections { */
+    /*     target: ServiceItemModel */
+    /*     function onActivateChanged(index) { */
+    /*         console.log("$$$$$$$$$$$$$$$$$$$$"); */
+    /*         const slide = SlideModel.getSlideFromService(index); */
+    /*         SlideMod.activate(slide); */
+    /*     } */
+    /* } */
+
     Timer {
         interval: 500
         running: false

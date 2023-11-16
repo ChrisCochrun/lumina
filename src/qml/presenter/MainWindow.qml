@@ -174,7 +174,7 @@ Controls.Page {
         console.log("change-service-item: " + index);
         const item = ServiceItemC.getRust(index, ServiceItemModel);
         currentServiceItem = index;
-        const slideId = SlideModel.findSlideIdFromServItm(index);
+        const slideId = SlideMod.getSlideFromService(index);
         currentSlide = slideId;
         const slide = SlideModel.getItemRust(slideId, SlideMod);
         console.log("index grabbed: " + index);
@@ -187,7 +187,7 @@ Controls.Page {
 
         ServiceItemModel.activate(index);
         console.log("%%%%%%%%%");
-        console.log(slide);
+        console.log(slideId);
         /* SlideObject.changeSlide(slide, slideId); */
         slideHelper.chngSlide(slide, slideId, SlideObject);
         console.log("%%%%%%%%%");

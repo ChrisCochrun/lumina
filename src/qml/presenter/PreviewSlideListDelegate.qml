@@ -11,6 +11,7 @@ Item {
     implicitHeight: Kirigami.Units.gridUnit * 6.5
     implicitWidth: Kirigami.Units.gridUnit * 9
     property bool showVidBG
+    /* property var previewSlidesList: parent */
     /* Component.onCompleted: { */
     /*     if (model.videoBackground != "") */
     /*         SlideModel.thumbnailVideoRust(model.videoBackground, model.serviceItemId, index, SlideMod); */
@@ -89,6 +90,8 @@ Item {
         target: SlideMod
         function onActiveChanged() {
             if (active) {
+                console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                console.log(index);
                 previewSlidesList.currentIndex = index;
                 previewSlidesList.positionViewAtIndex(index, ListView.Center);
             }
