@@ -95,3 +95,41 @@ fn make_client() -> Client {
     let client = runtime.block_on(future).unwrap();
     client
 }
+
+#[cxx_qt::bridge]
+mod obs_model {
+    use tracing::debug;
+
+    unsafe extern "C++" {
+        include!("cxx-qt-lib/qstring.h");
+        type QString = cxx_qt_lib::QString;
+        include!("cxx-qt-lib/qstringlist.h");
+        type QStringList = cxx_qt_lib::QStringList;
+        include!("cxx-qt-lib/qlist.h");
+        type QList_QString = cxx_qt_lib::QList<QString>;
+    }
+
+    #[cxx_qt::qobject]
+    #[derive(Debug, Default)]
+    pub struct ObsModel {
+        #[qproperty]
+        scenes: QStringList,
+        obs: Option<super::Obs>,
+    }
+
+
+    impl qobject::ObsModel {
+        #[qinvokable]
+        pub fn update_scenes(mut self: Pin<&mut Self>) -> QStringList {
+            debug!("updating scenes");
+            let mut scenes_list = QList_QString::default();
+            if let Some(obs) = self.obs() {
+                obs.scenes.scenes.iter().map(|x| {
+                    debug!(?x);
+                    scenes_list.append(QString::from(&x.name))
+                });
+            }
+            QStringList::from(&scenes_list)
+        }
+    }
+}

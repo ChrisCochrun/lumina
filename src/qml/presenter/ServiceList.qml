@@ -291,6 +291,24 @@ Item {
                                 text: "delete"
                                 onTriggered: removeItem(index)
                             }
+                            Kirigami.Action {
+                                text: "Obs Scenes"
+                                onTriggered: {
+                                    ObsModel.updateScenes();
+                                    console.log("udated")
+                                    obsList.model = ObsModel.scenes
+                                    obsMenu.open();
+                                }
+                            }
+                        }
+                        Controls.Menu {
+                            id: obsMenu
+                            x: rightClickMenu.x + rightClickMenu.width
+                            y: mouse.mouseY
+                            ListView {
+                                id: obsList
+                                delegate: Kirigami.Action { text: modelData }
+                            }
                         }
                     }
                 }

@@ -15,5 +15,6 @@ fn main() {
         .file("src/rust/songs/song_editor.rs")
         .file("src/rust/ytdl.rs")
         .file("src/rust/utils.rs")
+        .file("src/rust/obs.rs")
         .build();
 }

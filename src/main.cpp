@@ -61,6 +61,7 @@
 #include "cxx-qt-gen/image_model.cxxqt.h"
 #include "cxx-qt-gen/utilities.cxxqt.h"
 #include "cxx-qt-gen/song_editor.cxxqt.h"
+#include "cxx-qt-gen/obs_model.cxxqt.h"
 
 static QWindow *windowFromEngine(QQmlApplicationEngine *engine)
 {
@@ -153,6 +154,7 @@ int main(int argc, char *argv[])
   QScopedPointer<ServiceItemMod> serviceItemModel(new ServiceItemMod);
   QScopedPointer<ServiceItemModel> serviceItemC(new ServiceItemModel);
   QScopedPointer<SlideObject> slideobject(new SlideObject);
+  QScopedPointer<ObsModel> obsModel(new ObsModel);
 
   Settings *settings = new Settings;
   settings->setup();
@@ -243,6 +245,7 @@ int main(int argc, char *argv[])
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "FileManager", filemanager.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "PresWindow", PresWindow);
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "RSettings", settings);
+  qmlRegisterSingletonInstance("org.presenter", 1, 0, "ObsModel", obsModel.get());
   // qmlRegisterSingletonInstance("org.presenter", 1, 0, "PresWindow", preswin.get());
 
   // This is the same slideobject, however to enusre that the PresWindow can have it
