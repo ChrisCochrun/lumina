@@ -7,7 +7,7 @@ target_sources(lumina
  cpp/songsqlmodel.cpp cpp/songsqlmodel.h
  cpp/serviceitemmodel.cpp cpp/serviceitemmodel.h
  cpp/serviceitem.cpp cpp/serviceitem.h
- cpp/slideobject.cpp cpp/slideobject.h
+ cpp/slidehelper.cpp cpp/slidehelper.h
  cpp/slidemodel.cpp cpp/slidemodel.h
  cpp/slide.cpp cpp/slide.h
  cpp/videosqlmodel.cpp cpp/videosqlmodel.h
