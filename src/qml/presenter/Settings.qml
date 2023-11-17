@@ -15,9 +15,10 @@ Kirigami.OverlaySheet {
         text: "Settings"
     }
 
-    /* Component.onCompleted: { */
-    /*     showPassiveNotification(screenModel.get(1).name) */
-    /* } */
+    Component.onCompleted: {
+        /* ObsModel.getObs(); */
+        /* ObsModel.updateScenes(); */
+    }
 
     Kirigami.FormLayout {
         implicitHeight: Kirigami.Units.gridUnit * 30
@@ -61,6 +62,21 @@ Kirigami.OverlaySheet {
             text: "Sound Effect"
             onClicked: soundFileDialog.open()
         }
+
+        Controls.ToolButton {
+            Kirigami.FormData.label: i18nc("@label:button", "OBS debug")
+            text: "Obs Debug"
+            onClicked: {
+                ObsModel.updateScenes();
+                console.log(ObsModel.scenes);
+            }
+        }
+
+        Kirigami.ActionTextField {
+            Kirigami.FormData.label: i18nc("@label:textbox", "Obs Connection")
+            text: ObsModel.connected
+        }
+        
     }
 
 }

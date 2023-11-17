@@ -155,6 +155,8 @@ int main(int argc, char *argv[])
   QScopedPointer<ServiceItemModel> serviceItemC(new ServiceItemModel);
   QScopedPointer<SlideObject> slideobject(new SlideObject);
   QScopedPointer<ObsModel> obsModel(new ObsModel);
+  obsModel.get()->getObs();
+  obsModel.get()->updateScenes();
 
   Settings *settings = new Settings;
   settings->setup();

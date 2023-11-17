@@ -1,6 +1,6 @@
 import QtQuick 2.13
 /* import QtQuick.Dialogs 1.0 */
-import QtQuick.Controls 2.0 as Controls
+import QtQuick.Controls 2.12 as Controls
 /* import QtQuick.Window 2.15 */
 import QtQuick.Layouts 1.15
 import QtQuick.Shapes 1.15
@@ -279,35 +279,33 @@ Item {
                         }
                         Controls.Menu {
                             id: rightClickMenu
-                            x: mouse.mouseX
-                            y: mouse.mouseY + 10
                             Kirigami.Action {
-                                text: "copy"
+                                text: "Copy"
                             }
                             Kirigami.Action {
-                                text: "paste"
+                                text: "Paste"
                             }
                             Kirigami.Action {
-                                text: "delete"
+                                text: "Delete"
                                 onTriggered: removeItem(index)
                             }
-                            Kirigami.Action {
-                                text: "Obs Scenes"
-                                onTriggered: {
-                                    ObsModel.updateScenes();
-                                    console.log("udated")
-                                    obsList.model = ObsModel.scenes
-                                    obsMenu.open();
+
+                            Controls.MenuSeparator {}
+
+                            Controls.Menu {
+                                id: obsMenu
+                                title: "Obs Scenes"
+
+                                ListView {
+                                    width: parent.width
+                                    height: 200
+                                    model: ObsModel.scenes
+                                    delegate: Controls.ToolButton {
+                                        width: parent.width
+                                        text: modelData
+                                        onClicked: ObsModel.setScene(modelData)
+                                    }
                                 }
-                            }
-                        }
-                        Controls.Menu {
-                            id: obsMenu
-                            x: rightClickMenu.x + rightClickMenu.width
-                            y: mouse.mouseY
-                            ListView {
-                                id: obsList
-                                delegate: Kirigami.Action { text: modelData }
                             }
                         }
                     }
