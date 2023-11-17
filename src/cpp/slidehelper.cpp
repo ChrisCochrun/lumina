@@ -1,4 +1,4 @@
-#include "slideobject.h"
+#include "slidehelper.h"
 #include "serviceitemmodel.h"
 #include "slidemodel.h"
 
@@ -6,13 +6,13 @@
 #include <QDebug>
 
 // using namespace PoDoFo;
-SlideObject::SlideObject(QObject *parent)
+SlideHelper::SlideHelper(QObject *parent)
   : Slide{parent}
 {
   qDebug() << "Initializing slide";
 }
 
-SlideObject::SlideObject(const QString &text, const QString &audio,
+SlideHelper::SlideHelper(const QString &text, const QString &audio,
                          const QString &imageBackground,
                          const QString &videoBackground,
                          const QString &horizontalTextAlignment,
@@ -40,33 +40,33 @@ SlideObject::SlideObject(const QString &text, const QString &audio,
   qDebug() << "Initializing slide with defaults";
 }
 
-bool SlideObject::isPlaying() const
+bool SlideHelper::isPlaying() const
 {
   return m_isPlaying;
 }
 
-int SlideObject::slideIndex() const
+int SlideHelper::slideIndex() const
 {
   return m_slideIndex;
 }
 
-int SlideObject::slideSize() const
+int SlideHelper::slideSize() const
 {
   return m_slideSize;
 }
 
-bool SlideObject::loop() const
+bool SlideHelper::loop() const
 {
   return m_loop;
 }
 
-void SlideObject::chngSlide(QVariantMap item, int index, SlideObj *slideObj) {
+void SlideHelper::chngSlide(QVariantMap item, int index, SlideObject *slideObject) {
   // qDebug() << "Here is the pointer to the slideObj" << slideObj;
   // qDebug() << "Here is the item" << item;
-  slideObj->changeSlide(item, index);
+  slideObject->changeSlide(item, index);
 }
 
-void SlideObject::changeSlide(QVariantMap item, int index)
+void SlideHelper::changeSlide(QVariantMap item, int index)
 {
   // QVariantMap serviceItem = serviceItemModel->getItem(item.value("serviceItemId").toInt());
   if (item.value("text").toString() != text())
@@ -104,7 +104,7 @@ void SlideObject::changeSlide(QVariantMap item, int index)
   // emit slideSizeChanged(m_slideSize);
 }
 
-bool SlideObject::next(QVariantMap nextItem, SlideModel *slideModel)
+bool SlideHelper::next(QVariantMap nextItem, SlideModel *slideModel)
 {
   // QVariantMap serviceItem = serviceItemModel->getItem(nextItem.value("serviceItemId").toInt());
   setText(nextItem.value("text").toString());
@@ -129,7 +129,7 @@ bool SlideObject::next(QVariantMap nextItem, SlideModel *slideModel)
   return false;
 }
 
-bool SlideObject::previous(QVariantMap prevItem, SlideModel *slideModel)
+bool SlideHelper::previous(QVariantMap prevItem, SlideModel *slideModel)
 {
   // QVariantMap serviceItem = serviceItemModel->getItem(prevItem.value("serviceItemId").toInt());
   setText(prevItem.value("text").toString());
@@ -153,10 +153,10 @@ bool SlideObject::previous(QVariantMap prevItem, SlideModel *slideModel)
   return false;
 }
 
-bool SlideObject::changeSlideIndex(int index)
+bool SlideHelper::changeSlideIndex(int index)
 {
   qDebug() << "Starting to change slide index.";
-  qDebug() << "SlideObject Index: " << slideIndex() << " SlideObject Size: " << slideSize();
+  qDebug() << "SlideHelper Index: " << slideIndex() << " SlideHelper Size: " << slideSize();
   // QStringList text = serviceItemId().value("text").toStringList();
   if (index > slideSize() - 1 || index < 0) {
     qDebug() << "index is invalid: " << index;
@@ -185,25 +185,25 @@ bool SlideObject::changeSlideIndex(int index)
   return false;
 }
 
-void SlideObject::play()
+void SlideHelper::play()
 {
   m_isPlaying = true;
   emit isPlayingChanged(m_isPlaying);
 }
 
-void SlideObject::setLoop(bool loop)
+void SlideHelper::setLoop(bool loop)
 {
   m_loop = loop;
   emit loopChanged(m_loop);
 }
 
-void SlideObject::pause()
+void SlideHelper::pause()
 {
   m_isPlaying = false;
   emit isPlayingChanged(m_isPlaying);
 }
 
-void SlideObject::playPause()
+void SlideHelper::playPause()
 {
   m_isPlaying = !m_isPlaying;
   emit isPlayingChanged(m_isPlaying);

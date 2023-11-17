@@ -8,9 +8,9 @@
 #include <qqml.h>
 #include <QObject>
 #include <qobject.h>
-#include "cxx-qt-gen/slide_obj.cxxqt.h"
+#include "cxx-qt-gen/slide_object.cxxqt.h"
 
-class SlideObject : public Slide
+class SlideHelper : public Slide
 {
   Q_OBJECT
   Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
@@ -20,8 +20,8 @@ class SlideObject : public Slide
   // QML_ELEMENT
 
 public:
-  explicit SlideObject(QObject *parent = nullptr);
-  SlideObject(const QString &text, const QString &audio,
+  explicit SlideHelper(QObject *parent = nullptr);
+  SlideHelper(const QString &text, const QString &audio,
               const QString &imageBackground, const QString &videoBackground,
               const QString &horizontalTextAlignment, const QString &verticalTextAlignment,
               const QString &font, const int &fontSize, const int &imageCount,
@@ -34,7 +34,7 @@ public:
   bool loop() const;
 
   Q_INVOKABLE void changeSlide(QVariantMap item, int index);
-  Q_INVOKABLE void chngSlide(QVariantMap item, int index, SlideObj *slideObj);
+  Q_INVOKABLE void chngSlide(QVariantMap item, int index, SlideObject *slideObject);
   Q_INVOKABLE void play();
   Q_INVOKABLE void pause();
   Q_INVOKABLE void playPause();

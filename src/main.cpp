@@ -45,12 +45,12 @@
 #include "cpp/imagesqlmodel.h"
 #include "cpp/presentationsqlmodel.h"
 #include "cpp/filemanager.h"
-#include "cpp/slideobject.h"
+#include "cpp/slidehelper.h"
 
 // RUST
 #include "cxx-qt-gen/service_thing.cxxqt.h"
 #include "cxx-qt-gen/file_helper.cxxqt.h"
-#include "cxx-qt-gen/slide_obj.cxxqt.h"
+#include "cxx-qt-gen/slide_object.cxxqt.h"
 #include "cxx-qt-gen/slide_model.cxxqt.h"
 #include "cxx-qt-gen/service_item_model.cxxqt.h"
 #include "cxx-qt-gen/settings.cxxqt.h"
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
   // QScopedPointer<QQuickView> preswin(new QQuickView);
   QScopedPointer<ServiceItemMod> serviceItemModel(new ServiceItemMod);
   QScopedPointer<ServiceItemModel> serviceItemC(new ServiceItemModel);
-  QScopedPointer<SlideObj> slideobject(new SlideObj);
+  QScopedPointer<SlideObject> slideobject(new SlideObject);
 
   Settings *settings = new Settings;
   settings->setup();
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
   qmlRegisterType<FileHelper>("org.presenter", 1, 0, "FileHelper");
   qmlRegisterType<Ytdl>("org.presenter", 1, 0, "Ytdl");
   qmlRegisterType<ServiceThing>("org.presenter", 1, 0, "ServiceThing");
-  qmlRegisterType<SlideObject>("org.presenter", 1, 0, "SlideHelper");
+  qmlRegisterType<SlideHelper>("org.presenter", 1, 0, "SlideHelper");
   qmlRegisterSingletonInstance("org.presenter", 1, 0,
                                "ServiceItemModel", serviceItemModel.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0,
@@ -244,6 +244,11 @@ int main(int argc, char *argv[])
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "PresWindow", PresWindow);
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "RSettings", settings);
   // qmlRegisterSingletonInstance("org.presenter", 1, 0, "PresWindow", preswin.get());
+
+  // This is the same slideobject, however to enusre that the PresWindow can have it
+  // we need to set it as a separate context so that it can change it's slides too.
+  // This is because SlideObject singleton is started before the window is shown
+  // thus it doesn't exist in this window's context. So we set it here.
   PresWindow->rootContext()->setContextProperty("SlideObj", slideobject.get());
   PresWindow->setTitle("presentation-window");
 
