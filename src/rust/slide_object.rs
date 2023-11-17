@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod slide_obj {
+mod slide_object {
     // use cxx_qt_lib::QVariantValue;
     // use std::path::Path;
     // use std::task::Context;
@@ -17,7 +17,7 @@ mod slide_obj {
     }
 
     #[derive(Debug)]
-    #[cxx_qt::qsignals(SlideObj)]
+    #[cxx_qt::qsignals(SlideObject)]
     pub enum Signals<'a> {
         PlayingChanged { is_playing: &'a bool },
         SlideIndexChanged { slide_index: &'a i32 },
@@ -30,7 +30,7 @@ mod slide_obj {
 
     #[derive(Clone, Debug)]
     #[cxx_qt::qobject]
-    pub struct SlideObj {
+    pub struct SlideObject {
         #[qproperty]
         slide_index: i32,
         #[qproperty]
@@ -67,7 +67,7 @@ mod slide_obj {
         video_end_time: f32,
     }
 
-    impl Default for SlideObj {
+    impl Default for SlideObject {
         fn default() -> Self {
             Self {
                 slide_index: 0,
@@ -91,7 +91,7 @@ mod slide_obj {
         }
     }
 
-    impl qobject::SlideObj {
+    impl qobject::SlideObject {
         #[qinvokable]
         pub fn change_slide(
             mut self: Pin<&mut Self>,

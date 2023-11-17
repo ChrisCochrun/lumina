@@ -10,7 +10,7 @@ mod service_item_model;
 mod service_thing;
 pub mod settings;
 pub mod slide_model;
-mod slide_obj;
+mod slide_object;
 pub mod songs;
 pub mod utils;
 pub mod video_model;
