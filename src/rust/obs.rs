@@ -77,7 +77,7 @@ impl Obs {
                 self.client
                     .unwrap()
                     .scenes()
-                    .set_current_program_scene(scene.as_str()).await
+                    .set_current_program_scene(&scene).await
             })?;
             Ok(())
         } else {
