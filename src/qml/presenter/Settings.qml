@@ -67,6 +67,7 @@ Kirigami.OverlaySheet {
             Kirigami.FormData.label: i18nc("@label:button", "OBS debug")
             text: "Obs Debug"
             onClicked: {
+                ObsModel.getObs();
                 ObsModel.updateScenes();
                 console.log(ObsModel.scenes);
             }

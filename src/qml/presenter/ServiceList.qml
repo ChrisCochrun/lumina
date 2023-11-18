@@ -297,6 +297,7 @@ Item {
                             Controls.Menu {
                                 id: obsMenu
                                 title: "Obs Scenes"
+                                enabled: ObsModel.connected
                                 Instantiator {
                                     model: ObsModel.scenes
                                     Kirigami.Action {
