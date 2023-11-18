@@ -72,13 +72,13 @@ impl Obs {
         if self.client.is_some() {
             debug!("Starting to set");
             let runtime = tokio::runtime::Runtime::new().unwrap();
-            tokio::spawn(async move {
+            runtime.block_on(async move {
                 debug!(scene, "working in thread");
                 self.client
                     .unwrap()
                     .scenes()
                     .set_current_program_scene(scene.as_str()).await
-            });
+            })?;
             Ok(())
         } else {
             Err("There is no client".to_owned())?
@@ -126,7 +126,7 @@ mod obs_model {
             let mut scenes_list = QList_QString::default();
             if let Some(obs) = self.obs() {
                 debug!("found obs");
-                for scene in obs.scenes.scenes.iter() {
+                for scene in obs.scenes.scenes.iter().rev() {
                     debug!(?scene);
                     scenes_list.append(QString::from(&scene.name));
                 }
@@ -151,7 +151,10 @@ mod obs_model {
                         self.as_mut().set_obs(Some(o));
                         self.as_mut().update_scenes();
                     },
-                    Err(e) => error!(e)
+                    Err(e) => {
+                        error!(e);
+                        self.as_mut().set_connected(false);
+                    },
                 }
             });
 

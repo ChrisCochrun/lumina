@@ -4,6 +4,7 @@ import QtQuick.Controls 2.12 as Controls
 /* import QtQuick.Window 2.15 */
 import QtQuick.Layouts 1.15
 import QtQuick.Shapes 1.15
+import QtQml.Models 2.15
 /* import QtQml.Models 2.12 */
 /* import QtMultimedia 5.15 */
 /* import QtAudioEngine 1.15 */
@@ -292,19 +293,20 @@ Item {
 
                             Controls.MenuSeparator {}
 
+                            
                             Controls.Menu {
                                 id: obsMenu
                                 title: "Obs Scenes"
-
-                                ListView {
-                                    width: parent.width
-                                    height: 200
+                                Instantiator {
                                     model: ObsModel.scenes
-                                    delegate: Controls.ToolButton {
-                                        width: parent.width
+                                    Kirigami.Action {
                                         text: modelData
-                                        onClicked: ObsModel.setScene(modelData)
+                                        onTriggered: {
+                                            showPassiveNotification("setting: " + modelData)
+                                        }
                                     }
+                                    onObjectAdded: obsMenu.insertAction(index, object)
+                                    onObjectRemoved: obsMenu.removeAction(object)
                                 }
                             }
                         }
@@ -675,4 +677,5 @@ Item {
         }
         serviceItemList.forceLayout()
     }
+
 }
