@@ -304,6 +304,7 @@ Item {
                                         text: modelData
                                         onTriggered: {
                                             showPassiveNotification("setting: " + modelData)
+                                            ObsModel.setScene(modelData);
                                         }
                                     }
                                     onObjectAdded: obsMenu.insertAction(index, object)
