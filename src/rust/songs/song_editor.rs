@@ -1,5 +1,7 @@
 #[cxx_qt::bridge]
 pub mod song_editor {
+    use std::path::PathBuf;
+
     use tracing::{debug, debug_span, error, info, instrument};
 
     unsafe extern "C++" {
@@ -49,6 +51,10 @@ pub mod song_editor {
         font: QString,
         #[qproperty]
         font_size: i32,
+        #[qproperty]
+        background_exists: bool,
+        #[qproperty]
+        audio_exists: bool,
         // #[qproperty]
         // song_model: *mut CxxSongs,
     }
@@ -69,6 +75,8 @@ pub mod song_editor {
                 vertical_text_alignment: QString::default(),
                 font: QString::default(),
                 font_size: 50,
+                background_exists: true,
+                audio_exists: true,
                 // song_model: std::ptr::null_mut(),
             }
         }
@@ -94,6 +102,28 @@ pub mod song_editor {
                     self.as_mut().set_verse_order_error(false);
                 }
             }
+        }
+
+        #[qinvokable]
+        pub fn check_files(mut self: Pin<&mut Self>) {
+            let background = PathBuf::from(
+                self.background()
+                    .clone()
+                    .to_string()
+                    .trim_start_matches("file://"),
+            );
+            let audio = PathBuf::from(
+                self.audio()
+                    .clone()
+                    .to_string()
+                    .trim_start_matches("file://"),
+            );
+            debug!(
+                background = background.exists(),
+                audio = audio.exists()
+            );
+            self.as_mut().set_background_exists(background.exists());
+            self.as_mut().set_audio_exists(audio.exists());
         }
     }
 }
