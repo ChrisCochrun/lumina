@@ -47,10 +47,21 @@ mod db {
 
 #[cxx_qt::bridge]
 mod utilities {
+    use tokio::runtime::Runtime;
 
     #[cxx_qt::qobject]
-    #[derive(Default, Debug)]
-    pub struct Utils {}
+    #[derive(Debug)]
+    pub struct Utils {
+        runtime: Runtime,
+    }
+
+    impl Default for Utils {
+        fn default() -> Self {
+            Self {
+                runtime: tokio::runtime::Runtime::new().unwrap(),
+            }
+        }
+    }
 
     impl qobject::Utils {
         #[qinvokable]
