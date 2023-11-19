@@ -423,6 +423,10 @@ Item {
                         onEditingFinished: showPassiveNotification(text)
                         background: Presenter.TextBackground {
                             control: songAudioField
+                            errorCondition: !song.audioExists
+                        }
+                        Controls.ToolTip {
+                            text: song.audioExists ? "The audio that will be played for this song" : "The audio is missing or does not exists"
                         }
                     }
 
@@ -492,6 +496,7 @@ Item {
         songEditorModel.verticalTextAlignment = thisSong.verticalTextAlignment;
         songEditorModel.font = thisSong.font;
         songEditorModel.fontSize = thisSong.fontSize;
+        songEditorModel.checkFiles();
         songID = thisSong.id;
 
         updateHorizontalTextAlignment("Center");
@@ -515,19 +520,20 @@ Item {
             clearSlides();
             const updatedSong = songProxyModel.getSong(index);
             console.log(updatedSong.vorder + " " + updatedSong.title + " " + updatedSong.audio);
-            song.title = updatedSong.title;
-            song.lyrics = updatedSong.lyrics;
-            song.author = updatedSong.author;
-            song.ccli = updatedSong.ccli;
-            song.audio = updatedSong.audio;
-            song.verseOrder = updatedSong.vorder;
-            song.background = updatedSong.background;
-            song.backgroundType = updatedSong.backgroundType;
-            song.horizontalTextAlignment = updatedSong.horizontalTextAlignment;
-            song.verticalTextAlignment = updatedSong.verticalTextAlignment;
-            song.font = updatedSong.font;
-            song.fontSize = updatedSong.fontSize;
-            song.checkVerseOrder();
+            songEditorModel.title = updatedSong.title;
+            songEditorModel.lyrics = updatedSong.lyrics;
+            songEditorModel.author = updatedSong.author;
+            songEditorModel.ccli = updatedSong.ccli;
+            songEditorModel.audio = updatedSong.audio;
+            songEditorModel.verseOrder = updatedSong.vorder;
+            songEditorModel.background = updatedSong.background;
+            songEditorModel.backgroundType = updatedSong.backgroundType;
+            songEditorModel.horizontalTextAlignment = updatedSong.horizontalTextAlignment;
+            songEditorModel.verticalTextAlignment = updatedSong.verticalTextAlignment;
+            songEditorModel.font = updatedSong.font;
+            songEditorModel.fontSize = updatedSong.fontSize;
+            songEditorModel.checkVerseOrder();
+            songEditorModel.checkFiles();
             songID = updatedSong.id;
 
             changeSlideHAlignment(song.horizontalTextAlignment);
@@ -574,8 +580,9 @@ Item {
 
     function updateAudioFile() {
         const file = fileHelper.loadFile("Pick Audio", "audio");
-        songEditorModel.audio = file
+        songEditorModel.audio = file;
         songProxyModel.songModel.updateAudio(songID, file);
+        songEditorModel.checkFiles();
     }
 
     function updateBackground(backgroundType) {
