@@ -101,7 +101,7 @@ mod service_item_model {
                         Err(e) => {
                             error!(e);
                             None
-                        },
+                        }
                     }
                 });
             Self {
@@ -622,9 +622,14 @@ mod service_item_model {
                        background = ?service_item.background,
                        background_type = ?service_item.background_type);
                 service_item.active = true;
-                if let Some(obs) = obs {
-                    obs.set_scene(service_item.obs_scene.to_string());
-                }
+                // if let Some(obs) = obs {
+                //     match obs
+                //         .set_scene(service_item.obs_scene.to_string())
+                //     {
+                //         Ok(()) => debug!("Successfully set scene"),
+                //         Err(e) => error!(e),
+                //     }
+                // }
                 self.as_mut().emit_data_changed(
                     tl,
                     br,
