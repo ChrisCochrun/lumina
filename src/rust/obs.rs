@@ -1,5 +1,6 @@
 use core::fmt;
 use std::error::Error;
+use std::thread::sleep;
 use std::time::Duration;
 
 use obws::responses::scenes::Scenes;
@@ -71,14 +72,25 @@ impl Obs {
         debug!("Starting function");
         if self.client.is_some() {
             debug!("Starting to set");
-            let runtime = tokio::runtime::Runtime::new().unwrap();
-            runtime.block_on(async move {
+            let runtime =
+                tokio::runtime::Builder::new_current_thread()
+                    .thread_keep_alive(Duration::from_secs(1))
+                    .enable_all()
+                    .build()
+                    .unwrap();
+            let client = make_client();
+            let handle = runtime.spawn(async move {
                 debug!(scene, "working in thread");
-                self.client
-                    .unwrap()
-                    .scenes()
-                    .set_current_program_scene(&scene).await
-            })?;
+                client.scenes()
+                    .set_current_program_scene(&scene)
+                    .await
+            });
+            loop {
+                sleep(Duration::from_millis(100));
+                if handle.is_finished() {
+                    break;
+                }
+            }
             Ok(())
         } else {
             Err("There is no client".to_owned())?
@@ -118,10 +130,11 @@ mod obs_model {
         obs: Option<super::Obs>,
     }
 
-
     impl qobject::ObsModel {
         #[qinvokable]
-        pub fn update_scenes(mut self: Pin<&mut Self>) -> QStringList {
+        pub fn update_scenes(
+            mut self: Pin<&mut Self>,
+        ) -> QStringList {
             debug!("updating scenes");
             let mut scenes_list = QList_QString::default();
             if let Some(obs) = self.obs() {
@@ -150,11 +163,11 @@ mod obs_model {
                         self.as_mut().set_connected(true);
                         self.as_mut().set_obs(Some(o));
                         self.as_mut().update_scenes();
-                    },
+                    }
                     Err(e) => {
                         error!(e);
                         self.as_mut().set_connected(false);
-                    },
+                    }
                 }
             });
 
