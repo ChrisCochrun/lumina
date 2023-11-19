@@ -38,6 +38,8 @@ In order to achieve this, I have to do some of the logic in qml as opposed to ru
 - Now need to see if I can do more logic in Rust instead.
 - Maybe signal handlers?
 
+I've written this with signal handlers now. It's working sorta.
+
 ** TODO write a function for setting each slide to the appropriate index in html presentations
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::/* function moveToSlideIndex(index) { */]]
 ** DONE Rename SlideEditor.qml to SongEditorSlideList.qml
