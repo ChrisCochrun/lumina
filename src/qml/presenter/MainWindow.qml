@@ -75,10 +75,11 @@ Controls.Page {
                     height: parent.height
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: parent.width / 4
-                    color: parent.Controls.SplitHandle.hovered ? Kirigami.Theme.hoverColor : "#00000000"
+                    color: area.containsMouse ? Kirigami.Theme.hoverColor : "#00000000"
                 }
 
                 MouseArea {
+                    id: area
                     anchors.fill: parent
                     enabled: false
                     hoverEnabled: true
