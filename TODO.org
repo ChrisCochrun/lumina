@@ -13,8 +13,6 @@ The basic implementation is done. In order to make use of it in the odd broken Q
 Once the model of OBS scenes is created, we can select a scene to add it to the service item. Then hopefully activate will take that scene and set it inside obs when switching slides.
 *** TODO OBWS setting scenes
 This has been really tricky since there is something of a bug when using =runtime.block_on()= rather than having a single cohesive tokio runtime. So, perhaps I need to figure out if I can't make a runtime that works for the whole app so that I can manage these a little better.
-** DONE When updating background, it isn't changed in the list
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateBackground(backgroundType) {]]
 ** TODO Find segfault in webengine
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
 
@@ -214,6 +212,8 @@ This thread helped a lot
 Let's rename everything to that.
 ** DONE Make saving file auto use the last save file and go from there
 [[file:~/dev/lumina/src/qml/main.qml::function save() {]]
+** DONE When updating background, it isn't changed in the list
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateBackground(backgroundType) {]]
 ** DONE Need to test on other wayland compositors but Hyprland doesn't show the presentation window. :bug:
 Quite by accident, I discovered how I may be able to fix this bug. Even though in QML I cannot show the window on demand, apparently in C++ I can still do it. So I will attempt to show the window by subclassing QQuickView in Rust and assign it's source through a QML file that is the PresentationWindow.qml
 
