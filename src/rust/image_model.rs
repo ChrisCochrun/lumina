@@ -240,7 +240,7 @@ mod image_model {
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
             vector_roles
-                .append(self.as_ref().get_role(Role::TitleRole));
+                .append(self.as_ref().get_role_id(Role::TitleRole));
             let model_index = &self.as_ref().index(
                 index,
                 0,
@@ -281,7 +281,7 @@ mod image_model {
         ) -> bool {
             let mut vector_roles = QVector_i32::default();
             vector_roles
-                .append(self.as_ref().get_role(Role::PathRole));
+                .append(self.as_ref().get_role_id(Role::PathRole));
             let model_index = &self.as_ref().index(
                 index,
                 0,
@@ -340,7 +340,7 @@ mod image_model {
             qvariantmap
         }
 
-        fn get_role(&self, role: Role) -> i32 {
+        fn get_role_id(&self, role: Role) -> i32 {
             match role {
                 Role::IdRole => 0,
                 Role::TitleRole => 1,
