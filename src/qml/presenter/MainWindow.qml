@@ -69,13 +69,21 @@ Controls.Page {
         Controls.SplitView {
             id: splitMainView
             anchors.fill: parent
-            handle: Item{
+            handle: Item {
                 implicitWidth: Kirigami.Units.gridUnit / 2
                 Rectangle {
                     height: parent.height
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: parent.width / 4
                     color: parent.Controls.SplitHandle.hovered ? Kirigami.Theme.hoverColor : "#00000000"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: false
+                    hoverEnabled: true
+                    cursorShape: Qt.SizeHorCursor
+                    propagateComposedEvents: true
                 }
             }
 
