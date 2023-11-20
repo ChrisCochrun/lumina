@@ -62,6 +62,18 @@ mod image_model {
         TitleRole,
     }
 
+    impl FromStr for Role {
+        type Err = ();
+        fn from_str(input: &str) -> Result<Role, Self::Err> {
+            match input {
+                "id" => Ok(Role::IdRole),
+                "title" => Ok(Role::TitleRole),
+                "path" => Ok(Role::PathRole),
+                _ => Err(()),
+            }
+        }
+    }
+
     // use crate::entities::{images, prelude::Images};
     // use sea_orm::{ConnectionTrait, Database, DbBackend, DbErr, Statement, ActiveValue};
     impl qobject::ImageModel {

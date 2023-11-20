@@ -3,7 +3,28 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [60%] [45/75]
+* Tasks [0%] [0/0]
+** TODO Possibly add better handling of data through enums
+[[file:~/dev/lumina/src/rust/image_model.rs::impl FromStr for Role {]]
+
+I've done a sample of this in the image_model.rs file. But, I essentially want to make sure I can ask that each piece of data is associated with an enum so that I am ensuring to protect myself. Now that I think about it more though, I'm not 100% sure why or what to do it with, so I need a clear reason before just "It's more rust-like!!!"
+
+Here is an example
+
+#+begin_src rust
+impl FromStr for Role {
+    type Err = ();
+    fn from_str(input: &str) -> Result<Role, Self::Err> {
+        match input {
+            "id" => Ok(Role::IdRole),
+            "title" => Ok(Role::TitleRole),
+            "path" => Ok(Role::PathRole),
+            _ => Err(()),
+        }
+    }
+}
+#+end_src
+
 ** TODO Mouse needs to have resize shape when hovering controls
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
 ** TODO Add a way to interact with OBS
