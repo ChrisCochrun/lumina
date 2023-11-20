@@ -231,6 +231,16 @@ FocusScope {
                     NumberAnimation {properties: "x, y"; duration: 100}
                 }
 
+
+                Connections {
+                    target: SlideMod
+                    function onActiveChanged(index) {
+                        console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                        console.log(index);
+                        previewSlidesList.currentIndex = index;
+                        previewSlidesList.positionViewAtIndex(index, ListView.Center);
+                    }
+                }
             }
 
             Component {

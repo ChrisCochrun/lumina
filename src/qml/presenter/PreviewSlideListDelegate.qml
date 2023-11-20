@@ -85,16 +85,4 @@ Item {
         propagateComposedEvents: true
     }
 
-
-    Connections {
-        target: SlideMod
-        function onActiveChanged() {
-            if (active) {
-                console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                console.log(index);
-                previewSlidesList.currentIndex = index;
-                previewSlidesList.positionViewAtIndex(index, ListView.Center);
-            }
-        }
-    }
 }
