@@ -71,11 +71,12 @@ Controls.Page {
             anchors.fill: parent
             handle: Item {
                 implicitWidth: Kirigami.Units.gridUnit / 2
+
                 Rectangle {
                     height: parent.height
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: parent.width / 4
-                    color: area.containsMouse ? Kirigami.Theme.hoverColor : "#00000000"
+                    color: Qt.lighter(Kirigami.Theme.backgroundColor)
                 }
 
                 MouseArea {

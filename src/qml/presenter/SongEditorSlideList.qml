@@ -85,6 +85,14 @@ Item {
             function playPauseVideo() {
                 representation.playPauseVideo();
             }
+
+            Connections {
+                target: songEditorModel
+                function onBackgroundChanged() {
+                    console.log("BG CHANGED: Load video or clear it");
+                    representation.loadVideo();
+                }
+            }
         }
 
         Kirigami.WheelHandler {
