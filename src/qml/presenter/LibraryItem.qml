@@ -219,7 +219,7 @@ ColumnLayout {
 
         Component {
             id: libraryDelegate
-            Item{
+            Item {
                 implicitWidth: ListView.view.width
                 height: selectedLibrary == libraryType ? 50 : 0
                 Kirigami.BasicListItem {
@@ -306,6 +306,18 @@ ColumnLayout {
                     id: dragHandler
                     anchors.fill: parent
                     hoverEnabled: true
+
+                    Controls.ToolTip {
+                        text: {
+                            if (libraryType == "song")
+                                title + "\n" + author
+                            else if (fileValidation)
+                                title + "\n" + filePath;
+                            else
+                                "file is missing"
+                            }
+                    }
+
                     drag {
                         target: listItem
                         onActiveChanged: {
@@ -321,6 +333,8 @@ ColumnLayout {
                         filterChildren: true
                         threshold: 10
                         /* onDropped: dragHighlightLine.visible = false; */
+
+
                     }
                     MouseArea {
                         id: clickHandler
@@ -379,6 +393,7 @@ ColumnLayout {
                         }
                     }
                 }
+
             }
         }
 
