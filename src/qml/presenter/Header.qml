@@ -12,7 +12,7 @@ Kirigami.ActionToolBar {
     height: Kirigami.Units.gridUnit * 2.0
 
     Kirigami.Heading {
-        text: "Presenter"
+        text: "Lumina"
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.leftMargin: 20
