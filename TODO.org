@@ -25,6 +25,8 @@ impl FromStr for Role {
 }
 #+end_src
 
+Apparently this doesn't work with cxx_qt right now....
+
 ** TODO Mouse needs to have resize shape when hovering controls
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
 ** TODO Add a way to interact with OBS
