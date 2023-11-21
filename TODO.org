@@ -3,7 +3,18 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
+* Tasks [61%] [47/76]
+** TODO Write a function to handle switching to the next fragment in revealjs
+[[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
+
+In order to achieve this, I have to do some of the logic in qml as opposed to rust. Rust just is too far abstracted I think... Unless maybe I can have some form of slide signal pieces that the slide can react to and pass the necessary pieces into rust. I'll need to experiment with this, but I've found that it is all possible, so I'll keep playing.
+
+- First in JS
+- Now need to see if I can do more logic in Rust instead.
+- Maybe signal handlers?
+
+I've written this with signal handlers now. It's working sorta.
+
 ** TODO Possibly add better handling of data through enums
 [[file:~/dev/lumina/src/rust/image_model.rs::impl FromStr for Role {]]
 
@@ -36,7 +47,7 @@ The basic implementation is done. In order to make use of it in the odd broken Q
 Once the model of OBS scenes is created, we can select a scene to add it to the service item. Then hopefully activate will take that scene and set it inside obs when switching slides.
 *** TODO OBWS setting scenes
 This has been really tricky since there is something of a bug when using =runtime.block_on()= rather than having a single cohesive tokio runtime. So, perhaps I need to figure out if I can't make a runtime that works for the whole app so that I can manage these a little better.
-** TODO Find segfault in webengine
+** TODO Find segfault in webengine :bug:
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
 
 When moving service items around and thus slides, sometimes the WebEngineView causes a segfault
@@ -44,28 +55,15 @@ When moving service items around and thus slides, sometimes the WebEngineView ca
 /Maybe I need to use a timer function before loading the WebView? That way while moving things around, we aren't loading anything and wait until moving is over?/
 
 ACTUALLY, if I can just generate thumbnails, I won't even need the WebEngineView in the PreviewSlideListDelegate anyway, which seems to fix it.
-*** TODO Add a generate thumbnails function for reveal.js presentations
+*** TODO Add a generate thumbnails function for reveal.js presentations :feature:
 [[file:~/dev/lumina/src/qml/presenter/MainWindow.qml::function getRevealThumbs(file) {]]
 
 This site is very helpful: https://html2canvas.hertzen.com/configuration/
 
 I could use html2canvas in order to render the file in a canvas and pick it's size. Then I could take images of a slide, check to see if there are more slides, take another after changing and so on. This will likely need to be a lengthy script and I'll need to toy with how to load both html2canvas and this script into the QML webengine
-** TODO Write a function to handle switching to the next fragment in revealjs
-[[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
-
-In order to achieve this, I have to do some of the logic in qml as opposed to rust. Rust just is too far abstracted I think... Unless maybe I can have some form of slide signal pieces that the slide can react to and pass the necessary pieces into rust. I'll need to experiment with this, but I've found that it is all possible, so I'll keep playing.
-
-- First in JS
-- Now need to see if I can do more logic in Rust instead.
-- Maybe signal handlers?
-
-I've written this with signal handlers now. It's working sorta.
-
-** TODO write a function for setting each slide to the appropriate index in html presentations
+** TODO write a function for setting each slide to the appropriate index in html presentations :feature:
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::/* function moveToSlideIndex(index) { */]]
-** DONE Rename SlideEditor.qml to SongEditorSlideList.qml
-[[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Item {]]
-** TODO Build a slide_editor.rs
+** TODO Build a slide_editor.rs :maintenance:
 [[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Presenter.Slide {]]
 
 This file can house all the logic for the editor and propogate the changes to the Slide.qml better. This way it can talk more directly to the song_model if done properly.
@@ -73,21 +71,11 @@ This file can house all the logic for the editor and propogate the changes to th
 This could also help to separate more concerns in Rust and allow me to fix some small problems from the complications of Rust to C++ to QML. Maybe I can setup the changes to certain data pieces more cleanly this way.
 
 Need to experiment with it more.
-** TODO Need to use a better logging systems so things stop getting confusingly lost
+** TODO Need to use a better logging systems so things stop getting confusingly lost :maintenance:
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
 *** TODO Need to work on all warnings and errors to cleanup logs
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
-** TODO [#B] Fix updating things in the song editor
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
-The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
-
-*** TODO Seems that updating songs aren't reflected well
-[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
-** DONE Delete temp folder
-[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
-** DONE Update the last save file
-[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
-** TODO Adding move rows to service list
+** TODO Adding move rows to service list :bug:
 [[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
 Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
 
@@ -96,9 +84,9 @@ All that said, the real solution is to figure out how to get beginMoveRows to co
 ALMOST DONE!! I only now need to figure out and fix whatever is happening to the seg fault that happens when moving things fast.
 ** TODO Consider converting diesel to raw sqlx instead
 From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries. The only issue is that my queries have been rather small. I only really need to select everything into the app and then run it from there. However, it could still be a consideration as things age. Perhaps when there are hundreds or even thousands of items in the database, it'll be more effective to use something like SQLx.
-** TODO Figure out qml hot reload
+** TODO Figure out qml hot reload :maintenance:
 https://www.reddit.com/r/QtFramework/comments/11plifj/qhot_now_with_qt6_support/
-** TODO Switch to using rust only deletion functions.
+** TODO Switch to using rust only deletion functions. :bug:
 [[file:~/dev/lumina/src/qml/presenter/Library.qml::videoProxyModel.deleteVideos(rows)]]
 
 For this to work I'll need to use a vector of indexes. Somehow I'll need to figure out what QML can pass to Rust and then cycle through all of them and remove each item.
@@ -110,7 +98,7 @@ A large portion of the back I am refactoring to create a slide class with a slid
 
 Could start working on moving slide.h and slide.cpp to a slide.rs. Then creating a slide_object.rs. Then maybe a service_item.rs. Creating these very basic classes in Rust would mean I start learning more and more Rust, and I would be preventing more memory bugs.
 
-*** TODO What is out
+*** DONE What is out
 Some of the special effects and things that I wanted to do could perhaps hold off. A lot of the things that I want to do to help make this really special could hold off. Blur, Color Adjustments, and Shadows for backgrounds and text and stuff can hold off for now. More of the special propresenter kind of things.
 
 I had some scope creep. While working on a handful of things I started to transition things over to using Rust instead of C++ with CXX-QT. In the end, I believe this to be a MUCH better move since so much of C++ is dangerous in a lot of ways and I am not confident in my abilities as a developer to make sure I'm not creating memory bugs.
@@ -164,6 +152,7 @@ Start with select, deselect, select_items, and deactivate. Then either move onto
 - [X] Activate
 - [X] Deselect
 - [ ] Select Items
+  Multiple items will be next. This will allow me to edit things much faster, and is necessary for releasing this.
 - [X] Deactivate
 - [X] Load
 - [X] Save
@@ -172,18 +161,6 @@ Start with select, deselect, select_items, and deactivate. Then either move onto
   Need to figure out if I can use Nix to deploy in various fashions. Maybe I'll need to handcraft my own things for Arch, flatpak, and or snap.
 - [ ] Windows
 - [ ] Macos
-** TODO [#A] Updating properties in models. [4/5] [80%]
-All of the models need to be editable from the outside so that the editor pages a can appropriately change the properties of each item. I'll go in this order.
-*** DONE Video
-*** DONE Image
-*** DONE Presentations
-*** DONE Songs
-
-Songs will be the hardest so I'll save them for last. They are not even using the rust models yet anyway. The key that I figured out is that instead of relying on the proxy model to map to the appropriate id inside the rust model. I'll store an id in the sqlite database and use that as a way to find each item. I'll need to keep tinkering with the best way to do that as right now I looped through all the items and that may get inefficient as models grow.
-
-Another big blocker in this process is to make sure that all properties are accessed appropriately on the QML side. I need to update a lot of QML code yet.
-*** TODO DATA CHANGED
-Almost done here, but I can't get the data to emit the change and therefore inform the proxyModel of the changes and change it in the list view.
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 ** TODO A busy indicator while deleting library items :feature:ui:
@@ -233,6 +210,26 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE [#B] Fix updating things in the song editor
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
+The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
+
+*** DONE Seems that updating songs aren't reflected well
+[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
+** DONE [#A] Updating properties in models. [0/0] [0%]
+All of the models need to be editable from the outside so that the editor pages a can appropriately change the properties of each item. I'll go in this order.
+*** DONE Video
+*** DONE Image
+*** DONE Presentations
+*** DONE Songs
+
+Songs will be the hardest so I'll save them for last. They are not even using the rust models yet anyway. The key that I figured out is that instead of relying on the proxy model to map to the appropriate id inside the rust model. I'll store an id in the sqlite database and use that as a way to find each item. I'll need to keep tinkering with the best way to do that as right now I looped through all the items and that may get inefficient as models grow.
+
+Another big blocker in this process is to make sure that all properties are accessed appropriately on the QML side. I need to update a lot of QML code yet.
+*** DONE DATA CHANGED
+Almost done here, but I can't get the data to emit the change and therefore inform the proxyModel of the changes and change it in the list view.
+** DONE Rename SlideEditor.qml to SongEditorSlideList.qml
+[[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Item {]]
 ** DONE Make saving file auto use the last save file and go from there
 [[file:~/dev/lumina/src/qml/main.qml::function save() {]]
 ** DONE When updating background, it isn't changed in the list
@@ -413,6 +410,11 @@ or at least turns the entry above it into the same as itself while retaining it'
 
 ** DONE Fix file dialog using basic QT theme
 [[file:~/dev/church-presenter/src/qml/presenter/SongEditor.qml::FileDialog {]]
+
+** DONE Delete temp folder
+[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
+** DONE Update the last save file
+[[file:~/dev/lumina/src/rust/service_item_model.rs::println!("tar-written: {:?}", &lf);]]
 
 * Thoughts
 I'm considering porting from using QML and CXX-QT to something like Iced or Slint and thus doing the entire app in a far more "Rust" way. The issues with this include:
