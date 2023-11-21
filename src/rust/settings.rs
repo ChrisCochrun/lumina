@@ -15,6 +15,12 @@ mod settings {
         #[qproperty(QUrl, last_save_file)]
         #[qproperty(QUrl, loaded_file)]
         type Settings = super::SettingsRust;
+
+        #[qinvokable]
+        fn setup(self: Pin<&mut Settings>);
+
+        #[qinvokable]
+        fn set_save_file(self: Pin<&mut Settings>, file: QUrl);
     }
 }
 
@@ -28,13 +34,9 @@ use std::path::PathBuf;
 pub struct SettingsRust {
     config: Ini,
 
-    #[qproperty]
     screen: QString,
-    #[qproperty]
     sound_effect: QString,
-    #[qproperty]
     last_save_file: QUrl,
-    #[qproperty]
     loaded_file: QUrl,
 }
 
@@ -51,15 +53,6 @@ impl Default for SettingsRust {
 }
 
 impl qobject::Settings {
-    #[qinvokable]
-    pub fn print_sound(self: Pin<&mut Self>) {
-        let mut config = Ini::new();
-        let _map = config.load("~/.config/lumina/lumina.conf");
-
-        println!("{}", self.sound_effect());
-    }
-
-    #[qinvokable]
     pub fn setup(mut self: Pin<&mut Self>) {
         let home = dirs::config_dir();
         println!("{:?}", home);
@@ -92,7 +85,6 @@ impl qobject::Settings {
         }
     }
 
-    #[qinvokable]
     pub fn set_save_file(mut self: Pin<&mut Self>, file: QUrl) {
         println!("{file}");
         match self.as_mut().config_mut().set(

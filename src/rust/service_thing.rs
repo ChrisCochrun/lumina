@@ -64,7 +64,6 @@ impl Default for ServiceThingRust {
 }
 
 impl qobject::ServiceThing {
-    #[qinvokable]
     pub fn activate(self: Pin<&mut Self>) {
         println!("{}", self.active());
         let active: bool = *self.active();
@@ -72,7 +71,6 @@ impl qobject::ServiceThing {
         println!("{}", !active);
     }
 
-    #[qinvokable]
     pub fn check_active(self: Pin<&mut Self>) {
         println!("Are we active?: {}", self.active());
     }
