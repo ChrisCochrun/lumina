@@ -170,6 +170,9 @@ Both PDFs and reveal.js presentations think every slide is the first one. I need
 Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
 ** TODO [#A] Organize and layout structure of rust code       :maintenance:
 Since building a lot of the rust code felt more like an experiment, I've not kept it very well organized. I need to go through each model and rust module and organize them well and then decide what needs to be publicly available or not.
+
+One major way to work on this is to pass less items back to rust and just their indexes instead. This leads to knowing which item and letting rust find the item. Another solution is to allow qml to pass a QVariantMap to rust when adding items, and loop through the map to find all matches and build the item.
+
 ** TODO find song on SongSelect or perhaps Genius Lyrics          :feature:
 This function will need to include parsing through the HTML of the results page. Finding the first "song-result", then "song-result-title", and inside that tag is the name. In the URL is the CCLI number.
 
