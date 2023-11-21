@@ -29,7 +29,7 @@ Item {
                 Controls.ComboBox {
                     id: fontBox
                     model: Qt.fontFamilies()
-                    implicitWidth: 300
+                    implicitWidth: root.width / 5 > 300 ? 300 : root.width / 5
                     editable: true
                     hoverEnabled: true
                     /* flat: true */
@@ -165,17 +165,17 @@ Item {
                 Item { Layout.fillWidth: true }
                 Controls.ToolSeparator {}
                 Controls.ToolButton {
-                    text: "Effects"
-                    icon.name: "image-auto-adjust"
-                    hoverEnabled: true
-                    onClicked: {}
-                }
-                Controls.ToolButton {
                     id: backgroundButton
                     text: "Background"
                     icon.name: "fileopen"
                     hoverEnabled: true
                     onClicked: backgroundTypePopup.open()
+                }
+                Controls.ToolButton {
+                    text: "Effects"
+                    icon.name: "image-auto-adjust"
+                    hoverEnabled: true
+                    onClicked: {}
                 }
 
                 Controls.Popup {
