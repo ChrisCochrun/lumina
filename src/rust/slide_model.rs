@@ -253,7 +253,6 @@ pub struct SlideModelRust {
 }
 
 impl qobject::SlideModel {
-    #[qinvokable]
     pub fn add_video_thumbnail(
         mut self: Pin<&mut Self>,
         index: i32,
@@ -285,7 +284,6 @@ impl qobject::SlideModel {
         true
     }
 
-    #[qinvokable]
     pub fn clear(mut self: Pin<&mut Self>) {
         println!("CLEARING ALL SLIDES");
         unsafe {
@@ -295,7 +293,6 @@ impl qobject::SlideModel {
         }
     }
 
-    #[qinvokable]
     pub fn remove_item_from_service(
         mut self: Pin<&mut Self>,
         index: i32,
@@ -324,7 +321,6 @@ impl qobject::SlideModel {
         }
     }
 
-    #[qinvokable]
     pub fn remove_item(mut self: Pin<&mut Self>, index: i32) {
         if index < 0 || (index as usize) >= self.slides().len() {
             return;
@@ -394,7 +390,6 @@ impl qobject::SlideModel {
         });
     }
 
-    #[qinvokable]
     pub fn insert_item_from_service(
         mut self: Pin<&mut Self>,
         index: i32,
@@ -586,7 +581,6 @@ impl qobject::SlideModel {
         println!("Item added in slide model!");
     }
 
-    #[qinvokable]
     pub fn add_item_from_service(
         mut self: Pin<&mut Self>,
         index: i32,
@@ -742,7 +736,6 @@ impl qobject::SlideModel {
         println!("Item added in rust model!");
     }
 
-    #[qinvokable]
     pub fn move_item_from_service(
         mut self: Pin<&mut Self>,
         source_index: i32,
@@ -948,7 +941,6 @@ impl qobject::SlideModel {
         }
     }
 
-    #[qinvokable]
     pub fn get_item(
         self: Pin<&mut Self>,
         index: i32,
@@ -972,7 +964,6 @@ impl qobject::SlideModel {
         qvariantmap
     }
 
-    #[qinvokable]
     pub fn get_slide_from_service(
         self: Pin<&mut Self>,
         index: i32,
@@ -992,7 +983,6 @@ impl qobject::SlideModel {
         id
     }
 
-    #[qinvokable]
     pub fn activate(mut self: Pin<&mut Self>, index: i32) -> bool {
         let rc = self.as_ref().count() - 1;
         let tl = &self.as_ref().index(0, 0, &QModelIndex::default());

@@ -1,9 +1,21 @@
 #+TITLE: Todo List
+#+filetags: :projectdev:
 :PROPERTIES:
 :CATEGORY: dev
 :END:
 
-* Tasks [61%] [47/76]
+* Tasks [0%] [0/0]
+** TODO Port to CXX-QT 6.0 [37%] [3/8]
+[[file:~/dev/lumina/src/rust/lib.rs]]
+
+*** DONE image_model.rs
+*** DONE video_model.rs
+*** DONE presentation_model.rs
+*** TODO songs/song_model.rs
+*** TODO songs/song_editor.rs
+*** TODO ytdl.rs
+*** TODO utils.rs
+*** TODO obs.rs
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
