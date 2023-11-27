@@ -4,8 +4,8 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
-** TODO Port to CXX-QT 6.0 [90%] [9/10]
+* Tasks [62%] [48/77]
+** DONE Port to CXX-QT 6.0 [0%] [0/0]
 [[file:~/dev/lumina/src/rust/lib.rs]]
 
 *** DONE image_model.rs
@@ -18,8 +18,16 @@
 *** DONE obs.rs
 *** DONE 18000 errors.....
 round 1 of errors done.....
-*** TODO 237 errors...
+*** DONE 237 errors...
 now round 2
+*** DONE FIX CMAKE? or build.rs
+This was a doozy. Apparently the way that cmake links things together changed in cxx_qt 6.0. So, I had to rename a lot of the library linking to ${APP_NAME}_lib instead of using the ${CRATE} name. So, basically it changed from liblumina to lumina_lib I believe. 
+
+Like this..
+#+begin_src CMake
+target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
+#+end_src
+
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
