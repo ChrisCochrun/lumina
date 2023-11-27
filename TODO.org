@@ -5,29 +5,6 @@
 :END:
 
 * Tasks [62%] [48/77]
-** DONE Port to CXX-QT 6.0 [0%] [0/0]
-[[file:~/dev/lumina/src/rust/lib.rs]]
-
-*** DONE image_model.rs
-*** DONE video_model.rs
-*** DONE presentation_model.rs
-*** DONE songs/song_model.rs
-*** DONE songs/song_editor.rs
-*** DONE ytdl.rs
-*** DONE utils.rs
-*** DONE obs.rs
-*** DONE 18000 errors.....
-round 1 of errors done.....
-*** DONE 237 errors...
-now round 2
-*** DONE FIX CMAKE? or build.rs
-This was a doozy. Apparently the way that cmake links things together changed in cxx_qt 6.0. So, I had to rename a lot of the library linking to ${APP_NAME}_lib instead of using the ${CRATE} name. So, basically it changed from liblumina to lumina_lib I believe. 
-
-Like this..
-#+begin_src CMake
-target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
-#+end_src
-
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
@@ -237,6 +214,30 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE Port to CXX-QT 6.0 [0%] [0/0]
+[[file:~/dev/lumina/src/rust/lib.rs]]
+
+*** DONE image_model.rs
+*** DONE video_model.rs
+*** DONE presentation_model.rs
+*** DONE songs/song_model.rs
+*** DONE songs/song_editor.rs
+*** DONE ytdl.rs
+*** DONE utils.rs
+*** DONE obs.rs
+*** DONE 18000 errors.....
+round 1 of errors done.....
+*** DONE 237 errors...
+now round 2
+There were more after this too... some thousands of them I suppose
+*** DONE FIX CMAKE? or build.rs
+This was a doozy. Apparently the way that cmake links things together changed in cxx_qt 6.0. So, I had to rename a lot of the library linking to ${APP_NAME}_lib instead of using the ${CRATE} name. So, basically it changed from liblumina to lumina_lib I believe. 
+
+Like this..
+#+begin_src CMake
+target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
+#+end_src
+
 ** DONE [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
