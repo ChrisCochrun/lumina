@@ -73,7 +73,7 @@ Item {
             onEntered: (drag) => {
                 if (drag.keys[0] === "library") {
                     dropHighlightLine.visible = true;
-                    var lastItem = serviceItemList.itemAtIndex(ServiceItemModel.count() - 1);
+                    var lastItem = serviceItemList.itemAtIndex(ServiceItemModel.count - 1);
                     dropHighlightLine.y = lastItem.y + lastItem.height;
                 }
             }

@@ -1,11 +1,14 @@
 use core::fmt;
-use std::error::Error;
+use std::{error::Error, pin::Pin};
 use std::thread::sleep;
 use std::time::Duration;
-
+use cxx_qt::CxxQtType;
+use cxx_qt_lib::{QStringList, QString};
 use obws::responses::scenes::Scenes;
 use obws::Client;
-use tracing::debug;
+use tracing::{debug, error};
+
+use crate::obs::obs_model::QList_QString;
 
 pub struct Obs {
     scenes: Scenes,
@@ -107,8 +110,6 @@ fn make_client() -> Client {
 
 #[cxx_qt::bridge]
 mod obs_model {
-    use tracing::{debug, error};
-
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -118,75 +119,84 @@ mod obs_model {
         type QList_QString = cxx_qt_lib::QList<QString>;
     }
 
-    #[cxx_qt::qobject]
-    #[derive(Debug, Default)]
-    pub struct ObsModel {
-        #[qproperty]
-        scenes: QStringList,
-        #[qproperty]
-        port: QString,
-        #[qproperty]
-        connected: bool,
-        obs: Option<super::Obs>,
+    unsafe extern "RustQt" {
+        #[qobject]
+        #[qml_element]
+        #[qproperty(QStringList, scenes)]
+        #[qproperty(QString, port)]
+        #[qproperty(bool, connected)]
+        type ObsModel = super::ObsModelRust;
+
+        #[qinvokable]
+        fn update_scenes(self: Pin<&mut ObsModel>) -> QStringList;
+        #[qinvokable]
+        fn get_obs(self: Pin<&mut ObsModel>) -> bool;
+        #[qinvokable]
+        fn set_scene(self: Pin<&mut ObsModel>, scene: QString);
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ObsModelRust {
+    scenes: QStringList,
+    port: QString,
+    connected: bool,
+    obs: Option<Obs>,
+}
+
+impl obs_model::ObsModel {
+    pub fn update_scenes(
+        mut self: Pin<&mut Self>,
+    ) -> QStringList {
+        debug!("updating scenes");
+        let mut scenes_list = QList_QString::default();
+        if let Some(obs) = &self.as_mut().rust_mut().obs {
+            debug!("found obs");
+            for scene in obs.scenes.scenes.iter().rev() {
+                debug!(?scene);
+                scenes_list.append(QString::from(&scene.name));
+            }
+        }
+        for s in scenes_list.iter() {
+            debug!(?s);
+        }
+        let list = QStringList::from(&scenes_list);
+        debug!(?list);
+        self.as_mut().set_scenes(list.clone());
+        list
     }
 
-    impl qobject::ObsModel {
-        #[qinvokable]
-        pub fn update_scenes(
-            mut self: Pin<&mut Self>,
-        ) -> QStringList {
-            debug!("updating scenes");
-            let mut scenes_list = QList_QString::default();
-            if let Some(obs) = self.obs() {
-                debug!("found obs");
-                for scene in obs.scenes.scenes.iter().rev() {
-                    debug!(?scene);
-                    scenes_list.append(QString::from(&scene.name));
+    pub fn get_obs(mut self: Pin<&mut Self>) -> bool {
+        debug!("getting obs");
+
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            match Obs::new().await {
+                Ok(o) => {
+                    self.as_mut().set_connected(true);
+                    self.as_mut().rust_mut().obs = Some(o);
+                    self.as_mut().update_scenes();
+                }
+                Err(e) => {
+                    error!(e);
+                    self.as_mut().set_connected(false);
                 }
             }
-            for s in scenes_list.iter() {
-                debug!(?s);
-            }
-            let list = QStringList::from(&scenes_list);
-            debug!(?list);
-            self.as_mut().set_scenes(list.clone());
-            list
+        });
+
+        if let Some(_obs) = &self.as_mut().rust_mut().obs {
+            true
+        } else {
+            false
         }
+    }
 
-        #[qinvokable]
-        pub fn get_obs(mut self: Pin<&mut Self>) -> bool {
-            debug!("getting obs");
-
-            tokio::runtime::Runtime::new().unwrap().block_on(async {
-                match super::Obs::new().await {
-                    Ok(o) => {
-                        self.as_mut().set_connected(true);
-                        self.as_mut().set_obs(Some(o));
-                        self.as_mut().update_scenes();
-                    }
-                    Err(e) => {
-                        error!(e);
-                        self.as_mut().set_connected(false);
-                    }
-                }
-            });
-
-            if let Some(_obs) = self.obs() {
-                true
-            } else {
-                false
-            }
-        }
-
-        #[qinvokable]
-        pub fn set_scene(mut self: Pin<&mut Self>, scene: QString) {
-            let scene = scene.to_string();
-            if let Some(obs) = self.obs_mut() {
-                let obs = obs.clone();
-                match obs.set_scene(scene) {
-                    Ok(()) => debug!("Successfully set scene"),
-                    Err(e) => error!(e),
-                }
+    pub fn set_scene(mut self: Pin<&mut Self>, scene: QString) {
+        let scene = scene.to_string();
+        if let Some(obs) = &self.as_mut().rust_mut().obs {
+            let obs = obs.clone();
+            match obs.set_scene(scene) {
+                Ok(()) => debug!("Successfully set scene"),
+                Err(e) => error!(e),
             }
         }
     }

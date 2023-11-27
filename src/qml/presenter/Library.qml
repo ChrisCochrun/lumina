@@ -40,11 +40,11 @@ Item {
                 headerLabel: "Songs"
                 itemIcon: "folder-music-symbolic"
                 /* itemSubtitle: model.author */
-                count: innerModel.count()
+                count: innerModel.count
                 newItemFunction: (function() {
                     songProxyModel.setFilterRegularExpression("");
                     innerModel.newSong();
-                    libraryList.currentIndex = innerModel.count() - 1;
+                    libraryList.currentIndex = innerModel.count - 1;
                     if (!editMode)
                         editMode = true;
                     editSwitch(libraryList.currentIndex, "song");
@@ -67,7 +67,7 @@ Item {
                 headerLabel: "Videos"
                 itemIcon: "folder-videos-symbolic"
                 /* itemSubtitle: model.path */
-                count: innerModel.count()
+                count: innerModel.count
                 newItemFunction: (function() {
                     videoProxyModel.setFilterRegularExpression("");
                     newVideo.open();
@@ -102,7 +102,7 @@ Item {
                 headerLabel: "Images"
                 itemIcon: "folder-pictures-symbolic"
                 /* itemSubtitle: model.path */
-                count: innerModel.count()
+                count: innerModel.count
                 newItemFunction: (function() {
                     imageProxyModel.setFilterRegularExpression("");
                 })
@@ -123,7 +123,7 @@ Item {
                 headerLabel: "Presentations"
                 itemIcon: "x-office-presentation-symbolic"
                 /* itemSubtitle: model.path */
-                count: innerModel.count()
+                count: innerModel.count
                 newItemFunction: (function() {
                     presProxyModel.setFilterRegularExpression("");
                 })
@@ -320,7 +320,7 @@ Item {
     function addVideo(url) {
         videoProxyModel.videoModel.newItem(url);
         selectedLibrary = "video";
-        videoLibrary.libraryList.currentIndex = videoProxyModel.videoModel.count() - 1;
+        videoLibrary.libraryList.currentIndex = videoProxyModel.videoModel.count - 1;
         if (!editMode)
             editMode = true;
         editSwitch(videoLibrary.libraryList.currentIndex, "video");
@@ -329,7 +329,7 @@ Item {
     function addImg(url) {
         imageProxyModel.newItem(url);
         selectedLibrary = "image";
-        imageLibrary.libraryList.currentIndex = imageProxyModel.imageModel.count() - 1;
+        imageLibrary.libraryList.currentIndex = imageProxyModel.imageModel.count - 1;
         if (!editMode)
             editMode = true;
         editSwitch(imageLibrary.libraryList.currentIndex, "image");
@@ -350,7 +350,7 @@ Item {
 
         presProxyModel.presentationModel.newItem(url, pageCount);
         selectedLibrary = "presentation";
-        presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count() - 1;
+        presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count - 1;
         if (!editMode)
             editMode = true;
         editSwitch(presentationLibrary.libraryList.currentIndex, "presentation");

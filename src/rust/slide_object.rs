@@ -51,7 +51,7 @@ mod slide_object {
         #[qproperty(QString, vtext_alignment)]
         #[qproperty(QString, htext_alignment)]
         #[qproperty(QString, font)]
-        #[qproperty(bool, font_size)]
+        #[qproperty(i32, font_size)]
         #[qproperty(f32, video_start_time)]
         #[qproperty(f32, video_end_time)]
         type SlideObject = super::SlideObjectRust;
@@ -81,7 +81,13 @@ mod slide_object {
     }
 }
 
+use std::pin::Pin;
+
+use cxx_qt::CxxQtType;
+use cxx_qt_lib::{QString, QVariant};
 use tracing::debug;
+
+use self::slide_object::QMap_QString_QVariant;
 
 #[derive(Clone, Debug)]
 pub struct SlideObjectRust {
@@ -128,7 +134,7 @@ impl Default for SlideObjectRust {
     }
 }
 
-impl qobject::SlideObject {
+impl slide_object::SlideObject {
     pub fn change_slide(
         mut self: Pin<&mut Self>,
         item: QMap_QString_QVariant,
@@ -153,12 +159,12 @@ impl qobject::SlideObject {
                 debug!(?html, count, slide_index);
                 if slide_index > 0 && slide_index < count - 1 {
                     if current_index < &index {
-                        self.as_mut().emit(Signals::RevealNext);
-                        debug!(signal = ?Signals::RevealNext);
+                        self.as_mut().reveal_next();
+                        debug!("RevealNext");
                         return;
                     } else if slide_index > 0 {
-                        self.as_mut().emit(Signals::RevealPrev);
-                        debug!(signal = ?Signals::RevealPrev);
+                        self.as_mut().reveal_prev();
+                        debug!("RevealPrev");
                         return;
                     }
                 }
@@ -267,9 +273,9 @@ impl qobject::SlideObject {
             .get(&QString::from("fontSize"))
             .unwrap_or(QVariant::from(&50));
         if let Some(font_size) = font_size.value::<i32>() {
-            if &font_size != self.as_ref().font_size() {
+            if font_size != self.as_ref().font_size {
                 println!("font-size: {font_size}");
-                self.as_mut().set_font_size(font_size);
+                self.as_mut().rust_mut().font_size = font_size;
             }
         } else {
             println!("font-size: empty");
@@ -282,8 +288,7 @@ impl qobject::SlideObject {
                 println!("looping: {looping}");
                 self.as_mut().set_looping(looping);
                 let lp = looping;
-                self.as_mut()
-                    .emit(Signals::LoopChanged { looping: &lp });
+                self.as_mut().loop_changed(lp)
             }
         } else {
             println!("looping: empty")
@@ -308,7 +313,8 @@ impl qobject::SlideObject {
 
         self.as_mut().set_slide_index(slide_index);
 
-        self.as_mut().emit(Signals::SlideChanged { slide: &index });
+        self.as_mut().slide_changed(index);
+        // self.as_mut().emit(Signals::SlideChanged { slide: &index });
         println!("## Slide End ##");
     }
 
@@ -330,12 +336,12 @@ impl qobject::SlideObject {
     }
     pub fn play(mut self: Pin<&mut Self>) -> bool {
         self.as_mut().set_is_playing(true);
-        self.as_mut().emit_playing_changed(&true);
+        self.as_mut().playing_changed(true);
         true
     }
     pub fn pause(mut self: Pin<&mut Self>) -> bool {
         self.as_mut().set_is_playing(false);
-        self.as_mut().emit_playing_changed(&false);
+        self.as_mut().playing_changed(false);
         false
     }
     pub fn play_pause(mut self: Pin<&mut Self>) -> bool {
@@ -344,7 +350,7 @@ impl qobject::SlideObject {
             true => self.as_mut().set_is_playing(false),
             false => self.as_mut().set_is_playing(true),
         }
-        self.as_mut().emit_playing_changed(&!playing);
+        self.as_mut().playing_changed(!playing);
         !playing
     }
 }

@@ -31,6 +31,7 @@ mod service_thing {
 }
 
 use cxx_qt_lib::QString;
+use std::pin::Pin;
 
 #[derive(Clone)]
 pub struct ServiceThingRust {
@@ -63,7 +64,7 @@ impl Default for ServiceThingRust {
     }
 }
 
-impl qobject::ServiceThing {
+impl service_thing::ServiceThing {
     pub fn activate(self: Pin<&mut Self>) {
         println!("{}", self.active());
         let active: bool = *self.active();

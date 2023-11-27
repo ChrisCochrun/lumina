@@ -5,17 +5,21 @@
 :END:
 
 * Tasks [0%] [0/0]
-** TODO Port to CXX-QT 6.0 [37%] [3/8]
+** TODO Port to CXX-QT 6.0 [90%] [9/10]
 [[file:~/dev/lumina/src/rust/lib.rs]]
 
 *** DONE image_model.rs
 *** DONE video_model.rs
 *** DONE presentation_model.rs
-*** TODO songs/song_model.rs
-*** TODO songs/song_editor.rs
-*** TODO ytdl.rs
-*** TODO utils.rs
-*** TODO obs.rs
+*** DONE songs/song_model.rs
+*** DONE songs/song_editor.rs
+*** DONE ytdl.rs
+*** DONE utils.rs
+*** DONE obs.rs
+*** DONE 18000 errors.....
+round 1 of errors done.....
+*** TODO 237 errors...
+now round 2
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 

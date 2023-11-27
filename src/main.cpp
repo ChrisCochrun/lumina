@@ -140,19 +140,14 @@ int main(int argc, char *argv[])
   qDebug() << QIcon::themeName();
   qDebug() << QApplication::platformName();
 
-  // integrate with commandline argument handling
-  // QCommandLineParser parser;
-  // aboutData.setupCommandLine(&parser);
-  // setup of app specific commandline args
-
   //Need to instantiate our slide
   QScopedPointer<Utils> utils(new Utils);
   QScopedPointer<SlideModel> slideModel(new SlideModel);
-  QScopedPointer<SlideyMod> slideMod(new SlideyMod);
+  QScopedPointer<SlideModelCpp> slideMod(new SlideModelCpp);
   QScopedPointer<File> filemanager(new File);
   // QScopedPointer<QQuickView> preswin(new QQuickView);
-  QScopedPointer<ServiceItemMod> serviceItemModel(new ServiceItemMod);
-  QScopedPointer<ServiceItemModel> serviceItemC(new ServiceItemModel);
+  QScopedPointer<ServiceItemModel> serviceItemModel(new ServiceItemModel);
+  QScopedPointer<ServiceItemModelCpp> serviceItemC(new ServiceItemModelCpp);
   QScopedPointer<SlideObject> slideobject(new SlideObject);
   QScopedPointer<ObsModel> obsModel(new ObsModel);
   obsModel.get()->getObs();
@@ -167,41 +162,42 @@ int main(int argc, char *argv[])
   // PresWindow->setSource(QUrl(QStringLiteral("qrc://qml/presenter/PresentationWindow.qml")));
   qDebug() << PresWindow->isVisible();
 
-  QObject::connect(serviceItemModel.get(),
+  QObject::connect(serviceItemC.get(),
                    SIGNAL(itemInserted(const int&, const ServiceItem&)),
-                   slideModel.get(),
+                   slideMod.get(),
                    SLOT(insertItemFromService(const int&, const ServiceItem&)));
-  QObject::connect(serviceItemModel.get(),
+  QObject::connect(serviceItemC.get(),
                    SIGNAL(itemAdded(const int&, const ServiceItem&)),
-                   slideModel.get(),
+                   slideMod.get(),
                    SLOT(addItemFromService(const int&, const ServiceItem&)));
+
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemMod::itemAdded,
-                   slideMod.get(),
-                   &SlideyMod::addItemFromService);
+                   &ServiceItemModel::itemAdded,
+                   slideModel.get(),
+                   &SlideModel::addItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemMod::itemInserted,
-                   slideMod.get(),
-                   &SlideyMod::insertItemFromService);
+                   &ServiceItemModel::itemInserted,
+                   slideModel.get(),
+                   &SlideModel::insertItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemMod::itemMoved,
-                   slideMod.get(),
-                   &SlideyMod::moveItemFromService);
+                   &ServiceItemModel::itemMoved,
+                   slideModel.get(),
+                   &SlideModel::moveItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemMod::itemRemoved,
-                   slideMod.get(),
-                   &SlideyMod::removeItemFromService);
+                   &ServiceItemModel::itemRemoved,
+                   slideModel.get(),
+                   &SlideModel::removeItemFromService);
   QObject::connect(serviceItemModel.get(),
-                   &ServiceItemMod::cleared,
-                   slideMod.get(),
-                   &SlideyMod::clear);
+                   &ServiceItemModel::cleared,
+                   slideModel.get(),
+                   &SlideModel::clear);
   // QObject::connect(serviceItemModel.get(),
   //                  SIGNAL(allRemoved()),
   //                  slideMod.get(),
   //                  SLOT(clear()));
   QObject::connect(slideobject.get(),
                    SIGNAL(slideChanged(int)),
-                   slideMod.get(),
+                   slideModel.get(),
                    SLOT(activate(int)));
 
   utils.get()->setup();

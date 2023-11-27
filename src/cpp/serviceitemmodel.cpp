@@ -27,11 +27,11 @@
 #include "cxx-qt-gen/slide_model.cxxqt.h"
 #include "cxx-qt-gen/service_item_model.cxxqt.h"
 
-ServiceItemModel::ServiceItemModel(QObject *parent)
+ServiceItemModelCpp::ServiceItemModelCpp(QObject *parent)
     : QAbstractListModel(parent) {
 }
 
-int ServiceItemModel::rowCount(const QModelIndex &parent) const {
+int ServiceItemModelCpp::rowCount(const QModelIndex &parent) const {
   // For list models only the root node (an invalid parent) should return the
   // list's size. For all other (valid) parents, rowCount() should return 0 so
   // that it does not become a tree model.
@@ -42,7 +42,7 @@ int ServiceItemModel::rowCount(const QModelIndex &parent) const {
   return m_items.size();
 }
 
-QVariant ServiceItemModel::data(const QModelIndex &index, int role) const {
+QVariant ServiceItemModelCpp::data(const QModelIndex &index, int role) const {
   if (!index.isValid())
     return QVariant();
 
@@ -77,7 +77,7 @@ QVariant ServiceItemModel::data(const QModelIndex &index, int role) const {
   }
 }
 
-QHash<int, QByteArray> ServiceItemModel::roleNames() const {
+QHash<int, QByteArray> ServiceItemModelCpp::roleNames() const {
   static QHash<int, QByteArray> mapping{{NameRole, "name"},
                                         {TypeRole, "type"},
                                         {BackgroundRole, "background"},
@@ -94,7 +94,7 @@ QHash<int, QByteArray> ServiceItemModel::roleNames() const {
   return mapping;
 }
 
-bool ServiceItemModel::setData(const QModelIndex &index, const QVariant &value,
+bool ServiceItemModelCpp::setData(const QModelIndex &index, const QVariant &value,
                                int role) {
 
   ServiceItem *item = m_items[index.row()];
@@ -182,14 +182,14 @@ bool ServiceItemModel::setData(const QModelIndex &index, const QVariant &value,
   return false;
 }
 
-Qt::ItemFlags ServiceItemModel::flags(const QModelIndex &index) const {
+Qt::ItemFlags ServiceItemModelCpp::flags(const QModelIndex &index) const {
   if (!index.isValid())
     return Qt::NoItemFlags;
 
   return Qt::ItemIsEditable; // FIXME: Implement me!
 }
 
-void ServiceItemModel::addItem(ServiceItem *item) {
+void ServiceItemModelCpp::addItem(ServiceItem *item) {
   const int index = m_items.size();
   qDebug() << index;
   // foreach (item, m_items) {
@@ -200,14 +200,14 @@ void ServiceItemModel::addItem(ServiceItem *item) {
   endInsertRows();
 }
 
-void ServiceItemModel::insertItem(const int &index, ServiceItem *item) {
+void ServiceItemModelCpp::insertItem(const int &index, ServiceItem *item) {
   beginInsertRows(this->index(index).parent(), index, index);
   m_items.insert(index, item);
   endInsertRows();
   qDebug() << "Success";
 }
 
-void ServiceItemModel::addItem(const QString &name, const QString &type,
+void ServiceItemModelCpp::addItem(const QString &name, const QString &type,
                                const QString &background, const QString &backgroundType,
                                const QStringList &text, const QString &audio,
                                const QString &font, const int &fontSize,
@@ -248,7 +248,7 @@ void ServiceItemModel::addItem(const QString &name, const QString &type,
   qDebug() << "#################################";
 }
 
-void ServiceItemModel::insertItem(const int &index, const QString &name,
+void ServiceItemModelCpp::insertItem(const int &index, const QString &name,
                                   const QString &type,const QString &background,
                                   const QString &backgroundType,const QStringList &text,
                                   const QString &audio, const QString &font,
@@ -289,13 +289,13 @@ void ServiceItemModel::insertItem(const int &index, const QString &name,
   qDebug() << "#################################";
 }
 
-void ServiceItemModel::removeItem(int index) {
+void ServiceItemModelCpp::removeItem(int index) {
   beginRemoveRows(QModelIndex(), index, index);
   m_items.removeAt(index);
   endRemoveRows();
 }
 
-void ServiceItemModel::removeItems() {
+void ServiceItemModelCpp::removeItems() {
   for (int i = m_items.length() - 1; i > -1; i--) {
     QModelIndex idx = index(i);
     ServiceItem *item = m_items[idx.row()];
@@ -313,7 +313,7 @@ void ServiceItemModel::removeItems() {
 
 }
 
-bool ServiceItemModel::moveRows(int sourceIndex, int destIndex, int count) {
+bool ServiceItemModelCpp::moveRows(int sourceIndex, int destIndex, int count) {
   qDebug() << sourceIndex;
   qDebug() << destIndex;
 
@@ -349,7 +349,7 @@ bool ServiceItemModel::moveRows(int sourceIndex, int destIndex, int count) {
   return true;
 }
 
-bool ServiceItemModel::moveDown(int id) {
+bool ServiceItemModelCpp::moveDown(int id) {
   qDebug() << index(id).row();
   qDebug() << index(id + 1).row();
   QModelIndex parent = index(id).parent();
@@ -371,7 +371,7 @@ bool ServiceItemModel::moveDown(int id) {
   return false;
 }
 
-bool ServiceItemModel::moveUp(int id) {
+bool ServiceItemModelCpp::moveUp(int id) {
   qDebug() << index(id).row();
   qDebug() << index(id - 1).row();
   QModelIndex parent = index(id).parent();
@@ -394,7 +394,7 @@ bool ServiceItemModel::moveUp(int id) {
   return false;
 }
 
-bool ServiceItemModel::moveRowsRust(int source, int dest, int count, ServiceItemMod *rustModel) {
+bool ServiceItemModelCpp::moveRowsRust(int source, int dest, int count, ServiceItemModel *rustModel) {
   const QModelIndex parent = index(source).parent();
   const bool isMoveDown = dest > source;
 
@@ -409,12 +409,12 @@ bool ServiceItemModel::moveRowsRust(int source, int dest, int count, ServiceItem
   return moved;
 }
 
-QVariantMap ServiceItemModel::getRust(int index, ServiceItemMod *rustModel) const {
+QVariantMap ServiceItemModelCpp::getRust(int index, ServiceItemModel *rustModel) const {
   QVariantMap item = rustModel->getItem(index);
   return item;
 }
 
-QVariantMap ServiceItemModel::getItem(int index) const {
+QVariantMap ServiceItemModelCpp::getItem(int index) const {
   QVariantMap data;
   const QModelIndex idx = this->index(index,0);
   // qDebug() << idx;
@@ -431,7 +431,7 @@ QVariantMap ServiceItemModel::getItem(int index) const {
   return data;
 }
 
-QVariantList ServiceItemModel::getItems() {
+QVariantList ServiceItemModelCpp::getItems() {
   QVariantList data;
   ServiceItem * item;
   foreach (item, m_items) {
@@ -457,7 +457,7 @@ QVariantList ServiceItemModel::getItems() {
   return data;
 }
 
-bool ServiceItemModel::select(int id) {
+bool ServiceItemModelCpp::select(int id) {
   for (int i = 0; i < m_items.length(); i++) {
     QModelIndex idx = index(i);
     ServiceItem *item = m_items[idx.row()];
@@ -479,7 +479,7 @@ bool ServiceItemModel::select(int id) {
   return true;
 }
 
-bool ServiceItemModel::selectItems(QVariantList items) {
+bool ServiceItemModelCpp::selectItems(QVariantList items) {
   qDebug() << "Let's select some items!";
   for (int i = 0; i < m_items.length(); i++) {
     QModelIndex idx = index(i);
@@ -508,7 +508,7 @@ bool ServiceItemModel::selectItems(QVariantList items) {
   return true;
 }
 
-bool ServiceItemModel::activate(int id) {
+bool ServiceItemModelCpp::activate(int id) {
   QModelIndex idx = index(id);
   ServiceItem *item = m_items[idx.row()];
 
@@ -532,7 +532,7 @@ bool ServiceItemModel::activate(int id) {
   return true;
 }
 
-bool ServiceItemModel::deactivate(int id) {
+bool ServiceItemModelCpp::deactivate(int id) {
   QModelIndex idx = index(id);
   ServiceItem *item = m_items[idx.row()];
 
@@ -544,7 +544,7 @@ bool ServiceItemModel::deactivate(int id) {
   return true;
 }
 
-bool ServiceItemModel::save(QUrl file) {
+bool ServiceItemModelCpp::save(QUrl file) {
   qDebug() << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
   qDebug() << "Saving...";
   qDebug() << "File path is: " << file.toString();
@@ -661,7 +661,7 @@ bool ServiceItemModel::save(QUrl file) {
   return false;
 }
 
-bool ServiceItemModel::load(QUrl file) {
+bool ServiceItemModelCpp::load(QUrl file) {
   qDebug() << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
   qDebug() << "Loading...";
   qDebug() << "File path is: " << file.toString();
@@ -780,14 +780,14 @@ bool ServiceItemModel::load(QUrl file) {
   return false;
 }
 
-void ServiceItemModel::clearAll() {
+void ServiceItemModelCpp::clearAll() {
   for (int i = m_items.size(); i >= 0; i--) {
     removeItem(i);
   }
   emit allRemoved();
 }
 
-bool ServiceItemModel::loadLastSaved() {
+bool ServiceItemModelCpp::loadLastSaved() {
   QSettings settings;
   return load(settings.value("lastSaveFile").toUrl());
 }

@@ -27,7 +27,7 @@ mod slide_model {
     }
 
     #[qenum(SlideModel)]
-    enum Role {
+    enum SlideRoles {
         Ty,
         Text,
         Audio,
@@ -39,7 +39,7 @@ mod slide_model {
         FontSize,
         ServiceItemId,
         SlideIndex,
-        ImageCount,
+        SlideCount,
         Active,
         Selected,
         Looping,
@@ -53,6 +53,7 @@ mod slide_model {
         #[qobject]
         #[base = "QAbstractListModel"]
         #[qml_element]
+        #[qproperty(i32, count)]
         type SlideModel = super::SlideModelRust;
 
         #[inherit]
@@ -186,16 +187,24 @@ mod slide_model {
         fn row_count(self: &SlideModel, _parent: &QModelIndex)
             -> i32;
 
-        #[qinvokable]
-        fn count(self: &SlideModel) -> i32;
     }
 }
 
 use crate::ffmpeg;
-use cxx_qt_lib::CaseSensitivity;
-use std::path::PathBuf;
+use crate::slide_model::slide_model::QList_QString;
+use cxx_qt::{CxxQtType, Threading};
+use cxx_qt_lib::{
+    CaseSensitivity, QByteArray, QModelIndex, QString, QStringList,
+    QVariant,
+};
 use std::thread;
+use std::{path::PathBuf, pin::Pin};
 use tracing::{debug, debug_span, error, info, instrument};
+
+use self::slide_model::{
+    QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
+    SlideRoles,
+};
 
 #[derive(Clone, Debug)]
 pub struct Slide {
@@ -250,20 +259,22 @@ impl Default for Slide {
 pub struct SlideModelRust {
     id: i32,
     slides: Vec<Slide>,
+    count: i32,
 }
 
-impl qobject::SlideModel {
+impl slide_model::SlideModel {
     pub fn add_video_thumbnail(
         mut self: Pin<&mut Self>,
         index: i32,
     ) -> bool {
         let mut vector_roles = QVector_i32::default();
-        vector_roles.append(self.get_role(Role::VideoThumbnailRole));
+        vector_roles
+            .append(self.get_role(SlideRoles::VideoThumbnail));
 
         let model_index =
             &self.index(index, 0, &QModelIndex::default());
         if let Some(slide) =
-            self.as_mut().slides_mut().get_mut(index as usize)
+            self.as_mut().rust_mut().slides.get_mut(index as usize)
         {
             if !slide.video_background.is_empty() {
                 let path =
@@ -274,7 +285,7 @@ impl qobject::SlideModel {
                 .insert(0, &QString::from("file://"))
                 .to_owned();
                 slide.video_thumbnail = video;
-                self.as_mut().emit_data_changed(
+                self.as_mut().data_changed(
                     model_index,
                     model_index,
                     &vector_roles,
@@ -288,7 +299,7 @@ impl qobject::SlideModel {
         println!("CLEARING ALL SLIDES");
         unsafe {
             self.as_mut().begin_reset_model();
-            self.as_mut().slides_mut().clear();
+            self.as_mut().rust_mut().slides.clear();
             self.as_mut().end_reset_model();
         }
     }
@@ -299,7 +310,7 @@ impl qobject::SlideModel {
         _service_item: &QMap_QString_QVariant,
     ) {
         println!("Rusty-Removal-Time: {:?}", index);
-        let slides = self.slides().clone();
+        let slides = self.slides.clone();
         let slides_iter = slides.iter();
         for (i, slide) in slides_iter.enumerate().rev() {
             if slide.service_item_id == index {
@@ -307,7 +318,7 @@ impl qobject::SlideModel {
                 println!("Removing-slide: {:?}", i);
             } else if slide.service_item_id > index {
                 if let Some(slide) =
-                    self.as_mut().slides_mut().get_mut(i)
+                    self.as_mut().rust_mut().slides.get_mut(i)
                 {
                     println!("changing-serviceid-of: {:?}", i);
                     println!(
@@ -322,7 +333,7 @@ impl qobject::SlideModel {
     }
 
     pub fn remove_item(mut self: Pin<&mut Self>, index: i32) {
-        if index < 0 || (index as usize) >= self.slides().len() {
+        if index < 0 || (index as usize) >= self.slides.len() {
             return;
         }
 
@@ -332,16 +343,19 @@ impl qobject::SlideModel {
                 index,
                 index,
             );
-            self.as_mut().slides_mut().remove(index as usize);
+            self.as_mut().rust_mut().slides.remove(index as usize);
             self.as_mut().end_remove_rows();
         }
         println!("removed-row: {:?}", index);
     }
 
     fn add_slide(mut self: Pin<&mut Self>, slide: &Slide) {
-        let index = self.as_ref().slides().len() as i32;
+        let index = self.as_ref().slides.len() as i32;
         println!("{:?}", slide);
         let slide = slide.clone();
+
+        let count = self.as_ref().count;
+        self.as_mut().set_count(count + 1);
 
         unsafe {
             self.as_mut().begin_insert_rows(
@@ -349,7 +363,7 @@ impl qobject::SlideModel {
                 index,
                 index,
             );
-            self.as_mut().slides_mut().push(slide);
+            self.as_mut().rust_mut().slides.push(slide);
             self.as_mut().end_insert_rows();
         }
         let thread = self.qt_thread();
@@ -377,7 +391,10 @@ impl qobject::SlideModel {
                 index,
                 index,
             );
-            self.as_mut().slides_mut().insert(index as usize, slide);
+            self.as_mut()
+                .rust_mut()
+                .slides
+                .insert(index as usize, slide);
             self.as_mut().end_insert_rows();
         }
         let thread = self.qt_thread();
@@ -503,7 +520,8 @@ impl qobject::SlideModel {
             .unwrap_or(false);
         slide.video_thumbnail = QString::from("");
 
-        let slides_iter = self.as_mut().slides_mut().iter_mut();
+        let mut binding = self.as_mut().rust_mut();
+        let slides_iter = binding.slides.iter_mut();
         let mut slide_index = 0;
         for (i, slide) in slides_iter.enumerate().rev() {
             if slide.service_item_id == index {
@@ -513,7 +531,7 @@ impl qobject::SlideModel {
         }
 
         // We need to move all the current slides service_item_id's up by one.
-        let slides_iter = self.as_mut().slides_mut().iter_mut();
+        let slides_iter = binding.slides.iter_mut();
         for slide in
             slides_iter.filter(|x| x.service_item_id >= index)
         {
@@ -747,7 +765,7 @@ impl qobject::SlideModel {
         }
 
         let move_down = source_index < destination_index;
-        let slides = self.slides().clone();
+        let slides = self.slides.clone();
         let slides_iter = slides.iter();
 
         let mut first_slide = 0;
@@ -798,7 +816,7 @@ impl qobject::SlideModel {
         println!("RUST_dest_slide: {:?}", dest_slide);
         println!("RUST_len: {:?}", self.rust().slides.len());
 
-        let slides = self.slides().clone();
+        let slides = self.slides.clone();
         let slides_iter = slides.iter();
 
         unsafe {
@@ -824,7 +842,7 @@ impl qobject::SlideModel {
                     })
                 {
                     if let Some(slide) =
-                        self.as_mut().slides_mut().get_mut(i)
+                        self.as_mut().rust_mut().slides.get_mut(i)
                     {
                         println!(
                             "rust: these ones right here officer. from {:?} to {:?}",
@@ -841,7 +859,7 @@ impl qobject::SlideModel {
                     .filter(|x| x.0 < (dest_slide + count) as usize)
                 {
                     if let Some(slide) =
-                        self.as_mut().slides_mut().get_mut(i)
+                        self.as_mut().rust_mut().slides.get_mut(i)
                     {
                         println!(
                             "rust: these ones right here officer. from {:?} to {:?}",
@@ -854,7 +872,8 @@ impl qobject::SlideModel {
         } else {
             if let Some(slide) = self
                 .as_mut()
-                .slides_mut()
+                .rust_mut()
+                .slides
                 .get_mut(dest_slide as usize)
             {
                 println!(
@@ -873,7 +892,7 @@ impl qobject::SlideModel {
                 .filter(|x| x.1.service_item_id >= source_index)
             {
                 if let Some(slide) =
-                    self.as_mut().slides_mut().get_mut(i)
+                    self.as_mut().rust_mut().slides.get_mut(i)
                 {
                     println!(
                         "rust-switching-service: {:?} to {:?}",
@@ -894,7 +913,7 @@ impl qobject::SlideModel {
                 .filter(|x| x.1.service_item_id <= source_index)
             {
                 if let Some(slide) =
-                    self.as_mut().slides_mut().get_mut(i)
+                    self.as_mut().rust_mut().slides.get_mut(i)
                 {
                     println!(
                         "rust-switching-service-of: {:?} to {:?}",
@@ -929,12 +948,14 @@ impl qobject::SlideModel {
                 let move_amount =
                     dest_index - source_index - count + 1;
                 // println!("rust-move_amount: {:?}", move_amount);
-                self.as_mut().slides_mut()[source_index..=dest_index]
+                self.as_mut().rust_mut().slides
+                    [source_index..=dest_index]
                     .rotate_right(move_amount);
             } else {
                 let move_amount = end_slide - dest_index - count + 1;
                 println!("rust-move_amount: {:?}", move_amount);
-                self.as_mut().slides_mut()[dest_index..=end_slide]
+                self.as_mut().rust_mut().slides
+                    [dest_index..=end_slide]
                     .rotate_left(move_amount);
             }
             self.as_mut().end_reset_model();
@@ -968,17 +989,17 @@ impl qobject::SlideModel {
         self: Pin<&mut Self>,
         index: i32,
     ) -> i32 {
-        let slides = self.slides().clone();
+        let slides = self.slides.clone();
         let slides_iter = slides.iter();
         debug!(service_item = index, "Getting slide from this item");
         let mut id = 0;
-        for (i, slide) in slides_iter
+        if let Some((i, slide)) = slides_iter
             .enumerate()
             .filter(|(i, slide)| slide.service_item_id == index)
+            .next()
         {
             debug!(slide_id = i, ?slide);
             id = i as i32;
-            break;
         }
         id
     }
@@ -988,13 +1009,13 @@ impl qobject::SlideModel {
         let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
         let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
         let mut vector_roles = QVector_i32::default();
-        vector_roles.append(self.get_role(Role::ActiveRole));
-        for slide in self.as_mut().slides_mut().iter_mut() {
+        vector_roles.append(self.get_role(SlideRoles::Active));
+        for slide in self.as_mut().rust_mut().slides.iter_mut() {
             // println!("slide is deactivating {:?}", i);
             slide.active = false;
         }
         if let Some(slide) =
-            self.as_mut().slides_mut().get_mut(index as usize)
+            self.as_mut().rust_mut().slides.get_mut(index as usize)
         {
             debug!(
                 slide = index,
@@ -1012,83 +1033,79 @@ impl qobject::SlideModel {
             //     slide.video_background
             // );
             slide.active = true;
-            self.as_mut().emit_data_changed(tl, br, &vector_roles);
+            self.as_mut().data_changed(tl, br, &vector_roles);
             // We use this signal generated by our signals enum to tell QML that
             // the active slide has changed which is used to reposition views.
-            self.as_mut().emit_active_changed(&index);
+            self.as_mut().active_change(&index);
             true
         } else {
             false
         }
     }
 
-    fn get_role(&self, role: Role) -> i32 {
+    fn get_role(&self, role: SlideRoles) -> i32 {
         match role {
-            Role::TextRole => 1,
-            Role::ActiveRole => 12,
-            Role::SelectedRole => 13,
-            Role::LoopingRole => 14,
-            Role::VideoThumbnailRole => 15,
-            Role::VideoStartTimeRole => 16,
-            Role::VideoEndTimeRole => 17,
+            SlideRoles::Text => 1,
+            SlideRoles::Active => 12,
+            SlideRoles::Selected => 13,
+            SlideRoles::Looping => 14,
+            SlideRoles::VideoThumbnail => 15,
+            SlideRoles::VideoStartTime => 16,
+            SlideRoles::VideoEndTime => 17,
             _ => 0,
         }
     }
 }
 
 // QAbstractListModel implementation
-impl qobject::SlideModel {
+impl slide_model::SlideModel {
     pub fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-        let role = qobject::Roles { repr: role };
-        if let Some(slide) = self.slides().get(index.row() as usize) {
+        let role = SlideRoles { repr: role };
+        if let Some(slide) = self.slides.get(index.row() as usize) {
             return match role {
-                qobject::Roles::Ty => QVariant::from(&slide.ty),
-                qobject::Roles::Text => QVariant::from(&slide.text),
-                qobject::Roles::Audio => QVariant::from(&slide.audio),
-                qobject::Roles::ImageBackground => {
+                SlideRoles::Ty => QVariant::from(&slide.ty),
+                SlideRoles::Text => QVariant::from(&slide.text),
+                SlideRoles::Audio => QVariant::from(&slide.audio),
+                SlideRoles::ImageBackground => {
                     QVariant::from(&slide.image_background)
                 }
-                qobject::Roles::VideoBackground => {
+                SlideRoles::VideoBackground => {
                     QVariant::from(&slide.video_background)
                 }
-                qobject::Roles::HTextAlignment => {
+                SlideRoles::HTextAlignment => {
                     QVariant::from(&slide.htext_alignment)
                 }
-                qobject::Roles::VTextAlignment => {
+                SlideRoles::VTextAlignment => {
                     QVariant::from(&slide.vtext_alignment)
                 }
-                qobject::Roles::Font => QVariant::from(&slide.font),
-                qobject::Roles::FontSize => {
+                SlideRoles::Font => QVariant::from(&slide.font),
+                SlideRoles::FontSize => {
                     QVariant::from(&slide.font_size)
                 }
-                qobject::Roles::ServiceItemId => {
+                SlideRoles::ServiceItemId => {
                     QVariant::from(&slide.service_item_id)
                 }
-                qobject::Roles::SlideIndex => {
+                SlideRoles::SlideIndex => {
                     QVariant::from(&slide.slide_index)
                 }
-                qobject::Roles::SlideCount => {
+                SlideRoles::SlideCount => {
                     QVariant::from(&slide.slide_count)
                 }
-                qobject::Roles::Active => {
-                    QVariant::from(&slide.active)
-                }
-                qobject::Roles::Selected => {
+                SlideRoles::Active => QVariant::from(&slide.active),
+                SlideRoles::Selected => {
                     QVariant::from(&slide.selected)
                 }
-                qobject::Roles::Looping => {
-                    QVariant::from(&slide.looping)
-                }
-                qobject::Roles::VideoThumbnail => {
+                SlideRoles::Looping => QVariant::from(&slide.looping),
+                SlideRoles::VideoThumbnail => {
                     QVariant::from(&slide.video_thumbnail)
                 }
-                qobject::Roles::VideoStartTime => {
+                SlideRoles::VideoStartTime => {
                     QVariant::from(&slide.video_start_time)
                 }
-                qobject::Roles::VideoEndTime => {
+                SlideRoles::VideoEndTime => {
                     QVariant::from(&slide.video_end_time)
                 }
-                qobject::Roles::Html => QVariant::from(&slide.html),
+                SlideRoles::Html => QVariant::from(&slide.html),
                 _ => QVariant::default(),
             };
         }
@@ -1096,89 +1113,77 @@ impl qobject::SlideModel {
         QVariant::default()
     }
 
-    // Example of overriding a C++ virtual method and calling the base class implementation.
-    pub fn can_fetch_more(&self, parent: &QModelIndex) -> bool {
-        self.base_can_fetch_more(parent)
-    }
+    // // Example of overriding a C++ virtual method and calling the base class implementation.
+    // pub fn can_fetch_more(&self, parent: &QModelIndex) -> bool {
+    //     self.base_can_fetch_more(parent)
+    // }
 
     pub fn role_names(&self) -> QHash_i32_QByteArray {
         let mut roles = QHash_i32_QByteArray::default();
+        roles.insert(SlideRoles::Ty.repr, QByteArray::from("type"));
+        roles.insert(SlideRoles::Text.repr, QByteArray::from("text"));
         roles.insert(
-            qobject::Roles::Ty.repr,
-            cxx_qt_lib::QByteArray::from("type"),
+            SlideRoles::Audio.repr,
+            QByteArray::from("audio"),
         );
         roles.insert(
-            qobject::Roles::Text.repr,
-            cxx_qt_lib::QByteArray::from("text"),
+            SlideRoles::ImageBackground.repr,
+            QByteArray::from("imageBackground"),
         );
         roles.insert(
-            qobject::Roles::Audio.repr,
-            cxx_qt_lib::QByteArray::from("audio"),
+            SlideRoles::VideoBackground.repr,
+            QByteArray::from("videoBackground"),
         );
         roles.insert(
-            qobject::Roles::ImageBackground.repr,
-            cxx_qt_lib::QByteArray::from("imageBackground"),
+            SlideRoles::HTextAlignment.repr,
+            QByteArray::from("hTextAlignment"),
         );
         roles.insert(
-            qobject::Roles::VideoBackground.repr,
-            cxx_qt_lib::QByteArray::from("videoBackground"),
+            SlideRoles::VTextAlignment.repr,
+            QByteArray::from("vTextAlignment"),
+        );
+        roles.insert(SlideRoles::Font.repr, QByteArray::from("font"));
+        roles.insert(
+            SlideRoles::FontSize.repr,
+            QByteArray::from("fontSize"),
         );
         roles.insert(
-            qobject::Roles::HTextAlignment.repr,
-            cxx_qt_lib::QByteArray::from("hTextAlignment"),
+            SlideRoles::ServiceItemId.repr,
+            QByteArray::from("serviceItemId"),
         );
         roles.insert(
-            qobject::Roles::VTextAlignment.repr,
-            cxx_qt_lib::QByteArray::from("vTextAlignment"),
+            SlideRoles::SlideIndex.repr,
+            QByteArray::from("slideIndex"),
         );
         roles.insert(
-            qobject::Roles::Font.repr,
-            cxx_qt_lib::QByteArray::from("font"),
+            SlideRoles::SlideCount.repr,
+            QByteArray::from("imageCount"),
         );
         roles.insert(
-            qobject::Roles::FontSize.repr,
-            cxx_qt_lib::QByteArray::from("fontSize"),
+            SlideRoles::Active.repr,
+            QByteArray::from("active"),
         );
         roles.insert(
-            qobject::Roles::ServiceItemId.repr,
-            cxx_qt_lib::QByteArray::from("serviceItemId"),
+            SlideRoles::Selected.repr,
+            QByteArray::from("selected"),
         );
         roles.insert(
-            qobject::Roles::SlideIndex.repr,
-            cxx_qt_lib::QByteArray::from("slideIndex"),
+            SlideRoles::Looping.repr,
+            QByteArray::from("looping"),
         );
         roles.insert(
-            qobject::Roles::ImageCount.repr,
-            cxx_qt_lib::QByteArray::from("imageCount"),
+            SlideRoles::VideoThumbnail.repr,
+            QByteArray::from("videoThumbnail"),
         );
         roles.insert(
-            qobject::Roles::Active.repr,
-            cxx_qt_lib::QByteArray::from("active"),
+            SlideRoles::VideoStartTime.repr,
+            QByteArray::from("videoStartTime"),
         );
         roles.insert(
-            qobject::Roles::Selected.repr,
-            cxx_qt_lib::QByteArray::from("selected"),
+            SlideRoles::VideoEndTime.repr,
+            QByteArray::from("videoEndTime"),
         );
-        roles.insert(
-            qobject::Roles::Looping.repr,
-            cxx_qt_lib::QByteArray::from("looping"),
-        );
-        roles.insert(
-            qobject::Roles::VideoThumbnail.repr,
-            cxx_qt_lib::QByteArray::from("videoThumbnail"),
-        );
-        roles.insert(
-            qobject::Roles::VideoStartTime.repr,
-            cxx_qt_lib::QByteArray::from("videoStartTime"),
-        );
-        roles.insert(
-            qobject::Roles::VideoEndTime.repr,
-            cxx_qt_lib::QByteArray::from("videoEndTime"),
-        );
-        roles.insert(
-            qobject::Roles::Html.repr,
-            cxx_qt_lib::QByteArray::from("html"),
-        );
+        roles.insert(SlideRoles::Html.repr, QByteArray::from("html"));
         roles
     }
 
@@ -1186,9 +1191,5 @@ impl qobject::SlideModel {
         let cnt = self.rust().slides.len() as i32;
         // println!("row count is {cnt}");
         cnt
-    }
-
-    pub fn count(&self) -> i32 {
-        self.rust().slides.len() as i32
     }
 }

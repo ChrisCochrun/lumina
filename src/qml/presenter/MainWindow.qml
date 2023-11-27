@@ -15,8 +15,8 @@ Controls.Page {
     // properties passed around for the slides
     property int currentServiceItem
     property int currentSlide
-    property int totalServiceItems: ServiceItemModel.rowCount()
-    property int totalSlides: SlideMod.count()
+    property int totalServiceItems: ServiceItemModel.rowCount
+    property int totalSlides: SlideModel.count
     property url imageBackground: presentation.imageBackground
     property url videoBackground: presentation.vidBackground
     property url webSource
@@ -184,9 +184,9 @@ Controls.Page {
         console.log("change-service-item: " + index);
         const item = ServiceItemC.getRust(index, ServiceItemModel);
         currentServiceItem = index;
-        const slideId = SlideMod.getSlideFromService(index);
+        const slideId = SlideModel.getSlideFromService(index);
         currentSlide = slideId;
-        const slide = SlideModel.getItemRust(slideId, SlideMod);
+        const slide = SlideMod.getItemRust(slideId, SlideModel);
         console.log("index grabbed: " + index);
         console.log(slideId);
         console.log("Time to start changing");
@@ -217,8 +217,8 @@ Controls.Page {
 
     function changeSlide(index) {
         console.log("index grabbed: " + index);
-        const currentItem = SlideModel.getItemRust(currentServiceItem, SlideMod);
-        const item = SlideModel.getItemRust(index, SlideMod);
+        const currentItem = SlideMod.getItemRust(currentServiceItem, SlideModel);
+        const item = SlideMod.getItemRust(index, SlideModel);
         const isMoveDown = currentSlide < index;
         console.log(item + " " + currentItem);
         currentSlide = index;
@@ -250,7 +250,7 @@ Controls.Page {
         ServiceItemModel.activate(currentServiceItem);
         /* SlideObject.changeSlide(slide, slideId); */
         slideHelper.chngSlide(item, index, SlideObject);
-        /* SlideMod.activate(index); */
+        /* SlideModel.activate(index); */
         presentation.textIndex = 0;
         console.log("Slide changed to: ", item.imageBackground);
         activeServiceItem = ServiceItemC.getRust(currentServiceItem, ServiceItemModel).name;

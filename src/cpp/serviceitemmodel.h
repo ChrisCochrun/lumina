@@ -11,11 +11,11 @@
 
 #include "cxx-qt-gen/service_item_model.cxxqt.h"
 
-class ServiceItemModel : public QAbstractListModel {
+class ServiceItemModelCpp : public QAbstractListModel {
   Q_OBJECT
 
 public:
-  explicit ServiceItemModel(QObject *parent = nullptr);
+  explicit ServiceItemModelCpp(QObject *parent = nullptr);
 
   enum Roles {
     NameRole = Qt::UserRole,
@@ -66,7 +66,7 @@ public:
   Q_INVOKABLE void removeItem(int index);
   Q_INVOKABLE void removeItems();
   Q_INVOKABLE bool moveRows(int sourceIndex, int destIndex, int count);
-  Q_INVOKABLE bool moveRowsRust(int source, int dest, int count, ServiceItemMod *rustModel);
+  Q_INVOKABLE bool moveRowsRust(int source, int dest, int count, ServiceItemModel *rustModel);
   Q_INVOKABLE bool moveDown(int index);
   Q_INVOKABLE bool moveUp(int index);
   Q_INVOKABLE bool select(int id);
@@ -74,7 +74,7 @@ public:
   Q_INVOKABLE bool activate(int id);
   Q_INVOKABLE bool deactivate(int id);
   Q_INVOKABLE QVariantMap getItem(int index) const;
-  Q_INVOKABLE QVariantMap getRust(int index, ServiceItemMod *rustModel) const;
+  Q_INVOKABLE QVariantMap getRust(int index, ServiceItemModel *rustModel) const;
   Q_INVOKABLE QVariantList getItems();
   Q_INVOKABLE void clearAll();
 

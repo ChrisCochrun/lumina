@@ -25,7 +25,7 @@ mod image_model {
     }
 
     #[qenum(ImageModel)]
-    enum Role {
+    enum ImageRoles {
         Id,
         Path,
         Title,
@@ -35,7 +35,7 @@ mod image_model {
         #[qobject]
         #[base = "QAbstractListModel"]
         #[qml_element]
-        #[qproperty(i32, count_rows)]
+        #[qproperty(i32, count)]
         type ImageModel = super::ImageModelRust;
 
         #[inherit]
@@ -151,19 +151,24 @@ mod image_model {
         #[cxx_override]
         fn row_count(self: &ImageModel, _parent: &QModelIndex)
             -> i32;
-
-        #[qinvokable]
-        fn count(self: &ImageModel) -> i32;
     }
 }
 
-use crate::image_model::image_model::Image;
 use crate::schema::images::dsl::*;
+use cxx_qt::{CxxQtType, Threading};
+use cxx_qt_lib::{QModelIndex, QString, QUrl, QVariant};
 use diesel::sqlite::SqliteConnection;
 use diesel::{delete, insert_into, prelude::*, update};
 use std::path::PathBuf;
+use std::pin::Pin;
+
+use self::image_model::{
+    ImageRoles, QHash_i32_QByteArray, QMap_QString_QVariant,
+    QVector_i32,
+};
 
 #[derive(Default, Clone, Debug)]
+/// Idk what this is but it's cool
 pub struct Image {
     id: i32,
     title: QString,
@@ -172,16 +177,16 @@ pub struct Image {
 
 #[derive(Default, Debug)]
 pub struct ImageModelRust {
-    count_rows: i32,
+    count: i32,
     highest_id: i32,
-    images: Vec<self::Image>,
+    images: Vec<Image>,
 }
 
-impl qobject::ImageModel {
+impl image_model::ImageModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
-            self.as_mut().images_mut().clear();
+            self.as_mut().rust_mut().images.clear();
             self.as_mut().end_reset_model();
         }
     }
@@ -191,7 +196,7 @@ impl qobject::ImageModel {
         let results = images
             .load::<crate::models::Image>(db)
             .expect("Error loading images");
-        self.as_mut().set_highest_id(0);
+        self.as_mut().rust_mut().highest_id = 0;
 
         println!("SHOWING IMAGES");
         println!("--------------");
@@ -200,8 +205,8 @@ impl qobject::ImageModel {
             println!("{}", image.id);
             println!("{}", image.path);
             println!("--------------");
-            if self.as_mut().highest_id() < &image.id {
-                self.as_mut().set_highest_id(image.id);
+            if &self.as_mut().highest_id < &image.id {
+                self.as_mut().rust_mut().highest_id = image.id;
             }
 
             let img = self::Image {
@@ -213,17 +218,17 @@ impl qobject::ImageModel {
             self.as_mut().add_image(img);
         }
         println!("--------------------------------------");
-        println!("{:?}", self.as_mut().images());
+        println!("{:?}", self.as_mut().images);
         println!("--------------------------------------");
     }
 
     pub fn remove_item(mut self: Pin<&mut Self>, index: i32) -> bool {
-        if index < 0 || (index as usize) >= self.images().len() {
+        if index < 0 || (index as usize) >= self.images.len() {
             return false;
         }
         let db = &mut self.as_mut().get_db();
 
-        let image_id = self.images().get(index as usize).unwrap().id;
+        let image_id = self.images.get(index as usize).unwrap().id;
 
         let result =
             delete(images.filter(id.eq(image_id))).execute(db);
@@ -236,11 +241,14 @@ impl qobject::ImageModel {
                         index,
                         index,
                     );
-                    self.as_mut().images_mut().remove(index as usize);
+                    self.as_mut()
+                        .rust_mut()
+                        .images
+                        .remove(index as usize);
                     self.as_mut().end_remove_rows();
                 }
                 println!("removed-item-at-index: {:?}", image_id);
-                println!("new-Vec: {:?}", self.as_mut().images());
+                println!("new-Vec: {:?}", self.as_mut().images);
                 true
             }
             Err(_e) => {
@@ -273,7 +281,7 @@ impl qobject::ImageModel {
 
         if self.as_mut().add_item(image_id, image_title, image_path) {
             println!("filename: {:?}", name);
-            self.as_mut().set_highest_id(image_id);
+            self.as_mut().rust_mut().highest_id = image_id;
         } else {
             println!("Error in inserting item");
         }
@@ -306,7 +314,7 @@ impl qobject::ImageModel {
         match result {
             Ok(_i) => {
                 self.as_mut().add_image(image);
-                println!("{:?}", self.as_mut().images());
+                println!("{:?}", self.as_mut().images);
                 true
             }
             Err(_e) => {
@@ -317,15 +325,17 @@ impl qobject::ImageModel {
     }
 
     fn add_image(mut self: Pin<&mut Self>, image: self::Image) {
-        let index = self.as_ref().images().len() as i32;
+        let index = self.as_ref().images.len() as i32;
         println!("{:?}", image);
+        let count = self.as_ref().count;
+        self.as_mut().set_count(count + 1);
         unsafe {
             self.as_mut().begin_insert_rows(
                 &QModelIndex::default(),
                 index,
                 index,
             );
-            self.as_mut().images_mut().push(image);
+            self.as_mut().rust_mut().images.push(image);
             self.as_mut().end_insert_rows();
         }
     }
@@ -337,7 +347,7 @@ impl qobject::ImageModel {
     ) -> bool {
         let mut vector_roles = QVector_i32::default();
         vector_roles
-            .append(self.as_ref().get_role_id(Role::TitleRole));
+            .append(self.as_ref().get_role_id(ImageRoles::Title));
         let model_index =
             &self.as_ref().index(index, 0, &QModelIndex::default());
 
@@ -349,14 +359,15 @@ impl qobject::ImageModel {
             Ok(_i) => {
                 for image in self
                     .as_mut()
-                    .images_mut()
+                    .rust_mut()
+                    .images
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
                     image.title = updated_title.clone();
                     println!("rust-title: {:?}", image.title);
                 }
-                self.as_mut().emit_data_changed(
+                self.as_mut().data_changed(
                     model_index,
                     model_index,
                     &vector_roles,
@@ -374,7 +385,7 @@ impl qobject::ImageModel {
     ) -> bool {
         let mut vector_roles = QVector_i32::default();
         vector_roles
-            .append(self.as_ref().get_role_id(Role::PathRole));
+            .append(self.as_ref().get_role_id(ImageRoles::Path));
         let model_index =
             &self.as_ref().index(index, 0, &QModelIndex::default());
 
@@ -386,14 +397,15 @@ impl qobject::ImageModel {
             Ok(_i) => {
                 for image in self
                     .as_mut()
-                    .images_mut()
+                    .rust_mut()
+                    .images
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
                     image.path = updated_file_path.clone();
                     println!("rust-title: {:?}", image.path);
                 }
-                self.as_mut().emit_data_changed(
+                self.as_mut().data_changed(
                     model_index,
                     model_index,
                     &vector_roles,
@@ -427,25 +439,25 @@ impl qobject::ImageModel {
         qvariantmap
     }
 
-    fn get_role_id(&self, role: Role) -> i32 {
+    fn get_role_id(&self, role: ImageRoles) -> i32 {
         match role {
-            qobject::Role::Id => 0,
-            qobject::Role::Title => 1,
-            qobject::Role::Path => 2,
+            ImageRoles::Id => 0,
+            ImageRoles::Title => 1,
+            ImageRoles::Path => 2,
             _ => 0,
         }
     }
 }
 
 // QAbstractListModel implementation
-impl qobject::ImageModel {
+impl image_model::ImageModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-        let role = qobject::Roles { repr: role };
-        if let Some(image) = self.images().get(index.row() as usize) {
+        let role = ImageRoles { repr: role };
+        if let Some(image) = self.images.get(index.row() as usize) {
             return match role {
-                qobject::Roles::Id => QVariant::from(&image.id),
-                qobject::Roles::Title => QVariant::from(&image.title),
-                qobject::Roles::Path => QVariant::from(&image.path),
+                ImageRoles::Id => QVariant::from(&image.id),
+                ImageRoles::Title => QVariant::from(&image.title),
+                ImageRoles::Path => QVariant::from(&image.path),
                 _ => QVariant::default(),
             };
         }
@@ -455,22 +467,22 @@ impl qobject::ImageModel {
 
     // Example of overriding a C++ virtual method and calling the base class implementation.
 
-    pub fn can_fetch_more(&self, parent: &QModelIndex) -> bool {
-        self.base_can_fetch_more(parent)
-    }
+    // pub fn can_fetch_more(&self, parent: &QModelIndex) -> bool {
+    //     self.base_can_fetch_more(parent)
+    // }
 
     pub fn role_names(&self) -> QHash_i32_QByteArray {
         let mut roles = QHash_i32_QByteArray::default();
         roles.insert(
-            qobject::Roles::Id.repr,
+            ImageRoles::Id.repr,
             cxx_qt_lib::QByteArray::from("id"),
         );
         roles.insert(
-            qobject::Roles::Title.repr,
+            ImageRoles::Title.repr,
             cxx_qt_lib::QByteArray::from("title"),
         );
         roles.insert(
-            qobject::Roles::Path.repr,
+            ImageRoles::Path.repr,
             cxx_qt_lib::QByteArray::from("filePath"),
         );
         roles
@@ -480,12 +492,6 @@ impl qobject::ImageModel {
         let cnt = self.rust().images.len() as i32;
         // self.as_mut().set_count(cnt);
         // println!("row count is {cnt}");
-        cnt
-    }
-
-    pub fn count(mut self: Pin<&mut Self>) -> i32 {
-        let cnt = self.rust().images.len() as i32;
-        self.as_mut().set_count_rows(cnt);
         cnt
     }
 }

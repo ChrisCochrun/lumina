@@ -513,8 +513,8 @@ Item {
     }
 
     function changeSong(index) {
-        console.log("Preparing to change song: " + index + 1 + " out of " + songProxyModel.songModel.count());
-        if (songProxyModel.songModel.count() - 1 === index)
+        console.log("Preparing to change song: " + index + 1 + " out of " + songProxyModel.songModel.count);
+        if (songProxyModel.songModel.count - 1 === index)
             newSong(index)
         else {
             clearSlides();

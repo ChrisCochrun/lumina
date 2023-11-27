@@ -25,8 +25,10 @@ mod settings {
 }
 
 use configparser::ini::Ini;
+use cxx_qt::CxxQtType;
+use cxx_qt_lib::{QString, QUrl};
 use dirs;
-use std::path::PathBuf;
+use std::{path::PathBuf, pin::Pin};
 
 // In order for settings to save to the ini file,
 // I'll need to create my own setting functions I think.
@@ -52,19 +54,19 @@ impl Default for SettingsRust {
     }
 }
 
-impl qobject::Settings {
+impl settings::Settings {
     pub fn setup(mut self: Pin<&mut Self>) {
         let home = dirs::config_dir();
         println!("{:?}", home);
         if let Some(mut conf) = home {
             conf.push("lumina");
             conf.push("lumina.conf");
-            match self.as_mut().config_mut().load(conf) {
+            match self.as_mut().rust_mut().config.load(conf) {
                 Ok(map) => {
                     // println!("{:?}", self.rust().config);
                     let sf = self
                         .as_ref()
-                        .config()
+                        .config
                         .get("General", "lastSaveFile");
                     println!("{:?}", sf);
                     if let Some(s) = sf {
@@ -87,7 +89,7 @@ impl qobject::Settings {
 
     pub fn set_save_file(mut self: Pin<&mut Self>, file: QUrl) {
         println!("{file}");
-        match self.as_mut().config_mut().set(
+        match self.as_mut().rust_mut().config.set(
             "General",
             "lastSaveFile",
             Some(file.to_string()),
@@ -96,7 +98,7 @@ impl qobject::Settings {
                 println!(
                     "set-save-file: {:?}",
                     self.as_mut()
-                        .config_mut()
+                        .config
                         .get("General", "lastSaveFile")
                 );
                 if let Err(e) = self.as_mut().write() {
@@ -112,7 +114,7 @@ impl qobject::Settings {
         let mut file = dirs::config_dir().unwrap();
         file.push("lumina");
         file.push("lumina.conf");
-        match self.as_mut().config_mut().write(file) {
+        match self.as_mut().config.write(file) {
             Ok(_s) => Ok("Saved File"),
             Err(e) => {
                 println!("error: {:?}", e);

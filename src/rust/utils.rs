@@ -1,4 +1,7 @@
+use std::pin::Pin;
+
 use time::macros::format_description;
+use tokio::runtime::Runtime;
 use tracing_subscriber::{
     fmt::{self, time::LocalTime},
     EnvFilter,
@@ -47,27 +50,32 @@ mod db {
 
 #[cxx_qt::bridge]
 mod utilities {
-    use tokio::runtime::Runtime;
+    unsafe extern "RustQt" {
+        #[qobject]
+        #[qml_element]
+        type Utils = super::UtilsRust;
 
-    #[cxx_qt::qobject]
-    #[derive(Debug)]
-    pub struct Utils {
-        runtime: Runtime,
-    }
-
-    impl Default for Utils {
-        fn default() -> Self {
-            Self {
-                runtime: tokio::runtime::Runtime::new().unwrap(),
-            }
-        }
-    }
-
-    impl qobject::Utils {
         #[qinvokable]
-        pub fn setup(&self) {
-            crate::utils::setup();
+        fn setup(self: Pin<&mut Utils>);
+    }
+}
+
+#[derive(Debug)]
+pub struct UtilsRust {
+    runtime: Runtime,
+}
+
+impl Default for UtilsRust {
+    fn default() -> Self {
+        Self {
+            runtime: tokio::runtime::Runtime::new().unwrap(),
         }
+    }
+}
+
+impl utilities::Utils {
+    pub fn setup(mut self: Pin<&mut Self>) {
+        crate::utils::setup();
     }
 }
 

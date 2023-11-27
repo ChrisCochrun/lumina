@@ -8,3 +8,6 @@ run:
     RUST_LOG=debug ./bld/bin/lumina
 lint:
     cargo clippy
+clean:
+    cargo clean
+    rm -rf bld/

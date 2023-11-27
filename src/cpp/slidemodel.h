@@ -10,11 +10,11 @@
 #include <qsize.h>
 #include "cxx-qt-gen/slide_model.cxxqt.h"
 
-class SlideModel : public QAbstractListModel {
+class SlideModelCpp : public QAbstractListModel {
   Q_OBJECT
 
 public:
-  explicit SlideModel(QObject *parent = nullptr);
+  explicit SlideModelCpp(QObject *parent = nullptr);
 
   enum Roles {
     TypeRole = Qt::UserRole,
@@ -82,11 +82,11 @@ public:
   Q_INVOKABLE bool moveDown(int index);
   Q_INVOKABLE bool moveUp(int index);
   Q_INVOKABLE QVariantMap getItem(int index) const;
-  Q_INVOKABLE QVariantMap getItemRust(int index, SlideyMod *slidemodel) const;
+  Q_INVOKABLE QVariantMap getItemRust(int index, SlideModel *slidemodel) const;
   Q_INVOKABLE QVariantList getItems();
   Q_INVOKABLE int findSlideIdFromServItm(int index);
   Q_INVOKABLE QString thumbnailVideo(QString video, int serviceItemId, int index);
-  Q_INVOKABLE QString thumbnailVideoRust(QString video, int serviceItemId, int index, SlideyMod *slideModel);
+  Q_INVOKABLE QString thumbnailVideoRust(QString video, int serviceItemId, int index, SlideModel *slideModel);
   QImage frameToImage(const QString &video, int width);
 
 

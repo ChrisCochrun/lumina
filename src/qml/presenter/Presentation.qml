@@ -202,7 +202,7 @@ FocusScope {
                 spacing: Kirigami.Units.smallSpacing * 2
                 cacheBuffer: 900
                 reuseItems: true
-                model: SlideMod
+                model: SlideModel
                 delegate: Presenter.PreviewSlideListDelegate {}
                 highlight: highlightBar
                 highlightFollowsCurrentItem: false
@@ -233,7 +233,7 @@ FocusScope {
 
 
                 Connections {
-                    target: SlideMod
+                    target: SlideModel
                     function onActiveChanged(index) {
                         console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
                         console.log(index);
@@ -282,7 +282,7 @@ FocusScope {
                 cacheBuffer: 800
                 reuseItems: true
                 clip: true
-                model: SlideMod
+                model: SlideModel
                 delegate: Presenter.PreviewSlideListDelegate { showVidBG: false }
 
                 Kirigami.WheelHandler {
@@ -355,8 +355,8 @@ FocusScope {
     /*     target: ServiceItemModel */
     /*     function onActivateChanged(index) { */
     /*         console.log("$$$$$$$$$$$$$$$$$$$$"); */
-    /*         const slide = SlideModel.getSlideFromService(index); */
-    /*         SlideMod.activate(slide); */
+    /*         const slide = SlideMod.getSlideFromService(index); */
+    /*         SlideModel.activate(slide); */
     /*     } */
     /* } */
 

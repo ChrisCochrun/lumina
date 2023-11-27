@@ -36,8 +36,9 @@ mod file_helper {
     }
 }
 
+use cxx_qt_lib::{QString, QUrl};
 use rfd::FileDialog;
-use std::path::Path;
+use std::{path::Path, pin::Pin};
 use tracing::{debug, debug_span, error, info, instrument};
 
 #[derive(Clone)]
@@ -55,7 +56,7 @@ impl Default for FileHelperRust {
     }
 }
 
-impl qobject::FileHelper {
+impl file_helper::FileHelper {
     pub fn load(self: Pin<&mut Self>, file: QUrl) -> Vec<String> {
         println!("{file}");
         vec!["hi".to_string()]

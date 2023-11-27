@@ -27,7 +27,7 @@
 
 const QDir writeDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
-SlideModel::SlideModel(QObject *parent)
+SlideModelCpp::SlideModelCpp(QObject *parent)
     : QAbstractListModel(parent) {
   // if () {
   //   addItem(new Slide("10,000 Reasons", "song",
@@ -43,7 +43,7 @@ SlideModel::SlideModel(QObject *parent)
   // }
 }
 
-int SlideModel::rowCount(const QModelIndex &parent) const {
+int SlideModelCpp::rowCount(const QModelIndex &parent) const {
   // For list models only the root node (an invalid parent) should return the
   // list's size. For all other (valid) parents, rowCount() should return 0 so
   // that it does not become a tree model.
@@ -54,7 +54,7 @@ int SlideModel::rowCount(const QModelIndex &parent) const {
   return m_items.size();
 }
 
-QVariant SlideModel::data(const QModelIndex &index, int role) const {
+QVariant SlideModelCpp::data(const QModelIndex &index, int role) const {
   if (!index.isValid())
     return QVariant();
 
@@ -95,7 +95,7 @@ QVariant SlideModel::data(const QModelIndex &index, int role) const {
   }
 }
 
-QHash<int, QByteArray> SlideModel::roleNames() const {
+QHash<int, QByteArray> SlideModelCpp::roleNames() const {
   static QHash<int, QByteArray> mapping {
     {TextRole, "text"},
     {TypeRole, "type"},
@@ -117,7 +117,7 @@ QHash<int, QByteArray> SlideModel::roleNames() const {
   return mapping;
 }
 
-bool SlideModel::setData(const QModelIndex &index, const QVariant &value,
+bool SlideModelCpp::setData(const QModelIndex &index, const QVariant &value,
                                int role) {
 
   Slide *item = m_items[index.row()];
@@ -223,14 +223,14 @@ bool SlideModel::setData(const QModelIndex &index, const QVariant &value,
   return false;
 }
 
-Qt::ItemFlags SlideModel::flags(const QModelIndex &index) const {
+Qt::ItemFlags SlideModelCpp::flags(const QModelIndex &index) const {
   if (!index.isValid())
     return Qt::NoItemFlags;
 
   return Qt::ItemIsEditable; // FIXME: Implement me!
 }
 
-// int SlideModel::index(int row, int column, const QModelIndex &parent) {
+// int SlideyMod::index(int row, int column, const QModelIndex &parent) {
 //       if (!hasIndex(row, column, parent))
 //         return QModelIndex();
 
@@ -247,7 +247,7 @@ Qt::ItemFlags SlideModel::flags(const QModelIndex &index) const {
 //     return QModelIndex();
 // }
 
-void SlideModel::addItem(Slide *item) {
+void SlideModelCpp::addItem(Slide *item) {
   const int index = m_items.size();
   qDebug() << index;
   // foreach (item, m_items) {
@@ -258,14 +258,14 @@ void SlideModel::addItem(Slide *item) {
   endInsertRows();
 }
 
-void SlideModel::insertItem(const int &index, Slide *item) {
+void SlideModelCpp::insertItem(const int &index, Slide *item) {
   beginInsertRows(this->index(index).parent(), index, index);
   m_items.insert(index, item);
   endInsertRows();
   qDebug() << "Success";
 }
 
-void SlideModel::addItem(const QString &text, const QString &type,
+void SlideModelCpp::addItem(const QString &text, const QString &type,
                          const QString &imageBackground, const QString &videoBackground,
                          const QString &audio,
                          const QString &font, const int &fontSize,
@@ -286,7 +286,7 @@ void SlideModel::addItem(const QString &text, const QString &type,
   qDebug() << "#################################";
 }
 
-void SlideModel::insertItem(const int &index,
+void SlideModelCpp::insertItem(const int &index,
                             const QString &type, const QString &imageBackground,
                             const QString &videoBackground, const QString &text,
                             const QString &audio, const QString &font,
@@ -307,13 +307,13 @@ void SlideModel::insertItem(const int &index,
   qDebug() << "#################################";
 }
 
-void SlideModel::removeItem(int index) {
+void SlideModelCpp::removeItem(int index) {
   beginRemoveRows(QModelIndex(), index, index);
   m_items.removeAt(index);
   endRemoveRows();
 }
 
-void SlideModel::removeServiceItem(const int &index, const ServiceItem &item) {
+void SlideModelCpp::removeServiceItem(const int &index, const ServiceItem &item) {
   qDebug() << "Need to remove serviceItem:"
            << item.name()
            << "with"
@@ -345,7 +345,7 @@ void SlideModel::removeServiceItem(const int &index, const ServiceItem &item) {
   }
 }
 
-void SlideModel::removeItems() {
+void SlideModelCpp::removeItems() {
   for (int i = m_items.length() - 1; i > -1; i--) {
     QModelIndex idx = index(i);
     Slide *item = m_items[idx.row()];
@@ -358,7 +358,7 @@ void SlideModel::removeItems() {
   }
 }
 
-bool SlideModel::moveRows(int sourceIndex, int destIndex, int count) {
+bool SlideModelCpp::moveRows(int sourceIndex, int destIndex, int count) {
   qDebug() << index(sourceIndex).row();
   qDebug() << index(destIndex).row();
 
@@ -391,7 +391,7 @@ bool SlideModel::moveRows(int sourceIndex, int destIndex, int count) {
   return true;
 }
 
-bool SlideModel::moveDown(int id) {
+bool SlideModelCpp::moveDown(int id) {
   qDebug() << index(id).row();
   qDebug() << index(id + 1).row();
   QModelIndex parent = index(id).parent();
@@ -413,7 +413,7 @@ bool SlideModel::moveDown(int id) {
   return false;
 }
 
-bool SlideModel::moveUp(int id) {
+bool SlideModelCpp::moveUp(int id) {
   qDebug() << index(id).row();
   qDebug() << index(id - 1).row();
   QModelIndex parent = index(id).parent();
@@ -436,7 +436,7 @@ bool SlideModel::moveUp(int id) {
   return false;
 }
 
-QVariantMap SlideModel::getItem(int index) const {
+QVariantMap SlideModelCpp::getItem(int index) const {
   QVariantMap data;
   const QModelIndex idx = this->index(index,0);
   // qDebug() << idx;
@@ -453,13 +453,13 @@ QVariantMap SlideModel::getItem(int index) const {
   return data;
 }
 
-QVariantMap SlideModel::getItemRust(int index, SlideyMod *slidemodel) const {
+QVariantMap SlideModelCpp::getItemRust(int index, SlideModel *slidemodel) const {
   QVariantMap data = slidemodel->getItem(index);
   qDebug() << data;
   return data;
 }
 
-QVariantList SlideModel::getItems() {
+QVariantList SlideModelCpp::getItems() {
   QVariantList data;
   Slide * item;
   foreach (item, m_items) {
@@ -486,7 +486,7 @@ QVariantList SlideModel::getItems() {
   return data;
 }
 
-bool SlideModel::select(int id) {
+bool SlideModelCpp::select(int id) {
   for (int i = 0; i < m_items.length(); i++) {
     QModelIndex idx = index(i);
     Slide *item = m_items[idx.row()];
@@ -508,7 +508,7 @@ bool SlideModel::select(int id) {
   return true;
 }
 
-bool SlideModel::activate(int id) {
+bool SlideModelCpp::activate(int id) {
   QModelIndex idx = index(id);
   Slide *item = m_items[idx.row()];
   qDebug() << item->type();
@@ -534,7 +534,7 @@ bool SlideModel::activate(int id) {
   return true;
 }
 
-bool SlideModel::deactivate(int id) {
+bool SlideModelCpp::deactivate(int id) {
   QModelIndex idx = index(id);
   Slide *item = m_items[idx.row()];
 
@@ -546,13 +546,13 @@ bool SlideModel::deactivate(int id) {
   return true;
 }
 
-void SlideModel::clearAll() {
+void SlideModelCpp::clearAll() {
   for (int i = m_items.size(); i >= 0; i--) {
     removeItem(i);
   }
 }
 
-int SlideModel::findSlideIdFromServItm(int index) {
+int SlideModelCpp::findSlideIdFromServItm(int index) {
   for (int i = 0; i < m_items.size(); i++) {
     Slide *itm = m_items[i];
     if (itm->serviceItemId() == index) {
@@ -562,7 +562,7 @@ int SlideModel::findSlideIdFromServItm(int index) {
   return 0;
 }
 
-void SlideModel::addItemFromService(const int &index, const ServiceItem &item) {
+void SlideModelCpp::addItemFromService(const int &index, const ServiceItem &item) {
   qDebug() << "***INSERTING SLIDE FROM SERVICEITEM***";
   if (item.type() == "song") {
     for (int i = 0; i < item.text().size(); i++) {
@@ -597,7 +597,7 @@ void SlideModel::addItemFromService(const int &index, const ServiceItem &item) {
 
 }
 
-void SlideModel::insertItemFromService(const int &index, const ServiceItem &item) {
+void SlideModelCpp::insertItemFromService(const int &index, const ServiceItem &item) {
   qDebug() << "***INSERTING SLIDE FROM SERVICEITEM***";
   int slideId = findSlideIdFromServItm(index);
   // move all slides to the next serviceItem
@@ -640,7 +640,7 @@ void SlideModel::insertItemFromService(const int &index, const ServiceItem &item
 
 }
 
-void SlideModel::moveRowFromService(const int &fromIndex,
+void SlideModelCpp::moveRowFromService(const int &fromIndex,
                                     const int &toIndex,
                                     const ServiceItem &item) {
   const bool isMoveDown = toIndex > fromIndex;
@@ -700,7 +700,7 @@ void SlideModel::moveRowFromService(const int &fromIndex,
   }
 }
 
-QString SlideModel::thumbnailVideoRust(QString video, int serviceItemId, int index, SlideyMod *slideModel) {
+QString SlideModelCpp::thumbnailVideoRust(QString video, int serviceItemId, int index, SlideModel *slideModel) {
 
   QDir dir = writeDir.absolutePath() + "/librepresenter/thumbnails";
   QDir absDir = writeDir.absolutePath() + "/librepresenter";
@@ -745,7 +745,7 @@ QString SlideModel::thumbnailVideoRust(QString video, int serviceItemId, int ind
   return thumbnailInfo.filePath();
 }
 
-QString SlideModel::thumbnailVideo(QString video, int serviceItemId, int index) {
+QString SlideModelCpp::thumbnailVideo(QString video, int serviceItemId, int index) {
 
   QDir dir = writeDir.absolutePath() + "/librepresenter/thumbnails";
   QDir absDir = writeDir.absolutePath() + "/librepresenter";
@@ -803,7 +803,7 @@ QString SlideModel::thumbnailVideo(QString video, int serviceItemId, int index) 
   return thumbnailInfo.filePath();
 }
 
-QImage SlideModel::frameToImage(const QString &video, int width)
+QImage SlideModelCpp::frameToImage(const QString &video, int width)
 {
     QImage image;
     FrameDecoder frameDecoder(video, nullptr);

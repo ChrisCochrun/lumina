@@ -1,9 +1,5 @@
 #[cxx_qt::bridge]
 pub mod song_editor {
-    use std::path::PathBuf;
-
-    use tracing::{debug, debug_span, error, info, instrument};
-
     unsafe extern "C++" {
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant =
@@ -22,108 +18,119 @@ pub mod song_editor {
         // type CxxSongs = crate::songs::song_model::qobject::SongModel;
     }
 
-    #[derive(Clone, Debug)]
-    #[cxx_qt::qobject]
-    pub struct SongEditor {
-        #[qproperty]
-        title: QString,
-        #[qproperty]
-        lyrics: QString,
-        #[qproperty]
-        author: QString,
-        #[qproperty]
-        ccli: QString,
-        #[qproperty]
-        audio: QString,
-        #[qproperty]
-        verse_order: QString,
-        #[qproperty]
-        verse_order_error: bool,
-        #[qproperty]
-        background: QString,
-        #[qproperty]
-        background_type: QString,
-        #[qproperty]
-        horizontal_text_alignment: QString,
-        #[qproperty]
-        vertical_text_alignment: QString,
-        #[qproperty]
-        font: QString,
-        #[qproperty]
-        font_size: i32,
-        #[qproperty]
-        background_exists: bool,
-        #[qproperty]
-        audio_exists: bool,
-        // #[qproperty]
-        // song_model: *mut CxxSongs,
+    unsafe extern "RustQt" {
+        #[qobject]
+        #[qml_element]
+        #[qproperty(QString, title)]
+        #[qproperty(QString, lyrics)]
+        #[qproperty(QString, author)]
+        #[qproperty(QString, ccli)]
+        #[qproperty(QString, audio)]
+        #[qproperty(QString, verse_order)]
+        #[qproperty(bool, verse_order_error)]
+        #[qproperty(QString, background)]
+        #[qproperty(QString, background_type)]
+        #[qproperty(QString, horizontal_text_alignment)]
+        #[qproperty(QString, vertical_text_alignment)]
+        #[qproperty(QString, font)]
+        #[qproperty(i32, font_size)]
+        #[qproperty(bool, background_exists)]
+        #[qproperty(bool, audio_exists)]
+        type SongEditor = super::SongEditorRust;
+
+        #[qinvokable]
+        fn check_verse_order(self: Pin<&mut SongEditor>);
+        #[qinvokable]
+        fn check_files(self: Pin<&mut SongEditor>);
+    }
+}
+
+use cxx_qt_lib::QString;
+use std::{path::PathBuf, pin::Pin};
+use tracing::{debug, debug_span, error, info, instrument};
+
+#[derive(Clone, Debug)]
+pub struct SongEditorRust {
+    title: QString,
+    lyrics: QString,
+    author: QString,
+    ccli: QString,
+    audio: QString,
+    verse_order: QString,
+    verse_order_error: bool,
+    background: QString,
+    background_type: QString,
+    horizontal_text_alignment: QString,
+    vertical_text_alignment: QString,
+    font: QString,
+    font_size: i32,
+    background_exists: bool,
+    audio_exists: bool,
+    // song_model: *mut CxxSongs,
+}
+
+impl Default for SongEditorRust {
+    fn default() -> Self {
+        Self {
+            title: QString::default(),
+            lyrics: QString::default(),
+            author: QString::default(),
+            ccli: QString::default(),
+            audio: QString::default(),
+            verse_order: QString::default(),
+            verse_order_error: false,
+            background: QString::default(),
+            background_type: QString::default(),
+            horizontal_text_alignment: QString::default(),
+            vertical_text_alignment: QString::default(),
+            font: QString::default(),
+            font_size: 50,
+            background_exists: true,
+            audio_exists: true,
+            // song_model: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl song_editor::SongEditor {
+    fn idk(mut self: Pin<&mut Self>) {
+        // let mut model = self.song_model().as_mut().unwrap();
+        // let pinned_model = Pin::new_unchecked(model);
+        // pinned_model.update_ccli(0, QString::from("idk"));
+        todo!()
     }
 
-    impl Default for SongEditor {
-        fn default() -> Self {
-            Self {
-                title: QString::default(),
-                lyrics: QString::default(),
-                author: QString::default(),
-                ccli: QString::default(),
-                audio: QString::default(),
-                verse_order: QString::default(),
-                verse_order_error: false,
-                background: QString::default(),
-                background_type: QString::default(),
-                horizontal_text_alignment: QString::default(),
-                vertical_text_alignment: QString::default(),
-                font: QString::default(),
-                font_size: 50,
-                background_exists: true,
-                audio_exists: true,
-                // song_model: std::ptr::null_mut(),
+    pub fn check_verse_order(mut self: Pin<&mut Self>) {
+        let vo = self.verse_order().to_string();
+        let split = vo.split(" ");
+        debug!(verse_order = ?vo, iterator = ?split);
+        for s in split {
+            if s.contains(",") || s.is_empty() {
+                self.as_mut().set_verse_order_error(true);
+            } else {
+                self.as_mut().set_verse_order_error(false);
             }
         }
     }
 
-    impl qobject::SongEditor {
-        fn idk(mut self: Pin<&mut Self>) {
-            // let mut model = self.song_model().as_mut().unwrap();
-            // let pinned_model = Pin::new_unchecked(model);
-            // pinned_model.update_ccli(0, QString::from("idk"));
-            todo!()
-        }
-
-        #[qinvokable]
-        pub fn check_verse_order(mut self: Pin<&mut Self>) {
-            let vo = self.verse_order().to_string();
-            let split = vo.split(" ");
-            debug!(verse_order = ?vo, iterator = ?split);
-            for s in split {
-                if s.contains(",") || s.is_empty() {
-                    self.as_mut().set_verse_order_error(true);
-                } else {
-                    self.as_mut().set_verse_order_error(false);
-                }
-            }
-        }
-
-        #[qinvokable]
-        pub fn check_files(mut self: Pin<&mut Self>) {
-            let background = PathBuf::from(
-                self.background()
-                    .clone()
-                    .to_string()
-                    .trim_start_matches("file://"),
-            );
-            let audio = PathBuf::from(
-                self.audio()
-                    .clone()
-                    .to_string()
-                    .trim_start_matches("file://"),
-            );
-            debug!(
-                background = background.exists(),
-                audio = audio.exists()
-            );
-            self.as_mut().set_background_exists(background.exists());
-            self.as_mut().set_audio_exists(audio.exists());
-        }
+    pub fn check_files(mut self: Pin<&mut Self>) {
+        let background = PathBuf::from(
+            self.background()
+                .clone()
+                .to_string()
+                .trim_start_matches("file://"),
+        );
+        let audio = PathBuf::from(
+            self.audio()
+                .clone()
+                .to_string()
+                .trim_start_matches("file://"),
+        );
+        debug!(
+            background = background.exists(),
+            audio = audio.exists()
+        );
+        self.as_mut().set_background_exists(background.exists());
+        self.as_mut().set_audio_exists(audio.exists());
     }
 }

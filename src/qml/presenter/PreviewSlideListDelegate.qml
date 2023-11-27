@@ -14,7 +14,7 @@ Item {
     /* property var previewSlidesList: parent */
     /* Component.onCompleted: { */
     /*     if (model.videoBackground != "") */
-    /*         SlideModel.thumbnailVideoRust(model.videoBackground, model.serviceItemId, index, SlideMod); */
+    /*         SlideMod.thumbnailVideoRust(model.videoBackground, model.serviceItemId, index, SlideModel); */
     /* } */
 
     Rectangle {
