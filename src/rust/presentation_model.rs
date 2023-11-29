@@ -70,6 +70,9 @@ mod presentation_model {
         //     index: i32,
         //     updated_path: QString,
         // ) -> bool;
+        // #[qinvokable]
+        // fn duplicate_item(self: Pin<&mut Self>, index: i32) -> bool;
+
         #[qinvokable]
         fn get_item(
             self: Pin<&mut PresentationModel>,
@@ -409,6 +412,34 @@ impl presentation_model::PresentationModel {
         }
     }
 
+    // fn insert_presentation(
+    //     mut self: Pin<&mut Self>,
+    //     presentation: Presentation,
+    //     index: i32,
+    // ) {
+    //     unsafe {
+    //         self.as_mut().begin_insert_rows(
+    //             &QModelIndex::default(),
+    //             index,
+    //             index,
+    //         );
+    //         self.as_mut()
+    //             .rust_mut()
+    //             .presentations
+    //             .insert(index as usize, presentation);
+    //         self.as_mut().end_insert_rows();
+    //     }
+    //     let iter = self
+    //         .as_mut()
+    //         .presentations
+    //         .iter()
+    //         .enumerate()
+    //         .filter(|p| p.id > index);
+    //     for p in iter {
+    //         p.id = p.id + 1;
+    //     }
+    // }
+
     pub fn get_item(
         self: Pin<&mut Self>,
         index: i32,
@@ -432,6 +463,21 @@ impl presentation_model::PresentationModel {
             }
         };
         qvariantmap
+    }
+
+    pub fn duplicate_item(
+        mut self: Pin<&mut Self>,
+        index: i32,
+    ) -> bool {
+        let binding = self.as_mut();
+        let pres = binding.presentations.get(index as usize).clone();
+        if let Some(item) = pres {
+            let item = item.clone();
+            binding.add_presentation(item);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn update_title(
