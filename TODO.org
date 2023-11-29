@@ -39,6 +39,8 @@ impl FromStr for Role {
 
 Apparently this doesn't work with cxx_qt right now....
 
+And I think it's been improved by allow Q_ENUMs to be made. So, perhaps I'll figure out how to register those enums to QML and can pass them back into the rust side to stop using so many random ints.
+
 ** TODO Mouse needs to have resize shape when hovering controls
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
 ** TODO Add a way to interact with OBS
@@ -48,6 +50,9 @@ The basic implementation is done. In order to make use of it in the odd broken Q
 Once the model of OBS scenes is created, we can select a scene to add it to the service item. Then hopefully activate will take that scene and set it inside obs when switching slides.
 *** TODO OBWS setting scenes
 This has been really tricky since there is something of a bug when using =runtime.block_on()= rather than having a single cohesive tokio runtime. So, perhaps I need to figure out if I can't make a runtime that works for the whole app so that I can manage these a little better.
+*** TODO This should be ported to slides rather than service_items.
+Since sometimes in a presentation you'd possibly want different obs scenes, lets instead make these changes on the slides rather than on the service_items. That way each slide can have an associated obs scene and do some trickerydo to determine if we need to change it.
+
 ** TODO Find segfault in webengine :bug:
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
 
