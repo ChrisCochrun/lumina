@@ -191,6 +191,7 @@ mod slide_model {
 }
 
 use crate::ffmpeg;
+use crate::obs::Obs;
 use crate::slide_model::slide_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
@@ -613,28 +614,26 @@ impl slide_model::SlideModel {
 
         for (key, value) in iter {
             debug!(?key);
-            match key.to_string().to_str() {
-                "ty" => slide.ty = QString::from(value),
-                "background" => {
-                    slide.background = QString::from(value)
-                }
-                "backgroundType" => {
-                    slide.background_type = QString::from(value)
-                }
-                "audio" => slide.audio = QString::from(value),
-                "font" => slide.font = QString::from(value),
-                "fontSize" => slide.font_size = QString::from(value),
-                "looping" => slide.looping = QString::from(value),
-                "slideCount" => {
-                    slide.slide_count = QString::from(value)
-                }
-                "videoEndTime" => {
-                    slide.video_end_time = QString::from(value)
-                }
-                "videoStartTime" => {
-                    slide.video_end_time = QString::from(value)
-                }
-            }
+            // match key.to_string().as_str() {
+            //     "ty" => slide.ty = QString::from(value),
+            //     // "background" => {
+            //     //     slide.background = QString::from(value)
+            //     // }
+            //     // "backgroundType" => {
+            //     //     slide.background_type = QString::from(value)
+            //     // }
+            //     "audio" => slide.audio = QString::from(value),
+            //     "font" => slide.font = QString::from(value),
+            //     "fontSize" => slide.font_size = i32::from(value),
+            //     "looping" => slide.looping = bool::from(value),
+            //     "slideCount" => slide.slide_count = i32::from(value),
+            //     "videoEndTime" => {
+            //         slide.video_end_time = f32::from(value)
+            //     }
+            //     "videoStartTime" => {
+            //         slide.video_end_time = f32::from(value)
+            //     }
+            // }
         }
 
         let ty = service_item
@@ -1055,21 +1054,12 @@ impl slide_model::SlideModel {
                 service_item = slide.service_item_id,
                 "This slide is activating"
             );
-            // println!("slide is activating {:?}", index);
-            // println!("slide-title: {:?}", slide.service_item_id);
-            // println!(
-            //     "slide-image-background: {:?}",
-            //     slide.image_background
-            // );
-            // println!(
-            //     "slide-video-background: {:?}",
-            //     slide.video_background
-            // );
+            let obs_scene = slide.obs_scene.to_string();
             slide.active = true;
             self.as_mut().data_changed(tl, br, &vector_roles);
 
             if let Some(obs) = obs {
-                match obs.set_scene(slide.obs_scene.to_string()) {
+                match obs.set_scene(obs_scene) {
                     Ok(()) => debug!("Successfully set scene"),
                     Err(e) => error!(e),
                 }
