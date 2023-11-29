@@ -1,0 +1,5 @@
+#+title: Lumina Documentation
+#+author: Chris Cochrun
+#+date: <2023-11-29 Wed> 
+
+* Welcome to Lumina's Documentation
