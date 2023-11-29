@@ -15,6 +15,7 @@
         <file>qml/presenter/ImageEditor.qml</file>
         <file>qml/presenter/PresentationEditor.qml</file>
         <file>qml/presenter/Slide.qml</file>
+        <file>qml/presenter/SlidesListView.qml</file>
         <file>qml/presenter/SongEditorSlideList.qml</file>
         <file>qml/presenter/DragHandle.qml</file>
         <file>qml/presenter/Presentation.qml</file>

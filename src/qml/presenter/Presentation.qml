@@ -62,7 +62,7 @@ FocusScope {
                     text: "Details"
                     icon.name: "view-list-details"
                     hoverEnabled: true
-                    onClicked: serviceThing.activate();
+                    onClicked: stack.replace(detailsView);
                 }
                 Controls.ToolSeparator {}
                 Item { Layout.fillWidth: true }
@@ -94,11 +94,10 @@ FocusScope {
 
         Item {
             id: presenterView
-            anchors.fill: parent
             Item {
                 id: slideArea
-                implicitWidth: parent.width
-                implicitHeight: parent.height - previewSlidesList.height
+                implicitWidth: stack.width
+                implicitHeight: stack.height - previewSlideList.height
                 /* anchors.bottomMargin: previewSlidesList.height */
 
                 Kirigami.Icon {
@@ -191,56 +190,9 @@ FocusScope {
 
             }
 
-            ListView {
-                // The active items X value from root
-                property int activeX
-                id: previewSlidesList
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: Kirigami.Units.gridUnit * 9
-                orientation: ListView.Horizontal
-                spacing: Kirigami.Units.smallSpacing * 2
-                cacheBuffer: 900
-                reuseItems: true
-                model: SlideModel
-                delegate: Presenter.PreviewSlideListDelegate {}
+            Presenter.SlidesListView {
+                id: previewSlideList
                 highlight: highlightBar
-                highlightFollowsCurrentItem: false
-
-                Kirigami.WheelHandler {
-                    id: wheelHandler
-                    target: previewSlidesList
-                    filterMouseEvents: true
-                }
-
-                Controls.ScrollBar.horizontal: Controls.ScrollBar {
-                    active: hovered || pressed
-                }
-
-                add: Transition {
-                    NumberAnimation {properties: "width, height"; duration: 3000}
-                    NumberAnimation { properties: "opacity"; duration: 3000 }
-                }
-
-                remove: Transition {
-                    NumberAnimation { properties: "width, height"; duration: 3000 }
-                    NumberAnimation { properties: "opacity"; duration: 3000 }
-                }
-
-                displaced: Transition {
-                    NumberAnimation {properties: "x, y"; duration: 100}
-                }
-
-
-                Connections {
-                    target: SlideModel
-                    function onActiveChanged(index) {
-                        console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                        console.log(index);
-                        previewSlidesList.currentIndex = index;
-                        previewSlidesList.positionViewAtIndex(index, ListView.Center);
-                    }
-                }
             }
 
             Component {
@@ -264,7 +216,7 @@ FocusScope {
             }
         }
 
-        Item {
+        Component {
             id: gridView
             /* Layout.fillHeight: true */
             /* Layout.fillWidth: true */
@@ -275,7 +227,7 @@ FocusScope {
                 // The active items X value from root
                 property int activeX
                 id: previewSlidesGrid
-                anchors.fill: parent
+                anchors.fill: stack
                 cellWidth: Kirigami.Units.gridUnit * 11
                 cellHeight: Kirigami.Units.gridUnit * 8
                 /* spacing: Kirigami.Units.smallSpacing * 2 */
@@ -297,6 +249,120 @@ FocusScope {
 
             }
 
+
+        }
+
+        Component {
+            id: detailsView
+            Item {
+                id: detailsWrapper
+                implicitWidth: stack.width
+                implicitHeight: stack.height
+
+                Item {
+                    id: detailsSlide
+                    implicitWidth: parent.width / 2
+                    implicitHeight: parent.height - detailsSlideList.height
+                    anchors.left: parent.horizontalCenter
+                    /* anchors.bottomMargin: previewSlidesList.height */
+
+                    Kirigami.Icon {
+                        source: "arrow-left"
+                        implicitWidth: Kirigami.Units.gridUnit * 7
+                        implicitHeight: Kirigami.Units.gridUnit * 10
+                        anchors.right: detailsPreviewSlide.left
+                        anchors.verticalCenter: detailsPreviewSlide.verticalCenter
+                        color: "white"
+                        MouseArea {
+                            anchors.fill: parent
+                            onPressed: previousSlideAction()
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                    }
+
+                    Presenter.Slide {
+                        id: detailsPreviewSlide
+                        implicitWidth: parent.width - 400 > 200 ? parent.width - 400 : 200
+                        implicitHeight: width / 16 * 9
+                        anchors.top: parent.top
+                        anchors.topMargin: 10
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        itemType: SlideObject.ty
+                        imageSource: SlideObject.imageBackground.endsWith(".html") ? "" : SlideObject.imageBackground
+                        webSource: SlideObject.imageBackground.endsWith(".html") ? SlideObject.imageBackground : ""
+                        htmlVisible: SlideObject.imageBackground.endsWith(".html")
+                        videoSource: SlideObject.videoBackground
+                        audioSource: SlideObject.audio
+                        chosenFont: SlideObject.font
+                        textSize: SlideObject.fontSize
+                        text: SlideObject.text
+                        pdfIndex: SlideObject.slideIndex
+                        vidLoop: SlideObject.looping
+                        vidStartTime: SlideObject.videoStartTime
+                        vidEndTime: SlideObject.videoEndTime
+                        preview: true 
+                    }
+
+                    Kirigami.Icon {
+                        source: "arrow-right"
+                        implicitWidth: Kirigami.Units.gridUnit * 7
+                        implicitHeight: Kirigami.Units.gridUnit * 10
+                        anchors.left: detailsPreviewSlide.right
+                        anchors.verticalCenter: detailsPreviewSlide.verticalCenter
+                        color: Kirigami.Theme.textColor
+                        MouseArea {
+                            anchors.fill: parent
+                            onPressed: nextSlideAction()
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 2
+                        width: detailsPreviewSlide.width
+                        /* Layout.alignment: Qt.AlignHCenter, Qt.AlignTop */
+                        anchors.top: detailsPreviewSlide.bottom
+                        anchors.topMargin: 10
+                        anchors.horizontalCenter: detailsPreviewSlide.horizontalCenter
+                        /* Layout.columnSpan: 3 */
+                        visible: itemType === "video";
+                        Controls.ToolButton {
+                            Layout.preferredWidth: 25
+                            Layout.preferredHeight: 25
+                            icon.name: detailsPreviewSlide.mpvIsPlaying ? "media-pause" : "media-play"
+                            hoverEnabled: true
+                            onClicked: SlideObject.playPause();
+                        }
+                        Controls.Slider {
+                            id: detailsVideoSlider
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 25
+                            from: 0
+                            to: detailsPreviewSlide.mpvDuration
+                            value: detailsPreviewSlide.mpvPosition
+                            live: true
+                            onMoved: changeVidPos(value);
+                        }
+
+                        Controls.Switch {
+                            id: detailsLoopSwitch
+                            text: "Loop"
+                            checked: SlideObject.looping
+                            onToggled: SlideObject.setLooping(!SlideObject.looping)
+                            Keys.onLeftPressed: previousSlideAction()
+                            Keys.onRightPressed: nextSlideAction()
+                            Keys.onUpPressed: previousSlideAction()
+                            Keys.onDownPressed: nextSlideAction()
+                        }
+                    }
+
+                }
+
+                Presenter.SlidesListView {
+                    id: detailsSlideList
+                }
+                
+            }
 
         }
     }

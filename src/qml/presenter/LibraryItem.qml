@@ -237,7 +237,7 @@ ColumnLayout {
                     implicitWidth: libraryList.width
                     height: selectedLibrary == libraryType ? 50 : 0
                     clip: true
-                    label: index + " " + title
+                    label: title
                     subtitle: {
                         if (libraryType == "song")
                             author
