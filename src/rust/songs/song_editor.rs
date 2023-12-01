@@ -1,3 +1,5 @@
+use crate::songs::song_model::song_model::SongModel;
+
 #[cxx_qt::bridge]
 pub mod song_editor {
     unsafe extern "C++" {
@@ -14,8 +16,8 @@ pub mod song_editor {
         type QStringList = cxx_qt_lib::QStringList;
         include!("cxx-qt-lib/qlist.h");
         type QList_QString = cxx_qt_lib::QList<QString>;
-        // #[cxx_name = "SongModel"]
-        // type CxxSongs = crate::songs::song_model::qobject::SongModel;
+        #[cxx_name = "SongModel"]
+        type SongModel = crate::songs::song_model::qobject::SongModel;
     }
 
     unsafe extern "RustQt" {
@@ -36,6 +38,7 @@ pub mod song_editor {
         #[qproperty(i32, font_size)]
         #[qproperty(bool, background_exists)]
         #[qproperty(bool, audio_exists)]
+        #[qproperty(*mut SongModel, song_model)]
         type SongEditor = super::SongEditorRust;
 
         #[qinvokable]
@@ -66,7 +69,7 @@ pub struct SongEditorRust {
     font_size: i32,
     background_exists: bool,
     audio_exists: bool,
-    // song_model: *mut CxxSongs,
+    song_model: *mut SongModel,
 }
 
 impl Default for SongEditorRust {
@@ -87,17 +90,17 @@ impl Default for SongEditorRust {
             font_size: 50,
             background_exists: true,
             audio_exists: true,
-            // song_model: std::ptr::null_mut(),
+            song_model: std::ptr::null_mut(),
         }
     }
 }
 
 impl song_editor::SongEditor {
     fn idk(mut self: Pin<&mut Self>) {
-        // let mut model = self.song_model().as_mut().unwrap();
-        // let pinned_model = Pin::new_unchecked(model);
-        // pinned_model.update_ccli(0, QString::from("idk"));
-        todo!()
+        if let Some(model) = unsafe { self.song_model().as_mut() } {
+            let pinned_model = unsafe { Pin::new_unchecked(model) };
+            pinned_model.update_ccli(0, QString::from("idk"));
+        }
     }
 
     pub fn check_verse_order(mut self: Pin<&mut Self>) {
