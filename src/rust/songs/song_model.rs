@@ -248,7 +248,7 @@ use self::song_model::{
     SongRoles,
 };
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Song {
     id: i32,
     title: String,
@@ -263,6 +263,18 @@ pub struct Song {
     vertical_text_alignment: String,
     font: String,
     font_size: i32,
+}
+
+impl Default for Song {
+    fn default() -> Self {
+        Self {
+            horizontal_text_alignment: String::from("Center"),
+            vertical_text_alignment: String::from("Center"),
+            font: String::from("Quicksand Bold"),
+            font_size: 50,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -451,18 +463,19 @@ impl song_model::SongModel {
     ) -> (usize, QModelIndex, QVector_i32) {
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.as_ref().get_role(role));
-        let index = self
-            .as_ref()
-            .songs
-            .iter()
-            .position(|x| x.id == song_id)
-            .unwrap();
-        let model_index = self.as_ref().index(
-            index as i32,
-            0,
-            &QModelIndex::default(),
-        );
-        (index, model_index, vector_roles)
+        if let Some(index) =
+            self.as_ref().songs.iter().position(|x| x.id == song_id)
+        {
+            let model_index = self.as_ref().index(
+                index as i32,
+                0,
+                &QModelIndex::default(),
+            );
+            (index, model_index, vector_roles)
+        } else {
+            error!(song_id, "This song appears to be missing");
+            (0, QModelIndex::default(), vector_roles)
+        }
     }
 
     pub fn update_title(
