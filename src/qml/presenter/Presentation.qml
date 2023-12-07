@@ -415,6 +415,9 @@ FocusScope {
         function onRevealNext() {
             previewSlide.revealNext();
         }
+        function onRevealPrev() {
+            previewSlide.revealPrev();
+        }
     }
 
     /* Connections { */

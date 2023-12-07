@@ -89,6 +89,12 @@ Item {
             else
                 presentationSlide.stopAudio();
         }
+        function onRevealNext() {
+            presentationSlide.revealNext();
+        }
+        function onRevealPrev() {
+            presentationSlide.revealPrev();
+        }
     }
 
     function loadVideo() {
