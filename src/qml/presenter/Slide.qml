@@ -143,10 +143,24 @@ Item {
             radius: blurRadius
 
             Controls.Label {
+                text: Math.max(root.width, 1000) / 1000 * Math.max(root.textSize, 50)
+                horizontalAlignment: hTextAlignment
+                verticalAlignment: vTextAlignment
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.topMargin: 10
+                anchors.bottomMargin: 10
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                visible: RSettings.debug
+            }
+
+            Controls.Label {
                 id: lyrics
                 text: root.text
+                /* text: root.textSize */
                 /* text: root.width / 1000 * root.textSize */
-                font.pixelSize: root.width / 1000 * root.textSize 
+                font.pixelSize: Math.max(root.width, 1000) / 1000 * Math.max(root.textSize, 50)
                 /* minimumPointSize: 5 */
                 fontSizeMode: Text.Fit
                 font.family: chosenFont
