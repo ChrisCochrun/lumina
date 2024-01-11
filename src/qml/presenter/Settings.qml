@@ -77,6 +77,14 @@ Kirigami.OverlaySheet {
             Kirigami.FormData.label: i18nc("@label:textbox", "Obs Connection")
             text: ObsModel.connected
         }
+
+        Controls.CheckBox {
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Debug")
+            onClicked: {
+                RSettings.debug = checked;
+                console.log(RSettings.debug);
+            }
+        }
         
     }
 

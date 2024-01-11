@@ -14,6 +14,7 @@ mod settings {
         #[qproperty(QString, sound_effect)]
         #[qproperty(QUrl, last_save_file)]
         #[qproperty(QUrl, loaded_file)]
+        #[qproperty(bool, debug)]
         type Settings = super::SettingsRust;
 
         #[qinvokable]
@@ -40,6 +41,7 @@ pub struct SettingsRust {
     sound_effect: QString,
     last_save_file: QUrl,
     loaded_file: QUrl,
+    debug: bool,
 }
 
 impl Default for SettingsRust {
@@ -50,6 +52,7 @@ impl Default for SettingsRust {
             sound_effect: QString::from(""),
             last_save_file: QUrl::from(""),
             loaded_file: QUrl::from(""),
+            debug: false,
         }
     }
 }
