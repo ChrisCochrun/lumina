@@ -416,6 +416,7 @@ impl slide_model::SlideModel {
         index: i32,
         service_item: &QMap_QString_QVariant,
     ) {
+        debug!(index, "Inserting slide from service insert");
         for (key, data) in service_item.iter() {
             debug!(
                 ?key,
@@ -527,7 +528,7 @@ impl slide_model::SlideModel {
         let mut binding = self.as_mut().rust_mut();
         let slides_iter = binding.slides.iter_mut();
         let mut slide_index = 0;
-        for (i, slide) in slides_iter.enumerate().rev() {
+        for (i, slide) in slides_iter.enumerate() {
             if slide.service_item_id == index {
                 slide_index = i as i32;
                 break;
@@ -582,6 +583,7 @@ impl slide_model::SlideModel {
                 self.as_mut().insert_slide(&slide, slide_index);
             }
             Some(ty) if ty == QString::from("presentation") => {
+                debug!(?slide, "Inserting presentation slide");
                 for i in 0..slide.slide_count {
                     slide.ty = ty.clone();
                     if background.ends_with(
@@ -594,7 +596,7 @@ impl slide_model::SlideModel {
                     slide.video_background = QString::from("");
                     slide.slide_index = i;
                     self.as_mut()
-                        .insert_slide(&slide, slide_index + i as i32);
+                        .insert_slide(&slide, slide_index + i);
                 }
             }
             _ => println!("It's somethign else!"),
@@ -769,6 +771,7 @@ impl slide_model::SlideModel {
                 self.as_mut().add_slide(&slide);
             }
             Some(ty) if ty == QString::from("presentation") => {
+                debug!(slides = ?slide.slide_count);
                 for i in 0..slide.slide_count {
                     slide.ty = ty.clone();
                     slide.image_background = background.clone();
