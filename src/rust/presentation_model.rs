@@ -333,10 +333,13 @@ impl presentation_model::PresentationModel {
             presentation_html,
             new_page_count,
         ) {
-            println!("filename: {:?}", name);
+            debug!(filename = ?name, "Item inserted");
             self.as_mut().rust_mut().highest_id = presentation_id;
+            let cnt =
+                self.as_mut().row_count(&QModelIndex::default());
+            self.as_mut().set_count(cnt);
         } else {
-            println!("Error in inserting item");
+            debug!("Error in inserting item");
         }
     }
 
@@ -461,6 +464,7 @@ impl presentation_model::PresentationModel {
                     self.as_ref().data(&idx, *i.0),
                 );
             }
+            debug!("{:?}", presentation);
         };
         qvariantmap
     }
