@@ -262,6 +262,7 @@ QModelIndex PresentationProxyModel::idx(int row) {
 }
 
 QVariantMap PresentationProxyModel::getPresentation(const int &row) {
+  qDebug() << "Getting Presentation through cpp";
   auto model = qobject_cast<PresentationModel *>(sourceModel());
   QVariantMap presentation = model->getItem(mapToSource(index(row, 0)).row());
   return presentation;
