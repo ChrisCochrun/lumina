@@ -609,7 +609,7 @@ Item {
             return;
         }
         case 'presentation': {
-            const pres = presProxyModel.getPresentation(itemIndex);
+            const pres = presProxyModel.presentationModel.getItem(itemIndex);
             console.log("adding: " + pres.title +
                         " of type " + type +
                         " with " + pres.pageCount + " slides");
@@ -663,7 +663,7 @@ Item {
             return;
         }
         case 'presentation': {
-            const pres = presProxyModel.getPresentation(itemIndex);
+            const pres = presProxyModel.presentationModel.getItem(itemIndex);
             console.log("adding: " + pres.title +
                         " of type " + type +
                         " with " + pres.pageCount + " slides");

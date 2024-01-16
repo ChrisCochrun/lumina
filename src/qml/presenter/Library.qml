@@ -351,9 +351,12 @@ Item {
         presProxyModel.presentationModel.newItem(url, pageCount);
         selectedLibrary = "presentation";
         presentationLibrary.libraryList.currentIndex = presProxyModel.presentationModel.count - 1;
+        let presId = presentationLibrary.libraryList.currentIndex + 1;
+        let pres = presProxyModel.presentationModel.getItem(presId);
+        console.log(pres.id);
         if (!editMode)
             editMode = true;
-        editSwitch(presentationLibrary.libraryList.currentIndex, "presentation");
+        editSwitch(presId, "presentation");
         pdf.source = "";
     }
 
