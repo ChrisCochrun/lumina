@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [62%] [49/78]
+* Tasks [62%] [49/79]
 ** TODO Figure out how to nest qobjects
 
 This is supposed to be covered in the examples and the book.
@@ -14,6 +14,8 @@ This is supposed to be covered in the examples and the book.
 But, I can't seem to get it to compile. I'll keep tinkering but this would be huge for allowing me to have a single object that can get passed into functions of other objects to be able to call inner functions from the outer call. This would mean I could have obs and slides talk. I could have the slide_object talk to the model. And more...
 
 Maybe an alternative to this would be connecting them through signals, but idk yet....
+** TODO Create an emacs interface
+For me, building lumina presentations through the ui is cumbersome. I'd like to improve it but honestly, it works great for the normal person use case, maybe for now as I get more of it matured. I'll consider developing an emacs interface and connect it. Maybe even develop a server/client architecture so that I can build presentations quickly through a myriad of ways too.
 
 ** TODO Possibly add better handling of data through enums
 [[file:~/dev/lumina/src/rust/image_model.rs::impl FromStr for Role {]]
