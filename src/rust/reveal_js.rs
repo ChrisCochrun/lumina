@@ -9,7 +9,8 @@ pub fn count_slides_and_fragments(html_file_path: &Path) -> i32 {
         .expect("Failed to read HTML file");
 
     // Split HTML content by slide delimiters
-    let slide_delimiter = "<section";
+    // Needs a space after to ensure we are grabbing only real slides
+    let slide_delimiter = "<section ";
     let slide_content: Vec<&str> =
         html_content.split(slide_delimiter).collect();
 
