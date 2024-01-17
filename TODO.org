@@ -4,17 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [61%] [48/78]
-** TODO Write a function to handle switching to the next fragment in revealjs
-[[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
-
-In order to achieve this, I have to do some of the logic in qml as opposed to rust. Rust just is too far abstracted I think... Unless maybe I can have some form of slide signal pieces that the slide can react to and pass the necessary pieces into rust. I'll need to experiment with this, but I've found that it is all possible, so I'll keep playing.
-
-- First in JS
-- Now need to see if I can do more logic in Rust instead.
-- Maybe signal handlers?
-
-I've written this with signal handlers now. It's working sorta.
+* Tasks [62%] [49/78]
 ** TODO Figure out how to nest qobjects
 
 This is supposed to be covered in the examples and the book.
@@ -258,6 +248,16 @@ The core problem with this is that when we set the song, the index to get the it
 
 *** DONE Seems that updating songs aren't reflected well
 [[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
+** DONE Write a function to handle switching to the next fragment in revealjs
+[[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
+
+In order to achieve this, I have to do some of the logic in qml as opposed to rust. Rust just is too far abstracted I think... Unless maybe I can have some form of slide signal pieces that the slide can react to and pass the necessary pieces into rust. I'll need to experiment with this, but I've found that it is all possible, so I'll keep playing.
+
+- First in JS
+- Now need to see if I can do more logic in Rust instead.
+- Maybe signal handlers?
+
+I've written this with signal handlers now. It's working sorta.
 ** DONE [#A] Updating properties in models. [0/0] [0%]
 All of the models need to be editable from the outside so that the editor pages a can appropriately change the properties of each item. I'll go in this order.
 *** DONE Video
