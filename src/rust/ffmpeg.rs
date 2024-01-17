@@ -10,7 +10,7 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
     println!("{:?}", video);
     println!("{:?}", video.file_name());
     let mut data_dir = dirs::data_local_dir().unwrap();
-    data_dir.push("librepresenter");
+    data_dir.push("lumina");
     data_dir.push("thumbnails");
     if !data_dir.exists() {
         fs::create_dir(&data_dir)

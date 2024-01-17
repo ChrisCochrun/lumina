@@ -49,7 +49,7 @@ impl ytdl::Ytdl {
         } else {
             let data_dir = dirs::data_local_dir().unwrap();
             if let Some(mut data_dir) = dirs::data_local_dir() {
-                data_dir.push("librepresenter");
+                data_dir.push("lumina");
                 data_dir.push("ytdl");
                 if !data_dir.exists() {
                     fs::create_dir(&data_dir)
