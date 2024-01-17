@@ -584,19 +584,26 @@ impl slide_model::SlideModel {
             }
             Some(ty) if ty == QString::from("presentation") => {
                 debug!(?slide, "Inserting presentation slide");
-                for i in 0..slide.slide_count {
+                if background.clone().ends_with(
+                    &QString::from(".html"),
+                    CaseSensitivity::CaseInsensitive,
+                ) {
                     slide.ty = ty.clone();
-                    if background.ends_with(
-                        &QString::from(".html"),
-                        CaseSensitivity::CaseInsensitive,
-                    ) {
-                        slide.html = true;
-                    }
+                    slide.html = true;
                     slide.image_background = background.clone();
                     slide.video_background = QString::from("");
                     slide.slide_index = i;
                     self.as_mut()
                         .insert_slide(&slide, slide_index + i);
+                } else {
+                    for i in 0..slide.slide_count {
+                        slide.ty = ty.clone();
+                        slide.image_background = background.clone();
+                        slide.video_background = QString::from("");
+                        slide.slide_index = i;
+                        self.as_mut()
+                            .insert_slide(&slide, slide_index + i);
+                    }
                 }
             }
             _ => println!("It's somethign else!"),
@@ -717,7 +724,7 @@ impl slide_model::SlideModel {
             .value()
             .unwrap_or(0);
         slide.slide_count = service_item
-            .get(&QString::from("imageCount"))
+            .get(&QString::from("slideCount"))
             .unwrap_or(QVariant::from(&1))
             .value()
             .unwrap_or(1);
@@ -771,13 +778,25 @@ impl slide_model::SlideModel {
                 self.as_mut().add_slide(&slide);
             }
             Some(ty) if ty == QString::from("presentation") => {
-                debug!(slides = ?slide.slide_count);
-                for i in 0..slide.slide_count {
+                debug!(?slide, "Inserting presentation slide");
+                if background.clone().ends_with(
+                    &QString::from(".html"),
+                    CaseSensitivity::CaseInsensitive,
+                ) {
                     slide.ty = ty.clone();
+                    slide.html = true;
                     slide.image_background = background.clone();
                     slide.video_background = QString::from("");
                     slide.slide_index = i;
                     self.as_mut().add_slide(&slide);
+                } else {
+                    for i in 0..slide.slide_count {
+                        slide.ty = ty.clone();
+                        slide.image_background = background.clone();
+                        slide.video_background = QString::from("");
+                        slide.slide_index = i;
+                        self.as_mut().add_slide(&slide);
+                    }
                 }
             }
             _ => println!("It's somethign else!"),

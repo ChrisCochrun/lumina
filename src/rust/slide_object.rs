@@ -8,6 +8,8 @@ mod slide_object {
             cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qvariant.h");
         type QVariant = cxx_qt_lib::QVariant;
+        // #[cxx_name = "SlideModel"]
+        // type SlideModel = crate::slide_model::SlideModelRust;
     }
 
     unsafe extern "RustQt" {
@@ -54,6 +56,7 @@ mod slide_object {
         #[qproperty(i32, font_size)]
         #[qproperty(f32, video_start_time)]
         #[qproperty(f32, video_end_time)]
+        // #[qproperty(*mut SlideModel, slide_model)]
         type SlideObject = super::SlideObjectRust;
 
         #[qinvokable]
@@ -84,7 +87,7 @@ mod slide_object {
 use std::pin::Pin;
 
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::{QString, QVariant};
+use cxx_qt_lib::{CaseSensitivity, QString, QVariant};
 use tracing::debug;
 
 use self::slide_object::QMap_QString_QVariant;
@@ -108,6 +111,7 @@ pub struct SlideObjectRust {
     font_size: i32,
     video_start_time: f32,
     video_end_time: f32,
+    // slide_model: *mut qobject::SlideModel,
 }
 
 impl Default for SlideObjectRust {
@@ -130,6 +134,7 @@ impl Default for SlideObjectRust {
             image_count: 0,
             video_start_time: 0.0,
             video_end_time: 0.0,
+            // slide_model: std::ptr::null_mut(),
         }
     }
 }
@@ -151,25 +156,26 @@ impl slide_object::SlideObject {
             .unwrap_or(QVariant::from(&0));
         let slide_index = slindex.value::<i32>().unwrap_or_default();
 
-        let html = item
-            .get(&QString::from("html"))
-            .unwrap_or(QVariant::from(&false));
-        if let Some(html) = html.value::<bool>() {
-            if html {
-                debug!(?html, count, slide_index);
-                if slide_index > 0 && slide_index < count - 1 {
-                    if current_index < &index {
-                        self.as_mut().reveal_next();
-                        debug!("RevealNext");
-                        return;
-                    } else if slide_index > 0 {
-                        self.as_mut().reveal_prev();
-                        debug!("RevealPrev");
-                        return;
-                    }
-                }
-            }
-        }
+        // let html = item
+        //     .get(&QString::from("html"))
+        //     .unwrap_or(QVariant::from(&false));
+        // if let Some(html) = html.value::<bool>() {
+        //     if html {
+        //         debug!(?html, count, slide_index);
+        //         if slide_index > 0 && slide_index < count - 1 {
+        //             if current_index < &index {
+        //                 self.as_mut().reveal_next();
+        //                 debug!("RevealNext");
+        //                 return;
+        //             } else if slide_index > 0 {
+        //                 self.as_mut().reveal_prev();
+        //                 debug!("RevealPrev");
+        //                 return;
+        //             }
+        //         }
+        //     }
+        // }
+        debug!(index, "Changing slide");
 
         println!("## Slide Details ##");
         let text = item
@@ -322,15 +328,67 @@ impl slide_object::SlideObject {
         mut self: Pin<&mut Self>,
         next_item: QMap_QString_QVariant,
     ) -> bool {
+        debug!(
+            item = ?next_item.get(&QString::from("type")).unwrap().value::<QString>(),
+            ibg = ?next_item.get(&QString::from("imageBackground")).unwrap().value::<QString>(),
+            vbg = ?next_item.get(&QString::from("videoBackground")).unwrap().value::<QString>(),
+            "advancing to next slide"
+        );
         let new_id = self.as_ref().slide_index() + 1;
-        self.as_mut().change_slide(next_item, new_id);
+        let html = self.as_ref().image_background.ends_with(
+            &QString::from(".html"),
+            CaseSensitivity::CaseInsensitive,
+        );
+        let service_item = next_item
+            .get(&QString::from("serviceItemId"))
+            .unwrap()
+            .value::<i32>()
+            .unwrap_or_default();
+        if html {
+            // Check to see if current slide is at the end
+            // if not, advance to the next one.
+            debug!(
+                currentIndex = self.as_ref().slide_index,
+                newIndex = new_id,
+                slide_count = self.as_ref().image_count
+            );
+            if self.as_ref().slide_index
+                < self.as_ref().image_count - 1
+            {
+                self.as_mut().set_slide_index(new_id);
+                self.as_mut().reveal_next();
+                debug!("returning false");
+                return false;
+            }
+        }
+        self.as_mut().change_slide(next_item, service_item);
+        debug!(service_item, "returning true");
         true
     }
     pub fn previous(
         mut self: Pin<&mut Self>,
         prev_item: QMap_QString_QVariant,
     ) -> bool {
+        debug!(
+            item = ?prev_item.get(&QString::from("type")).unwrap().value::<QString>(),
+            ibg = ?prev_item.get(&QString::from("imageBackground")).unwrap().value::<QString>(),
+            vbg = ?prev_item.get(&QString::from("videoBackground")).unwrap().value::<QString>(),
+            "backing to previous slide"
+        );
         let new_id = self.as_ref().slide_index() - 1;
+        let html = self.as_ref().image_background.ends_with(
+            &QString::from(".html"),
+            CaseSensitivity::CaseInsensitive,
+        );
+        if html {
+            // Check to see if current slide is at the beginning
+            // if not, go back to the previous one.
+            if self.as_ref().slide_index > 0 {
+                self.as_mut().set_slide_index(new_id);
+                self.as_mut().reveal_prev();
+                return false;
+            }
+        }
         self.as_mut().change_slide(prev_item, new_id);
         true
     }

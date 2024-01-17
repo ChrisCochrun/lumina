@@ -465,17 +465,22 @@ FocusScope {
 
     function nextSlideAction() {
         keyHandler.forceActiveFocus();
-        console.log(currentServiceItem);
-        console.log(totalSlides);
-        console.log(imageBackground);
         const nextSlideIdx = currentSlide + 1;
-        if (!SlideObject.imageBackground.endsWith(".html") &&
-            (nextSlideIdx > totalSlides || nextSlideIdx < 0))
-            return;
+        const nextSlide = SlideModel.getItem(nextSlideIdx);
+        /* if (!SlideObject.imageBackground.endsWith(".html") && */
+        /*     (nextSlideIdx > totalSlides || nextSlideIdx < 0)) */
+        /*     return; */
         console.log("currentServiceItem " + currentServiceItem);
+        console.log("totalSlides " + totalSlides);
         console.log("currentSlide " + currentSlide);
         console.log("nextSlideIdx " + nextSlideIdx);
-        changeSlide(nextSlideIdx);
+        for (var prop in nextSlide)
+            console.log(prop += " (" + typeof(nextSlide[prop]) + ") = " + nextSlide[prop]);
+        /* changeSlide(nextSlideIdx); */
+        if (SlideObject.next(nextSlide)) {
+            currentSlide = nextSlideIdx;
+            currentServiceItem = nextSlide.serviceItemId;
+        }
     }
 
     function nextSlide() {

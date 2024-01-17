@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [62%] [48/77]
+* Tasks [61%] [48/78]
 ** TODO Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
@@ -15,6 +15,15 @@ In order to achieve this, I have to do some of the logic in qml as opposed to ru
 - Maybe signal handlers?
 
 I've written this with signal handlers now. It's working sorta.
+** TODO Figure out how to nest qobjects
+
+This is supposed to be covered in the examples and the book.
+- https://github.com/KDAB/cxx-qt/blob/main/examples/qml_features/rust/src/nested_qobjects.rs
+- https://kdab.github.io/cxx-qt/book/concepts/nested_objects.html
+
+But, I can't seem to get it to compile. I'll keep tinkering but this would be huge for allowing me to have a single object that can get passed into functions of other objects to be able to call inner functions from the outer call. This would mean I could have obs and slides talk. I could have the slide_object talk to the model. And more...
+
+Maybe an alternative to this would be connecting them through signals, but idk yet....
 
 ** TODO Possibly add better handling of data through enums
 [[file:~/dev/lumina/src/rust/image_model.rs::impl FromStr for Role {]]
