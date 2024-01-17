@@ -120,9 +120,9 @@ FocusScope {
                     implicitHeight: width / 16 * 9
                     anchors.centerIn: parent
                     itemType: SlideObject.ty
-                    imageSource: SlideObject.imageBackground.endsWith(".html") ? "" : SlideObject.imageBackground
-                    webSource: SlideObject.imageBackground.endsWith(".html") ? SlideObject.imageBackground : ""
-                    htmlVisible: SlideObject.imageBackground.endsWith(".html")
+                    imageSource: SlideObject.html ? "" : SlideObject.imageBackground
+                    webSource: SlideObject.html ? SlideObject.imageBackground : ""
+                    htmlVisible: SlideObject.html
                     videoSource: SlideObject.videoBackground
                     audioSource: SlideObject.audio
                     chosenFont: SlideObject.font
@@ -467,9 +467,8 @@ FocusScope {
         keyHandler.forceActiveFocus();
         const nextSlideIdx = currentSlide + 1;
         const nextSlide = SlideModel.getItem(nextSlideIdx);
-        /* if (!SlideObject.imageBackground.endsWith(".html") && */
-        /*     (nextSlideIdx > totalSlides || nextSlideIdx < 0)) */
-        /*     return; */
+        if (nextSlideIdx > totalSlides || nextSlideIdx < 0)
+            return;
         console.log("currentServiceItem " + currentServiceItem);
         console.log("totalSlides " + totalSlides);
         console.log("currentSlide " + currentSlide);
@@ -491,12 +490,18 @@ FocusScope {
     function previousSlideAction() {
         keyHandler.forceActiveFocus();
         const prevSlideIdx = currentSlide - 1;
+        const prevSlide = SlideModel.getItem(prevSlideIdx);
         if (prevSlideIdx > totalSlides || prevSlideIdx < 0)
             return;
         console.log("currentServiceItem " + currentServiceItem);
+        console.log("totalSlides " + totalSlides);
         console.log("currentSlide " + currentSlide);
         console.log("prevSlideIdx " + prevSlideIdx);
-        changeSlide(prevSlideIdx);
+        /* changeSlide(prevSlideIdx); */
+        if (SlideObject.previous(prevSlide)) {
+            currentSlide = prevSlideIdx;
+            currentServiceItem = prevSlide.serviceItemId;
+        }
     }
 
     function previousSlide() {

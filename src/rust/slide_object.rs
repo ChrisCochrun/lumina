@@ -49,7 +49,7 @@ mod slide_object {
         #[qproperty(QString, audio)]
         #[qproperty(QString, image_background)]
         #[qproperty(QString, video_background)]
-        #[qproperty(QString, html)]
+        #[qproperty(bool, html)]
         #[qproperty(QString, vtext_alignment)]
         #[qproperty(QString, htext_alignment)]
         #[qproperty(QString, font)]
@@ -104,7 +104,7 @@ pub struct SlideObjectRust {
     audio: QString,
     image_background: QString,
     video_background: QString,
-    html: QString,
+    html: bool,
     vtext_alignment: QString,
     htext_alignment: QString,
     font: QString,
@@ -125,7 +125,7 @@ impl Default for SlideObjectRust {
             ty: QString::from(""),
             audio: QString::from(""),
             image_background: QString::from(""),
-            html: QString::from(""),
+            html: false,
             video_background: QString::from(""),
             vtext_alignment: QString::from(""),
             htext_alignment: QString::from(""),
@@ -315,6 +315,13 @@ impl slide_object::SlideObject {
             self.as_mut().set_video_start_time(int)
         }
 
+        let html =
+            image_background.value_or_default::<QString>().ends_with(
+                &QString::from(".html"),
+                CaseSensitivity::CaseInsensitive,
+            );
+        self.as_mut().set_html(html);
+
         self.as_mut().set_image_count(count);
 
         self.as_mut().set_slide_index(slide_index);
@@ -361,6 +368,8 @@ impl slide_object::SlideObject {
                 return false;
             }
         }
+        // reset to empty before change to ensure that the web source gets unloaded
+        self.as_mut().set_image_background(QString::from(""));
         self.as_mut().change_slide(next_item, service_item);
         debug!(service_item, "returning true");
         true
@@ -389,6 +398,8 @@ impl slide_object::SlideObject {
                 return false;
             }
         }
+        // reset to empty before change to ensure that the web source gets unloaded
+        self.as_mut().set_image_background(QString::from(""));
         self.as_mut().change_slide(prev_item, new_id);
         true
     }

@@ -592,9 +592,8 @@ impl slide_model::SlideModel {
                     slide.html = true;
                     slide.image_background = background.clone();
                     slide.video_background = QString::from("");
-                    slide.slide_index = i;
-                    self.as_mut()
-                        .insert_slide(&slide, slide_index + i);
+                    slide.slide_index = 0;
+                    self.as_mut().insert_slide(&slide, slide_index);
                 } else {
                     for i in 0..slide.slide_count {
                         slide.ty = ty.clone();
@@ -787,7 +786,7 @@ impl slide_model::SlideModel {
                     slide.html = true;
                     slide.image_background = background.clone();
                     slide.video_background = QString::from("");
-                    slide.slide_index = i;
+                    slide.slide_index = 0;
                     self.as_mut().add_slide(&slide);
                 } else {
                     for i in 0..slide.slide_count {

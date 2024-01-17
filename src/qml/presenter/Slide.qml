@@ -191,11 +191,14 @@ Item {
             anchors.fill: parent
             url: webSource
             visible: htmlVisible
+            enabled: htmlVisible
             zoomFactor: preview ? 0.25 : 1.0
             onLoadingChanged: {
                 if (loadRequest.status == 2)
                     showPassiveNotification("yahoo?");
             }
+            settings.playbackRequiresUserGesture: false
+            audioMuted: root.preview
 
             /* function moveToSlideIndex(index) { */
             /*     web.runJavaScript(" */
