@@ -199,10 +199,10 @@ FocusScope {
                 id: highlightBar
                 Rectangle {
                     id: activeHighlightBar
-                    width: Kirigami.Units.gridUnit * 10
+                    width: previewSlideList.currentItem.width
                     height: Kirigami.Units.gridUnit / 4
                     y: Kirigami.Units.gridUnit * 7.35
-                    x: 0
+                    x: previewSlideList.currentItem.x
                     radius: 5
                     color: Kirigami.Theme.negativeTextColor
 
