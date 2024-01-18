@@ -23,6 +23,7 @@ mkShell rec {
     clang-tools
     clang
     libclang
+    # libwebp
     # clang-format
     qt5.qtbase
     qt5.qttools
@@ -31,6 +32,7 @@ mkShell rec {
     qt5.qtmultimedia
     qt5.qtwayland
     qt5.qtwebengine
+    qt5.qtimageformats
     libsForQt5.kirigami2
     # libsForQt5.breeze-icons
     # libsForQt5.breeze-qt5
