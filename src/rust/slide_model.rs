@@ -838,6 +838,12 @@ impl slide_model::SlideModel {
         let mut count = 0;
         let mut dest_count = 0;
 
+        // service item 1 moves to service item 2
+        // 1 becomes 2 and 2 becomes 1
+
+        // first slide is 1
+        // dest slide is 2
+
         for (i, slide) in slides_iter.clone().enumerate() {
             if slide.service_item_id == source_index {
                 debug!(index = i, ?slide);
@@ -858,7 +864,11 @@ impl slide_model::SlideModel {
                     //     dest_slide = i as i32 - count
                     // } else {
                     dest_slide = i as i32;
-                    dest_count = slide.slide_count;
+                    dest_count = if slide.slide_count == 0 {
+                        1
+                    } else {
+                        slide.slide_count
+                    };
                     println!(
                         "RUST_dest_slide: {:?} with {:?} slides",
                         dest_slide, dest_count
@@ -884,7 +894,7 @@ impl slide_model::SlideModel {
         println!("RUST_COUNT: {:?}", count);
         println!("RUST_first_slide: {:?}", first_slide);
         println!("RUST_dest_slide: {:?}", dest_slide);
-        println!("RUST_len: {:?}", self.rust().slides.len());
+        // println!("RUST_len: {:?}", self.rust().slides.len());
 
         let slides = self.slides.clone();
         let slides_iter = slides.iter();
@@ -909,8 +919,57 @@ impl slide_model::SlideModel {
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(SlideRoles::ServiceItemId));
 
+        // Change the shifted slides, not the moved service_item
+        if move_down {
+            debug!("While moving down, change service item id");
+            for (i, slide) in slides_iter
+                .clone()
+                .enumerate()
+                .filter(|x| {
+                    x.0 >= (first_slide + dest_count) as usize
+                })
+                .filter(|x| x.1.service_item_id <= destination_index)
+                .filter(|x| x.1.service_item_id >= source_index)
+            {
+                if let Some(slide) =
+                    self.as_mut().rust_mut().slides.get_mut(i)
+                {
+                    debug!(
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id - 1,
+                        "rust-switching-service",
+                    );
+                    slide.service_item_id -= 1;
+                }
+            }
+        } else {
+            debug!("While moving up, change service item id");
+            for (i, slide) in slides_iter
+                .clone()
+                .enumerate()
+                .filter(|x| {
+                    x.0 >= (dest_slide as usize + count as usize)
+                })
+                .filter(|x| x.1.service_item_id >= destination_index)
+                .filter(|x| x.1.service_item_id <= source_index)
+            {
+                if let Some(slide) =
+                    self.as_mut().rust_mut().slides.get_mut(i)
+                {
+                    debug!(
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id + 1,
+                        "rust-switching-service",
+                    );
+                    slide.service_item_id += 1;
+                }
+            }
+        }
+
+        // Change the service_item_id of the moved slide
         if count > 1 {
             if move_down {
+                debug!("While moving down, change service items id of moved slide");
                 for (i, slide) in slides_iter
                     .clone()
                     .enumerate()
@@ -933,6 +992,7 @@ impl slide_model::SlideModel {
                     }
                 }
             } else {
+                debug!("While moving up, change service items id of moved slide");
                 for (i, slide) in slides_iter
                     .clone()
                     .enumerate()
@@ -957,51 +1017,13 @@ impl slide_model::SlideModel {
                 .slides
                 .get_mut(dest_slide as usize)
             {
-                println!(
-                    "rust: this one right here officer. {:?} from {:?} to {:?}",
-                    slide.slide_index, slide.service_item_id, destination_index
+                debug!(
+                    internal_slide_index = slide.slide_index,
+                    service_item = slide.service_item_id,
+                    destination_index,
+                    "This is the slide who's service item needs changed"
                 );
                 slide.service_item_id = destination_index;
-            }
-        }
-
-        if move_down {
-            for (i, slide) in slides_iter
-                .enumerate()
-                .filter(|x| x.0 < (first_slide + dest_count) as usize)
-                .filter(|x| x.1.service_item_id <= destination_index)
-                .filter(|x| x.1.service_item_id >= source_index)
-            {
-                if let Some(slide) =
-                    self.as_mut().rust_mut().slides.get_mut(i)
-                {
-                    debug!(
-                        old_service_id = slide.service_item_id,
-                        new_service_id = slide.service_item_id - 1,
-                        "rust-switching-service",
-                    );
-                    slide.service_item_id -= 1;
-                }
-            }
-        } else {
-            for (i, slide) in slides_iter
-                .enumerate()
-                .filter(|x| {
-                    x.0 >= (dest_slide as usize + count as usize)
-                })
-                .filter(|x| x.1.service_item_id >= destination_index)
-                .filter(|x| x.1.service_item_id <= source_index)
-            {
-                if let Some(slide) =
-                    self.as_mut().rust_mut().slides.get_mut(i)
-                {
-                    debug!(
-                        old_service_id = slide.service_item_id,
-                        new_service_id = slide.service_item_id + 1,
-                        "rust-switching-service",
-                    );
-                    slide.service_item_id += 1;
-                }
             }
         }
 
@@ -1019,6 +1041,9 @@ impl slide_model::SlideModel {
         count: usize,
     ) {
         debug!(source_index, dest_index, count);
+        if source_index == dest_index {
+            return;
+        };
         let end_slide = source_index + count - 1;
         println!("rust-end-slide: {:?}", end_slide);
         println!("rust-dest-slide: {:?}", dest_index);
