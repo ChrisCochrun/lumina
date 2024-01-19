@@ -59,17 +59,37 @@ mod service_item_model {
         );
 
         #[qsignal]
-        fn active_changed(self: Pin<&mut ServiceItemModel>, index: &i32);
+        fn active_changed(
+            self: Pin<&mut ServiceItemModel>,
+            index: &i32,
+        );
         #[qsignal]
         fn selected_changed(self: Pin<&mut ServiceItemModel>);
         #[qsignal]
-        fn item_inserted(self: Pin<&mut ServiceItemModel>, index: &i32, item: &QMap_QString_QVariant);
+        fn item_inserted(
+            self: Pin<&mut ServiceItemModel>,
+            index: &i32,
+            item: &QMap_QString_QVariant,
+        );
         #[qsignal]
-        fn item_added(self: Pin<&mut ServiceItemModel>, index: &i32, item: &QMap_QString_QVariant);
+        fn item_added(
+            self: Pin<&mut ServiceItemModel>,
+            index: &i32,
+            item: &QMap_QString_QVariant,
+        );
         #[qsignal]
-        fn item_removed(self: Pin<&mut ServiceItemModel>, index: &i32, item: &QMap_QString_QVariant);
+        fn item_removed(
+            self: Pin<&mut ServiceItemModel>,
+            index: &i32,
+            item: &QMap_QString_QVariant,
+        );
         #[qsignal]
-        fn item_moved(self: Pin<&mut ServiceItemModel>, source_index: &i32, dest_index: &i32, item: &QMap_QString_QVariant);
+        fn item_moved(
+            self: Pin<&mut ServiceItemModel>,
+            source_index: &i32,
+            dest_index: &i32,
+            item: &QMap_QString_QVariant,
+        );
         #[qsignal]
         fn cleared(self: Pin<&mut ServiceItemModel>);
 
@@ -113,7 +133,7 @@ mod service_item_model {
             video_start_time: f32,
             video_end_time: f32,
         );
-        
+
         #[qinvokable]
         fn get_item(
             self: Pin<&mut ServiceItemModel>,
@@ -129,10 +149,16 @@ mod service_item_model {
         ) -> bool;
 
         #[qinvokable]
-        fn move_up(self: Pin<&mut ServiceItemModel>, index: i32) -> bool;
+        fn move_up(
+            self: Pin<&mut ServiceItemModel>,
+            index: i32,
+        ) -> bool;
 
         #[qinvokable]
-        fn move_down(self: Pin<&mut ServiceItemModel>, index: i32) -> bool;
+        fn move_down(
+            self: Pin<&mut ServiceItemModel>,
+            index: i32,
+        ) -> bool;
 
         #[qinvokable]
         fn select(self: Pin<&mut ServiceItemModel>, index: i32);
@@ -156,10 +182,12 @@ mod service_item_model {
         ) -> bool;
 
         #[qinvokable]
-        fn save(self: Pin<&mut ServiceItemModel>, file: QUrl) -> bool;
+        fn save(self: Pin<&mut ServiceItemModel>, file: QUrl)
+            -> bool;
 
         #[qinvokable]
-        fn load(self: Pin<&mut ServiceItemModel>, file: QUrl) -> bool;
+        fn load(self: Pin<&mut ServiceItemModel>, file: QUrl)
+            -> bool;
     }
 
     impl cxx_qt::Threading for ServiceItemModel {}
@@ -184,7 +212,6 @@ mod service_item_model {
             last: i32,
         );
 
-
         #[inherit]
         unsafe fn begin_move_rows(
             self: Pin<&mut ServiceItemModel>,
@@ -196,10 +223,7 @@ mod service_item_model {
         ) -> bool;
 
         #[inherit]
-        unsafe fn end_move_rows(
-            self: Pin<&mut ServiceItemModel>,
-        );
-
+        unsafe fn end_move_rows(self: Pin<&mut ServiceItemModel>);
 
         #[inherit]
         unsafe fn end_remove_rows(self: Pin<&mut ServiceItemModel>);
@@ -234,20 +258,28 @@ mod service_item_model {
 
         #[qinvokable]
         #[cxx_override]
-        fn role_names(self: &ServiceItemModel) -> QHash_i32_QByteArray;
+        fn role_names(
+            self: &ServiceItemModel,
+        ) -> QHash_i32_QByteArray;
 
         #[qinvokable]
         #[cxx_override]
-        fn row_count(self: &ServiceItemModel, _parent: &QModelIndex)
-            -> i32;
+        fn row_count(
+            self: &ServiceItemModel,
+            _parent: &QModelIndex,
+        ) -> i32;
 
     }
 }
 
-
+use crate::obs::Obs;
+use crate::service_item_model::service_item_model::QList_QString;
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::{QModelIndex, QStringList, QString, QByteArray, QUrl, QVariant};
+use cxx_qt_lib::{
+    QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
+};
 use dirs;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Deserializer, Map, Serializer, Value};
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Read, Write};
@@ -259,11 +291,11 @@ use std::{fs, println};
 use tar::{Archive, Builder};
 use tracing::{debug, debug_span, error, info, instrument};
 use zstd::{Decoder, Encoder};
-use crate::obs::Obs;
-use crate::service_item_model::service_item_model::QList_QString;
-use serde::{Deserialize, Serialize};
 
-use self::service_item_model::{QMap_QString_QVariant, QVector_i32, QHash_i32_QByteArray, ServiceRoles};
+use self::service_item_model::{
+    QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
+    ServiceRoles,
+};
 
 #[derive(Clone, Debug)]
 pub struct ServiceItem {
@@ -282,6 +314,12 @@ pub struct ServiceItem {
     video_start_time: f32,
     video_end_time: f32,
     obs_scene: QString,
+}
+
+impl ServiceItem {
+    fn debug(self) {
+        debug!(?self);
+    }
 }
 
 impl Default for ServiceItem {
@@ -316,9 +354,8 @@ pub struct ServiceItemModelRust {
 
 impl Default for ServiceItemModelRust {
     fn default() -> Self {
-        let obs = tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
+        let obs =
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
                 match Obs::new().await {
                     Ok(o) => Some(o),
                     Err(e) => {
@@ -352,9 +389,7 @@ impl service_item_model::ServiceItemModel {
     }
 
     pub fn remove_item(mut self: Pin<&mut Self>, index: i32) {
-        if index < 0
-            || (index as usize) >= self.service_items.len()
-        {
+        if index < 0 || (index as usize) >= self.service_items.len() {
             return;
         }
 
@@ -364,7 +399,8 @@ impl service_item_model::ServiceItemModel {
                 index,
                 index,
             );
-            self.as_mut().rust_mut()
+            self.as_mut()
+                .rust_mut()
                 .service_items
                 .remove(index as usize);
             self.as_mut().end_remove_rows();
@@ -476,7 +512,8 @@ impl service_item_model::ServiceItemModel {
                 id,
                 id,
             );
-            self.as_mut().rust_mut()
+            self.as_mut()
+                .rust_mut()
                 .service_items
                 .insert(id as usize, service_item);
             self.as_mut().end_insert_rows();
@@ -525,6 +562,8 @@ impl service_item_model::ServiceItemModel {
             self.index(source_index, 0, &QModelIndex::default());
         let parent = model_index.parent();
         let source_id = source_index as usize;
+        let source_first = source_index;
+        let source_last = source_index + count - 1;
         let dest_id = dest_index as usize;
         let cnt = count as usize;
         let end_service_item = source_id + cnt - 1;
@@ -536,14 +575,24 @@ impl service_item_model::ServiceItemModel {
             dest_index
         };
 
+        debug!(
+            ?model_index,
+            ?parent,
+            source_id,
+            dest_id,
+            cnt,
+            end_service_item,
+            qt_dest_index
+        );
+
         println!("rust-end-service_item: {:?}", end_service_item);
         println!("qt-dest-service_item: {:?}", qt_dest_index);
         unsafe {
             // this function doesn't build
             self.as_mut().begin_move_rows(
                 &parent,
-                source_index,
-                source_index + count - 1,
+                source_first,
+                source_last,
                 &parent,
                 qt_dest_index,
             );
@@ -565,7 +614,12 @@ impl service_item_model::ServiceItemModel {
 
             self.as_mut().end_move_rows();
             let item = self.as_mut().get_item(dest_index);
-            self.as_mut().item_moved(&source_index, &dest_index, &item);
+            debug!(source_index, dest_index);
+            self.as_mut().item_moved(
+                &source_index,
+                &dest_index,
+                &item,
+            );
             true
         }
     }
@@ -580,10 +634,8 @@ impl service_item_model::ServiceItemModel {
 
     pub fn select(mut self: Pin<&mut Self>, index: i32) {
         let rc = self.as_ref().count() - 1;
-        let tl =
-            &self.as_ref().index(0, 0, &QModelIndex::default());
-        let br =
-            &self.as_ref().index(rc, 0, &QModelIndex::default());
+        let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
+        let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(ServiceRoles::Selected));
         for service_item in
@@ -593,7 +645,8 @@ impl service_item_model::ServiceItemModel {
             service_item.selected = false;
         }
         if let Some(service_item) = self
-            .as_mut().rust_mut()
+            .as_mut()
+            .rust_mut()
             .service_items
             .get_mut(index as usize)
         {
@@ -642,7 +695,8 @@ impl service_item_model::ServiceItemModel {
                     &QModelIndex::default(),
                 );
                 for (index, item) in self
-                    .as_mut().rust_mut()
+                    .as_mut()
+                    .rust_mut()
                     .service_items
                     .iter_mut()
                     .enumerate()
@@ -654,7 +708,11 @@ impl service_item_model::ServiceItemModel {
                     item.selected = true;
                     debug!(selected_item = ?item, index = index);
                 }
-                self.as_mut().data_changed(top_left, bottom_right, &vector_roles);
+                self.as_mut().data_changed(
+                    top_left,
+                    bottom_right,
+                    &vector_roles,
+                );
                 // self.as_mut().emit_selected_changed();
             } else {
                 let top_left = &self.as_ref().index(
@@ -668,7 +726,8 @@ impl service_item_model::ServiceItemModel {
                     &QModelIndex::default(),
                 );
                 for (index, item) in self
-                    .as_mut().rust_mut()
+                    .as_mut()
+                    .rust_mut()
                     .service_items
                     .iter_mut()
                     .enumerate()
@@ -680,7 +739,11 @@ impl service_item_model::ServiceItemModel {
                     item.selected = true;
                     debug!(selected_item = ?item, index = index);
                 }
-                self.as_mut().data_changed(top_left, bottom_right, &vector_roles);
+                self.as_mut().data_changed(
+                    top_left,
+                    bottom_right,
+                    &vector_roles,
+                );
             }
 
             true
@@ -689,18 +752,16 @@ impl service_item_model::ServiceItemModel {
             // final item. Since we don't know which one is selected,
             // assume that the first one is "selected"
 
-            let top_left = &self.as_ref().index(
-                0,
-                0,
-                &QModelIndex::default(),
-            );
+            let top_left =
+                &self.as_ref().index(0, 0, &QModelIndex::default());
             let bottom_right = &self.as_ref().index(
                 final_index,
                 0,
                 &QModelIndex::default(),
             );
             for (index, item) in self
-                .as_mut().rust_mut()
+                .as_mut()
+                .rust_mut()
                 .service_items
                 .iter_mut()
                 .enumerate()
@@ -709,7 +770,11 @@ impl service_item_model::ServiceItemModel {
                 item.selected = true;
                 debug!(selected_item = ?item, index = index);
             }
-            self.as_mut().data_changed(top_left, bottom_right, &vector_roles);
+            self.as_mut().data_changed(
+                top_left,
+                bottom_right,
+                &vector_roles,
+            );
             debug!(
                 first_item = 0,
                 final_item = final_index,
@@ -719,15 +784,10 @@ impl service_item_model::ServiceItemModel {
         }
     }
 
-    pub fn activate(
-        mut self: Pin<&mut Self>,
-        index: i32,
-    ) -> bool {
+    pub fn activate(mut self: Pin<&mut Self>, index: i32) -> bool {
         let rc = self.as_ref().count() - 1;
-        let tl =
-            &self.as_ref().index(0, 0, &QModelIndex::default());
-        let br =
-            &self.as_ref().index(rc, 0, &QModelIndex::default());
+        let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
+        let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(ServiceRoles::Active));
         for service_item in
@@ -739,7 +799,8 @@ impl service_item_model::ServiceItemModel {
         let obs = self.as_mut().obs.clone();
 
         if let Some(service_item) = self
-            .as_mut().rust_mut()
+            .as_mut()
+            .rust_mut()
             .service_items
             .get_mut(index as usize)
         {
@@ -766,27 +827,20 @@ impl service_item_model::ServiceItemModel {
         }
     }
 
-    pub fn deactivate(
-        mut self: Pin<&mut Self>,
-        index: i32,
-    ) -> bool {
+    pub fn deactivate(mut self: Pin<&mut Self>, index: i32) -> bool {
         let rc = self.as_ref().count() - 1;
-        let tl =
-            &self.as_ref().index(0, 0, &QModelIndex::default());
-        let br =
-            &self.as_ref().index(rc, 0, &QModelIndex::default());
+        let tl = &self.as_ref().index(0, 0, &QModelIndex::default());
+        let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(ServiceRoles::Active));
         if let Some(service_item) = self
-            .as_mut().rust_mut()
+            .as_mut()
+            .rust_mut()
             .service_items
             .get_mut(index as usize)
         {
             println!("service_item is activating {:?}", index);
-            println!(
-                "service_item_title: {:?}",
-                service_item.name
-            );
+            println!("service_item_title: {:?}", service_item.name);
             println!(
                 "service_item_background: {:?}",
                 service_item.background
@@ -821,8 +875,8 @@ impl service_item_model::ServiceItemModel {
             temp_dir.push("lumina");
             let mut s: String =
                 iter::repeat_with(fastrand::alphanumeric)
-                .take(5)
-                .collect();
+                    .take(5)
+                    .collect();
             s.insert_str(0, "temp_");
             temp_dir.push(s);
             match fs::create_dir_all(&temp_dir) {
@@ -854,16 +908,13 @@ impl service_item_model::ServiceItemModel {
                     Some(name) => {
                         println!("bg: {:?}", &name);
                         if name.to_str().unwrap() != "temp" {
-                            flat_background =
-                                name.to_str().unwrap()
+                            flat_background = name.to_str().unwrap()
                         } else {
                             flat_background = "";
                         }
                     }
                     _ => {
-                        println!(
-                            "save-background: no background"
-                        );
+                        println!("save-background: no background");
                         flat_background = "";
                     }
                 }
@@ -909,8 +960,7 @@ impl service_item_model::ServiceItemModel {
                     Err(e) => println!("audio-copy-error: {e}"),
                 }
 
-                for (index, line) in text_list.iter().enumerate()
-                {
+                for (index, line) in text_list.iter().enumerate() {
                     text_vec.insert(index, line.to_string())
                 }
 
@@ -932,10 +982,9 @@ impl service_item_model::ServiceItemModel {
             println!("{:?}", &temp_service_file);
             match fs::File::create(&temp_service_file) {
                 Ok(o) => println!("created: {:?}", o),
-                Err(e) => println!(
-                    "error-creating-service-file: {:?}",
-                    e
-                ),
+                Err(e) => {
+                    println!("error-creating-service-file: {:?}", e)
+                }
             }
             match fs::File::options()
                 .write(true)
@@ -949,15 +998,17 @@ impl service_item_model::ServiceItemModel {
                     ) {
                         Ok(e) => {
                             println!("json: file written");
-                            match tar
-                                .append_dir_all("./", &temp_dir)
+                            match tar.append_dir_all("./", &temp_dir)
                             {
                                 Ok(i) => {
                                     println!("idk");
 
                                     match tar.finish() {
                                         Ok(i) => {
-                                            println!("tar-written: {:?}", &lf);
+                                            println!(
+                                                "tar-written: {:?}",
+                                                &lf
+                                            );
                                             fs::remove_dir_all(
                                                 &temp_dir,
                                             );
@@ -1038,9 +1089,8 @@ impl service_item_model::ServiceItemModel {
             // older save files use servicelist.json instead of serviceitems.json
             // Let's check to see if that's the case and change it's name in the
             // temp dir.
-            for mut file in fs::read_dir(datadir.clone())
-                .unwrap()
-                .filter(|f| {
+            for mut file in
+                fs::read_dir(datadir.clone()).unwrap().filter(|f| {
                     f.as_ref()
                         .map(|e| {
                             String::from(
@@ -1053,10 +1103,7 @@ impl service_item_model::ServiceItemModel {
             {
                 let mut service_path = datadir.clone();
                 service_path.push("serviceitems.json");
-                match fs::rename(
-                    file.unwrap().path(),
-                    service_path,
-                ) {
+                match fs::rename(file.unwrap().path(), service_path) {
                     Ok(i) => println!("We did it captain"),
                     Err(e) => println!("error: {:?}", e),
                 }
@@ -1102,17 +1149,12 @@ impl service_item_model::ServiceItemModel {
                         .as_str()
                         .unwrap();
                     if !string.is_empty() {
-                        println!(
-                            "before_audio_str: {:?}",
-                            string
-                        );
+                        println!("before_audio_str: {:?}", string);
                         let mut audio_path = datadir.clone();
                         audio_path.push(string);
                         // Needed to ensure QML images and mpv will find the audio
-                        let mut final_string = audio_path
-                            .to_str()
-                            .unwrap()
-                            .to_owned();
+                        let mut final_string =
+                            audio_path.to_str().unwrap().to_owned();
                         final_string.insert_str(0, "file://");
                         audio = QString::from(&final_string);
                         println!(
@@ -1126,11 +1168,8 @@ impl service_item_model::ServiceItemModel {
                     audio = QString::from(audio_string);
                 }
 
-                let bgstr = obj
-                    .get("background")
-                    .unwrap()
-                    .as_str()
-                    .unwrap();
+                let bgstr =
+                    obj.get("background").unwrap().as_str().unwrap();
                 let mut background;
                 println!("background_on_disk: {bgstr}");
                 let bgpath =
@@ -1156,10 +1195,7 @@ impl service_item_model::ServiceItemModel {
                             bgpath.to_str().unwrap().to_owned();
                         final_string.insert_str(0, "file://");
                         background = QString::from(&final_string);
-                        println!(
-                            "after_bgstr: {:?}",
-                            final_string
-                        );
+                        println!("after_bgstr: {:?}", final_string);
                     } else {
                         background = QString::default();
                     }
@@ -1177,12 +1213,9 @@ impl service_item_model::ServiceItemModel {
                 let font = QString::from(
                     obj.get("font").unwrap().as_str().unwrap(),
                 );
-                let font_size = obj
-                    .get("fontSize")
-                    .unwrap()
-                    .as_i64()
-                    .unwrap()
-                    as i32;
+                let font_size =
+                    obj.get("fontSize").unwrap().as_i64().unwrap()
+                        as i32;
                 let looping;
                 if let Some(lp) = obj.get("loop") {
                     looping = lp.as_bool().unwrap();
@@ -1200,8 +1233,7 @@ impl service_item_model::ServiceItemModel {
                     obj.get("video_start_time")
                 {
                     video_start_time =
-                        video_start_value.as_f64().unwrap()
-                        as f32;
+                        video_start_value.as_f64().unwrap() as f32;
                 }
                 let mut video_end_time = f32::default();
                 if let Some(video_end_value) =
@@ -1214,9 +1246,8 @@ impl service_item_model::ServiceItemModel {
                     obj.get("text").unwrap().as_array().unwrap();
                 let mut text_list = QList_QString::default();
                 for txt in text_array {
-                    text_list.append(QString::from(
-                        txt.as_str().unwrap(),
-                    ));
+                    text_list
+                        .append(QString::from(txt.as_str().unwrap()));
                 }
                 let text = QStringList::from(&text_list);
 
@@ -1281,20 +1312,42 @@ impl service_item_model::ServiceItemModel {
             self.service_items.get(index.row() as usize)
         {
             return match role {
-                ServiceRoles::Name => QVariant::from(&service_item.name),
-                ServiceRoles::Type => QVariant::from(&service_item.ty),
-                ServiceRoles::Audio => QVariant::from(&service_item.audio),
-                ServiceRoles::Background => QVariant::from(&service_item.background),
+                ServiceRoles::Name => {
+                    QVariant::from(&service_item.name)
+                }
+                ServiceRoles::Type => {
+                    QVariant::from(&service_item.ty)
+                }
+                ServiceRoles::Audio => {
+                    QVariant::from(&service_item.audio)
+                }
+                ServiceRoles::Background => {
+                    QVariant::from(&service_item.background)
+                }
                 ServiceRoles::BackgroundType => {
                     QVariant::from(&service_item.background_type)
                 }
-                ServiceRoles::Text => QVariant::from(&service_item.text),
-                ServiceRoles::Font => QVariant::from(&service_item.font),
-                ServiceRoles::FontSize => QVariant::from(&service_item.font_size),
-                ServiceRoles::SlideCount => QVariant::from(&service_item.slide_count),
-                ServiceRoles::Active => QVariant::from(&service_item.active),
-                ServiceRoles::Selected => QVariant::from(&service_item.selected),
-                ServiceRoles::Looping => QVariant::from(&service_item.looping),
+                ServiceRoles::Text => {
+                    QVariant::from(&service_item.text)
+                }
+                ServiceRoles::Font => {
+                    QVariant::from(&service_item.font)
+                }
+                ServiceRoles::FontSize => {
+                    QVariant::from(&service_item.font_size)
+                }
+                ServiceRoles::SlideCount => {
+                    QVariant::from(&service_item.slide_count)
+                }
+                ServiceRoles::Active => {
+                    QVariant::from(&service_item.active)
+                }
+                ServiceRoles::Selected => {
+                    QVariant::from(&service_item.selected)
+                }
+                ServiceRoles::Looping => {
+                    QVariant::from(&service_item.looping)
+                }
                 ServiceRoles::VideoStartTime => {
                     QVariant::from(&service_item.video_start_time)
                 }
@@ -1315,9 +1368,15 @@ impl service_item_model::ServiceItemModel {
 
     pub fn role_names(&self) -> QHash_i32_QByteArray {
         let mut roles = QHash_i32_QByteArray::default();
-        roles.insert(ServiceRoles::Name.repr, QByteArray::from("name"));
+        roles.insert(
+            ServiceRoles::Name.repr,
+            QByteArray::from("name"),
+        );
         roles.insert(ServiceRoles::Type.repr, QByteArray::from("ty"));
-        roles.insert(ServiceRoles::Audio.repr, QByteArray::from("audio"));
+        roles.insert(
+            ServiceRoles::Audio.repr,
+            QByteArray::from("audio"),
+        );
         roles.insert(
             ServiceRoles::Background.repr,
             QByteArray::from("background"),
@@ -1326,17 +1385,34 @@ impl service_item_model::ServiceItemModel {
             ServiceRoles::BackgroundType.repr,
             QByteArray::from("backgroundType"),
         );
-        roles.insert(ServiceRoles::Text.repr, QByteArray::from("text"));
-        roles.insert(ServiceRoles::Font.repr, QByteArray::from("font"));
-        roles.insert(ServiceRoles::FontSize.repr, QByteArray::from("fontSize"));
+        roles.insert(
+            ServiceRoles::Text.repr,
+            QByteArray::from("text"),
+        );
+        roles.insert(
+            ServiceRoles::Font.repr,
+            QByteArray::from("font"),
+        );
+        roles.insert(
+            ServiceRoles::FontSize.repr,
+            QByteArray::from("fontSize"),
+        );
         roles.insert(
             ServiceRoles::SlideCount.repr,
             QByteArray::from("slideCount"),
         );
-        roles.insert(ServiceRoles::Active.repr, QByteArray::from("active"));
-        roles
-            .insert(ServiceRoles::Selected.repr, QByteArray::from("selected"));
-        roles.insert(ServiceRoles::Looping.repr, QByteArray::from("looping"));
+        roles.insert(
+            ServiceRoles::Active.repr,
+            QByteArray::from("active"),
+        );
+        roles.insert(
+            ServiceRoles::Selected.repr,
+            QByteArray::from("selected"),
+        );
+        roles.insert(
+            ServiceRoles::Looping.repr,
+            QByteArray::from("looping"),
+        );
         roles.insert(
             ServiceRoles::VideoStartTime.repr,
             QByteArray::from("videoStartTime"),

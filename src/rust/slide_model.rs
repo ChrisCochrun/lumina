@@ -157,6 +157,19 @@ mod slide_model {
         unsafe fn end_reset_model(self: Pin<&mut SlideModel>);
 
         #[inherit]
+        unsafe fn begin_move_rows(
+            self: Pin<&mut SlideModel>,
+            source_parent: &QModelIndex,
+            source_first: i32,
+            source_last: i32,
+            destination_parent: &QModelIndex,
+            destination_child: i32,
+        ) -> bool;
+
+        #[inherit]
+        unsafe fn end_move_rows(self: Pin<&mut SlideModel>);
+
+        #[inherit]
         fn can_fetch_more(
             self: &SlideModel,
             parent: &QModelIndex,
@@ -814,6 +827,8 @@ impl slide_model::SlideModel {
             return;
         }
 
+        debug!(source_index, destination_index);
+
         let move_down = source_index < destination_index;
         let slides = self.slides.clone();
         let slides_iter = slides.iter();
@@ -825,8 +840,13 @@ impl slide_model::SlideModel {
 
         for (i, slide) in slides_iter.clone().enumerate() {
             if slide.service_item_id == source_index {
+                debug!(index = i, ?slide);
                 first_slide = i as i32;
-                count = slide.slide_count;
+                count = if slide.slide_count == 0 {
+                    1
+                } else {
+                    slide.slide_count
+                };
                 break;
             }
         }
@@ -869,14 +889,25 @@ impl slide_model::SlideModel {
         let slides = self.slides.clone();
         let slides_iter = slides.iter();
 
-        unsafe {
-            self.as_mut().begin_reset_model();
-        }
         self.as_mut().move_items(
             first_slide as usize,
             dest_slide as usize,
             count as usize,
         );
+
+        // unsafe {
+        //     self.as_mut().begin_reset_model();
+        // }
+
+        let rc = self.as_ref().count() - 1;
+        let tl = &self.as_ref().index(
+            source_index,
+            0,
+            &QModelIndex::default(),
+        );
+        let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
+        let mut vector_roles = QVector_i32::default();
+        vector_roles.append(self.get_role(SlideRoles::ServiceItemId));
 
         if count > 1 {
             if move_down {
@@ -944,14 +975,13 @@ impl slide_model::SlideModel {
                 if let Some(slide) =
                     self.as_mut().rust_mut().slides.get_mut(i)
                 {
-                    println!(
-                        "rust-switching-service: {:?} to {:?}",
-                        slide.service_item_id,
-                        slide.service_item_id - 1
+                    debug!(
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id - 1,
+                        "rust-switching-service",
                     );
                     slide.service_item_id -= 1;
                 }
-                println!("rust-did:");
             }
         } else {
             for (i, slide) in slides_iter
@@ -965,20 +995,19 @@ impl slide_model::SlideModel {
                 if let Some(slide) =
                     self.as_mut().rust_mut().slides.get_mut(i)
                 {
-                    println!(
-                        "rust-switching-service-of: {:?} to {:?}",
-                        slide.service_item_id,
-                        slide.service_item_id + 1
+                    debug!(
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id + 1,
+                        "rust-switching-service",
                     );
                     slide.service_item_id += 1;
                 }
-                println!("rust-did:");
             }
         }
 
-        unsafe {
-            self.as_mut().end_reset_model();
-        }
+        // unsafe {
+        //     self.as_mut().end_reset_model();
+        // }
 
         println!("rust-move: {first_slide} to {dest_slide} with {count} slides");
     }
@@ -989,11 +1018,29 @@ impl slide_model::SlideModel {
         dest_index: usize,
         count: usize,
     ) {
+        debug!(source_index, dest_index, count);
         let end_slide = source_index + count - 1;
         println!("rust-end-slide: {:?}", end_slide);
         println!("rust-dest-slide: {:?}", dest_index);
+        let model_index = self.index(
+            source_index as i32,
+            0,
+            &QModelIndex::default(),
+        );
+        let parent = model_index.parent();
+        let qt_dest_index = if source_index < dest_index {
+            (dest_index + 1) as i32
+        } else {
+            dest_index as i32
+        };
         unsafe {
-            self.as_mut().begin_reset_model();
+            self.as_mut().begin_move_rows(
+                &parent,
+                source_index as i32,
+                (source_index + count - 1) as i32,
+                &parent,
+                qt_dest_index,
+            );
             if source_index < dest_index {
                 let move_amount =
                     dest_index - source_index - count + 1;
@@ -1008,7 +1055,7 @@ impl slide_model::SlideModel {
                     [dest_index..=end_slide]
                     .rotate_left(move_amount);
             }
-            self.as_mut().end_reset_model();
+            self.as_mut().end_move_rows();
         }
     }
 
