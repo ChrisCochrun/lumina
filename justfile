@@ -5,7 +5,7 @@ build:
     make -j8 --dir bld/
     rm -rf ~/.cache/lumina/lumina/qmlcache/
 run:
-    RUST_BACKTRACE=1 RUST_LOG=debug ./bld/bin/lumina
+    RUST_LOG=debug ./bld/bin/lumina
 lint:
     cargo clippy
 clean:

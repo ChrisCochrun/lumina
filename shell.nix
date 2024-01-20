@@ -64,7 +64,7 @@ mkShell rec {
   #   lockFile = ./Cargo.lock;
   # };
 
-  RUST_BACKTRACE = "full";
+  RUST_BACKTRACE = "1";
   LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
   CMAKE_C_COMPILER = "${gcc}/bin/gcc";
   CMAKE_CXX_COMPILER = "${gcc}/bin/g++";
