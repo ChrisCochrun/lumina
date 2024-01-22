@@ -1,4 +1,4 @@
-import QtQuick 2.13
+import QtQuick 2.15
 import QtQuick.Controls 2.15 as Controls
 import QtQuick.Layouts 1.15
 import Qt.labs.platform 1.1 as Labs
@@ -80,15 +80,6 @@ Item {
 
             Presenter.NewVideo {
                 id: newVideo
-            }
-
-            Timer {
-                id: videoDLTimer
-                interval: 3000
-                running: !newVideo.sheetOpen
-                onTriggered: {
-                    newVideo.clear();
-                }
             }
 
             Presenter.LibraryItem {

@@ -14,7 +14,7 @@ Kirigami.OverlaySheet {
     property bool ytdlLoaded: false
 
     header: Kirigami.Heading {
-        text: "Add a new video"
+        text: "Add a local video or download a new one"
     }
 
     ColumnLayout {
@@ -25,31 +25,32 @@ Kirigami.OverlaySheet {
                 anchors.fill: parent
                 Controls.Label {
                     id: videoInputLabel
-                    text: "Enter a video"
+                    text: "Video"
                 }
 
                 Controls.TextField {
                     id: videoInput
                     Layout.fillWidth: true
                     hoverEnabled: true
-                    placeholderText: "Enter a video url..."
+                    placeholderText: "Download a video or enter one..."
                     text: ""
                     onEditingFinished: videoInput.text.startsWith("http") ? loadVideo() : showPassiveNotification("Coach called, this isn't it.");
+                    background: Presenter.TextBackground {}
                 }
 
                 Controls.ToolButton {
                     id: localButton
-                    text: "Local Video"
+                    text: videoInput.text.startsWith("http") ? "Download" : "Local Video"
                     icon.name: "folder-videos-symbolic"
                     hoverEnabled: true
-                    onClicked: videoFileDialog.open()
+                    onClicked: videoInput.text.startsWith("http") ? loadVideo() : videoFileDialog.open()
                 }
             }
         }
 
         Item {
             id: centerItem
-            Layout.preferredHeight: Kirigami.Units.gridUnit * 30
+            Layout.preferredHeight: ytdl.loaded ? Kirigami.Units.gridUnit * 20 : Kirigami.Units.gridUnit * 5
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
             visible: true
@@ -110,15 +111,19 @@ Kirigami.OverlaySheet {
                     Controls.Label {
                         id: videoTitle
                         text: ytdl.title
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideRight
                     }
                 }
 
                 Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: Kirigami.Units.gridUnit * 2
-                    Controls.Button {
+                    Controls.ToolButton {
                         anchors.right: parent.right
                         text: "Ok"
+                        icon.name: "check-filled"
+                        hoverEnabled: true
                         onClicked: {
                             videoProxyModel.videoModel.newItem(ytdl.file);
                             clear();
@@ -147,14 +152,25 @@ Kirigami.OverlaySheet {
 
         }
 
+        Timer {
+            id: videoDLTimer
+            interval: 3000
+            running: !root.sheetOpen
+            onTriggered: {
+                clear();
+            }
+        }
+
     }
 
     function loadVideo() {
-        if (ytdl.getVideo(videoInput.text))
-            loadingIndicator.visible = true;
+        ytdl.getVideo(videoInput.text)
+        /* if (ytdl.getVideo(videoInput.text)) */
+        /*     loadingIndicator.visible = true; */
     }
 
     function clear() {
+        videoInput.text = "";
         ytdl.title = "";
         ytdl.thumbnail = "";
         ytdl.loaded = false;
