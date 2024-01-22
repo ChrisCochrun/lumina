@@ -313,7 +313,7 @@ impl slide_model::SlideModel {
     }
 
     pub fn clear(mut self: Pin<&mut Self>) {
-        println!("CLEARING ALL SLIDES");
+        debug!("CLEARING ALL SLIDES");
         unsafe {
             self.as_mut().begin_reset_model();
             self.as_mut().rust_mut().slides.clear();
@@ -326,19 +326,19 @@ impl slide_model::SlideModel {
         index: i32,
         _service_item: &QMap_QString_QVariant,
     ) {
-        println!("Rusty-Removal-Time: {:?}", index);
+        debug!("Rusty-Removal-Time: {:?}", index);
         let slides = self.slides.clone();
         let slides_iter = slides.iter();
         for (i, slide) in slides_iter.enumerate().rev() {
             if slide.service_item_id == index {
                 self.as_mut().remove_item(i as i32);
-                println!("Removing-slide: {:?}", i);
+                debug!("Removing-slide: {:?}", i);
             } else if slide.service_item_id > index {
                 if let Some(slide) =
                     self.as_mut().rust_mut().slides.get_mut(i)
                 {
-                    println!("changing-serviceid-of: {:?}", i);
-                    println!(
+                    debug!("changing-serviceid-of: {:?}", i);
+                    debug!(
                         "changing-serviceid-fromandto: {:?}-{:?}",
                         slide.service_item_id,
                         slide.service_item_id - 1
@@ -363,12 +363,12 @@ impl slide_model::SlideModel {
             self.as_mut().rust_mut().slides.remove(index as usize);
             self.as_mut().end_remove_rows();
         }
-        println!("removed-row: {:?}", index);
+        debug!("removed-row: {:?}", index);
     }
 
     fn add_slide(mut self: Pin<&mut Self>, slide: &Slide) {
         let index = self.as_ref().slides.len() as i32;
-        println!("{:?}", slide);
+        debug!("{:?}", slide);
         let slide = slide.clone();
 
         let count = self.as_ref().count;
@@ -563,17 +563,17 @@ impl slide_model::SlideModel {
                 slide.video_background = QString::from("");
                 slide.slide_index = 0;
                 self.as_mut().insert_slide(&slide, slide_index);
-                println!("Image added to slide model!");
+                debug!("Image added to slide model!");
             }
             Some(ty) if ty == QString::from("song") => {
                 let count = text_vec.len();
                 for (i, text) in text_vec.iter().enumerate() {
-                    println!(
+                    debug!(
                         "rust: add song of {:?} length at index {:?}",
                         &count, &slide_index
                     );
                     slide.ty = ty.clone();
-                    // println!("{:?}", text_vec[i].clone());
+                    // debug!("{:?}", text_vec[i].clone());
                     slide.text = text.clone();
                     slide.slide_count = count as i32;
                     slide.slide_index = i as i32;
@@ -618,10 +618,10 @@ impl slide_model::SlideModel {
                     }
                 }
             }
-            _ => println!("It's somethign else!"),
+            _ => debug!("It's somethign else!"),
         };
 
-        println!("Item added in slide model!");
+        debug!("Item added in slide model!");
     }
 
     pub fn add_item_from_service(
@@ -629,7 +629,7 @@ impl slide_model::SlideModel {
         index: i32,
         service_item: &QMap_QString_QVariant,
     ) {
-        println!("add rust slide {:?}", index);
+        debug!("add rust slide {:?}", index);
         let mut slide = Slide::default();
         let iter = service_item.iter();
 
@@ -768,7 +768,7 @@ impl slide_model::SlideModel {
             Some(ty) if ty == QString::from("song") => {
                 for (i, text) in text_vec.iter().enumerate() {
                     slide.ty = ty.clone();
-                    // println!("{:?}", text_vec[i].clone());
+                    // debug!("{:?}", text_vec[i].clone());
                     slide.text = text.clone();
                     slide.slide_count = text_vec.len() as i32;
                     slide.slide_index = i as i32;
@@ -811,10 +811,10 @@ impl slide_model::SlideModel {
                     }
                 }
             }
-            _ => println!("It's somethign else!"),
+            _ => debug!("It's somethign else!"),
         };
 
-        println!("Item added in rust model!");
+        debug!("Item added in rust model!");
     }
 
     pub fn move_item_from_service(
@@ -844,57 +844,61 @@ impl slide_model::SlideModel {
         // first slide is 1
         // dest slide is 2
 
-        for (i, slide) in slides_iter.clone().enumerate() {
-            if slide.service_item_id == source_index {
-                debug!(index = i, ?slide);
-                first_slide = i as i32;
-                count = if slide.slide_count == 0 {
+        //lets get the first slide and count
+        for (i, slide) in slides_iter
+            .clone()
+            .enumerate()
+            .filter(|slide| slide.1.service_item_id == source_index)
+        {
+            debug!(index = i, ?slide);
+            first_slide = i as i32;
+            count = if slide.slide_count == 0 {
+                1
+            } else {
+                slide.slide_count
+            };
+            break;
+        }
+
+        // lets get the dest_slide and count
+        if move_down {
+            for (i, slide) in
+                slides_iter.clone().enumerate().rev().filter(
+                    |slide| {
+                        slide.1.service_item_id == destination_index
+                    },
+                )
+            {
+                dest_slide = i as i32;
+                dest_count = if slide.slide_count == 0 {
                     1
                 } else {
                     slide.slide_count
                 };
+                debug!(
+                    "RUST_dest_slide: {:?} with {:?} slides",
+                    dest_slide, dest_count
+                );
+                break;
+            }
+        } else {
+            for (i, slide) in
+                slides_iter.enumerate().filter(|slide| {
+                    slide.1.service_item_id == destination_index
+                })
+            {
+                dest_slide = i as i32;
+                dest_count = if slide.slide_count == 0 {
+                    1
+                } else {
+                    slide.slide_count
+                };
+                debug!("RUST_dest_slide: {:?}", dest_slide);
                 break;
             }
         }
 
-        if move_down {
-            for (i, slide) in slides_iter.enumerate().rev() {
-                if slide.service_item_id == destination_index {
-                    // if count > 1 {
-                    //     dest_slide = i as i32 - count
-                    // } else {
-                    dest_slide = i as i32;
-                    dest_count = if slide.slide_count == 0 {
-                        1
-                    } else {
-                        slide.slide_count
-                    };
-                    println!(
-                        "RUST_dest_slide: {:?} with {:?} slides",
-                        dest_slide, dest_count
-                    );
-                    // }
-                    break;
-                }
-            }
-        } else {
-            for (i, slide) in slides_iter.enumerate() {
-                if slide.service_item_id == destination_index {
-                    // if count > 1 {
-                    //     dest_slide = i as i32 - count
-                    // } else {
-                    dest_slide = i as i32;
-                    println!("RUST_dest_slide: {:?}", dest_slide);
-                    // }
-                    break;
-                }
-            }
-        }
-
-        println!("RUST_COUNT: {:?}", count);
-        println!("RUST_first_slide: {:?}", first_slide);
-        println!("RUST_dest_slide: {:?}", dest_slide);
-        // println!("RUST_len: {:?}", self.rust().slides.len());
+        debug!(count, first_slide, dest_slide);
 
         let slides = self.slides.clone();
         let slides_iter = slides.iter();
@@ -911,60 +915,19 @@ impl slide_model::SlideModel {
 
         let rc = self.as_ref().count() - 1;
         let tl = &self.as_ref().index(
-            source_index,
+            first_slide,
             0,
             &QModelIndex::default(),
         );
-        let br = &self.as_ref().index(rc, 0, &QModelIndex::default());
+        let br = &self.as_ref().index(
+            dest_slide,
+            0,
+            &QModelIndex::default(),
+        );
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(SlideRoles::ServiceItemId));
-
-        // Change the shifted slides, not the moved service_item
-        if move_down {
-            debug!("While moving down, change service item id");
-            for (i, slide) in slides_iter
-                .clone()
-                .enumerate()
-                .filter(|x| {
-                    x.0 >= (first_slide + dest_count) as usize
-                })
-                .filter(|x| x.1.service_item_id <= destination_index)
-                .filter(|x| x.1.service_item_id >= source_index)
-            {
-                if let Some(slide) =
-                    self.as_mut().rust_mut().slides.get_mut(i)
-                {
-                    debug!(
-                        old_service_id = slide.service_item_id,
-                        new_service_id = slide.service_item_id - 1,
-                        "rust-switching-service",
-                    );
-                    slide.service_item_id -= 1;
-                }
-            }
-        } else {
-            debug!("While moving up, change service item id");
-            for (i, slide) in slides_iter
-                .clone()
-                .enumerate()
-                .filter(|x| {
-                    x.0 >= (dest_slide as usize + count as usize)
-                })
-                .filter(|x| x.1.service_item_id >= destination_index)
-                .filter(|x| x.1.service_item_id <= source_index)
-            {
-                if let Some(slide) =
-                    self.as_mut().rust_mut().slides.get_mut(i)
-                {
-                    debug!(
-                        old_service_id = slide.service_item_id,
-                        new_service_id = slide.service_item_id + 1,
-                        "rust-switching-service",
-                    );
-                    slide.service_item_id += 1;
-                }
-            }
-        }
+        vector_roles
+            .append(self.get_role(SlideRoles::ImageBackground));
 
         // Change the service_item_id of the moved slide
         if count > 1 {
@@ -984,7 +947,8 @@ impl slide_model::SlideModel {
                     if let Some(slide) =
                         self.as_mut().rust_mut().slides.get_mut(i)
                     {
-                        println!(
+                        debug!(
+                            ?slide,
                             "rust: these ones right here officer. from {:?} to {:?}",
                             slide.service_item_id, destination_index
                         );
@@ -1002,7 +966,8 @@ impl slide_model::SlideModel {
                     if let Some(slide) =
                         self.as_mut().rust_mut().slides.get_mut(i)
                     {
-                        println!(
+                        debug!(
+                            ?slide,
                             "rust: these ones right here officer. from {:?} to {:?}",
                             slide.service_item_id, destination_index
                         );
@@ -1027,11 +992,58 @@ impl slide_model::SlideModel {
             }
         }
 
+        // Change the service_item_id of the shifted slides, not the moved service_item
+        if move_down {
+            debug!("While moving down, change service item id");
+            for (i, slide) in slides_iter
+                .clone()
+                .enumerate()
+                .filter(|x| x.1.service_item_id <= destination_index)
+                .filter(|x| x.1.service_item_id >= source_index)
+                .filter(|x| x.0 <= (dest_slide - count) as usize)
+            {
+                if let Some(slide) =
+                    self.as_mut().rust_mut().slides.get_mut(i)
+                {
+                    debug!(
+                        ?slide,
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id - 1,
+                        "rust-switching-service",
+                    );
+                    slide.service_item_id -= 1;
+                }
+            }
+        } else {
+            debug!("While moving up, change service item id");
+            for (i, slide) in slides_iter
+                .clone()
+                .enumerate()
+                .filter(|x| x.0 >= (dest_slide + count) as usize)
+                .filter(|x| x.1.service_item_id >= destination_index)
+                .filter(|x| x.1.service_item_id <= source_index)
+            {
+                if let Some(slide) =
+                    self.as_mut().rust_mut().slides.get_mut(i)
+                {
+                    debug!(
+                        ?slide,
+                        old_service_id = slide.service_item_id,
+                        new_service_id = slide.service_item_id + 1,
+                        "rust-switching-service",
+                    );
+                    slide.service_item_id += 1;
+                }
+            }
+        }
+
+        self.as_mut().data_changed(tl, br, &vector_roles);
+
         // unsafe {
         //     self.as_mut().end_reset_model();
         // }
 
-        println!("rust-move: {first_slide} to {dest_slide} with {count} slides");
+        debug!("rust-move: {first_slide} to {dest_slide} with {count} slides");
     }
 
     fn move_items(
@@ -1045,8 +1057,8 @@ impl slide_model::SlideModel {
             return;
         };
         let end_slide = source_index + count - 1;
-        println!("rust-end-slide: {:?}", end_slide);
-        println!("rust-dest-slide: {:?}", dest_index);
+        debug!("rust-end-slide: {:?}", end_slide);
+        debug!("rust-dest-slide: {:?}", dest_index);
         let model_index = self.index(
             source_index as i32,
             0,
@@ -1069,13 +1081,13 @@ impl slide_model::SlideModel {
             if source_index < dest_index {
                 let move_amount =
                     dest_index - source_index - count + 1;
-                // println!("rust-move_amount: {:?}", move_amount);
+                // debug!("rust-move_amount: {:?}", move_amount);
                 self.as_mut().rust_mut().slides
                     [source_index..=dest_index]
                     .rotate_right(move_amount);
             } else {
                 let move_amount = end_slide - dest_index - count + 1;
-                println!("rust-move_amount: {:?}", move_amount);
+                debug!("rust-move_amount: {:?}", move_amount);
                 self.as_mut().rust_mut().slides
                     [dest_index..=end_slide]
                     .rotate_left(move_amount);
@@ -1088,7 +1100,7 @@ impl slide_model::SlideModel {
         self: Pin<&mut Self>,
         index: i32,
     ) -> QMap_QString_QVariant {
-        println!("{index}");
+        debug!("{index}");
         let mut qvariantmap = QMap_QString_QVariant::default();
         let idx = self.index(index, 0, &QModelIndex::default());
         if !idx.is_valid() {
@@ -1133,7 +1145,7 @@ impl slide_model::SlideModel {
         let mut vector_roles = QVector_i32::default();
         vector_roles.append(self.get_role(SlideRoles::Active));
         for slide in self.as_mut().rust_mut().slides.iter_mut() {
-            // println!("slide is deactivating {:?}", i);
+            // debug!("slide is deactivating {:?}", i);
             slide.active = false;
         }
 
@@ -1313,7 +1325,7 @@ impl slide_model::SlideModel {
 
     pub fn row_count(&self, _parent: &QModelIndex) -> i32 {
         let cnt = self.rust().slides.len() as i32;
-        // println!("row count is {cnt}");
+        // debug!("row count is {cnt}");
         cnt
     }
 }
