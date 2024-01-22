@@ -52,6 +52,10 @@ ListView {
             console.log(index);
             previewSlidesList.currentIndex = index;
             previewSlidesList.positionViewAtIndex(index, ListView.Center);
+            currentSlide = index;
+            const serviceItemId = SlideModel.getItem(index).serviceItemId;
+            console.log(serviceItemId);
+            currentServiceItem = serviceItemId;
         }
     }
 }
