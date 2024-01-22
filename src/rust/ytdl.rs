@@ -27,7 +27,8 @@ mod ytdl {
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use dirs;
-use std::{fs, thread, pin::Pin};
+use tracing::debug;
+use std::{fs, pin::Pin};
 use youtube_dl::YoutubeDl;
 
 #[derive(Clone, Default)]
@@ -47,7 +48,6 @@ impl ytdl::Ytdl {
         if !url.is_valid() {
             false
         } else {
-            let data_dir = dirs::data_local_dir().unwrap();
             if let Some(mut data_dir) = dirs::data_local_dir() {
                 data_dir.push("lumina");
                 data_dir.push("ytdl");
@@ -55,7 +55,7 @@ impl ytdl::Ytdl {
                     fs::create_dir(&data_dir)
                         .expect("Could not create ytdl dir");
                 }
-                println!("{:?}", data_dir);
+                debug!(?data_dir);
                 self.as_mut().set_loading(true);
                 let thread = self.qt_thread();
                 let runtime =
@@ -63,7 +63,7 @@ impl ytdl::Ytdl {
                 runtime.spawn(async move {
                     let url = url.to_string();
                     let output_dirs = data_dir.to_str().unwrap();
-                    println!("{output_dirs}");
+                    debug!(output_dirs);
                     let ytdl = YoutubeDl::new(url)
                         .socket_timeout("15")
                         .output_directory(output_dirs)
@@ -73,9 +73,7 @@ impl ytdl::Ytdl {
                         .unwrap();
                     let output =
                         ytdl.into_single_video().unwrap();
-                    println!("{:?}", output.title);
-                    println!("{:?}", output.thumbnail);
-                    println!("{:?}", output.url);
+                    debug!(output.title, output.thumbnail, output.url);
                     let title = QString::from(&output.title);
                     let thumbnail = QUrl::from(
                         &output.thumbnail.unwrap_or_default(),
@@ -87,7 +85,7 @@ impl ytdl::Ytdl {
                     file.push_str(
                         &output.ext.unwrap_or_default(),
                     );
-                    println!("{:?}", file);
+                    debug!(file);
 
                     thread.queue(move |mut qobject_ytdl| {
                         qobject_ytdl.as_mut().set_loaded(true);

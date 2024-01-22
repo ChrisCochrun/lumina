@@ -4,11 +4,11 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
+use tracing::debug;
 
 pub fn bg_from_video(video: &Path) -> PathBuf {
     let video = PathBuf::from(video);
-    println!("{:?}", video);
-    println!("{:?}", video.file_name());
+    debug!(?video);
     let mut data_dir = dirs::data_local_dir().unwrap();
     data_dir.push("lumina");
     data_dir.push("thumbnails");
@@ -29,11 +29,11 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
         let mut log = str::from_utf8(&output_duration.stderr)
             .expect("Using non UTF-8 characters")
             .to_string();
-        println!("{log}");
+        debug!(log);
         if let Some(duration_index) = log.find("Duration") {
             let mut duration = log.split_off(duration_index + 10);
             duration.truncate(11);
-            println!("rust-duration-is: {duration}");
+            // debug!("rust-duration-is: {duration}");
             let mut hours = String::from("");
             let mut minutes = String::from("");
             let mut seconds = String::from("");
@@ -54,10 +54,7 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
             minutes += hours * 60;
             seconds += minutes * 60;
             at_second = seconds / 5;
-            println!(
-                "hours: {}, minutes: {}, seconds: {}, at_second: {}",
-                hours, minutes, seconds, at_second
-            );
+            debug!(hours, minutes, seconds, at_second);
         }
         let _output = Command::new("ffmpeg")
             .args(&[
@@ -75,7 +72,7 @@ pub fn bg_from_video(video: &Path) -> PathBuf {
         // io::stdout().write_all(&output.stdout).unwrap();
         // io::stderr().write_all(&output.stderr).unwrap();
     } else {
-        println!("Screenshot already exists");
+        debug!("Screenshot already exists");
     }
     screenshot
 }
