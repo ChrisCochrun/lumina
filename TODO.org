@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [62%] [49/79]
+* Tasks [63%] [50/79]
 ** TODO Figure out how to nest qobjects
 
 This is supposed to be covered in the examples and the book.
@@ -82,13 +82,6 @@ Need to experiment with it more.
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
 *** TODO Need to work on all warnings and errors to cleanup logs
 [[file:~/dev/lumina/src/rust/song_model.rs::AudioRole,]]
-** TODO Adding move rows to service list :bug:
-[[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
-Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
-
-All that said, the real solution is to figure out how to get beginMoveRows to compile for rust, until then, implementing some wrapper functions and using beginResetModel instead will work for move_up and move_down.
-
-ALMOST DONE!! I only now need to figure out and fix whatever is happening to the seg fault that happens when moving things fast.
 ** TODO Consider converting diesel to raw sqlx instead
 From what I can gather, sometimes an orm is just too hard to work around rather than doing raw sql queries. The only issue is that my queries have been rather small. I only really need to select everything into the app and then run it from there. However, it could still be a consideration as things age. Perhaps when there are hundreds or even thousands of items in the database, it'll be more effective to use something like SQLx.
 ** TODO Figure out qml hot reload :maintenance:
@@ -220,6 +213,13 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE Adding move row to service list                               :bug:
+[[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
+Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
+
+All that said, the real solution is to figure out how to get beginMoveRows to compile for rust, until then, implementing some wrapper functions and using beginResetModel instead will work for move_up and move_down.
+
+ALMOST DONE!! I only now need to figure out and fix whatever is happening to the seg fault that happens when moving things fast.
 ** DONE Port to CXX-QT 6.0 [0%] [0/0]
 [[file:~/dev/lumina/src/rust/lib.rs]]
 
