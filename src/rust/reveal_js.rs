@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn count_slides_test() {
-        let html_file = Path::new("/home/chris/org/lessons/2023_24_1_adam_and_eve_lesson.html");
-        assert_eq!(count_slides_and_fragments(html_file), 33);
+        let html_file = Path::new("/home/chris/docs/notes/lessons/2023_24_1_adam_and_eve_lesson.html");
+        assert_eq!(count_slides_and_fragments(html_file), 21);
     }
 }
