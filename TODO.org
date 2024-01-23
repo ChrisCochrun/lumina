@@ -4,7 +4,11 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [62%] [50/80]
+* Tasks [0%] [0/0]
+** TODO Create a song_lyrics searching and importer for the song_editor
+[[file:~/dev/lumina/src/rust/songs/song_lyrics.rs::pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {]]
+
+This file will hold all the functions and facilities to search for songs through Genius lyrics and import the lyrics into the app.
 ** TODO Figure out how to nest qobjects
 
 This is supposed to be covered in the examples and the book.
@@ -42,17 +46,17 @@ Apparently this doesn't work with cxx_qt right now....
 
 And I think it's been improved by allow Q_ENUMs to be made. So, perhaps I'll figure out how to register those enums to QML and can pass them back into the rust side to stop using so many random ints.
 
-** TODO Mouse needs to have resize shape when hovering controls
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
-** TODO Add a way to interact with OBS
+** TODO Add a way to interact with OBS :feature:
 The basic implementation is done. In order to make use of it in the odd broken QT way, i needed to implement clone on my stuct, but it worked out.
 *** DONE OBWS
 *** DONE Need to create a way to track the obs scenes. Then render them as a model.
 Once the model of OBS scenes is created, we can select a scene to add it to the service item. Then hopefully activate will take that scene and set it inside obs when switching slides.
-*** TODO OBWS setting scenes
-This has been really tricky since there is something of a bug when using =runtime.block_on()= rather than having a single cohesive tokio runtime. So, perhaps I need to figure out if I can't make a runtime that works for the whole app so that I can manage these a little better.
+
 *** TODO This should be ported to slides rather than service_items.
 Since sometimes in a presentation you'd possibly want different obs scenes, lets instead make these changes on the slides rather than on the service_items. That way each slide can have an associated obs scene and do some trickerydo to determine if we need to change it.
+
+*** TODO OBWS setting scenes
+This has been really tricky since there is something of a bug when using =runtime.block_on()= rather than having a single cohesive tokio runtime. So, perhaps I need to figure out if I can't make a runtime that works for the whole app so that I can manage these a little better.
 
 ** TODO Find segfault in webengine :bug:
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::id: web]]
@@ -213,6 +217,9 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE Mouse needs to have resize shape when hovering controls       :bug:
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
+
 ** DONE Adding move row to service list                               :bug:
 [[file:~/dev/lumina/src/rust/service_item_model.rs::pub fn move_rows(]]
 Since cxx-qt is having trouble compiling beginMoveRows for rust, I tried a wrapper function in C++ but that's causing an overflow in the slide_model after the signal. Actually I don't think a wrapper function should even work since the Rust model is the one that should be calling beginMoveRows, not the C++ model.
