@@ -11,3 +11,5 @@ lint:
 clean:
     cargo clean
     rm -rf bld/
+test:
+    RUST_LOG=debug cargo test --benches --tests --all-features -- --nocapture
