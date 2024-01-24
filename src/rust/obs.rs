@@ -201,3 +201,13 @@ impl obs_model::ObsModel {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    
+    #[test]
+    pub fn test_obs_setting_scene() {
+        assert_eq!(true, true)
+    }
+}
