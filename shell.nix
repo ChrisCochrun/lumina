@@ -19,6 +19,8 @@ mkShell rec {
     libsForQt5.wrapQtAppsHook
     makeWrapper
 
+    openssl.dev
+    openssl.out
 
     clang-tools
     clang
@@ -68,7 +70,6 @@ mkShell rec {
   LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
   CMAKE_C_COMPILER = "${gcc}/bin/gcc";
   CMAKE_CXX_COMPILER = "${gcc}/bin/g++";
-
   CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG = true;
   # QT_SCALE_FACTOR = 1;
   # QT_PLUGIN_PATH="${QT_PLUGIN_PATH/':''/nix/store/85jx8w2nh1ln4kb0hf3dc6ky0dh6ri24-lightly-qt-0.4.1/lib/qt-5.15.9/plugins'':'/':'}"

@@ -99,6 +99,8 @@ target_link_libraries(${APP_NAME}_lib INTERFACE
   KF5::Archive
   KF5::CoreAddons
   mpv
+  ssl
+  crypto
 )
 
 # Link to the Rust library
