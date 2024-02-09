@@ -197,7 +197,7 @@ Kirigami.ApplicationWindow {
         defaultSuffix: ".pres"
         selectExisting: false
         onAccepted: {
-            /* save(saveFileDialog.fileUrl); */
+            finalSave(saveFileDialog.fileUrl);
             console.log(saveFileDialog.fileUrl);
         }
         onRejected: {
@@ -261,13 +261,15 @@ Kirigami.ApplicationWindow {
         const saveFile = RSettings.lastSaveFile;
         console.log(saveFile.toString());
         let file = "";
-        saveFile.length === 0 ? file = fileHelper.saveFile() : file = saveFile;
-        finalSave(file);
+        if (saveFile.length === 0) {
+            saveFileDialog.open()
+        } else {
+            finalSave(saveFile);
+        }
     }
 
     function saveAs() {
-        const file = fileHelper.saveFile();
-        finalSave(file);
+        saveFileDialog.open();
     }
 
     function finalSave(file) {
