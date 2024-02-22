@@ -4,7 +4,13 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [0%] [0/0]
+* Tasks [62%] [50/80]
+** TODO [#A] Fix updating things in the song editor
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
+The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
+
+*** TODO Seems that updating songs aren't reflected well
+[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
 ** TODO Create a song_lyrics searching and importer for the song_editor
 [[file:~/dev/lumina/src/rust/songs/song_lyrics.rs::pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {]]
 
@@ -251,12 +257,6 @@ Like this..
 target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
 #+end_src
 
-** DONE [#B] Fix updating things in the song editor
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
-The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
-
-*** DONE Seems that updating songs aren't reflected well
-[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
 ** DONE Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
