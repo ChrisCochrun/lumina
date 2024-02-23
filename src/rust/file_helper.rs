@@ -126,6 +126,7 @@ impl file_helper::FileHelper {
             }
             _ => debug!("nothing"),
         };
+        debug!("trying to load file");
         let file = file.pick_file();
         if let Some(file) = file {
             println!("loading-file: {:?}", file);
@@ -138,6 +139,7 @@ impl file_helper::FileHelper {
                 QUrl::from(string.as_str())
             }
         } else {
+            error!("Couldn't load file, is xdg-desktop-portals correctly setup?");
             QUrl::default()
         }
     }
