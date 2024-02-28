@@ -80,6 +80,7 @@ impl file_helper::FileHelper {
     }
 
     pub fn save_file(self: Pin<&mut Self>) -> QUrl {
+        debug!("Saving file in rust");
         let file = FileDialog::new()
             .set_file_name("NVTFC.pres")
             .set_title("Save Presentation")
@@ -95,6 +96,7 @@ impl file_helper::FileHelper {
                 QUrl::from(string.as_str())
             }
         } else {
+            error!("There was an error, is xdg-desktop-portals correctly setup?");
             QUrl::default()
         }
     }

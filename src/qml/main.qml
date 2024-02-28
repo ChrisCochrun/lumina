@@ -262,14 +262,16 @@ Kirigami.ApplicationWindow {
         console.log(saveFile.toString());
         let file = "";
         if (saveFile.length === 0) {
-            saveFileDialog.open()
+            file = fileHelper.saveFile();
+            finalSave(file);
         } else {
             finalSave(saveFile);
         }
     }
 
     function saveAs() {
-        saveFileDialog.open();
+        let file = fileHelper.saveFile();
+        finalSave(file);
     }
 
     function finalSave(file) {
