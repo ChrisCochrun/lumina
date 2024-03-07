@@ -594,6 +594,8 @@ impl song_model::SongModel {
         let result = update(songs.filter(id.eq(song_id)))
             .set(audio.eq(updated_audio.to_string()))
             .execute(db);
+        debug!(?result);
+        debug!(?updated_audio);
         match result {
             Ok(_i) => {
                 if let Some(song) =
