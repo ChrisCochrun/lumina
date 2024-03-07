@@ -595,7 +595,6 @@ impl song_model::SongModel {
             .set(audio.eq(updated_audio.to_string()))
             .execute(db);
         debug!(?result);
-        debug!(?updated_audio);
         match result {
             Ok(_i) => {
                 if let Some(song) =
