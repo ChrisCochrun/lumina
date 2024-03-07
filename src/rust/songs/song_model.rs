@@ -495,7 +495,7 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
-                    debug!(?song);
+                    debug!(?song, title = updated_title.to_string());
                     song.title = updated_title.to_string();
                     self.as_mut().data_changed(
                         &model_index,
@@ -527,6 +527,10 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        lyrics = updated_lyrics.to_string()
+                    );
                     song.lyrics = updated_lyrics.to_string();
                     self.as_mut().data_changed(
                         &model_index,
@@ -559,6 +563,10 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        author = updated_author.to_string()
+                    );
                     song.author = updated_author.to_string();
                     self.as_mut().data_changed(
                         &model_index,
@@ -591,6 +599,7 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(?song, audio = updated_audio.to_string());
                     song.audio = updated_audio.to_string();
                     self.as_mut().data_changed(
                         &model_index,
@@ -623,6 +632,7 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(?song, ccli = updated_ccli.to_string());
                     song.ccli = updated_ccli.to_string();
                     self.as_mut().data_changed(
                         &model_index,
@@ -655,6 +665,10 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        verse_order = updated_verse_order.to_string()
+                    );
                     song.verse_order =
                         updated_verse_order.to_string();
                     self.as_mut().data_changed(
@@ -730,6 +744,11 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        background_type =
+                            updated_background_type.to_string()
+                    );
                     song.background_type =
                         updated_background_type.to_string();
                     self.as_mut().data_changed(
@@ -767,6 +786,12 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        horizontal =
+                            updated_horizontal_text_alignment
+                                .to_string()
+                    );
                     song.horizontal_text_alignment =
                         updated_horizontal_text_alignment.to_string();
                     self.as_mut().data_changed(
@@ -804,6 +829,11 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        vertical = updated_vertical_text_alignment
+                            .to_string()
+                    );
                     song.vertical_text_alignment =
                         updated_vertical_text_alignment.to_string();
                     self.as_mut().data_changed(
@@ -838,7 +868,7 @@ impl song_model::SongModel {
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
                     song.font = updated_font.to_string();
-                    debug!(?updated_font);
+                    debug!(?song, font = updated_font.to_string());
                     self.as_mut().data_changed(
                         &model_index,
                         &model_index,
@@ -870,6 +900,10 @@ impl song_model::SongModel {
                 if let Some(song) =
                     self.as_mut().rust_mut().songs.get_mut(index)
                 {
+                    debug!(
+                        ?song,
+                        font_size = updated_font_size.to_string()
+                    );
                     song.font_size = updated_font_size;
                     self.as_mut().data_changed(
                         &model_index,

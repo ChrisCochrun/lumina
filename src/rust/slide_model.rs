@@ -845,10 +845,12 @@ impl slide_model::SlideModel {
         // dest slide is 2
 
         //lets get the first slide and count
-        for (i, slide) in slides_iter
+
+        if let Some((i, slide)) = slides_iter
             .clone()
             .enumerate()
             .filter(|slide| slide.1.service_item_id == source_index)
+            .next()
         {
             debug!(index = i, ?slide);
             first_slide = i as i32;
@@ -857,17 +859,18 @@ impl slide_model::SlideModel {
             } else {
                 slide.slide_count
             };
-            break;
         }
 
         // lets get the dest_slide and count
         if move_down {
-            for (i, slide) in
-                slides_iter.clone().enumerate().rev().filter(
-                    |slide| {
-                        slide.1.service_item_id == destination_index
-                    },
-                )
+            if let Some((i, slide)) = slides_iter
+                .clone()
+                .enumerate()
+                .rev()
+                .filter(|slide| {
+                    slide.1.service_item_id == destination_index
+                })
+                .next()
             {
                 dest_slide = i as i32;
                 dest_count = if slide.slide_count == 0 {
@@ -879,13 +882,14 @@ impl slide_model::SlideModel {
                     "RUST_dest_slide: {:?} with {:?} slides",
                     dest_slide, dest_count
                 );
-                break;
             }
         } else {
-            for (i, slide) in
-                slides_iter.enumerate().filter(|slide| {
+            if let Some((i, slide)) = slides_iter
+                .enumerate()
+                .filter(|slide| {
                     slide.1.service_item_id == destination_index
                 })
+                .next()
             {
                 dest_slide = i as i32;
                 dest_count = if slide.slide_count == 0 {
@@ -894,8 +898,7 @@ impl slide_model::SlideModel {
                     slide.slide_count
                 };
                 debug!("RUST_dest_slide: {:?}", dest_slide);
-                break;
-            }
+            };
         }
 
         debug!(count, first_slide, dest_slide);
