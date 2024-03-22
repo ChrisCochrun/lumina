@@ -143,7 +143,7 @@ impl slide_object::SlideObject {
     pub fn change_slide(
         mut self: Pin<&mut Self>,
         item: QMap_QString_QVariant,
-        index: i32,
+        slide_index: i32,
     ) {
         let current_index = self.as_ref().get_ref().slide_index();
         let icount_variant = item
@@ -154,7 +154,7 @@ impl slide_object::SlideObject {
         let slindex = item
             .get(&QString::from("slideIndex"))
             .unwrap_or(QVariant::from(&0));
-        let slide_index = slindex.value::<i32>().unwrap_or_default();
+        // let slide_index = slindex.value::<i32>().unwrap_or_default();
 
         // let html = item
         //     .get(&QString::from("html"))
@@ -175,7 +175,7 @@ impl slide_object::SlideObject {
         //         }
         //     }
         // }
-        debug!(index, "Changing slide");
+        debug!(slide_index, "Changing slide");
 
         println!("## Slide Details ##");
         let text = item
@@ -326,7 +326,9 @@ impl slide_object::SlideObject {
 
         self.as_mut().set_slide_index(slide_index);
 
-        self.as_mut().slide_changed(index);
+        // This is pointing to the slide in the overall model. So to get it
+        // we need to either track the overall slide index, or get it from
+        self.as_mut().slide_changed(slide_index);
         // self.as_mut().emit(Signals::SlideChanged { slide: &index });
         println!("## Slide End ##");
     }
@@ -346,11 +348,11 @@ impl slide_object::SlideObject {
             &QString::from(".html"),
             CaseSensitivity::CaseInsensitive,
         );
-        let service_item = next_item
-            .get(&QString::from("serviceItemId"))
-            .unwrap()
-            .value::<i32>()
-            .unwrap_or_default();
+        // let service_item = next_item
+        //     .get(&QString::from("serviceItemId"))
+        //     .unwrap()
+        //     .value::<i32>()
+        //     .unwrap_or_default();
         if html {
             // Check to see if current slide is at the end
             // if not, advance to the next one.
@@ -362,16 +364,17 @@ impl slide_object::SlideObject {
             if self.as_ref().slide_index
                 < self.as_ref().image_count - 1
             {
-                self.as_mut().set_slide_index(new_id);
+                // self.as_mut().set_slide_index(new_id);
                 self.as_mut().reveal_next();
                 debug!("returning false");
                 return false;
             }
         }
+        self.as_mut().set_slide_index(new_id);
         // reset to empty before change to ensure that the web source gets unloaded
         self.as_mut().set_image_background(QString::from(""));
-        self.as_mut().change_slide(next_item, service_item);
-        debug!(service_item, "returning true");
+        self.as_mut().change_slide(next_item, new_id);
+        debug!(new_id, "returning true");
         true
     }
     pub fn previous(
@@ -398,6 +401,7 @@ impl slide_object::SlideObject {
                 return false;
             }
         }
+        self.as_mut().set_slide_index(new_id);
         // reset to empty before change to ensure that the web source gets unloaded
         self.as_mut().set_image_background(QString::from(""));
         self.as_mut().change_slide(prev_item, new_id);
