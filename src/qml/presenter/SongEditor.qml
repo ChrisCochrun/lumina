@@ -345,10 +345,10 @@ Item {
                         textFormat: TextEdit.PlainText
                         padding: 10
                         onEditingFinished: {
-                            updateLyrics(text);
-                            editorTimer.running = false;
+                            songEditorModel.lyrics = text
+                            /* editorTimer.running = false; */
                         }
-                        onPressed: editorTimer.running = true
+                        /* onPressed: editorTimer.running = true */
                         background: Presenter.TextBackground {
                             control: lyricsEditor
                         }
@@ -469,19 +469,19 @@ Item {
         }
     }
 
-    Timer {
-        id: editorTimer
-        interval: 1000
-        repeat: true
-        running: false
-        onTriggered: {
-            if (lyricsEditor.text === songEditorModel.lyrics)
-                return;
-            else
-                songEditorModel.lyrics = lyricsEditor.text;
-            /* updateLyrics(lyricsEditor.text); */
-        }
-    }
+    /* Timer { */
+    /*     id: editorTimer */
+    /*     interval: 1000 */
+    /*     repeat: true */
+    /*     running: false */
+    /*     onTriggered: { */
+    /*         if (lyricsEditor.text === songEditorModel.lyrics) */
+    /*             return; */
+    /*         else */
+    /*             songEditorModel.lyrics = lyricsEditor.text; */
+    /*         /\* updateLyrics(lyricsEditor.text); *\/ */
+    /*     } */
+    /* } */
 
     function changeSong(index) {
         console.log("Preparing to change song: " + index + 1 + " out of " + songProxyModel.songModel.count);
@@ -525,12 +525,12 @@ Item {
         }
     }
 
-    function updateLyrics(lyrics) {
-        songProxyModel.songModel.updateLyrics(songID, lyrics);
-        /* songLyrics = lyrics; */
-        clearSlides();
-        changeSlideText(songID);
-    }
+    /* function updateLyrics(lyrics) { */
+    /*     songProxyModel.songModel.updateLyrics(songID, lyrics); */
+    /*     /\* songLyrics = lyrics; *\/ */
+    /*     clearSlides(); */
+    /*     changeSlideText(songID); */
+    /* } */
 
     function updateTitle(title) {
         songProxyModel.songModel.updateTitle(songID, title)
