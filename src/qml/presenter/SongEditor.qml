@@ -5,6 +5,7 @@ import QtQuick.Dialogs 1.3
 import QtQuick.Layouts 1.15
 import org.kde.kirigami 2.13 as Kirigami
 import "./" as Presenter
+import org.presenter 1.0
 
 Item {
     id: root
@@ -348,7 +349,7 @@ Item {
                             songEditorModel.lyrics = text
                             /* editorTimer.running = false; */
                         }
-                        /* onPressed: editorTimer.running = true */
+                        onPressed: editorTimer.running = true
                         background: Presenter.TextBackground {
                             control: lyricsEditor
                         }
@@ -469,25 +470,34 @@ Item {
         }
     }
 
-    /* Timer { */
-    /*     id: editorTimer */
-    /*     interval: 1000 */
-    /*     repeat: true */
-    /*     running: false */
-    /*     onTriggered: { */
-    /*         if (lyricsEditor.text === songEditorModel.lyrics) */
-    /*             return; */
-    /*         else */
-    /*             songEditorModel.lyrics = lyricsEditor.text; */
-    /*         /\* updateLyrics(lyricsEditor.text); *\/ */
-    /*     } */
-    /* } */
+    Timer {
+        id: editorTimer
+        interval: 1000
+        repeat: true
+        running: false
+        onTriggered: {
+            if (lyricsEditor.text === songEditorModel.lyrics) {
+                return;
+            }
+            else {
+                Utils.dbg("Changing Lyrics");
+                /* songEditorModel.lyrics = lyricsEditor.text; */
+                /* showPassiveNotification("Lyrics changed"); */
+                songProxyModel.songModel.updateLyrics(songID, lyricsEditor.text);
+                clearSlides();
+                changeSlideText(songID);
+                Utils.dbg("Lyrics changed");
+            }
+            /* updateLyrics(lyricsEditor.text); */
+        }
+    }
 
     function changeSong(index) {
-        console.log("Preparing to change song: " + index + 1 + " out of " + songProxyModel.songModel.count);
+        Utils.dbg("Preparing to change song: " + index + 1 + " out of " + songProxyModel.songModel.count);
+        editorTimer.running = false;
         clearSlides();
-        const updatedSong = songProxyModel.getSong(index);
-        console.log(updatedSong.vorder + " " + updatedSong.title + " " + updatedSong.audio);
+        const updatedSong = songProxyModel.songModel.getItem(index);
+        Utils.dbg(updatedSong.vorder + " " + updatedSong.title + " " + updatedSong.audio);
         songEditorModel.title = updatedSong.title;
         songEditorModel.lyrics = updatedSong.lyrics;
         songEditorModel.author = updatedSong.author;
@@ -502,14 +512,14 @@ Item {
         songEditorModel.fontSize = updatedSong.fontSize;
         songEditorModel.checkVerseOrder();
         songEditorModel.checkFiles();
-        songID = updatedSong.id;
+        songID = index;
 
         changeSlideHAlignment(song.horizontalTextAlignment);
         changeSlideVAlignment(song.verticalTextAlignment);
         changeSlideFont(song.font, true);
         changeSlideFontSize(song.fontSize, true)
-        changeSlideText(songProxyModel.modelIndex(index).row);
-        console.log("Changing to song: " + song.title + " with ID: " + songID);
+        changeSlideText(index);
+        Utils.dbg("Changing to song: " + song.title + " with ID: " + songID);
         footerFirstText = "Song: ";
         footerSecondText = song.title;
         songList.loadVideo();
@@ -518,10 +528,6 @@ Item {
     Connections {
         target: songEditorModel
         function onLyricsChanged() {
-            showPassiveNotification("Lyrics changed");
-            songProxyModel.songModel.updateLyrics(songID, lyricsEditor.text);
-            clearSlides();
-            changeSlideText(songID);
         }
     }
 
@@ -568,7 +574,7 @@ Item {
         songEditorModel.background = file;
         songProxyModel.songModel.updateBackground(songID, file);
         songProxyModel.songModel.updateBackgroundType(songID, backgroundType);
-        console.log("changed background");
+        Utils.dbg("changed background");
     }
 
 
@@ -647,7 +653,7 @@ Item {
     }
 
     function changeSlideText(id) {
-        const verses = songProxyModel.getLyricList(id);
+        const verses = songProxyModel.songModel.getLyricList(id);
         verses.forEach(songList.appendVerse);
         /* songList.loadVideo(); */
     }

@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
   QCoreApplication::setOrganizationName(QStringLiteral("lumina"));
   QCoreApplication::setOrganizationDomain(QStringLiteral("tfcconnection.org"));
   QCoreApplication::setApplicationName(QStringLiteral("lumina"));
-  // qSetMessagePattern("[%{type} %{time h:m:s ap}: %{function} in %{file}]: %{message}\n");
+  qSetMessagePattern("[%{type} %{time h:m:s ap}: %{function} in %{file}]: %{message}\n");
 
 #ifdef Q_OS_WINDOWS
   QIcon::setFallbackThemeName("breeze");
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
   qDebug() << QApplication::platformName();
 
   //Need to instantiate our slide
-  QScopedPointer<Utils> utils(new Utils);
+  // QScopedPointer<Utils> utils(new Utils);
   QScopedPointer<SlideModel> slideModel(new SlideModel);
   QScopedPointer<SlideModelCpp> slideMod(new SlideModelCpp);
   QScopedPointer<File> filemanager(new File);
@@ -200,7 +200,9 @@ int main(int argc, char *argv[])
                    slideModel.get(),
                    SLOT(activate(int)));
 
-  utils.get()->setup();
+  Utils *utils = new Utils;
+  utils->setup();
+  // qDebug() << utils.get();
 
   if (!serviceItemModel.get()->load(settings->getLastSaveFile())) {
     qDebug() << "Last saved file is missing or there isn't a last saved file.";
@@ -239,6 +241,7 @@ int main(int argc, char *argv[])
                                "ServiceItemC", serviceItemC.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideModel", slideModel.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideMod", slideMod.get());
+  qmlRegisterSingletonInstance("org.presenter", 1, 0, "Utils", utils);
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "SlideObject", slideobject.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "FileManager", filemanager.get());
   qmlRegisterSingletonInstance("org.presenter", 1, 0, "PresWindow", PresWindow);

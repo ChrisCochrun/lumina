@@ -978,8 +978,8 @@ impl song_model::SongModel {
             for (i, line) in raw_lyrics.split("\n").enumerate() {
                 if keywords.contains(&line) {
                     if i != 0 {
-                        println!("{verse_title}");
-                        println!("{lyric}");
+                        // println!("{verse_title}");
+                        // println!("{lyric}");
                         lyric_map.insert(verse_title, lyric);
                         lyric = String::from("");
                         verse_title = line.to_string();
@@ -996,25 +996,25 @@ impl song_model::SongModel {
                 }
             }
             lyric_map.insert(verse_title, lyric);
-            println!("da-map: {:?}", lyric_map);
+            // println!("da-map: {:?}", lyric_map);
 
             for mut verse in vorder {
                 let mut verse_name = "";
-                debug!(verse = verse);
+                // debug!(verse = verse);
                 for word in keywords.clone() {
                     let end_verse =
                         verse.get(1..2).unwrap_or_default();
                     let beg_verse =
                         verse.get(0..1).unwrap_or_default();
-                    println!(
-                        "verse: {:?}, beginning: {:?}, end: {:?}, word: {:?}",
-                        verse, beg_verse, end_verse, word
-                    );
+                    // println!(
+                    //     "verse: {:?}, beginning: {:?}, end: {:?}, word: {:?}",
+                    //     verse, beg_verse, end_verse, word
+                    // );
                     if word.starts_with(beg_verse)
                         && word.ends_with(end_verse)
                     {
                         verse_name = word;
-                        println!("TITLE: {verse_name}");
+                        // println!("TITLE: {verse_name}");
                         continue;
                     }
                 }
@@ -1036,7 +1036,8 @@ impl song_model::SongModel {
                 };
             }
             for lyric in lyric_list.iter() {
-                println!("da-list: {:?}", lyric);
+                // println!("da-list: {:?}", lyric);
+                debug!(lyric = ?lyric)
             }
         }
         QStringList::from(&lyric_list)

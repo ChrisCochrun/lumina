@@ -2,10 +2,13 @@ use std::pin::Pin;
 
 use time::macros::format_description;
 use tokio::runtime::Runtime;
+use tracing::{debug, info};
 use tracing_subscriber::{
     fmt::{self, time::LocalTime},
     EnvFilter,
 };
+
+use self::utilities::QString;
 
 mod db {
     use diesel::{Connection, SqliteConnection};
@@ -50,6 +53,11 @@ mod db {
 
 #[cxx_qt::bridge]
 mod utilities {
+    unsafe extern "C++" {
+        include!("cxx-qt-lib/qstring.h");
+        type QString = cxx_qt_lib::QString;
+    }
+
     unsafe extern "RustQt" {
         #[qobject]
         #[qml_element]
@@ -57,6 +65,12 @@ mod utilities {
 
         #[qinvokable]
         fn setup(self: Pin<&mut Utils>);
+
+        #[qinvokable]
+        fn dbg(self: &Utils, message: QString);
+
+        #[qinvokable]
+        fn inf(self: &Utils, message: QString);
     }
 }
 
@@ -74,8 +88,16 @@ impl Default for UtilsRust {
 }
 
 impl utilities::Utils {
-    pub fn setup(mut self: Pin<&mut Self>) {
+    pub fn setup(self: Pin<&mut Self>) {
         crate::utils::setup();
+    }
+
+    pub fn dbg(self: &Self, message: QString) {
+        debug!(msg = ?message);
+    }
+
+    pub fn inf(self: &Self, message: QString) {
+        info!(msg = ?message);
     }
 }
 
