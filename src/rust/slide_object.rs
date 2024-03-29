@@ -41,7 +41,7 @@ mod slide_object {
         #[qml_element]
         #[qproperty(i32, slide_index)]
         #[qproperty(i32, slide_size)]
-        #[qproperty(i32, image_count)]
+        #[qproperty(i32, inner_slide_index)]
         #[qproperty(bool, is_playing)]
         #[qproperty(bool, looping)]
         #[qproperty(QString, text)]
@@ -96,7 +96,7 @@ use self::slide_object::QMap_QString_QVariant;
 pub struct SlideObjectRust {
     slide_index: i32,
     slide_size: i32,
-    image_count: i32,
+    inner_slide_index: i32,
     is_playing: bool,
     looping: bool,
     text: QString,
@@ -131,7 +131,7 @@ impl Default for SlideObjectRust {
             htext_alignment: QString::from(""),
             font: QString::from(""),
             font_size: 50,
-            image_count: 0,
+            inner_slide_index: 0,
             video_start_time: 0.0,
             video_end_time: 0.0,
             // slide_model: std::ptr::null_mut(),
@@ -300,7 +300,7 @@ impl slide_object::SlideObject {
             println!("looping: empty")
         }
         let slide_size = item
-            .get(&QString::from("slide_size"))
+            .get(&QString::from("imageCount"))
             .unwrap_or(QVariant::from(&1));
         if let Some(slide_size) = slide_size.value::<i32>() {
             if &slide_size != self.as_ref().slide_size() {
@@ -322,7 +322,7 @@ impl slide_object::SlideObject {
             );
         self.as_mut().set_html(html);
 
-        self.as_mut().set_image_count(count);
+        self.as_mut().set_inner_slide_index(0);
 
         self.as_mut().set_slide_index(slide_index);
 
@@ -356,15 +356,16 @@ impl slide_object::SlideObject {
         if html {
             // Check to see if current slide is at the end
             // if not, advance to the next one.
+            let new_inner = self.as_ref().inner_slide_index + 1;
             debug!(
                 currentIndex = self.as_ref().slide_index,
                 newIndex = new_id,
-                slide_count = self.as_ref().image_count
+                inner_slide_index = new_inner,
+                slide_size = self.as_ref().slide_size
             );
-            if self.as_ref().slide_index
-                < self.as_ref().image_count - 1
-            {
+            if self.as_ref().slide_size > new_inner {
                 // self.as_mut().set_slide_index(new_id);
+                self.as_mut().set_inner_slide_index(new_inner);
                 self.as_mut().reveal_next();
                 debug!("returning false");
                 return false;
@@ -395,8 +396,9 @@ impl slide_object::SlideObject {
         if html {
             // Check to see if current slide is at the beginning
             // if not, go back to the previous one.
-            if self.as_ref().slide_index > 0 {
-                self.as_mut().set_slide_index(new_id);
+            let new_inner = self.as_ref().inner_slide_index - 1;
+            if self.as_ref().inner_slide_index > 0 {
+                self.as_mut().set_inner_slide_index(new_inner);
                 self.as_mut().reveal_prev();
                 return false;
             }

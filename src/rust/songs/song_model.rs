@@ -602,6 +602,7 @@ impl song_model::SongModel {
                 {
                     debug!(?song, audio = updated_audio.to_string());
                     song.audio = updated_audio.to_string();
+                    debug!(?song);
                     self.as_mut().data_changed(
                         &model_index,
                         &model_index,

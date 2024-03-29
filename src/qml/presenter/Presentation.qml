@@ -150,6 +150,7 @@ FocusScope {
                 }
 
                 RowLayout {
+                    id: videoControls
                     spacing: 2
                     width: previewSlide.width
                     /* Layout.alignment: Qt.AlignHCenter, Qt.AlignTop */
@@ -185,6 +186,23 @@ FocusScope {
                         Keys.onRightPressed: nextSlideAction()
                         Keys.onUpPressed: previousSlideAction()
                         Keys.onDownPressed: nextSlideAction()
+                    }
+                }
+
+                RowLayout {
+                    id: htmlControls
+                    spacing: 2
+                    width: previewSlide.width
+                    /* Layout.alignment: Qt.AlignHCenter, Qt.AlignTop */
+                    anchors.top: previewSlide.bottom
+                    anchors.topMargin: 10
+                    anchors.horizontalCenter: previewSlide.horizontalCenter
+                    /* Layout.columnSpan: 3 */
+                    visible: SlideObject.imageBackground.startsWith("html");
+                    Controls.Label {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 25
+                        text: SlideObject.innerSlideIndex + "/" + SlideObject.slideSize
                     }
                 }
 
