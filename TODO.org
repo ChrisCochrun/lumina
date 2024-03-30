@@ -4,13 +4,16 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [62%] [51/82]
+* Tasks [63%] [52/82]
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
 
 *** TODO Seems that updating songs aren't reflected well
 [[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
+*** TODO I need to test to make sure I've fixed this.
+Sometimes it seemed that things would update, other times it would seem that after jumping to present view and then back that things wouldn't be updated.
+
 ** TODO [#B] Fix switching songs in editor not showing the right lyrics
 ** TODO Create a song_lyrics searching and importer for the song_editor
 [[file:~/dev/lumina/src/rust/songs/song_lyrics.rs::pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {]]
@@ -175,10 +178,6 @@ Start with select, deselect, select_items, and deactivate. Then either move onto
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 ** TODO A busy indicator while deleting library items :feature:ui:
-** TODO [#B] presentations need to know their index of individual slides and count :bug:
-Both PDFs and reveal.js presentations think every slide is the first one. I need a way of finding the individual components and then properly switching to the next one.
-
-Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
 ** TODO [#A] Organize and layout structure of rust code       :maintenance:
 Since building a lot of the rust code felt more like an experiment, I've not kept it very well organized. I need to go through each model and rust module and organize them well and then decide what needs to be publicly available or not.
 
@@ -224,6 +223,10 @@ This thread helped a lot
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
 
 Let's rename everything to that.
+** DONE [#B] presentations need to know their index of individual slides and count :bug:
+Both PDFs and reveal.js presentations think every slide is the first one. I need a way of finding the individual components and then properly switching to the next one.
+
+Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
 ** DONE Mouse needs to have resize shape when hovering controls       :bug:
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
 
