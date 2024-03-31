@@ -414,6 +414,8 @@ impl slide_model::SlideModel {
                 .insert(index as usize, slide);
             self.as_mut().end_insert_rows();
         }
+        let count = self.as_ref().count;
+        self.as_mut().set_count(count + 1);
         let thread = self.qt_thread();
         thread::spawn(move || {
             thread

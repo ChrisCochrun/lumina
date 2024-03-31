@@ -154,12 +154,9 @@ impl slide_object::SlideObject {
         let slindex = item
             .get(&QString::from("slideIndex"))
             .unwrap_or(QVariant::from(&0));
-        // let slide_index = slindex.value::<i32>().unwrap_or_default();
+        let inner_slide_index =
+            slindex.value::<i32>().unwrap_or_default();
 
-        // let html = item
-        //     .get(&QString::from("html"))
-        //     .unwrap_or(QVariant::from(&false));
-        // if let Some(html) = html.value::<bool>() {
         //     if html {
         //         debug!(?html, count, slide_index);
         //         if slide_index > 0 && slide_index < count - 1 {
@@ -175,7 +172,7 @@ impl slide_object::SlideObject {
         //         }
         //     }
         // }
-        debug!(slide_index, "Changing slide");
+        debug!(slide_index, inner_slide_index, "Changing slide");
 
         println!("## Slide Details ##");
         let text = item
@@ -322,7 +319,16 @@ impl slide_object::SlideObject {
             );
         self.as_mut().set_html(html);
 
-        self.as_mut().set_inner_slide_index(0);
+        let html = item
+            .get(&QString::from("html"))
+            .unwrap_or(QVariant::from(&false));
+        if let Some(html) = html.value::<bool>() {
+            if !html {
+                self.as_mut().set_inner_slide_index(inner_slide_index)
+            } else {
+                self.as_mut().set_inner_slide_index(0);
+            }
+        }
 
         self.as_mut().set_slide_index(slide_index);
 

@@ -128,7 +128,7 @@ FocusScope {
                     chosenFont: SlideObject.font
                     textSize: SlideObject.fontSize
                     text: SlideObject.text
-                    pdfIndex: SlideObject.slideIndex
+                    pdfIndex: SlideObject.innerSlideIndex
                     vidLoop: SlideObject.looping
                     vidStartTime: SlideObject.videoStartTime
                     vidEndTime: SlideObject.videoEndTime
@@ -483,7 +483,7 @@ FocusScope {
 
     function nextSlideAction() {
         keyHandler.forceActiveFocus();
-        const nextSlideIdx = currentSlide + 1;
+        const nextSlideIdx = SlideObject.html && (SlideObject.innerSlideIndex + 1 < SlideObject.slideSize) ? currentSlide : currentSlide + 1;
         const nextSlide = SlideModel.getItem(nextSlideIdx);
         if (nextSlideIdx > totalSlides || nextSlideIdx < 0)
             return;
