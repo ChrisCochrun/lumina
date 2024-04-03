@@ -13,6 +13,7 @@ use crate::obs::obs_model::QList_QString;
 pub struct Obs {
     scenes: Scenes,
     client: Option<Client>,
+    current_program_scene: Option<String>
 }
 
 impl fmt::Debug for Obs {
@@ -29,6 +30,7 @@ impl Clone for Obs {
         Self {
             scenes: self.scenes.clone(),
             client: Some(make_client()),
+            current_program_scene: self.current_program_scene.clone()
         }
     }
 }
@@ -38,6 +40,7 @@ impl Default for Obs {
         Self {
             scenes: Scenes::default(),
             client: None,
+            current_program_scene: None
         }
     }
 }
@@ -46,11 +49,14 @@ impl Obs {
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         let client =
             Client::connect("localhost", 4455, Some("")).await?;
-        let scene_list = client.scenes().list().await?;
+        let scenes_object = client.scenes();
+        let scene_list = scenes_object.list().await?;
+        let current_program_scene = scenes_object.current_program_scene().await?;
         debug!(?scene_list);
         Ok(Self {
             scenes: scene_list,
             client: Some(client),
+            current_program_scene: Some(current_program_scene)
         })
     }
 
@@ -73,7 +79,7 @@ impl Obs {
         scene: String,
     ) -> Result<(), Box<dyn Error>> {
         debug!("Starting function");
-        if self.client.is_some() {
+        if let Some(client) = self.client {
             debug!("Starting to set");
             let runtime =
                 tokio::runtime::Builder::new_current_thread()
@@ -125,6 +131,7 @@ mod obs_model {
         #[qproperty(QStringList, scenes)]
         #[qproperty(QString, port)]
         #[qproperty(bool, connected)]
+        #[qproperty(QString, current_program_scene)]
         type ObsModel = super::ObsModelRust;
 
         #[qinvokable]
@@ -142,6 +149,7 @@ pub struct ObsModelRust {
     port: QString,
     connected: bool,
     obs: Option<Obs>,
+    current_program_scene: QString
 }
 
 impl obs_model::ObsModel {
@@ -175,6 +183,10 @@ impl obs_model::ObsModel {
                     self.as_mut().set_connected(true);
                     self.as_mut().rust_mut().obs = Some(o);
                     self.as_mut().update_scenes();
+                    if let Some(scene) = o.current_program_scene {
+                        let scene = QString::from(&scene);
+                        self.as_mut().set_current_program_scene(scene);
+                    }
                 }
                 Err(e) => {
                     error!(e);
@@ -193,7 +205,7 @@ impl obs_model::ObsModel {
     pub fn set_scene(mut self: Pin<&mut Self>, scene: QString) {
         let scene = scene.to_string();
         if let Some(obs) = &self.as_mut().rust_mut().obs {
-            let obs = obs.clone();
+            // let obs = obs.clone();
             match obs.set_scene(scene) {
                 Ok(()) => debug!("Successfully set scene"),
                 Err(e) => error!(e),

@@ -73,16 +73,61 @@ Item {
         font.bold: true
     }
 
+    Controls.Label {
+        id: obsSceneLabel
+        width: previewHighlight.width
+        anchors.top: previewHighlight.bottom
+        anchors.left: previewHighlight.left
+        anchors.topMargin: Kirigami.Units.smallSpacing
+        anchors.rightMargin: Kirigami.Units.smallSpacing * 2
+        elide: Text.ElideRight
+        text: model.obsScene
+        font.bold: true
+    }
+
     MouseArea {
         id: previewerMouse
         anchors.fill: parent
         hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: {
-            changeSlide(index);
-            showPassiveNotification(model.serviceItemId);
+            if (mouse.button === Qt.RightButton) {
+                rightClickMenu.popup(mouse);
+            } else {
+                changeSlide(index);
+                showPassiveNotification(model.serviceItemId);
+            }
         }
         cursorShape: Qt.PointingHandCursor
         propagateComposedEvents: true
+
+        Controls.ToolTip {
+            text: model.obsScene
+        }
+
     }
 
+    Controls.Menu {
+        id: rightClickMenu
+
+        Controls.Menu {
+            id: obsMenu
+            title: "Obs Scenes"
+            enabled: ObsModel.connected
+            Instantiator {
+                model: ObsModel.scenes
+                Kirigami.Action {
+                    text: modelData
+                    onTriggered: {
+                        Utils.dbg("setting: " + modelData)
+                        Utils.dbg(model.obsScene);
+                        SlideModel.updateObsScene(modelData);
+                        /* ObsModel.setScene(modelData); */
+                    }
+                }
+                onObjectAdded: obsMenu.insertAction(index, object)
+                onObjectRemoved: obsMenu.removeAction(object)
+            }
+        }
+    }
 }
