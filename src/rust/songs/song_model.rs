@@ -60,6 +60,14 @@ pub mod song_model {
         fn font_size_changed(self: Pin<&mut SongModel>);
         #[qsignal]
         fn background_changed(self: Pin<&mut SongModel>);
+        #[qsignal]
+        fn audio_changed(self: Pin<&mut SongModel>);
+        #[qsignal]
+        fn lyrics_changed(self: Pin<&mut SongModel>);
+        #[qsignal]
+        fn font_changed(self: Pin<&mut SongModel>);
+        #[qsignal]
+        fn author_changed(self: Pin<&mut SongModel>);
 
         #[qinvokable]
         fn clear(self: Pin<&mut SongModel>);
@@ -590,6 +598,7 @@ impl song_model::SongModel {
         let (index, model_index, vector_roles) =
             self.as_mut().get_indices(song_id, SongRoles::Audio);
 
+        debug!(?updated_audio);
         let db = &mut self.as_mut().get_db();
         let result = update(songs.filter(id.eq(song_id)))
             .set(audio.eq(updated_audio.to_string()))
