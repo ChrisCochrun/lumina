@@ -512,7 +512,7 @@ Item {
         songEditorModel.fontSize = updatedSong.fontSize;
         songEditorModel.checkVerseOrder();
         songEditorModel.checkFiles();
-        songID = index;
+        songID = updatedSong.id;
 
         changeSlideHAlignment(song.horizontalTextAlignment);
         changeSlideVAlignment(song.verticalTextAlignment);
@@ -563,6 +563,8 @@ Item {
 
     function updateAudioFile() {
         const file = fileHelper.loadFile("Pick Audio", "audio");
+        Utils.dbg("song: " + songID);
+        Utils.dbg("song-title: " + songEditorModel.title)
         songEditorModel.audio = file;
         songProxyModel.songModel.updateAudio(songID, file);
         songEditorModel.checkFiles();
