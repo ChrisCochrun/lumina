@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [63%] [52/82]
+* Tasks [64%] [53/82]
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
@@ -17,7 +17,6 @@ The problem was compounded in that we are getting the ID through the proxy model
 *** DONE I need to test to make sure I've fixed this.
 Sometimes it seemed that things would update, other times it would seem that after jumping to present view and then back that things wouldn't be updated.
 
-** TODO [#B] Fix switching songs in editor not showing the right lyrics
 ** TODO Create a song_lyrics searching and importer for the song_editor
 [[file:~/dev/lumina/src/rust/songs/song_lyrics.rs::pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {]]
 
@@ -230,6 +229,7 @@ Let's rename everything to that.
 Both PDFs and reveal.js presentations think every slide is the first one. I need a way of finding the individual components and then properly switching to the next one.
 
 Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
+** DONE [#B] Fix switching songs in editor not showing the right lyrics
 ** DONE Mouse needs to have resize shape when hovering controls       :bug:
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]
 
