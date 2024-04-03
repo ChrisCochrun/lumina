@@ -9,9 +9,12 @@
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
 
-*** TODO Seems that updating songs aren't reflected well
+*** TODO Find all references to the ID and make sure to be passing around the db id instead of the one found in the index to make sure we are finding the right song for every operation
+The problem was compounded in that we are getting the ID through the proxy model too, which is different from the model index in rust. By setting the songID to the id found within the returned song, the rust model will have the same id meaning when we use that id, we are using the right one. Need to maybe find a way to ensure we are always passing around the id in the db so that we aren't using the wrong one anywhere.
+
+*** DONE Seems that updating songs aren't reflected well
 [[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
-*** TODO I need to test to make sure I've fixed this.
+*** DONE I need to test to make sure I've fixed this.
 Sometimes it seemed that things would update, other times it would seem that after jumping to present view and then back that things wouldn't be updated.
 
 ** TODO [#B] Fix switching songs in editor not showing the right lyrics
