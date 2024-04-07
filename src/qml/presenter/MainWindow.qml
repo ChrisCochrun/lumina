@@ -314,7 +314,7 @@ Controls.Page {
                 editMode = false;
                 refocusPresentation();
                 footerFirstText = presenting ? "Presenting..." : "Presentation Preview";
-                footerSecondText = "";
+                footerSecondText = ObsModel.currentProgramScene;
             }
         } else {
             videoEditor.visible = false;
@@ -327,7 +327,7 @@ Controls.Page {
             editMode = false;
             refocusPresentation();
             footerFirstText = presenting ? "Presenting..." : "Presentation Preview"
-            footerSecondText = "";
+            footerSecondText = ObsModel.currentProgramScene;
         }
     }
 

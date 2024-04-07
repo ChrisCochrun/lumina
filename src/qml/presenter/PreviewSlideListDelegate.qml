@@ -11,6 +11,7 @@ Item {
     implicitHeight: Kirigami.Units.gridUnit * 6.5
     implicitWidth: Kirigami.Units.gridUnit * 9
     property bool showVidBG
+    property var rootModel: model
     /* property var previewSlidesList: parent */
     /* Component.onCompleted: { */
     /*     if (model.videoBackground != "") */
@@ -75,14 +76,23 @@ Item {
 
     Controls.Label {
         id: obsSceneLabel
-        width: previewHighlight.width
-        anchors.top: previewHighlight.bottom
-        anchors.left: previewHighlight.left
+        anchors.top: previewHighlight.top
+        anchors.right: previewHighlight.right
         anchors.topMargin: Kirigami.Units.smallSpacing
-        anchors.rightMargin: Kirigami.Units.smallSpacing * 2
-        elide: Text.ElideRight
-        text: model.obsScene
-        font.bold: true
+        anchors.rightMargin: Kirigami.Units.smallSpacing
+        /* elide: Text.ElideRight */
+        background: Rectangle {
+            visible: model.obsScene.length > 0
+            color: Qt.lighter(Kirigami.Theme.backgroundColor, 1.2)
+            radius: 3
+        }
+
+        horizontalAlignment: Text.AlignRight
+        text: model.obsScene.length > 0 ? "OBS Scene: " + model.obsScene : ""
+        font.pointSize: 8
+        rightPadding: 4
+        leftPadding: 4
+        color: Kirigami.Theme.highlightColor
     }
 
     MouseArea {
@@ -101,9 +111,9 @@ Item {
         cursorShape: Qt.PointingHandCursor
         propagateComposedEvents: true
 
-        Controls.ToolTip {
-            text: model.obsScene
-        }
+        /* Controls.ToolTip { */
+        /*     text: model.obsScene.length > 0 ? "OBS Scene: " + model.obsScene : "" */
+        /* } */
 
     }
 
@@ -119,10 +129,10 @@ Item {
                 Kirigami.Action {
                     text: modelData
                     onTriggered: {
-                        Utils.dbg("setting: " + modelData)
-                        Utils.dbg(model.obsScene);
-                        SlideModel.updateObsScene(modelData);
-                        /* ObsModel.setScene(modelData); */
+                        Utils.dbg("setting: " + modelData + " on index: " + rootModel.index);
+                        Utils.dbg(rootModel.obsScene);
+                        SlideModel.updateObsScene(rootModel.index, modelData);
+                        ObsModel.setScene(modelData);
                     }
                 }
                 onObjectAdded: obsMenu.insertAction(index, object)

@@ -75,31 +75,33 @@ impl Obs {
     }
 
     pub fn set_scene(
-        self,
+        &self,
         scene: String,
     ) -> Result<(), Box<dyn Error>> {
-        debug!("Starting function");
-        if let Some(client) = self.client {
-            debug!("Starting to set");
-            let runtime =
-                tokio::runtime::Builder::new_current_thread()
-                    .thread_keep_alive(Duration::from_secs(1))
-                    .enable_all()
-                    .build()
-                    .unwrap();
+        // debug!("Starting function");
+        if let Some(client) = &self.client {
+            debug!(scene, "setting scene in obs");
+
             let client = make_client();
-            let handle = runtime.spawn(async move {
-                debug!(scene, "working in thread");
-                client.scenes()
-                    .set_current_program_scene(&scene)
-                    .await
-            });
-            loop {
-                sleep(Duration::from_millis(100));
-                if handle.is_finished() {
-                    break;
+            let runtime = tokio::runtime::Runtime::new()?;
+            let handle = runtime.spawn(async move  {
+                debug!("in spawn: before setting");
+                let res = client.scenes().set_current_program_scene(&scene).await;
+                match res {
+                    Ok(o) => debug!("in spawn: after setting: success"),
+                    Err(e) => error!(?e, "in spawn: after setting")
                 }
-            }
+            });
+
+            debug!("after spawn");
+
+            // loop {
+            //     sleep(Duration::from_millis(100));
+            //     if handle.is_finished() {
+            //         break;
+            //     }
+            // }
+
             Ok(())
         } else {
             Err("There is no client".to_owned())?
@@ -180,13 +182,13 @@ impl obs_model::ObsModel {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
             match Obs::new().await {
                 Ok(o) => {
+                    if let Some(scene) = &o.current_program_scene {
+                        let scene = QString::from(scene);
+                        self.as_mut().set_current_program_scene(scene);
+                    }
                     self.as_mut().set_connected(true);
                     self.as_mut().rust_mut().obs = Some(o);
                     self.as_mut().update_scenes();
-                    if let Some(scene) = o.current_program_scene {
-                        let scene = QString::from(&scene);
-                        self.as_mut().set_current_program_scene(scene);
-                    }
                 }
                 Err(e) => {
                     error!(e);
@@ -220,6 +222,11 @@ mod test {
     
     #[test]
     pub fn test_obs_setting_scene() {
-        assert_eq!(true, true)
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let future = Client::connect("localhost", 4455, Some(""));
+        let client = runtime.block_on(future).unwrap();
+        let scene = String::from("me");
+        let res = runtime.block_on(client.scenes().set_current_program_scene(&scene));
+        debug_assert!(res.is_ok());
     }
 }
