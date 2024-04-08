@@ -309,7 +309,15 @@ impl slide_object::SlideObject {
             .get(&QString::from("videoStartTime"))
             .unwrap_or(QVariant::from(&0.0));
         if let Some(int) = video_start_time.value::<f32>() {
+            debug!(start_time = int);
             self.as_mut().set_video_start_time(int)
+        }
+        let video_end_time = item
+            .get(&QString::from("videoEndTime"))
+            .unwrap_or(QVariant::from(&0.0));
+        if let Some(int) = video_end_time.value::<f32>() {
+            debug!(end_time = int);
+            self.as_mut().set_video_end_time(int)
         }
 
         let html =

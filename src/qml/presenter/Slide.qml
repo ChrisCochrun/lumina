@@ -7,6 +7,7 @@ import QtWebEngine 1.10
 import QtGraphicalEffects 1.15
 import org.kde.kirigami 2.13 as Kirigami
 import "./" as Presenter
+import org.presenter 1.0
 import mpv 1.0
 
 Item {
@@ -69,6 +70,7 @@ Item {
                     mpv.setProperty("loop", "no");
                 /* showPassiveNotification(mpv.getProperty("loop")); */
                 mpv.setProperty("sid", "no");
+
             }
             /* onIsPlayingChanged: showPassiveNotification(mpv.getProperty("pause")) */
 
@@ -86,8 +88,19 @@ Item {
             interval: 100
             onTriggered: {
                 /* showPassiveNotification("YIPPEEE!") */
+                if (vidStartTime > 0 && vidStartTime < vidEndTime) {
+                    /* mpv.seek(vidStartTime); */
+                    let start = "+" + vidStartTime;
+                    let end = "+" + vidEndTime;
+                    mpv.setProperty("start", start);
+                    mpv.setProperty("end", end);
+                    Utils.dbg("Setting position to: " + mpv.position);
+                } else {
+                    mpv.setProperty("start", "none");
+                    mpv.setProperty("end", "none");
+                }
                 mpv.loadFile(videoSource.toString());
-                mpv.seek(vidStartTime)
+                Utils.dbg("Setting position to: " + vidStartTime + " and end is " + vidEndTime);
                 if (editMode) {
                     console.log("WHY AREN'T YOU PASUING!");
                     pauseTimer.restart();

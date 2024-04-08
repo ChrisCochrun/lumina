@@ -531,8 +531,9 @@ void MpvObject::stepForward()
 
 void MpvObject::seek(double pos)
 {
-  // qDebug() << "seek" << pos;
+  qDebug() << "seek" << pos << m_duration;
   pos = qMax(0.0, qMin(pos, m_duration));
+  qDebug() << "seek" << pos;
   command(QVariantList() << "seek" << pos << "absolute");
 }
 

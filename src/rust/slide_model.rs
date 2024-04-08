@@ -431,6 +431,7 @@ impl slide_model::SlideModel {
     ) {
         let mut slide = slide.clone();
         // slide.slide_index = index;
+        debug!(?slide);
 
         unsafe {
             self.as_mut().begin_insert_rows(
@@ -553,6 +554,16 @@ impl slide_model::SlideModel {
             .unwrap_or(QVariant::from(&1))
             .value()
             .unwrap_or(1);
+        slide.video_start_time = service_item
+            .get(&QString::from("videoStartTime"))
+            .unwrap_or(QVariant::from(&0.0))
+            .value()
+            .unwrap_or(0.0);
+        slide.video_end_time = service_item
+            .get(&QString::from("videoEndTime"))
+            .unwrap_or(QVariant::from(&0.0))
+            .value()
+            .unwrap_or(0.0);
         slide.looping = service_item
             .get(&QString::from("loop"))
             .unwrap_or(QVariant::from(&false))
