@@ -1,4 +1,5 @@
 use dirs;
+use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -6,19 +7,7 @@ use std::process::Command;
 use std::str;
 use tracing::debug;
 
-pub async fn bg_from_video(video: &Path) -> PathBuf {
-    let video = PathBuf::from(video);
-    debug!(?video);
-    let mut data_dir = dirs::data_local_dir().unwrap();
-    data_dir.push("lumina");
-    data_dir.push("thumbnails");
-    if !data_dir.exists() {
-        fs::create_dir(&data_dir)
-            .expect("Could not create thumbnails dir");
-    }
-    let mut screenshot = data_dir.clone();
-    screenshot.push(video.file_name().unwrap());
-    screenshot.set_extension("png");
+pub async fn bg_from_video(video: &Path, screenshot: &Path) -> Result<(), Box<dyn Error>> {
     if !screenshot.exists() {
         let output_duration = Command::new("ffprobe")
             .args(&["-i", &video.to_string_lossy()])

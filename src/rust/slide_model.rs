@@ -319,27 +319,32 @@ impl slide_model::SlideModel {
             .append(self.get_role(SlideRoles::VideoThumbnail));
 
         let thread = self.qt_thread();
-        let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
+        let model_index = self.as_ref().index(index, 0, &QModelIndex::default()).clone();
         if let Some(slide) =
             self.as_mut().rust_mut().slides.get_mut(index as usize)
         {
             if !slide.video_background.is_empty() {
-                let runtime = tokio::runtime::Runtime::new().unwrap();
                 let path =
                     PathBuf::from(slide.video_background.to_string());
+                let screenshot = ffmpeg::bg_path_from_video(&path);
+                let screenshot_string = QString::from(
+                    screenshot.to_str().unwrap()
+                ).insert(0, &QString::from("file://")).to_owned();
+                slide.video_thumbnail = screenshot_string;
+                let runtime = tokio::runtime::Runtime::new().unwrap();
                 runtime.spawn(async move {
-                    let video = ffmpeg::bg_from_video(&path).await;
-                    let video = QString::from(
-                        video.to_str().unwrap()
-                    ).insert(0, &QString::from("file://")).to_owned();
-                    slide.video_thumbnail = video;
-                    thread.queue(move |mut slide|
-                                 slide.as_mut().data_changed(
-                                     model_index,
-                                     model_index,
+                    let video = ffmpeg::bg_from_video(&path, &screenshot).await;
+                    let res = thread.queue(move |mut slide_model|
+                                 slide_model.as_mut().data_changed(
+                                     &model_index,
+                                     &model_index,
                                      &vector_roles,
                                  )
                     );
+                    match res {
+                        Ok(o) => debug!("success making video background!"),
+                        Err(error) => error!(?error, "Error making video background!")
+                    }
                 });
             }
         }
