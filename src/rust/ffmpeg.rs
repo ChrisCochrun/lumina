@@ -74,5 +74,51 @@ pub async fn bg_from_video(video: &Path) -> PathBuf {
     } else {
         debug!("Screenshot already exists");
     }
+    Ok(())
+}
+
+pub fn bg_path_from_video(video: &Path) -> PathBuf {
+    let video = PathBuf::from(video);
+    debug!(?video);
+    let mut data_dir = dirs::data_local_dir().unwrap();
+    data_dir.push("lumina");
+    data_dir.push("thumbnails");
+    if !data_dir.exists() {
+        fs::create_dir(&data_dir)
+            .expect("Could not create thumbnails dir");
+    }
+    let mut screenshot = data_dir.clone();
+    screenshot.push(video.file_name().unwrap());
+    screenshot.set_extension("png");
     screenshot
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_bg_video_creation() {
+        let video = Path::new("/home/chris/vids/All WebDev Sucks and you know it.webm");
+        let screenshot = bg_path_from_video(video);
+        let screenshot_string = screenshot.to_str().expect("Should be thing");
+        assert_eq!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.png");
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let future = bg_from_video(video, &screenshot);
+        let result = runtime.block_on(future);
+        match result {
+            Ok(o) => assert_eq!(screenshot.exists(), true),
+            Err(e) => debug_assert!(false, "There was an error in the runtime future. {:?}", e)
+        }
+    }
+
+    #[test]
+    fn test_bg_not_same() {
+        let video = Path::new("/home/chris/vids/All WebDev Sucks and you know it.webm");
+        let screenshot = bg_path_from_video(video);
+        let screenshot_string = screenshot.to_str().expect("Should be thing");
+        assert_ne!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.webm");
+    }
 }
