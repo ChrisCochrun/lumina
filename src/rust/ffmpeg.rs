@@ -6,7 +6,7 @@ use std::process::Command;
 use std::str;
 use tracing::debug;
 
-pub fn bg_from_video(video: &Path) -> PathBuf {
+pub async fn bg_from_video(video: &Path) -> PathBuf {
     let video = PathBuf::from(video);
     debug!(?video);
     let mut data_dir = dirs::data_local_dir().unwrap();

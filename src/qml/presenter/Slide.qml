@@ -62,12 +62,13 @@ Item {
             Component.onCompleted: mpvLoadingTimer.start()
             onFileLoaded: {
                 /* showPassiveNotification(videoSource + " has been loaded"); */
-                if (itemType == "song")
+                if (itemType == "song") {
                     mpv.setProperty("loop", "inf");
-                else if (vidLoop)
+                } else if (vidLoop) {
                     mpv.setProperty("loop", "inf");
-                else
+                } else {
                     mpv.setProperty("loop", "no");
+                }
                 /* showPassiveNotification(mpv.getProperty("loop")); */
                 mpv.setProperty("sid", "no");
 
@@ -88,6 +89,7 @@ Item {
             interval: 100
             onTriggered: {
                 /* showPassiveNotification("YIPPEEE!") */
+                mpv.stop();
                 if (vidStartTime > 0 && vidStartTime < vidEndTime) {
                     /* mpv.seek(vidStartTime); */
                     let start = "+" + vidStartTime;

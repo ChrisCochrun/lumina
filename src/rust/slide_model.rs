@@ -318,25 +318,29 @@ impl slide_model::SlideModel {
         vector_roles
             .append(self.get_role(SlideRoles::VideoThumbnail));
 
-        let model_index =
-            &self.index(index, 0, &QModelIndex::default());
+        let thread = self.qt_thread();
+        let model_index = &self.as_ref().index(index, 0, &QModelIndex::default());
         if let Some(slide) =
             self.as_mut().rust_mut().slides.get_mut(index as usize)
         {
             if !slide.video_background.is_empty() {
+                let runtime = tokio::runtime::Runtime::new().unwrap();
                 let path =
                     PathBuf::from(slide.video_background.to_string());
-                let video = QString::from(
-                    ffmpeg::bg_from_video(&path).to_str().unwrap(),
-                )
-                .insert(0, &QString::from("file://"))
-                .to_owned();
-                slide.video_thumbnail = video;
-                self.as_mut().data_changed(
-                    model_index,
-                    model_index,
-                    &vector_roles,
-                );
+                runtime.spawn(async move {
+                    let video = ffmpeg::bg_from_video(&path).await;
+                    let video = QString::from(
+                        video.to_str().unwrap()
+                    ).insert(0, &QString::from("file://")).to_owned();
+                    slide.video_thumbnail = video;
+                    thread.queue(move |mut slide|
+                                 slide.as_mut().data_changed(
+                                     model_index,
+                                     model_index,
+                                     &vector_roles,
+                                 )
+                    );
+                });
             }
         }
         true
