@@ -333,17 +333,21 @@ impl slide_model::SlideModel {
                 slide.video_thumbnail = screenshot_string;
                 let runtime = tokio::runtime::Runtime::new().unwrap();
                 runtime.spawn(async move {
-                    let video = ffmpeg::bg_from_video(&path, &screenshot).await;
-                    let res = thread.queue(move |mut slide_model|
+                    let result = ffmpeg::bg_from_video(&path, &screenshot).await;
+                    match result {
+                        Ok(_o) => debug!("Success making video background!"),
+                        Err(error) => error!(?error, "Error making video background")
+                    };
+                    let result = thread.queue(move |mut slide_model|
                                  slide_model.as_mut().data_changed(
                                      &model_index,
                                      &model_index,
                                      &vector_roles,
                                  )
                     );
-                    match res {
-                        Ok(o) => debug!("success making video background!"),
-                        Err(error) => error!(?error, "Error making video background!")
+                    match result {
+                        Ok(o) => debug!("Success in creating qt_thread"),
+                        Err(error) => error!(?error, "Error in creating qt_thread")
                     }
                 });
             }
