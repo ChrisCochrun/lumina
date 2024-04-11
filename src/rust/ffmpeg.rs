@@ -7,7 +7,10 @@ use std::process::Command;
 use std::str;
 use tracing::debug;
 
-pub async fn bg_from_video(video: &Path, screenshot: &Path) -> Result<(), Box<dyn Error>> {
+pub fn bg_from_video(
+    video: &Path,
+    screenshot: &Path,
+) -> Result<(), Box<dyn Error>> {
     if !screenshot.exists() {
         let output_duration = Command::new("ffprobe")
             .args(&["-i", &video.to_string_lossy()])
@@ -82,32 +85,41 @@ pub fn bg_path_from_video(video: &Path) -> PathBuf {
     screenshot
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_bg_video_creation() {
-        let video = Path::new("/home/chris/vids/All WebDev Sucks and you know it.webm");
+        let video = Path::new(
+            "/home/chris/vids/All WebDev Sucks and you know it.webm",
+        );
         let screenshot = bg_path_from_video(video);
-        let screenshot_string = screenshot.to_str().expect("Should be thing");
+        let screenshot_string =
+            screenshot.to_str().expect("Should be thing");
         assert_eq!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.png");
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        let future = bg_from_video(video, &screenshot);
-        let result = runtime.block_on(future);
+        // let runtime = tokio::runtime::Runtime::new().unwrap();
+        let result = bg_from_video(video, &screenshot);
+        // let result = runtime.block_on(future);
         match result {
             Ok(o) => assert_eq!(screenshot.exists(), true),
-            Err(e) => debug_assert!(false, "There was an error in the runtime future. {:?}", e)
+            Err(e) => debug_assert!(
+                false,
+                "There was an error in the runtime future. {:?}",
+                e
+            ),
         }
     }
 
     #[test]
     fn test_bg_not_same() {
-        let video = Path::new("/home/chris/vids/All WebDev Sucks and you know it.webm");
+        let video = Path::new(
+            "/home/chris/vids/All WebDev Sucks and you know it.webm",
+        );
         let screenshot = bg_path_from_video(video);
-        let screenshot_string = screenshot.to_str().expect("Should be thing");
+        let screenshot_string =
+            screenshot.to_str().expect("Should be thing");
         assert_ne!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.webm");
     }
 }

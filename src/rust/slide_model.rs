@@ -331,9 +331,9 @@ impl slide_model::SlideModel {
                     screenshot.to_str().unwrap()
                 ).insert(0, &QString::from("file://")).to_owned();
                 slide.video_thumbnail = screenshot_string;
-                let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime.spawn(async move {
-                    let result = ffmpeg::bg_from_video(&path, &screenshot).await;
+                // let runtime = tokio::runtime::Runtime::new().unwrap();
+                std::thread::spawn(move || {
+                    let result = ffmpeg::bg_from_video(&path, &screenshot);
                     match result {
                         Ok(_o) => debug!("Success making video background!"),
                         Err(error) => error!(?error, "Error making video background")
@@ -426,15 +426,7 @@ impl slide_model::SlideModel {
             self.as_mut().rust_mut().slides.push(slide);
             self.as_mut().end_insert_rows();
         }
-        let thread = self.qt_thread();
-        thread::spawn(move || {
-            thread
-                .queue(move |slidemodel| {
-                    slidemodel.add_video_thumbnail(index);
-                })
-                .unwrap();
-        });
-        // self.as_mut().add_video_thumbnail(index);
+        self.as_mut().add_video_thumbnail(index);
     }
 
     fn insert_slide(
