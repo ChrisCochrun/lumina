@@ -331,7 +331,6 @@ impl slide_model::SlideModel {
                     screenshot.to_str().unwrap()
                 ).insert(0, &QString::from("file://")).to_owned();
                 slide.video_thumbnail = screenshot_string;
-                // let runtime = tokio::runtime::Runtime::new().unwrap();
                 std::thread::spawn(move || {
                     let result = ffmpeg::bg_from_video(&path, &screenshot);
                     match result {

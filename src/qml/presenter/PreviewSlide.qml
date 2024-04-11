@@ -42,6 +42,13 @@ Item {
             currentFrame: pdfIndex
         }
 
+        Presenter.LoadingSpinner {
+            id: loadingSpinner
+            color: Kirigami.Theme.highlightColor
+            running: true
+            anchors.fill: parent
+        }
+
         FastBlur {
             id: imageBlue
             anchors.fill: parent
