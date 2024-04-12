@@ -6,6 +6,7 @@ import QtMultimedia 5.15
 import QtGraphicalEffects 1.15
 import org.kde.kirigami 2.13 as Kirigami
 import "./" as Presenter
+import org.presenter 1.0
 
 Item {
     id: root
@@ -45,7 +46,7 @@ Item {
         Presenter.LoadingSpinner {
             id: loadingSpinner
             color: Kirigami.Theme.highlightColor
-            running: itemType === "video" && imageSource.length() < 1
+            running: !fileHelper.validate(imageSource)
             anchors.fill: parent
         }
 

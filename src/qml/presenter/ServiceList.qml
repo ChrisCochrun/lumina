@@ -461,9 +461,10 @@ Item {
                 color: Kirigami.Theme.backgroundColor
                 visible: false
 
-                Controls.BusyIndicator {
+                Presenter.LoadingSpinner {
                     anchors.centerIn: parent
-                    running: true
+                    running: parent.visible
+                    color: Kirigami.Theme.highlightColor
                 }
             }
         } 

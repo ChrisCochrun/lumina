@@ -68,12 +68,12 @@ impl file_helper::FileHelper {
         match file_string {
             Some(file) => {
                 let exists = Path::new(&file).exists();
-                println!("{file} exists? {exists}");
+                debug!(file, exists);
                 exists
             }
             None => {
                 let exists = Path::new(&file.to_string()).exists();
-                println!("{file} exists? {exists}");
+                debug!(?file, exists);
                 exists
             }
         }

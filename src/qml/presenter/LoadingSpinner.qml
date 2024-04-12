@@ -11,15 +11,13 @@ Controls.BusyIndicator {
     visible: root.running
 
     contentItem: Item {
-        implicitWidth: 64
-        implicitHeight: 64
+        anchors.fill: parent
 
         Item {
             id: item
             x: parent.width / 2 - 32
             y: parent.height / 2 - 32
-            width: 64
-            height: 64
+            anchors.fill: parent
             opacity: root.running ? 1 : 0
 
             Behavior on opacity {
@@ -47,7 +45,7 @@ Controls.BusyIndicator {
                         property: "width"
                         running: root.running
                         from: 0 - (index * 100)
-                        to: root.width * 1.8
+                        to: Kirigami.Units.gridUnit * 5
                         loops: Animation.Infinite
                         duration: 1400
                         easing.type: Easing.InSine
