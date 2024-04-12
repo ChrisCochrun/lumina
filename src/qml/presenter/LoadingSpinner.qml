@@ -8,7 +8,7 @@ import "./" as Presenter
 Controls.BusyIndicator {
     id: root
     property color color
-    visible: true
+    visible: root.running
 
     contentItem: Item {
         implicitWidth: 64
@@ -30,7 +30,7 @@ Controls.BusyIndicator {
 
             Repeater {
                 id: repeater
-                model: 1
+                model: 4
 
                 Rectangle {
                     id: delegate
@@ -38,41 +38,32 @@ Controls.BusyIndicator {
 
                     x: item.width / 2 - width / 2
                     y: item.height / 2 - height / 2
-                    implicitWidth: root.width
-                    implicitHeight: root.width
+                    height: width
                     radius: 500
                     color: root.color
-                    opacity: delegate.scale
-                    /* visible: root.visible */
-
-                    /* Text { */
-                    /*     text: delegate.scale + " & " + delegate.opacity */
-                    /* } */
 
                     PropertyAnimation {
                         target: delegate
-                        property: "scale"
-                        running: root.visible && root.running
-                        from: 0
-                        to: 1
+                        property: "width"
+                        running: root.running
+                        from: 0 - (index * 100)
+                        to: root.width * 1.8
                         loops: Animation.Infinite
-                        duration: 500 * index
-                        easing.type: Easing.OutInExpo
-                        easing.amplitude: 2.0
+                        duration: 1400
+                        easing.type: Easing.InSine
                     }
 
 
-                    /* transform: [ */
-                    /*     Translate { */
-                    /*         y: -Math.min(item.width, item.height) * 0.5 */
-                    /*         x: index */
-                    /*     }, */
-                    /*     Rotation { */
-                    /*         angle: delegate.index / repeater.count * 360 */
-                    /*         origin.x: 5 */
-                    /*         origin.y: 5 */
-                    /*     } */
-                    /* ] */
+                    PropertyAnimation {
+                        target: delegate
+                        property: "opacity"
+                        running: root.running
+                        from: 1
+                        to: 0
+                        loops: Animation.Infinite
+                        duration: 1400
+                        easing.type: Easing.InSine
+                    }
                 }
             }
         }

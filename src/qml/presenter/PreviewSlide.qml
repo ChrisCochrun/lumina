@@ -45,7 +45,7 @@ Item {
         Presenter.LoadingSpinner {
             id: loadingSpinner
             color: Kirigami.Theme.highlightColor
-            running: true
+            running: itemType === "video" && imageSource.length() < 1
             anchors.fill: parent
         }
 
