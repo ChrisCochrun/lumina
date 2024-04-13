@@ -150,6 +150,7 @@ Item {
                 url: isHtml ? presentation.filePath : ""
                 visible: isHtml
                 settings.playbackRequiresUserGesture: false
+                backgroundColor: Kirigami.Theme.backgroundColor
             }
             RowLayout {
                 Layout.fillWidth: true;

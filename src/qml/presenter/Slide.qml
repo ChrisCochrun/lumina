@@ -208,6 +208,7 @@ Item {
             visible: htmlVisible
             enabled: htmlVisible
             zoomFactor: preview ? 0.25 : 1.0
+            backgroundColor: Kirigami.Theme.backgroundColor
             onLoadingChanged: {
                 if (loadRequest.status == 2)
                     showPassiveNotification("yahoo?");
