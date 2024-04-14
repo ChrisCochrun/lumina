@@ -1459,3 +1459,33 @@ impl service_item_model::ServiceItemModel {
         cnt
     }
 }
+
+impl ServiceItemModelRust {
+    pub fn save(mut model: Pin<&mut ServiceItemModel>, file: QUrl) -> bool {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_save_file() {
+        let mut save_location =
+            dirs::runtime_dir().expect("can't find runtime dir");
+        save_location.push("test.pres");
+        let save_location = QUrl::from(&QString::from(
+            save_location.to_str().unwrap(),
+        ));
+        assert_eq!(save_location, "/run/user/1000/test.pres".into());
+
+        // let mut items = vec![];
+        // for i in 0..10 {
+        //     let mut item = ServiceItem::default();
+        //     item.name = QString::from(&format!("Item #{}", i));
+        //     items.push(item);
+        // }
+        // // let model = super::service_item_model::ServiceItemModel::save(self: Pin<&mut Self>, save_location);
+    }
+}
