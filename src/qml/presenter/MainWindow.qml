@@ -39,6 +39,7 @@ Controls.Page {
     property int dragItemSlideNumber
 
     property bool editing: true
+    property int progress: 0
 
     property Item slideItem
     property var song
@@ -53,6 +54,7 @@ Controls.Page {
     property var currentWindow: presentation
 
     property var dragHighlightLine
+
 
     Component.onCompleted: {
         changeServiceItem(0);
@@ -178,6 +180,13 @@ Controls.Page {
     SongEditor {
         id: songEditorModel
         /* songModel: songProxyModel.songModel() */
+    }
+
+    Connections {
+        target: ServiceItemModel
+        function saveProgressUpdate(progress) {
+            mainPage.progress = progress;
+        }
     }
 
     function changeServiceItem(index) {
@@ -314,7 +323,7 @@ Controls.Page {
                 editMode = false;
                 refocusPresentation();
                 footerFirstText = presenting ? "Presenting..." : "Presentation Preview";
-                footerSecondText = ObsModel.currentProgramScene;
+                footerSecondText = ObsModel.currentProgramScene
             }
         } else {
             videoEditor.visible = false;

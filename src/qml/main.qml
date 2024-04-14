@@ -109,6 +109,17 @@ Kirigami.ApplicationWindow {
                     cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor
                 }
             }
+
+            Controls.ProgressBar {
+                id: footerSaveProgress
+                anchors.left: footerFilePathLabel.left
+                anchors.right: footerFilePathLabel.right
+                anchors.rightMargin: footerFilePathLabel.rightMargin
+                from: 0
+                to: 100
+                value: mainPage.progress
+                visible: mainPage.progress > 0
+            }
         }
         /* Item { */
         /*     Layout.fillWidth: true */
@@ -276,10 +287,14 @@ Kirigami.ApplicationWindow {
 
     function finalSave(file) {
         const saved = mainPage.serviceItems.save(file);
-        saved ? RSettings.setSaveFile(file)
-            : console.log("File: " + file + " wasn't saved");
-        saved ? showPassiveNotification("SAVED! " + file)
-            : showPassiveNotification("Didn't save file");
+        if (saved) {
+            RSettings.setSaveFile(file);
+            showPassiveNotification("SAVED! " + file);
+            mainPage.progress = 0;
+        } else {
+            console.log("File: " + file + " wasn't saved");
+            showPassiveNotification("Didn't save file");
+        }
     }
 
     function load() {
