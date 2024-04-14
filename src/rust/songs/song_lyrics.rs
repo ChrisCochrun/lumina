@@ -54,7 +54,6 @@ impl SongBuilder {
             artist_names: self.artist_names.unwrap_or_default(),
         }
     }
-        
 }
 
 pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {
@@ -103,7 +102,8 @@ mod tests {
             .init();
 
         let song = "Perfect";
-        let res = search_song(song).unwrap().into_iter().next().unwrap();
+        let res =
+            search_song(song).unwrap().into_iter().next().unwrap();
         let song = Song {
             title: String::from("Perfect"),
             lyrics: String::from(""),

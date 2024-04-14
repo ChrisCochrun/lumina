@@ -27,8 +27,8 @@ mod ytdl {
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QString, QUrl};
 use dirs;
-use tracing::debug;
 use std::{fs, pin::Pin};
+use tracing::debug;
 use youtube_dl::YoutubeDl;
 
 #[derive(Clone, Default)]
@@ -41,10 +41,7 @@ pub struct YtdlRust {
 }
 
 impl ytdl::Ytdl {
-    pub fn get_video(
-        mut self: Pin<&mut Self>,
-        url: QUrl,
-    ) -> bool {
+    pub fn get_video(mut self: Pin<&mut Self>, url: QUrl) -> bool {
         if !url.is_valid() {
             false
         } else {
@@ -58,8 +55,7 @@ impl ytdl::Ytdl {
                 debug!(?data_dir);
                 self.as_mut().set_loading(true);
                 let thread = self.qt_thread();
-                let runtime =
-                    tokio::runtime::Runtime::new().unwrap();
+                let runtime = tokio::runtime::Runtime::new().unwrap();
                 runtime.spawn(async move {
                     let url = url.to_string();
                     let output_dirs = data_dir.to_str().unwrap();
@@ -71,9 +67,11 @@ impl ytdl::Ytdl {
                         .download(true)
                         .run()
                         .unwrap();
-                    let output =
-                        ytdl.into_single_video().unwrap();
-                    debug!(output.title, output.thumbnail, output.url);
+                    let output = ytdl.into_single_video().unwrap();
+                    debug!(
+                        output.title,
+                        output.thumbnail, output.url
+                    );
                     let title = QString::from(&output.title);
                     let thumbnail = QUrl::from(
                         &output.thumbnail.unwrap_or_default(),
@@ -82,9 +80,7 @@ impl ytdl::Ytdl {
                     file.push_str("/");
                     file.push_str(&output.title);
                     file.push_str(".");
-                    file.push_str(
-                        &output.ext.unwrap_or_default(),
-                    );
+                    file.push_str(&output.ext.unwrap_or_default());
                     debug!(file);
 
                     thread.queue(move |mut qobject_ytdl| {

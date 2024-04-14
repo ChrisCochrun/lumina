@@ -1,11 +1,11 @@
 use core::fmt;
-use std::{error::Error, pin::Pin};
-use std::thread::sleep;
-use std::time::Duration;
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::{QStringList, QString};
+use cxx_qt_lib::{QString, QStringList};
 use obws::responses::scenes::Scenes;
 use obws::Client;
+use std::thread::sleep;
+use std::time::Duration;
+use std::{error::Error, pin::Pin};
 use tracing::{debug, error};
 
 use crate::obs::obs_model::QList_QString;
@@ -13,7 +13,7 @@ use crate::obs::obs_model::QList_QString;
 pub struct Obs {
     scenes: Scenes,
     client: Option<Client>,
-    current_program_scene: Option<String>
+    current_program_scene: Option<String>,
 }
 
 impl fmt::Debug for Obs {
@@ -30,7 +30,7 @@ impl Clone for Obs {
         Self {
             scenes: self.scenes.clone(),
             client: Some(make_client()),
-            current_program_scene: self.current_program_scene.clone()
+            current_program_scene: self.current_program_scene.clone(),
         }
     }
 }
@@ -40,7 +40,7 @@ impl Default for Obs {
         Self {
             scenes: Scenes::default(),
             client: None,
-            current_program_scene: None
+            current_program_scene: None,
         }
     }
 }
@@ -51,12 +51,13 @@ impl Obs {
             Client::connect("localhost", 4455, Some("")).await?;
         let scenes_object = client.scenes();
         let scene_list = scenes_object.list().await?;
-        let current_program_scene = scenes_object.current_program_scene().await?;
+        let current_program_scene =
+            scenes_object.current_program_scene().await?;
         debug!(?scene_list);
         Ok(Self {
             scenes: scene_list,
             client: Some(client),
-            current_program_scene: Some(current_program_scene)
+            current_program_scene: Some(current_program_scene),
         })
     }
 
@@ -84,12 +85,17 @@ impl Obs {
 
             let client = make_client();
             let runtime = tokio::runtime::Runtime::new()?;
-            let handle = runtime.spawn(async move  {
+            let handle = runtime.spawn(async move {
                 debug!("in spawn: before setting");
-                let res = client.scenes().set_current_program_scene(&scene).await;
+                let res = client
+                    .scenes()
+                    .set_current_program_scene(&scene)
+                    .await;
                 match res {
-                    Ok(o) => debug!("in spawn: after setting: success"),
-                    Err(e) => error!(?e, "in spawn: after setting")
+                    Ok(o) => {
+                        debug!("in spawn: after setting: success")
+                    }
+                    Err(e) => error!(?e, "in spawn: after setting"),
                 }
             });
 
@@ -151,13 +157,11 @@ pub struct ObsModelRust {
     port: QString,
     connected: bool,
     obs: Option<Obs>,
-    current_program_scene: QString
+    current_program_scene: QString,
 }
 
 impl obs_model::ObsModel {
-    pub fn update_scenes(
-        mut self: Pin<&mut Self>,
-    ) -> QStringList {
+    pub fn update_scenes(mut self: Pin<&mut Self>) -> QStringList {
         debug!("updating scenes");
         let mut scenes_list = QList_QString::default();
         if let Some(obs) = &self.as_mut().rust_mut().obs {
@@ -184,7 +188,8 @@ impl obs_model::ObsModel {
                 Ok(o) => {
                     if let Some(scene) = &o.current_program_scene {
                         let scene = QString::from(scene);
-                        self.as_mut().set_current_program_scene(scene);
+                        self.as_mut()
+                            .set_current_program_scene(scene);
                     }
                     self.as_mut().set_connected(true);
                     self.as_mut().rust_mut().obs = Some(o);
@@ -219,14 +224,16 @@ impl obs_model::ObsModel {
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     #[test]
     pub fn test_obs_setting_scene() {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let future = Client::connect("localhost", 4455, Some(""));
         let client = runtime.block_on(future).unwrap();
         let scene = String::from("me");
-        let res = runtime.block_on(client.scenes().set_current_program_scene(&scene));
+        let res = runtime.block_on(
+            client.scenes().set_current_program_scene(&scene),
+        );
         debug_assert!(res.is_ok());
     }
 }

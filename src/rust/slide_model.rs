@@ -287,7 +287,6 @@ pub struct SlideModelRust {
     count: i32,
 }
 
-
 impl Default for SlideModelRust {
     fn default() -> Self {
         let obs =
@@ -319,7 +318,10 @@ impl slide_model::SlideModel {
             .append(self.get_role(SlideRoles::VideoThumbnail));
 
         let thread = self.qt_thread();
-        let model_index = self.as_ref().index(index, 0, &QModelIndex::default()).clone();
+        let model_index = self
+            .as_ref()
+            .index(index, 0, &QModelIndex::default())
+            .clone();
         if let Some(slide) =
             self.as_mut().rust_mut().slides.get_mut(index as usize)
         {
@@ -327,26 +329,39 @@ impl slide_model::SlideModel {
                 let path =
                     PathBuf::from(slide.video_background.to_string());
                 let screenshot = ffmpeg::bg_path_from_video(&path);
-                let screenshot_string = QString::from(
-                    screenshot.to_str().unwrap()
-                ).insert(0, &QString::from("file://")).to_owned();
+                let screenshot_string =
+                    QString::from(screenshot.to_str().unwrap())
+                        .insert(0, &QString::from("file://"))
+                        .to_owned();
                 slide.video_thumbnail = screenshot_string;
                 std::thread::spawn(move || {
-                    let result = ffmpeg::bg_from_video(&path, &screenshot);
+                    let result =
+                        ffmpeg::bg_from_video(&path, &screenshot);
                     match result {
-                        Ok(_o) => debug!("Success making video background!"),
-                        Err(error) => error!(?error, "Error making video background")
+                        Ok(_o) => {
+                            debug!("Success making video background!")
+                        }
+                        Err(error) => error!(
+                            ?error,
+                            "Error making video background"
+                        ),
                     };
-                    let result = thread.queue(move |mut slide_model|
-                                 slide_model.as_mut().data_changed(
-                                     &model_index,
-                                     &model_index,
-                                     &vector_roles,
-                                 )
-                    );
+                    let result =
+                        thread.queue(move |mut slide_model| {
+                            slide_model.as_mut().data_changed(
+                                &model_index,
+                                &model_index,
+                                &vector_roles,
+                            )
+                        });
                     match result {
-                        Ok(o) => debug!("Success in creating qt_thread"),
-                        Err(error) => error!(?error, "Error in creating qt_thread")
+                        Ok(o) => {
+                            debug!("Success in creating qt_thread")
+                        }
+                        Err(error) => error!(
+                            ?error,
+                            "Error in creating qt_thread"
+                        ),
                     }
                 });
             }

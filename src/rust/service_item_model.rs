@@ -285,23 +285,21 @@ use cxx_qt_lib::{
     QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
 };
 use dirs;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Deserializer, Map, Serializer, Value};
-use std::ffi::{OsStr, OsString};
-use std::io::{self, Read, Write};
+use serde_json::{json, Value};
+use std::io::{Read, Write};
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::str;
 use std::{fs, println};
 use tar::{Archive, Builder};
-use tracing::{debug, debug_span, error, info, instrument};
+use tracing::{debug, error};
 use zstd::{Decoder, Encoder};
-
 use self::service_item_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     ServiceRoles,
 };
+
+use super::service_item_model::service_item_model::ServiceItemModel;
 
 #[derive(Clone, Debug)]
 pub struct ServiceItem {
