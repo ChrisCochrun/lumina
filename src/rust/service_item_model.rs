@@ -93,6 +93,12 @@ mod service_item_model {
         #[qsignal]
         fn cleared(self: Pin<&mut ServiceItemModel>);
 
+        #[qsignal]
+        fn save_progress_updated(
+            self: Pin<&mut ServiceItemModel>,
+            progress: i32,
+        );
+
         #[qinvokable]
         fn clear(self: Pin<&mut ServiceItemModel>);
 
@@ -866,11 +872,14 @@ impl service_item_model::ServiceItemModel {
             file.to_local_file().unwrap_or_default().to_string();
         println!("path: {:?}", path);
         let lfr = fs::File::create(&path);
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut handles = vec![];
         if let Ok(lf) = &lfr {
             println!("archive: {:?}", lf);
+            self.as_mut().save_progress_updated(5);
             let encoder = Encoder::new(lf, 3).unwrap();
             let mut tar = Builder::new(encoder);
-            let items = &self.service_items;
+            let items = self.rust().service_items.clone();
             let mut temp_dir = dirs::data_dir().unwrap();
             temp_dir.push("lumina");
             let mut s: String =
@@ -887,9 +896,10 @@ impl service_item_model::ServiceItemModel {
             }
             let mut temp_service_file = temp_dir.clone();
             temp_service_file.push("serviceitems.json");
+            self.as_mut().save_progress_updated(10);
             let mut service_json: Vec<Value> = vec![];
-
-            for item in items {
+            let progress_fraction = items.len() as i32 / 80 as i32;
+            for (id, item) in items.iter().enumerate() {
                 let text_list = QList_QString::from(&item.text);
                 let mut text_vec = Vec::<String>::default();
 
@@ -902,7 +912,7 @@ impl service_item_model::ServiceItemModel {
                 );
                 println!("bg_path: {:?}", background_path);
                 let flat_background_name =
-                    &background_path.file_name();
+                    background_path.file_name().clone();
                 let flat_background;
                 match flat_background_name {
                     Some(name) => {
@@ -920,13 +930,6 @@ impl service_item_model::ServiceItemModel {
                 }
                 let mut temp_bg_path = temp_dir.clone();
                 temp_bg_path.push(flat_background);
-                match fs::copy(&background_path, &temp_bg_path) {
-                    Ok(s) => println!(
-                        "background-copied: of size: {:?}",
-                        s
-                    ),
-                    Err(e) => println!("bg-copy-error: {e}"),
-                }
 
                 let audio_path_str = item.audio.to_string();
                 let audio_path = PathBuf::from(
@@ -941,7 +944,8 @@ impl service_item_model::ServiceItemModel {
                     Some(name) => {
                         println!("audio: {:?}", &name);
                         if name.to_str().unwrap() != "temp" {
-                            flat_audio = name.to_str().unwrap()
+                            flat_audio =
+                                name.to_str().unwrap().clone()
                         } else {
                             flat_audio = "";
                         }
@@ -953,13 +957,6 @@ impl service_item_model::ServiceItemModel {
                 }
                 let mut temp_aud_path = temp_dir.clone();
                 temp_aud_path.push(flat_audio);
-                match fs::copy(&audio_path, temp_aud_path) {
-                    Ok(s) => {
-                        println!("audio-copied: of size: {:?}", s)
-                    }
-                    Err(e) => println!("audio-copy-error: {e}"),
-                }
-
                 for (index, line) in text_list.iter().enumerate() {
                     text_vec.insert(index, line.to_string())
                 }
@@ -977,8 +974,41 @@ impl service_item_model::ServiceItemModel {
                                        "slideNumber".to_owned(): Value::from(item.slide_count),
                                        "text".to_owned(): Value::from(text_vec)});
                 println!("item-json: {item_json}");
+
+                let handle = runtime.spawn(async move {
+                    match fs::copy(&background_path, &temp_bg_path) {
+                        Ok(s) => debug!(
+                            "background-copied: of size: {:?}",
+                            s
+                        ),
+                        Err(e) => error!("bg-copy-error: {e}"),
+                    }
+                });
+                handles.push(handle);
+
+                let handle = runtime.spawn(async move {
+                    match fs::copy(&audio_path, temp_aud_path) {
+                        Ok(s) => {
+                            debug!("audio-copied: of size: {:?}", s)
+                        }
+                        Err(e) => error!("audio-copy-error: {e}"),
+                    }
+                });
+                handles.push(handle);
+
                 service_json.push(item_json);
+                self.as_mut().save_progress_updated(
+                    progress_fraction * (id as i32 + 1),
+                );
             }
+
+            for handle in handles {
+                match runtime.block_on(handle) {
+                    Ok(_) => {}
+                    Err(error) => error!(?error, "Error in tokio"),
+                }
+            }
+
             println!("{:?}", &temp_service_file);
             match fs::File::create(&temp_service_file) {
                 Ok(o) => println!("created: {:?}", o),
@@ -1000,52 +1030,51 @@ impl service_item_model::ServiceItemModel {
                             println!("json: file written");
                             match tar.append_dir_all("./", &temp_dir)
                             {
-                                Ok(i) => {
-                                    println!("idk");
-
-                                    match tar.finish() {
-                                        Ok(i) => {
-                                            println!(
-                                                "tar-written: {:?}",
-                                                &lf
+                                Ok(i) => match tar.finish() {
+                                    Ok(i) => {
+                                        debug!(
+                                            file = ?&lf,
+                                            "Tar archive written"
+                                        );
+                                        self.as_mut()
+                                            .save_progress_updated(
+                                                100,
                                             );
-                                            fs::remove_dir_all(
-                                                &temp_dir,
+                                        fs::remove_dir_all(&temp_dir)
+                                            .expect(
+                                                "error in removal",
                                             );
-                                            true
-                                        }
-                                        Err(e) => {
-                                            println!(
-                                                "tar-error: {:?}",
-                                                e
-                                            );
-                                            fs::remove_dir_all(
-                                                &temp_dir,
-                                            );
-                                            false
-                                        }
+                                        true
                                     }
-                                }
-                                Err(e) => {
-                                    println!("err: {:?}", e);
-                                    fs::remove_dir_all(&temp_dir);
+                                    Err(error) => {
+                                        error!(?error);
+                                        fs::remove_dir_all(&temp_dir)
+                                            .expect(
+                                                "error in removal",
+                                            );
+                                        false
+                                    }
+                                },
+                                Err(error) => {
+                                    error!(?error);
+                                    fs::remove_dir_all(&temp_dir)
+                                        .expect("error in removal");
                                     false
                                 }
                             }
                         }
-                        Err(e) => {
-                            println!("json: error: {:?}", e);
-                            fs::remove_dir_all(&temp_dir);
+                        Err(error) => {
+                            error!(?error, "json error");
+                            fs::remove_dir_all(&temp_dir)
+                                .expect("error in removal");
                             false
                         }
                     }
                 }
-                Err(e) => {
-                    println!(
-                        "json: service_file isn't open: {:?}",
-                        e
-                    );
-                    fs::remove_dir_all(&temp_dir);
+                Err(error) => {
+                    error!(?error, "json service_file isn't open");
+                    fs::remove_dir_all(&temp_dir)
+                        .expect("error in removal");
                     false
                 }
             }
