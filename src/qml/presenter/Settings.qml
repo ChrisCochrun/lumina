@@ -34,6 +34,8 @@ Kirigami.OverlaySheet {
                 console.log(PresWindow.screen);
             }
 
+            /* background: Presenter.TextBackground {} */
+
             popup: Controls.Popup {
                 y: screenSelectionField.height + 10
                 z: 1000
