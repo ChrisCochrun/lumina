@@ -189,6 +189,11 @@ Controls.Page {
         }
     }
 
+    /* Connections { */
+    /*     target: SlideModel */
+    /*     function  */
+    /* } */
+
     function changeServiceItem(index) {
         console.log("change-service-item: " + index);
         const item = ServiceItemC.getRust(index, ServiceItemModel);

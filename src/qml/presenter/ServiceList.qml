@@ -580,7 +580,7 @@ Item {
             ServiceItemModel.insertItem(index, image.title,
                                         "", type, image.filePath,
                                         "image", "",
-                                        "", 0, 0, false, 0.0, 0.0);
+                                        "", 0, 0, false, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -590,7 +590,7 @@ Item {
             ServiceItemModel.insertItem(index, video.title,
                                         "", type, video.filePath,
                                         "video", "",
-                                        "", 0, 0, video.loop, video.startTime, video.endTime);
+                                        "", 0, 0, video.loop, video.startTime, video.endTime, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -605,7 +605,7 @@ Item {
                                         lyrics, type, song.background,
                                         song.backgroundType, 
                                         song.audio, song.font, song.fontSize,
-                                        lyrics.length, true, 0.0, 0.0);
+                                        lyrics.length, true, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -617,7 +617,7 @@ Item {
             ServiceItemModel.insertItem(index, pres.title,
                                         "", type, pres.filePath,
                                         "image",
-                                        "", "", 0, pres.pageCount, false, 0.0, 0.0);
+                                        "", "", 0, pres.pageCount, false, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -635,7 +635,7 @@ Item {
             ServiceItemModel.addItem(image.title,
                                      type, image.filePath,
                                      "image", "", "",
-                                     "", 0, 0, false, 0.0, 0.0);
+                                     "", 0, 0, false, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -645,7 +645,7 @@ Item {
             ServiceItemModel.addItem(video.title,
                                      type, video.filePath,
                                      "video", "", "",
-                                     "", 0, 0, video.loop, video.startTime, video.endTime);
+                                     "", 0, 0, video.loop, video.startTime, video.endTime, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -659,7 +659,7 @@ Item {
                                      type, song.background,
                                      song.backgroundType, lyrics,
                                      song.audio, song.font, song.fontSize,
-                                     lyrics.length, true, 0.0, 0.0);
+                                     lyrics.length, true, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }
@@ -672,7 +672,7 @@ Item {
                                      type, pres.filePath,
                                      "image", "",
                                      "", "", 0, pres.pageCount,
-                                     false, 0.0, 0.0);
+                                     false, 0.0, 0.0, itemIndex);
             serviceItemList.forceLayout()
             return;
         }

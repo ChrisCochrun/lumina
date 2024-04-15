@@ -40,6 +40,7 @@ mod service_item_model {
         Looping,
         VideoStartTime,
         VideoEndTime,
+        Id,
     }
 
     unsafe extern "RustQt" {
@@ -120,6 +121,7 @@ mod service_item_model {
             looping: bool,
             video_start_time: f32,
             video_end_time: f32,
+            id: i32,
         );
 
         #[qinvokable]
@@ -138,6 +140,7 @@ mod service_item_model {
             looping: bool,
             video_start_time: f32,
             video_end_time: f32,
+            id: i32,
         );
 
         #[qinvokable]
@@ -318,6 +321,7 @@ pub struct ServiceItem {
     video_start_time: f32,
     video_end_time: f32,
     obs_scene: QString,
+    id: i32,
 }
 
 impl ServiceItem {
@@ -344,6 +348,7 @@ impl Default for ServiceItem {
             video_start_time: 0.0,
             video_end_time: 0.0,
             obs_scene: QString::default(),
+            id: 0,
         }
     }
 }
@@ -427,6 +432,7 @@ impl service_item_model::ServiceItemModel {
         looping: bool,
         video_start_time: f32,
         video_end_time: f32,
+        id: i32,
     ) {
         let service_item = ServiceItem {
             name,
@@ -441,6 +447,7 @@ impl service_item_model::ServiceItemModel {
             looping,
             video_start_time,
             video_end_time,
+            id,
             ..Default::default()
         };
 
@@ -484,6 +491,7 @@ impl service_item_model::ServiceItemModel {
         looping: bool,
         video_start_time: f32,
         video_end_time: f32,
+        id: i32,
     ) {
         let service_item = ServiceItem {
             name,
@@ -498,6 +506,7 @@ impl service_item_model::ServiceItemModel {
             looping,
             video_start_time,
             video_end_time,
+            id,
             ..Default::default()
         };
 
@@ -1326,6 +1335,7 @@ impl service_item_model::ServiceItemModel {
             ServiceRoles::Looping => 11,
             ServiceRoles::VideoStartTime => 12,
             ServiceRoles::VideoEndTime => 13,
+            ServiceRoles::Id => 14,
             _ => 0,
         }
     }
@@ -1380,6 +1390,9 @@ impl service_item_model::ServiceItemModel {
                 }
                 ServiceRoles::VideoEndTime => {
                     QVariant::from(&service_item.video_end_time)
+                }
+                ServiceRoles::Id => {
+                    QVariant::from(&service_item.id)
                 }
                 _ => QVariant::default(),
             };
@@ -1447,6 +1460,10 @@ impl service_item_model::ServiceItemModel {
         roles.insert(
             ServiceRoles::VideoEndTime.repr,
             QByteArray::from("videoEndTime"),
+        );
+        roles.insert(
+            ServiceRoles::Id.repr,
+            QByteArray::from("id"),
         );
         roles
     }
