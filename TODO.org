@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [63%] [53/83]
+* Tasks [63%] [53/84]
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 
@@ -13,6 +13,22 @@ I've got a sorta working concept. It hinges on MPV's --start and --end propertie
 It does reset, but doesn't if the video we are switching to is the same video, but different start and end times. This could be problematic if the user wanted to have two sections of the same video loaded. For say a teaching moment or something like that.
 ** TODO Refactor service_item_model.rs and slide_model.rs
 I've been thinking about my design of the service item model and slide model classes and believe I've used way too many properties for these models than is necessary. Instead I would really only need to have the title, type, and ids of the various items in the other models, then find a way to look them up when requesting them for the slide_object.
+
+In doing this, I think I've started to come up with a basic design.
+
+Since I haven't gotten nested objects to work just yet, I think what I might do is move more connections into QML. This way I can run a basic javascript wrapper around the signal and slots connections to make sure I'm getting the correct info from the correct places.
+
+Basically a workflow could look like this.
+
+Add an item from the library to the servicelist. This will add the item in either by inserting or appending. Inserting uses the proper index, and insterts only the name, type, background(a generated one that is either from ffmpeg or the actual bg), and id within the corresponding model for that type of content.
+
+This will call the itemInserted signal which will connect to the slideModels' insertItem slot. This slot is essentially the same as the serviceItem, except it'll only track the name, type, id within corresponding model, and index of the current item of the service item. This enables us to make sure that each serviceItem can hold multiple slides still, especially for songs.
+
+Then when we want to load that into the slideObject, we simply grab the item from the slideModel, find the item in the corresponding types model, then use the index from the slideModel to make sure we are using the right item.
+
+To display all the slides... 
+
+Actually as I type this out, I'm starting to think that the slide_model still needs all the metadata that the slide_object will have. The reason being that I'd like to have details in the slide preview system that can only come from having all the info available to QML. This makes the QML preview system a lot easier to reason with because you can use property binding rather than needing to create a custom building system for each arbitrary detail we want to add the to the previews. All that said, what properties does the slide_object and slide_model really need then? Is there a way for the model to have fewer props?
 
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
@@ -39,6 +55,8 @@ This is supposed to be covered in the examples and the book.
 But, I can't seem to get it to compile. I'll keep tinkering but this would be huge for allowing me to have a single object that can get passed into functions of other objects to be able to call inner functions from the outer call. This would mean I could have obs and slides talk. I could have the slide_object talk to the model. And more...
 
 Maybe an alternative to this would be connecting them through signals, but idk yet....
+
+Another alternative would be to try to use rust mods to make sure it is in scope of the qobject mod block.
 ** TODO Create an emacs interface
 For me, building lumina presentations through the ui is cumbersome. I'd like to improve it but honestly, it works great for the normal person use case, maybe for now as I get more of it matured. I'll consider developing an emacs interface and connect it. Maybe even develop a server/client architecture so that I can build presentations quickly through a myriad of ways too.
 
