@@ -184,8 +184,8 @@ Controls.Page {
 
     Connections {
         target: ServiceItemModel
-        function saveProgressUpdate(progress) {
-            mainPage.progress = progress;
+        function onSaveProgressChanged() {
+            Utils.dbg(ServiceItemModel.saveProgress);
         }
     }
 

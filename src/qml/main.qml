@@ -115,10 +115,10 @@ Kirigami.ApplicationWindow {
                 anchors.left: footerFilePathLabel.left
                 anchors.right: footerFilePathLabel.right
                 anchors.rightMargin: footerFilePathLabel.rightMargin
-                from: 0
-                to: 100
-                value: mainPage.progress
-                visible: mainPage.progress > 0
+                from: 0.0
+                to: 100.0
+                value: Math.min(ServiceItemModel.saveProgess, 100.0)
+                /* visible: mainPage.progress > 0 */
             }
         }
         /* Item { */
@@ -208,7 +208,7 @@ Kirigami.ApplicationWindow {
         defaultSuffix: ".pres"
         selectExisting: false
         onAccepted: {
-            finalSave(saveFileDialog.fileUrl);
+            ServiceItemModel.save(saveFileDialog.fileUrl);
             console.log(saveFileDialog.fileUrl);
         }
         onRejected: {
@@ -274,28 +274,31 @@ Kirigami.ApplicationWindow {
         let file = "";
         if (saveFile.length === 0) {
             file = fileHelper.saveFile();
-            finalSave(file);
+            ServiceItemModel.save(file);
         } else {
-            finalSave(saveFile);
+            ServiceItemModel.save(saveFile);
         }
     }
 
     function saveAs() {
         let file = fileHelper.saveFile();
-        finalSave(file);
+        ServiceItemModel.save(file);
     }
 
-    function finalSave(file) {
-        const saved = mainPage.serviceItems.save(file);
-        if (saved) {
-            RSettings.setSaveFile(file);
-            showPassiveNotification("SAVED! " + file);
-            mainPage.progress = 0;
-        } else {
-            console.log("File: " + file + " wasn't saved");
-            showPassiveNotification("Didn't save file");
+    Connections {
+        target: ServiceItemModel
+        function onSavedToFile(saved, file) {
+            if (saved) {
+                Utils.dbg(file);
+                console.log(file);
+                showPassiveNotification("Saved to ", + Qt.resolvedUrl(file));
+            }
         }
     }
+
+    /* function finalSave(file) { */
+    /*     const saved = mainPage.serviceItems.save(file); */
+    /* } */
 
     function load() {
         const file = fileHelper.loadFile("Load Presentation");

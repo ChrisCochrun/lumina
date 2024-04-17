@@ -48,6 +48,8 @@ mod service_item_model {
         #[base = "QAbstractListModel"]
         #[qml_element]
         #[qproperty(i32, count)]
+        #[qproperty(f32, save_progress)]
+        #[qproperty(bool, saved)]
         type ServiceItemModel = super::ServiceItemModelRust;
 
         #[inherit]
@@ -98,6 +100,13 @@ mod service_item_model {
         fn save_progress_updated(
             self: Pin<&mut ServiceItemModel>,
             progress: i32,
+        );
+
+        #[qsignal]
+        fn saved_to_file(
+            self: Pin<&mut ServiceItemModel>,
+            saved: bool,
+            file: &QUrl,
         );
 
         #[qinvokable]
@@ -283,7 +292,7 @@ mod service_item_model {
 
 use crate::obs::Obs;
 use crate::service_item_model::service_item_model::QList_QString;
-use cxx_qt::CxxQtType;
+use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
     QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
 };
@@ -293,6 +302,7 @@ use std::io::{Read, Write};
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use std::time::Instant;
 use std::{fs, println};
 use tar::{Archive, Builder};
 use tracing::{debug, error};
@@ -359,6 +369,8 @@ pub struct ServiceItemModelRust {
     service_items: Vec<ServiceItem>,
     obs: Option<Obs>,
     count: i32,
+    save_progress: f32,
+    saved: bool,
 }
 
 impl Default for ServiceItemModelRust {
@@ -378,6 +390,8 @@ impl Default for ServiceItemModelRust {
             service_items: Vec::new(),
             obs,
             count: 0,
+            save_progress: 0.0,
+            saved: false,
         }
     }
 }
@@ -875,16 +889,19 @@ impl service_item_model::ServiceItemModel {
 
     pub fn save(mut self: Pin<&mut Self>, file: QUrl) -> bool {
         println!("rust-save-file: {file}");
-        let path =
+        let save_path =
             file.to_local_file().unwrap_or_default().to_string();
-        println!("path: {:?}", path);
-        let lfr = fs::File::create(&path);
+        println!("path: {:?}", save_path);
+
+        let save_file = fs::File::create(&save_path);
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let mut handles = vec![];
-        if let Ok(lf) = &lfr {
-            println!("archive: {:?}", lf);
+
+        if let Ok(save_file) = save_file {
+            println!("archive: {:?}", save_file);
             self.as_mut().save_progress_updated(5);
-            let encoder = Encoder::new(lf, 3).unwrap();
+            // let save_file = save_file.clone();
+            let encoder = Encoder::new(save_file, 3).unwrap();
             let mut tar = Builder::new(encoder);
             let items = self.rust().service_items.clone();
             let mut temp_dir = dirs::data_dir().unwrap();
@@ -905,7 +922,7 @@ impl service_item_model::ServiceItemModel {
             temp_service_file.push("serviceitems.json");
             self.as_mut().save_progress_updated(10);
             let mut service_json: Vec<Value> = vec![];
-            let progress_fraction = items.len() as i32 / 80 as i32;
+            let progress_fraction = items.len() as f32 / 100 as f32;
             for (id, item) in items.iter().enumerate() {
                 let text_list = QList_QString::from(&item.text);
                 let mut text_vec = Vec::<String>::default();
@@ -1004,9 +1021,6 @@ impl service_item_model::ServiceItemModel {
                 handles.push(handle);
 
                 service_json.push(item_json);
-                self.as_mut().save_progress_updated(
-                    progress_fraction * (id as i32 + 1),
-                );
             }
 
             for handle in handles {
@@ -1023,6 +1037,8 @@ impl service_item_model::ServiceItemModel {
                     println!("error-creating-service-file: {:?}", e)
                 }
             }
+            let now = Instant::now();
+            let thread = self.qt_thread();
             match fs::File::options()
                 .write(true)
                 .read(true)
@@ -1034,41 +1050,55 @@ impl service_item_model::ServiceItemModel {
                         &service_json,
                     ) {
                         Ok(e) => {
-                            println!("json: file written");
-                            match tar.append_dir_all("./", &temp_dir)
-                            {
-                                Ok(i) => match tar.finish() {
-                                    Ok(i) => {
-                                        debug!(
-                                            file = ?&lf,
-                                            "Tar archive written"
-                                        );
-                                        self.as_mut()
-                                            .save_progress_updated(
-                                                100,
-                                            );
+                            debug!(time = ?now.elapsed(), "file written");
+                            std::thread::spawn(move || {
+                                debug!(time = ?now.elapsed(), "idk");
+                                let dir = fs::read_dir(&temp_dir).expect("idk");
+                                for (index, file) in dir.enumerate() {
+                                    if let Ok(file) = file {
+                                        let file_name = file.file_name();
+                                        debug!(?file, ?file_name);
+                                        let mut file = std::fs::File::open(file.path()).expect("missing file");
+                                        tar.append_file(file_name, &mut file).expect("Error in moving file to tar");
+                                        thread.queue(move |mut service| {
+                                            service
+                                                .as_mut()
+                                                .set_save_progress(
+                                                    progress_fraction *
+                                                        (index as f32 + 1.0) * 100.0
+                                                )
+                                        }).expect("Problem queuing on cxx thread");
+                                    }
+
+                                }
+                                if let Ok(encoder) = tar.into_inner() {
+                                    if let Ok(done) = encoder.finish() {
+                                        debug!(time = ?now.elapsed(), ?done, "tar finished");
+                                        thread.queue(move |mut service| {
+                                            service.as_mut().set_save_progress(100.0);
+                                            service.as_mut().saved_to_file(true, &file);
+                                        }).expect("Problem queuing on cxx thread");
                                         fs::remove_dir_all(&temp_dir)
                                             .expect(
                                                 "error in removal",
                                             );
                                         true
-                                    }
-                                    Err(error) => {
-                                        error!(?error);
+                                    } else {
                                         fs::remove_dir_all(&temp_dir)
                                             .expect(
                                                 "error in removal",
                                             );
                                         false
                                     }
-                                },
-                                Err(error) => {
-                                    error!(?error);
+                                } else {
                                     fs::remove_dir_all(&temp_dir)
-                                        .expect("error in removal");
+                                        .expect(
+                                            "error in removal",
+                                        );
                                     false
                                 }
-                            }
+                            });
+                            true
                         }
                         Err(error) => {
                             error!(?error, "json error");
@@ -1086,7 +1116,7 @@ impl service_item_model::ServiceItemModel {
                 }
             }
         } else {
-            println!("rust-save-file-failed: {:?}", lfr);
+            error!(?save_file, "failed to save");
             false
         }
     }
