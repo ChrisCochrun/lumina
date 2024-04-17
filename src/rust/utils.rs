@@ -56,6 +56,7 @@ mod utilities {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
+        type QUrl = cxx_qt_lib::QUrl;
     }
 
     unsafe extern "RustQt" {
@@ -71,6 +72,9 @@ mod utilities {
 
         #[qinvokable]
         fn inf(self: &Utils, message: QString);
+
+        #[qinvokable]
+        fn url_to_string(self: &Utils, url: QUrl) -> QString;
     }
 }
 
@@ -98,6 +102,10 @@ impl utilities::Utils {
 
     pub fn inf(self: &Self, message: QString) {
         info!(msg = ?message);
+    }
+
+    pub fn url_to_string(self: &Self, url: QUrl) -> QString {
+        url.path()
     }
 }
 

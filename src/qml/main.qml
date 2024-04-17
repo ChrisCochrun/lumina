@@ -289,9 +289,10 @@ Kirigami.ApplicationWindow {
         target: ServiceItemModel
         function onSavedToFile(saved, file) {
             if (saved) {
-                Utils.dbg(file);
-                console.log(file);
-                showPassiveNotification("Saved to ", + Qt.resolvedUrl(file));
+                let path = file.toString();
+                path = path.replace(/^(file:\/{2})/,"");
+                let cleanPath = decodeURIComponent(path);
+                showPassiveNotification("Saved to ", + cleanPath);
             }
         }
     }
