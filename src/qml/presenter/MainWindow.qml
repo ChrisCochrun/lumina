@@ -133,6 +133,12 @@ Controls.Page {
                     visible: false
                     anchors.fill: parent
                 }
+
+                Presenter.SlideEditor {
+                    id: slideEditor
+                    visible: false
+                    anchors.fill: parent
+                }
             }
 
             Presenter.Library {
@@ -284,6 +290,7 @@ Controls.Page {
                 videoEditor.stop();
                 imageEditor.visible = false;
                 presentationEditor.visible = false;
+                slideEditor.visible = false;
                 songEditor.visible = true;
                 songEditor.changeSong(item);
                 currentWindow = songEditor;
@@ -293,6 +300,7 @@ Controls.Page {
                 songEditor.visible = false;
                 imageEditor.visible = false;
                 presentationEditor.visible = false;
+                slideEditor.visible = false;
                 videoEditor.visible = true;
                 videoEditor.changeVideo(item);
                 currentWindow = videoEditor;
@@ -303,6 +311,7 @@ Controls.Page {
                 videoEditor.stop();
                 songEditor.visible = false;
                 presentationEditor.visible = false;
+                slideEditor.visible = false;
                 imageEditor.visible = true;
                 imageEditor.changeImage(item);
                 currentWindow = imageEditor;
@@ -313,9 +322,20 @@ Controls.Page {
                 videoEditor.stop();
                 songEditor.visible = false;
                 imageEditor.visible = false;
+                slideEditor.visible = false;
                 presentationEditor.visible = true;
                 presentationEditor.changePresentation(item);
                 currentWindow = presentationEditor;
+                break;
+            case "slide" :
+                presentation.visible = false;
+                videoEditor.visible = false;
+                videoEditor.stop();
+                songEditor.visible = false;
+                imageEditor.visible = false;
+                presentationEditor.visible = false;
+                slideEditor.visible = true;
+                currentWindow = slideEditor;
                 break;
             default:
                 videoEditor.visible = false;

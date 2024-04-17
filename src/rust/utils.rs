@@ -8,7 +8,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
-use self::utilities::QString;
+use self::utilities::{QString, QUrl};
 
 mod db {
     use diesel::{Connection, SqliteConnection};

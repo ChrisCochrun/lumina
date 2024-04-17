@@ -124,141 +124,38 @@ Item {
 
             }
 
-            Rectangle {
-                id: slideLibraryPanel
-                Layout.preferredHeight: 40
-                Layout.fillWidth: true
+            Presenter.LibraryItem {
+                id: slideLibrary
                 Layout.alignment: Qt.AlignTop
-                color: Kirigami.Theme.backgroundColor
-
-                Controls.Label {
-                    anchors.centerIn: parent
-                    text: "Slides"
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        if (selectedLibrary == "slides")
-                            selectedLibrary = ""
-                        else
-                            selectedLibrary = "slides"
-                        console.log(selectedLibrary)
-                    }
-                }
-            }
-
-            Rectangle {
-                id: slideLibraryHeader
-                z: 2
-                Layout.preferredHeight: 40
                 Layout.fillWidth: true
-                /* width: parent.width */
-                color: Kirigami.Theme.backgroundColor
-                opacity: 1
-                state: "deselected"
+                Layout.preferredHeight: parent.height - 280
+                /* proxyModel: presProxyModel */
+                innerModel: slideModel
+                libraryType: "slide"
+                headerLabel: "Slides"
+                itemIcon: "x-office-presentation-symbolic"
+                /* itemSubtitle: model.path */
+                count: innerModel.count
+                newItemFunction: (function() {
+                    if (!editMode)
+                        editMode = true;
+                    editSwitch(0, libraryType);
+                })
+            }
 
-                states: [
-                    State {
-                        name: "deselected"
-                        when: (selectedLibrary !== "slides")
-                        PropertyChanges { target: slideLibraryHeader
-                                          Layout.preferredHeight: 0
-                                        }
-                    },
-                    State {
-                        name: "selected"
-                        when: (selectedLibrary == "slides")
-                        PropertyChanges { target: slideLibraryHeader }
-                    }
-                ]
-
-                transitions: Transition {
-                    to: "*"
-                    NumberAnimation {
-                        target: slideLibraryList
-                        properties: "preferredHeight"
-                        easing.type: Easing.OutCubic
-                        duration: 300
-                    }
+            ListModel {
+                id: slideModel
+                ListElement {
+                    title: "test"
+                    items: []
                 }
 
-                Kirigami.ActionToolBar {
-                    height: parent.height
-                    width: parent.width
-                    display: Controls.Button.IconOnly
-                    visible: selectedLibrary == "slides"
-                    actions: [
-                        Kirigami.Action {
-                            icon.name: "document-new"
-                            text: "New Slide"
-                            tooltip: "Add a new slide"
-                            onTriggered: slideLibraryList.newSlide()
-                            /* visible: selectedLibrary == "slides" */
-                        },
-                        
-                        Kirigami.Action {
-                            displayComponent: Component {
-                                Kirigami.SearchField {
-                                    id: searchField
-                                    height: parent.height
-                                    width: parent.width - 40
-                                    onAccepted: showPassiveNotification(searchField.text, 3000)
-                                }
-                            }
-                            /* visible: selectedLibrary == "slides" */
-                        }
-                    ]
-
-                    Behavior on height {
-                        NumberAnimation {
-                            easing.type: Easing.OutCubic
-                            duration: 300
-                        }
-                    }
+                ListElement {
+                    title: "Cool Slide"
+                    items: []
                 }
             }
 
-            ListView {
-                id: slideLibraryList
-                Layout.preferredHeight: parent.height - 240
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignTop
-                state: "deselected"
-
-                states: [
-                    State {
-                        name: "deselected"
-                        when: (selectedLibrary !== "slides")
-                        PropertyChanges { target: slideLibraryList
-                                          Layout.preferredHeight: 0
-                                        }
-                    },
-                    State {
-                        name: "selected"
-                        when: (selectedLibrary == "slides")
-                        PropertyChanges { target: slideLibraryList }
-                    }
-                ]
-
-                transitions: Transition {
-                    to: "*"
-                    NumberAnimation {
-                        target: slideLibraryList
-                        properties: "preferredHeight"
-                        easing.type: Easing.OutCubic
-                        duration: 300
-                    }
-                }
-
-                Controls.ScrollBar.vertical: Controls.ScrollBar {
-                    /* anchors.right: videoLibraryList.right */
-                    /* anchors.leftMargin: 10 */
-                    /* anchors.left: videoLibraryList.right */
-                    active: hovered || pressed
-                }
-
-            }
         }
 
         DropArea {

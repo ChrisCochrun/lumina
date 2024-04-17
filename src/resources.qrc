@@ -14,6 +14,7 @@
         <file>qml/presenter/VideoEditor.qml</file>
         <file>qml/presenter/ImageEditor.qml</file>
         <file>qml/presenter/PresentationEditor.qml</file>
+        <file>qml/presenter/SlideEditor.qml</file>
         <file>qml/presenter/Slide.qml</file>
         <file>qml/presenter/SlidesListView.qml</file>
         <file>qml/presenter/SongEditorSlideList.qml</file>
@@ -26,6 +27,7 @@
         <file>qml/presenter/RangedSlider.qml</file>
         <file>qml/presenter/NewVideo.qml</file>
         <file>qml/presenter/TextBackground.qml</file>
+        <file>qml/presenter/TextBox.qml</file>
         <file>qml/presenter/LoadingSpinner.qml</file>
         <file>assets/parallel.jpg</file>
         <file>assets/black.jpg</file>
