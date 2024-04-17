@@ -30,6 +30,11 @@ To display all the slides...
 
 Actually as I type this out, I'm starting to think that the slide_model still needs all the metadata that the slide_object will have. The reason being that I'd like to have details in the slide preview system that can only come from having all the info available to QML. This makes the QML preview system a lot easier to reason with because you can use property binding rather than needing to create a custom building system for each arbitrary detail we want to add the to the previews. All that said, what properties does the slide_object and slide_model really need then? Is there a way for the model to have fewer props?
 
+** TODO Saving needs to be asynchronous
+I need to figure out how to make saving asynchronous in order to not lock the ui thread while saving.
+
+Tokio seems to not be working the way I expected....
+
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.

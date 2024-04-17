@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
   QCoreApplication::setOrganizationName(QStringLiteral("lumina"));
   QCoreApplication::setOrganizationDomain(QStringLiteral("tfcconnection.org"));
   QCoreApplication::setApplicationName(QStringLiteral("lumina"));
-  qSetMessagePattern("[%{type} %{time h:m:s ap}: %{function} in %{file}]: %{message}\n");
+  qSetMessagePattern("%{category}: %{time h:m:s ap} %{type}  %{function}:  %{message}\n  %{file}");
 
 #ifdef Q_OS_WINDOWS
   QIcon::setFallbackThemeName("breeze");

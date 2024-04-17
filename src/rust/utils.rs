@@ -2,7 +2,7 @@ use std::pin::Pin;
 
 use time::macros::format_description;
 use tokio::runtime::Runtime;
-use tracing::{debug, info};
+use tracing::{debug, info, instrument::WithSubscriber};
 use tracing_subscriber::{
     fmt::{self, time::LocalTime},
     EnvFilter,
@@ -102,11 +102,16 @@ impl utilities::Utils {
 }
 
 pub fn setup() {
+    let timer = tracing_subscriber::fmt::time::ChronoLocal::new(
+        "%Y-%m-%d_%I:%M:%S%.6f %P".to_owned(),
+    );
     tracing_subscriber::FmtSubscriber::builder()
         .pretty()
         .with_line_number(true)
         .with_level(true)
         .with_target(true)
         .with_env_filter(EnvFilter::from_default_env())
+        .with_target(true)
+        .with_timer(timer)
         .init();
 }
