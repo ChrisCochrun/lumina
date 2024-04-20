@@ -37,6 +37,8 @@ Tokio seems to not be working the way I expected....
 
 Works much better with spawning an os thread.
 
+Still needs some form of ui to indicate that saving is in progress.
+
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
 The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
