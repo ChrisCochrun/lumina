@@ -112,13 +112,11 @@ Kirigami.ApplicationWindow {
 
             Controls.ProgressBar {
                 id: footerSaveProgress
-                anchors.left: footerFilePathLabel.left
-                anchors.right: footerFilePathLabel.right
-                anchors.rightMargin: footerFilePathLabel.rightMargin
+                anchors.fill: parent
                 from: 0.0
                 to: 100.0
-                value: Math.min(ServiceItemModel.saveProgess, 100.0)
-                /* visible: mainPage.progress > 0 */
+                value: mainPage.progress
+                visible: mainPage.progress > 0
             }
         }
         /* Item { */
@@ -292,9 +290,16 @@ Kirigami.ApplicationWindow {
                 let path = file.toString();
                 path = path.replace(/^(file:\/{2})/,"");
                 let cleanPath = decodeURIComponent(path);
-                showPassiveNotification("Saved to ", + cleanPath);
+                showPassiveNotification("Saved to " + cleanPath, 2000);
+                resetSavedTimer.restart();
             }
         }
+    }
+
+    Timer {
+        id: resetSavedTimer
+        interval: 2000
+        onTriggered: ServiceItemModel.saveProgress = 0;
     }
 
     /* function finalSave(file) { */

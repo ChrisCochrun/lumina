@@ -4,7 +4,7 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [63%] [53/84]
+* Tasks [64%] [54/84]
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 
@@ -29,15 +29,6 @@ Then when we want to load that into the slideObject, we simply grab the item fro
 To display all the slides... 
 
 Actually as I type this out, I'm starting to think that the slide_model still needs all the metadata that the slide_object will have. The reason being that I'd like to have details in the slide preview system that can only come from having all the info available to QML. This makes the QML preview system a lot easier to reason with because you can use property binding rather than needing to create a custom building system for each arbitrary detail we want to add the to the previews. All that said, what properties does the slide_object and slide_model really need then? Is there a way for the model to have fewer props?
-
-** TODO Saving needs to be asynchronous
-I need to figure out how to make saving asynchronous in order to not lock the ui thread while saving.
-
-Tokio seems to not be working the way I expected....
-
-Works much better with spawning an os thread.
-
-Still needs some form of ui to indicate that saving is in progress.
 
 ** TODO [#B] Fix updating things in the song editor
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
@@ -265,6 +256,15 @@ Let's rename everything to that.
 Both PDFs and reveal.js presentations think every slide is the first one. I need a way of finding the individual components and then properly switching to the next one.
 
 Switching to the next slide in reveal.js may be tricky since I'll need to push into the WebEngineView the next reveal function and then get back how many more slides and fragments there are.
+** DONE Saving needs to be asynchronous
+I need to figure out how to make saving asynchronous in order to not lock the ui thread while saving.
+
+Tokio seems to not be working the way I expected....
+
+Works much better with spawning an os thread.
+
+Still needs some form of ui to indicate that saving is in progress.
+
 ** DONE [#B] Fix switching songs in editor not showing the right lyrics
 ** DONE Mouse needs to have resize shape when hovering controls       :bug:
 [[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::Controls.SplitView {]]

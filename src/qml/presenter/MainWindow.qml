@@ -39,7 +39,7 @@ Controls.Page {
     property int dragItemSlideNumber
 
     property bool editing: true
-    property int progress: 0
+    property int progress: ServiceItemModel.saveProgress
 
     property Item slideItem
     property var song
