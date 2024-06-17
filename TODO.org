@@ -4,13 +4,14 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [64%] [54/84]
+* Tasks [63%] [54/85]
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 
 I've got a sorta working concept. It hinges on MPV's --start and --end properties. We'll use this to make sure the video has the right settings. But, when switching to another video, we'll need to reset it.
 
 It does reset, but doesn't if the video we are switching to is the same video, but different start and end times. This could be problematic if the user wanted to have two sections of the same video loaded. For say a teaching moment or something like that.
+** TODO Plugin architecture with steel or some scheme as an extension language
 ** TODO Refactor service_item_model.rs and slide_model.rs
 I've been thinking about my design of the service item model and slide model classes and believe I've used way too many properties for these models than is necessary. Instead I would really only need to have the title, type, and ids of the various items in the other models, then find a way to look them up when requesting them for the slide_object.
 

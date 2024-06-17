@@ -4,6 +4,8 @@
 * Introduction
 This is an attempt at building a church presentation application in Qt/QML. QML provides a very powerful and easy declarative way of creating a UI so it should also be a very simple method of creating on screen slides and presentations. This experiment is to see how difficult it is to rebuild these applications in QML as opposed to other more complicated systems. After digging through the source code of OpenLP, I discovered they are essentially creating a web server and rendering a webpage onto the screen to show slides. This felt like a waste of resources and added complexity when something so simple and useful as QML exists.
 
+In hind site, I may have been a bit too harsh on how OpenLP chose to create slides, that said, my focus was on simplicity and an actual working program so that I could do my work from linux and not need windows. This has now given a lot more programming experience and have rewritten parts of this project twice now. Potentially to do it again.
+
 ** Features (planned are in parentheses)
 - Presents songs lyrics with image and video backgrounds
 - Use MPV as a rendering system for videos
