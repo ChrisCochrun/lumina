@@ -288,7 +288,7 @@ Item {
                             }
                             Kirigami.Action {
                                 text: "Delete"
-                                onTriggered: removeItem(index)
+                                onTriggered: removeItems()
                             }
 
                             Controls.MenuSeparator {}

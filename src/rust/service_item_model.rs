@@ -113,7 +113,7 @@ mod service_item_model {
         fn clear(self: Pin<&mut ServiceItemModel>);
 
         #[qinvokable]
-        fn remove_item(self: Pin<&mut ServiceItemModel>, index: i32);
+        fn remove_items(self: Pin<&mut ServiceItemModel>);
 
         #[qinvokable]
         fn add_item(
@@ -411,25 +411,31 @@ impl service_item_model::ServiceItemModel {
         self.as_mut().cleared();
     }
 
-    pub fn remove_item(mut self: Pin<&mut Self>, index: i32) {
-        if index < 0 || (index as usize) >= self.service_items.len() {
-            return;
+    pub fn remove_items(mut self: Pin<&mut Self>) {
+        let mut indices = vec![];
+        let mut items = self.service_items.clone();
+        for (index, item) in items.iter_mut().enumerate().filter(|(y, x)| x.selected) {
+            let index = index as i32;
+            indices.push(index);
         }
-
-        unsafe {
-            self.as_mut().begin_remove_rows(
-                &QModelIndex::default(),
-                index,
-                index,
-            );
-            self.as_mut()
-                .rust_mut()
-                .service_items
-                .remove(index as usize);
-            self.as_mut().end_remove_rows();
+        debug!(vec = ?indices);
+        for index in indices.iter().rev() {
+            debug!(index);
+            unsafe {
+                self.as_mut().begin_remove_rows(
+                    &QModelIndex::default(),
+                    *index,
+                    *index,
+                );
+                self.as_mut()
+                    .rust_mut()
+                    .service_items
+                    .remove(*index as usize);
+                self.as_mut().end_remove_rows();
+            }
+            let item = self.as_mut().get_item(*index);
+            self.as_mut().item_removed(&index, &item);
         }
-        let item = self.as_mut().get_item(index);
-        self.as_mut().item_removed(&index, &item);
     }
 
     pub fn add_item(
