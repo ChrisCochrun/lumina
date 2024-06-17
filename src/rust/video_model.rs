@@ -193,8 +193,8 @@ use self::video_model::{
 #[derive(Default, Clone, Debug)]
 pub struct Video {
     id: i32,
-    title: QString,
-    path: QString,
+    title: String,
+    path: String,
     start_time: f32,
     end_time: f32,
     looping: bool,
@@ -236,8 +236,8 @@ impl video_model::VideoModel {
 
             let img = self::Video {
                 id: video.id,
-                title: QString::from(&video.title),
-                path: QString::from(&video.path),
+                title: video.title,
+                path: video.path,
                 start_time: video.start_time.unwrap_or(0.0),
                 end_time: video.end_time.unwrap_or(0.0),
                 looping: video.looping,
@@ -325,8 +325,8 @@ impl video_model::VideoModel {
         // println!("{:?}", db);
         let video = self::Video {
             id: video_id,
-            title: video_title.clone(),
-            path: video_path.clone(),
+            title: video_title.clone().to_string(),
+            path: video_path.clone().to_string(),
             start_time: 0.0,
             end_time: 0.0,
             looping: false,
@@ -553,7 +553,7 @@ impl video_model::VideoModel {
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
-                    video.title = updated_title.clone();
+                    video.title = updated_title.clone().to_string();
                     println!("rust-title: {:?}", video.title);
                 }
                 // TODO this seems to not be updating in the actual list
@@ -592,7 +592,7 @@ impl video_model::VideoModel {
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
-                    video.path = updated_path.clone();
+                    video.path = updated_path.clone().to_string();
                     println!("rust-title: {:?}", video.title);
                 }
                 self.as_mut().data_changed(
@@ -615,8 +615,12 @@ impl video_model::VideoModel {
         if let Some(video) = self.videos.get(index.row() as usize) {
             return match role {
                 VideoRoles::Id => QVariant::from(&video.id),
-                VideoRoles::Title => QVariant::from(&video.title),
-                VideoRoles::Path => QVariant::from(&video.path),
+                VideoRoles::Title => {
+                    QVariant::from(&QString::from(&video.title))
+                }
+                VideoRoles::Path => {
+                    QVariant::from(&QString::from(&video.path))
+                }
                 VideoRoles::StartTime => {
                     QVariant::from(&video.start_time)
                 }
