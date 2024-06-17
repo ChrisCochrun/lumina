@@ -113,6 +113,7 @@ impl file_helper::FileHelper {
             "jpg", "png", "gif", "jpeg", "JPG", "PNG", "webp", "gif",
         ];
         let audio_filters = ["mp3", "opus", "ogg", "flac", "wav"];
+        let pres_filter = ["pres"];
         let title = title.to_string();
         let filter = filter.to_string();
         let mut file = FileDialog::new().set_title(title);
@@ -125,6 +126,9 @@ impl file_helper::FileHelper {
             }
             "audio" => {
                 file = file.add_filter(filter, &audio_filters);
+            }
+            "pres" => {
+                file = file.add_filter(filter, &pres_filter);
             }
             _ => debug!("nothing"),
         };

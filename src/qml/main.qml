@@ -307,13 +307,17 @@ Kirigami.ApplicationWindow {
     /* } */
 
     function load() {
-        const file = fileHelper.loadFile("Load Presentation");
-        const loaded = mainPage.serviceItems.load(file);
-        loaded ? showPassiveNotification("Loaded: " + file)
-            : showPassiveNotification("File wasn't loaded");
-        loaded ? RSettings.loadFile = file
-            : showPassiveNotification("Didn't set loadfile!");
-        showPassiveNotification(RSettings.loadFile);
+        const file = fileHelper.loadFile("Load Presentation", "pres");
+        if (file != "") {
+            const loaded = mainPage.serviceItems.load(file);
+            loaded ? showPassiveNotification("Loaded: " + file)
+                : showPassiveNotification("File wasn't loaded");
+            loaded ? RSettings.loadFile = file
+                : showPassiveNotification("Didn't set loadfile!");
+            showPassiveNotification(RSettings.loadFile);
+        } else {
+            showPassiveNotification("Loading Canceled");
+        }
     }
 
     Component.onCompleted: {
