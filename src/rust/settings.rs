@@ -15,6 +15,7 @@ mod settings {
         #[qproperty(QUrl, last_save_file)]
         #[qproperty(QUrl, loaded_file)]
         #[qproperty(bool, debug)]
+        #[qproperty(bool, run_server)]
         type Settings = super::SettingsRust;
 
         #[qinvokable]
@@ -42,6 +43,7 @@ pub struct SettingsRust {
     last_save_file: QUrl,
     loaded_file: QUrl,
     debug: bool,
+    run_server: bool,
 }
 
 impl Default for SettingsRust {
@@ -53,6 +55,7 @@ impl Default for SettingsRust {
             last_save_file: QUrl::from(""),
             loaded_file: QUrl::from(""),
             debug: false,
+            run_server: false,
         }
     }
 }

@@ -84,7 +84,15 @@ Kirigami.OverlaySheet {
             Kirigami.FormData.label: i18nc("@label:checkbox", "Debug")
             onClicked: {
                 RSettings.debug = checked;
-                console.log(RSettings.debug);
+                Utils.dbg("Debugging: " + RSettings.debug);
+            }
+        }
+
+        Controls.CheckBox {
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Run Server")
+            onClicked: {
+                RSettings.runServer = checked;
+                Utils.dbg("Server running: " + RSettings.runServer);
             }
         }
         
