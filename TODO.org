@@ -4,14 +4,32 @@
 :CATEGORY: dev
 :END:
 
-* Tasks [63%] [54/85]
+* Tasks [62%] [54/86]
+** TODO [#A] Plugin architecture with steel or some scheme as an extension language
+** TODO [#A] Server client architecture
+** TODO [#A] Organize and layout structure of rust code       :maintenance:
+Since building a lot of the rust code felt more like an experiment, I've not kept it very well organized. I need to go through each model and rust module and organize them well and then decide what needs to be publicly available or not.
+
+One major way to work on this is to pass less items back to rust and just their indexes instead. This leads to knowing which item and letting rust find the item. Another solution is to allow qml to pass a QVariantMap to rust when adding items, and loop through the map to find all matches and build the item.
+
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 
 I've got a sorta working concept. It hinges on MPV's --start and --end properties. We'll use this to make sure the video has the right settings. But, when switching to another video, we'll need to reset it.
 
 It does reset, but doesn't if the video we are switching to is the same video, but different start and end times. This could be problematic if the user wanted to have two sections of the same video loaded. For say a teaching moment or something like that.
-** TODO Plugin architecture with steel or some scheme as an extension language
+** TODO [#B] Fix updating things in the song editor
+[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
+The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
+
+*** TODO Find all references to the ID and make sure to be passing around the db id instead of the one found in the index to make sure we are finding the right song for every operation
+The problem was compounded in that we are getting the ID through the proxy model too, which is different from the model index in rust. By setting the songID to the id found within the returned song, the rust model will have the same id meaning when we use that id, we are using the right one. Need to maybe find a way to ensure we are always passing around the id in the db so that we aren't using the wrong one anywhere.
+
+*** DONE Seems that updating songs aren't reflected well
+[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
+*** DONE I need to test to make sure I've fixed this.
+Sometimes it seemed that things would update, other times it would seem that after jumping to present view and then back that things wouldn't be updated.
+
 ** TODO Refactor service_item_model.rs and slide_model.rs
 I've been thinking about my design of the service item model and slide model classes and believe I've used way too many properties for these models than is necessary. Instead I would really only need to have the title, type, and ids of the various items in the other models, then find a way to look them up when requesting them for the slide_object.
 
@@ -30,18 +48,6 @@ Then when we want to load that into the slideObject, we simply grab the item fro
 To display all the slides... 
 
 Actually as I type this out, I'm starting to think that the slide_model still needs all the metadata that the slide_object will have. The reason being that I'd like to have details in the slide preview system that can only come from having all the info available to QML. This makes the QML preview system a lot easier to reason with because you can use property binding rather than needing to create a custom building system for each arbitrary detail we want to add the to the previews. All that said, what properties does the slide_object and slide_model really need then? Is there a way for the model to have fewer props?
-
-** TODO [#B] Fix updating things in the song editor
-[[file:~/dev/lumina/src/qml/presenter/SongEditor.qml::function updateLyrics(lyrics) {]]
-The core problem with this is that when we set the song, the index to get the item is the index of the item in the vector, not the ID in the DB. So, when we get a song, we can't use that index to update things, we need to make sure we are using the id so that all the new work in updating the right item is done correctly.
-
-*** TODO Find all references to the ID and make sure to be passing around the db id instead of the one found in the index to make sure we are finding the right song for every operation
-The problem was compounded in that we are getting the ID through the proxy model too, which is different from the model index in rust. By setting the songID to the id found within the returned song, the rust model will have the same id meaning when we use that id, we are using the right one. Need to maybe find a way to ensure we are always passing around the id in the db so that we aren't using the wrong one anywhere.
-
-*** DONE Seems that updating songs aren't reflected well
-[[file:~/dev/lumina/src/rust/songs/song_model.rs::updated_background.to_string();]]
-*** DONE I need to test to make sure I've fixed this.
-Sometimes it seemed that things would update, other times it would seem that after jumping to present view and then back that things wouldn't be updated.
 
 ** TODO Create a song_lyrics searching and importer for the song_editor
 [[file:~/dev/lumina/src/rust/songs/song_lyrics.rs::pub fn search_song(s: &str) -> Result<Vec<Song>, Error> {]]
@@ -208,17 +214,11 @@ Start with select, deselect, select_items, and deactivate. Then either move onto
 - [ ] Windows
 - [ ] Macos
 ** TODO A busy indicator while deleting library items :feature:ui:
-** TODO [#A] Organize and layout structure of rust code       :maintenance:
-Since building a lot of the rust code felt more like an experiment, I've not kept it very well organized. I need to go through each model and rust module and organize them well and then decide what needs to be publicly available or not.
-
-One major way to work on this is to pass less items back to rust and just their indexes instead. This leads to knowing which item and letting rust find the item. Another solution is to allow qml to pass a QVariantMap to rust when adding items, and loop through the map to find all matches and build the item.
-
 ** TODO find song on SongSelect or perhaps Genius Lyrics          :feature:
 This function will need to include parsing through the HTML of the results page. Finding the first "song-result", then "song-result-title", and inside that tag is the name. In the URL is the CCLI number.
 
 Lyrics will probably be better to grab from genius lyrics.
-** TODO Create a setting for holding static slides and audios :feature:
-[[file:~/dev/church-presenter/src/qml/presenter/Settings.qml]]
+** TODO Create a setting for holding static slides and audios :feature: [[file:~/dev/church-presenter/src/qml/presenter/Settings.qml]]
 ** TODO [#B] ffmpeg.rs                                            :feature:
 This still needs a lot of work.
 ** TODO [#B] ytdl.rs                                              :feature:
@@ -230,6 +230,9 @@ This is waiting till we get the service_item_model.rs finished so we can use rus
 ** TODO Add image slideshow with looping :feature:
 I could add this by adding a bool as a gallery option in the ImageSqlModel. Then add a loop bool as well. Then perhaps I'd ask if this image item contains a gallery and if so, make sure to loop through all of the filePaths as they could be saved as a list instead of a single filepath. Then decide on the last one whether or not to loop back to the beginning based on the loop bool in the image item.
 ** TODO Add image gallery options :feature:
+** TODO Finish toolbar in presentation display :ui:
+[[file:~/dev/church-presenter/src/qml/presenter/Presentation.qml::Controls.ToolBar {]]
+
 ** WAIT Make toolbar functional for =songeditor= [3/4] [75%]           :core:
 [[file:~/dev/church-presenter/src/qml/presenter/SongEditor.qml::Controls.ToolBar {]]
 
@@ -241,13 +244,38 @@ I could add this by adding a bool as a gallery option in the ImageSqlModel. Then
 
   I'm thinking shadows for sure for readability on slides. Also, maybe I should have an effect of like glow? But maybe I'll come back to this after more of the core system is finished.
 
-** TODO Finish toolbar in presentation display :ui:
-[[file:~/dev/church-presenter/src/qml/presenter/Presentation.qml::Controls.ToolBar {]]
-
 ** WAIT nix-shell needs a little bit of work perhaps yet. But may be working under plasma just not minimal window managers using qt5ct.
 https://discourse.nixos.org/t/developing-kirigami-applications/19947/17
 This thread helped a lot
 
+
+** DONE [#A] Fix using arrows shows the right slide, but the slide preview list doesn't follow it
+** DONE [#A] Updating properties in models. [0/0] [0%]
+All of the models need to be editable from the outside so that the editor pages a can appropriately change the properties of each item. I'll go in this order.
+*** DONE Video
+*** DONE Image
+*** DONE Presentations
+*** DONE Songs
+
+Songs will be the hardest so I'll save them for last. They are not even using the rust models yet anyway. The key that I figured out is that instead of relying on the proxy model to map to the appropriate id inside the rust model. I'll store an id in the sqlite database and use that as a way to find each item. I'll need to keep tinkering with the best way to do that as right now I looped through all the items and that may get inefficient as models grow.
+
+Another big blocker in this process is to make sure that all properties are accessed appropriately on the QML side. I need to update a lot of QML code yet.
+*** DONE DATA CHANGED
+Almost done here, but I can't get the data to emit the change and therefore inform the proxyModel of the changes and change it in the list view.
+** DONE [#A] new_song method                                  :feature:bug:
+[[file:~/dev/church-presenter/src/rust/song_model.rs::todo!();]]
+** DONE [#A] Make things not rely on my own machine.                  :bug:
+Right now some of the paths are hardcoded and I need to fix that very fast so that everything will work on other machines.
+** DONE [#A] Make Presentation Window follow the presenter component   :core:
+[[file:~/dev/church-presenter/src/qml/presenter/MainWindow.qml::Presenter.Slide {]]
+
+Starting this by creating a slide singleton that will carry the variables for the current visible slide in the presentation.
+
+May need to think about making this a slide class for all possible slides and a presentation singleton which carries the slide, but first I'll work out if this implementation works instead.
+
+The left dock doesn't carry the change from the arrow buttons and the video on the actual presentation doesn't load.'
+
+All pieces working now
 
 ** DONE RENAME TO LUMINA
 "Lumina" is a word derived from Latin, which means "lights" or "illuminations." It can be associated with brilliance, radiance, or the glow of light. In the context of a church presentation software, "Lumina" could represent the concept of shedding light, enlightenment, or guiding through visual presentations.
@@ -301,7 +329,6 @@ Like this..
 target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
 #+end_src
 
-** DONE [#A] Fix using arrows shows the right slide, but the slide preview list doesn't follow it
 ** DONE Write a function to handle switching to the next fragment in revealjs
 [[file:~/dev/lumina/src/qml/presenter/Slide.qml::WebEngineView {]]
 
@@ -312,18 +339,6 @@ In order to achieve this, I have to do some of the logic in qml as opposed to ru
 - Maybe signal handlers?
 
 I've written this with signal handlers now. It's working sorta.
-** DONE [#A] Updating properties in models. [0/0] [0%]
-All of the models need to be editable from the outside so that the editor pages a can appropriately change the properties of each item. I'll go in this order.
-*** DONE Video
-*** DONE Image
-*** DONE Presentations
-*** DONE Songs
-
-Songs will be the hardest so I'll save them for last. They are not even using the rust models yet anyway. The key that I figured out is that instead of relying on the proxy model to map to the appropriate id inside the rust model. I'll store an id in the sqlite database and use that as a way to find each item. I'll need to keep tinkering with the best way to do that as right now I looped through all the items and that may get inefficient as models grow.
-
-Another big blocker in this process is to make sure that all properties are accessed appropriately on the QML side. I need to update a lot of QML code yet.
-*** DONE DATA CHANGED
-Almost done here, but I can't get the data to emit the change and therefore inform the proxyModel of the changes and change it in the list view.
 ** DONE Rename SlideEditor.qml to SongEditorSlideList.qml
 [[file:~/dev/lumina/src/qml/presenter/SlideEditor.qml::Item {]]
 ** DONE Make saving file auto use the last save file and go from there
@@ -350,10 +365,6 @@ I think songs are loaded first
 Simply having diesel load the database creates one if there isn't one there
 *** DONE Load rest of app
 Once the migration is done, the rest just loads since it's in the setup function of the songs.
-** DONE [#A] new_song method                                  :feature:bug:
-[[file:~/dev/church-presenter/src/rust/song_model.rs::todo!();]]
-** DONE [#A] Make things not rely on my own machine.                  :bug:
-Right now some of the paths are hardcoded and I need to fix that very fast so that everything will work on other machines.
 ** DONE get_lyric_list method
 [[file:~/dev/church-presenter/src/rust/song_model.rs::todo!();]]
 This is the big one. Previous implementation in cpp is here:
@@ -477,17 +488,6 @@ This was due to the song not having a vorder. Need to protect from edge cases of
 ** DONE Need to make ListModel capable of bringing in a string list [2/2] [100%]
 - [X] Create a Model
 - [X] Create a class that we'll make a list of in the model
-
-** DONE [#A] Make Presentation Window follow the presenter component   :core:
-[[file:~/dev/church-presenter/src/qml/presenter/MainWindow.qml::Presenter.Slide {]]
-
-Starting this by creating a slide singleton that will carry the variables for the current visible slide in the presentation.
-
-May need to think about making this a slide class for all possible slides and a presentation singleton which carries the slide, but first I'll work out if this implementation works instead.
-
-The left dock doesn't carry the change from the arrow buttons and the video on the actual presentation doesn't load.'
-
-All pieces working now
 
 ** DONE Make an image sql model
 [[file:~/dev/church-presenter/src/videosqlmodel.h::ifndef VIDEOSQLMODEL_H]]
