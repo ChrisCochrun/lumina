@@ -249,7 +249,7 @@ ColumnLayout {
                     icon: itemIcon
                     iconSize: Kirigami.Units.gridUnit
                     supportsMouseEvents: false
-                    backgroundColor: Kirigami.Theme.backgroundColor;
+                    backgroundColor: index % 2 === 0 ? Kirigami.Theme.backgroundColor : Kirigami.Theme.alternateBackgroundColor;
                     Binding on backgroundColor {
                         when: dragHandler.containsMouse ||
                             (selectionModel.hasSelection &&
