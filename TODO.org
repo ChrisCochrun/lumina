@@ -12,6 +12,33 @@ Since building a lot of the rust code felt more like an experiment, I've not kep
 
 One major way to work on this is to pass less items back to rust and just their indexes instead. This leads to knowing which item and letting rust find the item. Another solution is to allow qml to pass a QVariantMap to rust when adding items, and loop through the map to find all matches and build the item.
 
+*** Better types
+#+begin_src rust
+modified   src/rust/service_item_model.rs
+@@ -314,10 +314,18 @@ use self::service_item_model::{
+ 
+ use super::service_item_model::service_item_model::ServiceItemModel;
+ 
++#[derive(Clone, Debug)]
++pub enum ItemType {
++    Song,
++    Video,
++    Image,
++    Presentation,
++}
++
+ #[derive(Clone, Debug)]
+ pub struct ServiceItem {
+     name: QString,
+-    ty: QString,
++    ty: ItemType,
+     audio: QString,
+     background: QString,
+     background_type: QString,
+#+end_src
+
+This represents an example of what it'd look like to add better types. If I can ensure to model things better I could leave out all the extra pieces in the ServiceItem struct and the Slide struct and include an ItemType. This would then let me jump to the appropriate db and get the right info for each item.
+
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
 

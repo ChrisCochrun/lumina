@@ -315,9 +315,17 @@ use self::service_item_model::{
 use super::service_item_model::service_item_model::ServiceItemModel;
 
 #[derive(Clone, Debug)]
+pub enum ItemType {
+    Song,
+    Video,
+    Image,
+    Presentation,
+}
+
+#[derive(Clone, Debug)]
 pub struct ServiceItem {
     name: QString,
-    ty: QString,
+    ty: ItemType,
     audio: QString,
     background: QString,
     background_type: QString,
@@ -344,7 +352,7 @@ impl Default for ServiceItem {
     fn default() -> Self {
         Self {
             name: QString::default(),
-            ty: QString::default(),
+            ty: ItemType::Image,
             audio: QString::default(),
             background: QString::default(),
             background_type: QString::default(),
