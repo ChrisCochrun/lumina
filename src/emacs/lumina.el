@@ -182,7 +182,3 @@
 :END:
 
 ")))
-
-(cdr (elt (elt (elt (lumina-get-lyrics-genius "Death Was Arrested") 0) 3) 7))
-
-(lumina-get-lyrics-genius "Death Was Arrested")
