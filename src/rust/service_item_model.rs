@@ -43,15 +43,6 @@ mod service_item_model {
         Id,
     }
 
-    #[qenum]
-    #[namespace = "Item"]
-    enum ItemType {
-        Song,
-        Video,
-        Image,
-        Presentation,
-    }
-
     unsafe extern "RustQt" {
         #[qobject]
         #[base = "QAbstractListModel"]
@@ -128,7 +119,7 @@ mod service_item_model {
         fn add_item(
             self: Pin<&mut ServiceItemModel>,
             name: QString,
-            ty: ItemType,
+            ty: QString,
             background: QString,
             background_type: QString,
             text: QStringList,
@@ -148,7 +139,7 @@ mod service_item_model {
             index: i32,
             name: QString,
             text: QStringList,
-            ty: ItemType,
+            ty: QString,
             background: QString,
             background_type: QString,
             audio: QString,
@@ -303,7 +294,7 @@ use crate::obs::Obs;
 use crate::service_item_model::service_item_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
-    QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant, QVariantValue,
+    QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
 };
 use dirs;
 use serde_json::{json, Value};
@@ -317,39 +308,16 @@ use tar::{Archive, Builder};
 use tracing::{debug, error};
 use zstd::{Decoder, Encoder};
 use self::service_item_model::{
-    ItemType, QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32, ServiceRoles
+    QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
+    ServiceRoles,
 };
 
 use super::service_item_model::service_item_model::ServiceItemModel;
 
-impl std::fmt::Debug for ItemType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &ItemType::Song => write!(f, "Song"),
-            &ItemType::Image => write!(f, "Image"),
-            &ItemType::Video => write!(f, "Video"),
-            &ItemType::Presentation => write!(f, "Presentation"),
-            _ => write!(f, "Unknown"),
-        }
-    }
-}
-
-impl std::fmt::Display for ItemType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &ItemType::Song => write!(f, "Song"),
-            &ItemType::Image => write!(f, "Image"),
-            &ItemType::Video => write!(f, "Video"),
-            &ItemType::Presentation => write!(f, "Presentation"),
-            _ => write!(f, "Unknown"),
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct ServiceItem {
     name: QString,
-    ty: ItemType,
+    ty: QString,
     audio: QString,
     background: QString,
     background_type: QString,
@@ -376,7 +344,7 @@ impl Default for ServiceItem {
     fn default() -> Self {
         Self {
             name: QString::default(),
-            ty: ItemType::Image,
+            ty: QString::default(),
             audio: QString::default(),
             background: QString::default(),
             background_type: QString::default(),
@@ -473,7 +441,7 @@ impl service_item_model::ServiceItemModel {
     pub fn add_item(
         mut self: Pin<&mut Self>,
         name: QString,
-        ty: ItemType,
+        ty: QString,
         background: QString,
         background_type: QString,
         text: QStringList,
@@ -533,7 +501,7 @@ impl service_item_model::ServiceItemModel {
         index: i32,
         name: QString,
         text: QStringList,
-        ty: ItemType,
+        ty: QString,
         background: QString,
         background_type: QString,
         audio: QString,
@@ -1233,18 +1201,9 @@ impl service_item_model::ServiceItemModel {
                 let name = QString::from(
                     obj.get("name").unwrap().as_str().unwrap(),
                 );
-                let ty = 
-                    obj.get("type").unwrap().as_str().unwrap();
-                let ty = match ty.to_lowercase().as_str() {
-                    "image" => ItemType::Image,
-                    "song" => ItemType::Song,
-                    "video" => ItemType::Video,
-                    "presentation" => ItemType::Presentation,
-                    other => {
-                        error!("ItemType doesn't match: {}", other);
-                        ItemType::Image
-                    },
-                };
+                let ty = QString::from(
+                    obj.get("type").unwrap().as_str().unwrap(),
+                );
                 // both audio and background will need to know if
                 // it exists on disk, if not use the flat version
                 let audio_string =
@@ -1430,16 +1389,7 @@ impl service_item_model::ServiceItemModel {
                     QVariant::from(&service_item.name)
                 }
                 ServiceRoles::Type => {
-                    match &service_item.ty {
-                        &ItemType::Image => QVariant::from(&QString::from("Image")),
-                        &ItemType::Song => QVariant::from(&QString::from("Song")),
-                        &ItemType::Video => QVariant::from(&QString::from("Video")),
-                        &ItemType::Presentation => QVariant::from(&QString::from("Presentation")),
-                        other => {
-                            error!("{:?} is not a proper variant.", other);
-                            QVariant::from(&QString::from(""))
-                        },
-                    }
+                    QVariant::from(&service_item.ty)
                 }
                 ServiceRoles::Audio => {
                     QVariant::from(&service_item.audio)
