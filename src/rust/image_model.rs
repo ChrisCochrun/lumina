@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod image_model {
+mod qobject {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -162,7 +162,7 @@ use diesel::{delete, insert_into, prelude::*, update};
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use self::image_model::{
+use self::qobject::{
     ImageRoles, QHash_i32_QByteArray, QMap_QString_QVariant,
     QVector_i32,
 };
@@ -182,7 +182,7 @@ pub struct ImageModelRust {
     images: Vec<Image>,
 }
 
-impl image_model::ImageModel {
+impl qobject::ImageModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -450,7 +450,7 @@ impl image_model::ImageModel {
 }
 
 // QAbstractListModel implementation
-impl image_model::ImageModel {
+impl qobject::ImageModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = ImageRoles { repr: role };
         if let Some(image) = self.images.get(index.row() as usize) {

@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod presentation_model {
+mod qobject {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -175,7 +175,7 @@ mod presentation_model {
     }
 }
 
-use crate::presentation_model::presentation_model::QMap_QString_QVariant;
+use crate::presentation_model::qobject::QMap_QString_QVariant;
 use crate::reveal_js;
 use crate::schema::presentations::dsl::*;
 use cxx_qt::CxxQtType;
@@ -187,9 +187,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use tracing::debug;
 
-use self::presentation_model::{
-    PresRoles, QHash_i32_QByteArray, QVector_i32,
-};
+use self::qobject::{PresRoles, QHash_i32_QByteArray, QVector_i32};
 
 #[derive(Default, Clone, Debug)]
 pub struct Presentation {
@@ -207,7 +205,7 @@ pub struct PresentationModelRust {
     presentations: Vec<Presentation>,
 }
 
-impl presentation_model::PresentationModel {
+impl qobject::PresentationModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -581,7 +579,7 @@ impl presentation_model::PresentationModel {
 }
 
 // QAbstractListModel implementation
-impl presentation_model::PresentationModel {
+impl qobject::PresentationModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = PresRoles { repr: role };
         if let Some(presentation) =

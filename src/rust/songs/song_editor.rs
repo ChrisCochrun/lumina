@@ -1,7 +1,5 @@
-// use crate::songs::song_model::song_model::SongModel;
-
 #[cxx_qt::bridge]
-pub mod song_editor {
+pub mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant =
@@ -16,8 +14,8 @@ pub mod song_editor {
         type QStringList = cxx_qt_lib::QStringList;
         include!("cxx-qt-lib/qlist.h");
         type QList_QString = cxx_qt_lib::QList<QString>;
-        // #[cxx_name = "SongModel"]
-        // type SongModel = crate::songs::song_model::qobject::SongModel;
+
+        // type SongModel = super::song_model::qobject::SongModel;
     }
 
     unsafe extern "RustQt" {
@@ -48,6 +46,7 @@ pub mod song_editor {
     }
 }
 
+// use crate::songs::song_model::qobject::SongModel;
 use cxx_qt_lib::QString;
 use std::{path::PathBuf, pin::Pin};
 use tracing::{debug, debug_span, error, info, instrument};
@@ -95,7 +94,7 @@ impl Default for SongEditorRust {
     }
 }
 
-impl song_editor::SongEditor {
+impl qobject::SongEditor {
     fn idk(mut self: Pin<&mut Self>) {
         // if let Some(model) = unsafe { self.song_model().as_mut() } {
         //     let pinned_model = unsafe { Pin::new_unchecked(model) };

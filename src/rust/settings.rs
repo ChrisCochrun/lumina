@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod settings {
+mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -60,7 +60,7 @@ impl Default for SettingsRust {
     }
 }
 
-impl settings::Settings {
+impl qobject::Settings {
     pub fn setup(mut self: Pin<&mut Self>) {
         let home = dirs::config_dir();
         println!("{:?}", home);

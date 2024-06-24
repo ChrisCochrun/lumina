@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod slide_object {
+mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -90,7 +90,7 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{CaseSensitivity, QString, QVariant};
 use tracing::debug;
 
-use self::slide_object::QMap_QString_QVariant;
+use self::qobject::QMap_QString_QVariant;
 
 #[derive(Clone, Debug)]
 pub struct SlideObjectRust {
@@ -139,7 +139,7 @@ impl Default for SlideObjectRust {
     }
 }
 
-impl slide_object::SlideObject {
+impl qobject::SlideObject {
     pub fn change_slide(
         mut self: Pin<&mut Self>,
         item: QMap_QString_QVariant,

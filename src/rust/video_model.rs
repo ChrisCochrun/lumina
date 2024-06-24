@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod video_model {
+mod qobject {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -185,7 +185,7 @@ use diesel::{delete, insert_into, prelude::*, update};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
-use self::video_model::{
+use self::qobject::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     VideoRoles,
 };
@@ -207,7 +207,7 @@ pub struct VideoModelRust {
     videos: Vec<self::Video>,
 }
 
-impl video_model::VideoModel {
+impl qobject::VideoModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -609,7 +609,7 @@ impl video_model::VideoModel {
 }
 
 // QAbstractListModel implementation
-impl video_model::VideoModel {
+impl qobject::VideoModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = VideoRoles { repr: role };
         if let Some(video) = self.videos.get(index.row() as usize) {

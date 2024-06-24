@@ -8,7 +8,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
-use self::utilities::{QString, QUrl};
+use self::qobject::{QString, QUrl};
 
 mod db {
     use diesel::{Connection, SqliteConnection};
@@ -52,7 +52,7 @@ mod db {
 }
 
 #[cxx_qt::bridge]
-mod utilities {
+mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -92,7 +92,7 @@ impl Default for UtilsRust {
     }
 }
 
-impl utilities::Utils {
+impl qobject::Utils {
     pub fn setup(self: Pin<&mut Self>) {
         crate::utils::setup();
     }

@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::{error::Error, pin::Pin};
 use tracing::{debug, error};
 
-use crate::obs::obs_model::QList_QString;
+use crate::obs::qobject::QList_QString;
 
 pub struct Obs {
     scenes: Scenes,
@@ -123,7 +123,7 @@ fn make_client() -> Client {
 }
 
 #[cxx_qt::bridge]
-mod obs_model {
+mod qobject {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -160,7 +160,7 @@ pub struct ObsModelRust {
     current_program_scene: QString,
 }
 
-impl obs_model::ObsModel {
+impl qobject::ObsModel {
     pub fn update_scenes(mut self: Pin<&mut Self>) -> QStringList {
         debug!("updating scenes");
         let mut scenes_list = QList_QString::default();
