@@ -180,7 +180,7 @@ Controls.Page {
     ImageProxyModel { id: imageProxyModel }
     PresentationProxyModel { id: presProxyModel }
     VideoProxyModel { id: videoProxyModel }
-    ServiceThing { id: serviceThing } 
+    /* ServiceThing { id: serviceThing }  */
     FileHelper { id: fileHelper } 
     SlideHelper { id: slideHelper }
     SongEditor {

@@ -7,7 +7,6 @@ pub mod presentation_model;
 pub mod reveal_js;
 pub mod schema;
 pub mod service_item_model;
-pub mod service_thing;
 pub mod settings;
 pub mod slide_model;
 pub mod slide_object;

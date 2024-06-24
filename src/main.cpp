@@ -48,7 +48,7 @@
 #include "cpp/slidehelper.h"
 
 // RUST
-#include "cxx-qt-gen/service_thing.cxxqt.h"
+// #include "cxx-qt-gen/service_thing.cxxqt.h"
 #include "cxx-qt-gen/file_helper.cxxqt.h"
 #include "cxx-qt-gen/slide_object.cxxqt.h"
 #include "cxx-qt-gen/slide_model.cxxqt.h"
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
   // qmlRegisterType<PresentationSqlModel>("org.presenter", 1, 0, "PresentationSqlModel");
   qmlRegisterType<FileHelper>("org.presenter", 1, 0, "FileHelper");
   qmlRegisterType<Ytdl>("org.presenter", 1, 0, "Ytdl");
-  qmlRegisterType<ServiceThing>("org.presenter", 1, 0, "ServiceThing");
+  // qmlRegisterType<ServiceThing>("org.presenter", 1, 0, "ServiceThing");
   qmlRegisterType<SlideHelper>("org.presenter", 1, 0, "SlideHelper");
   qmlRegisterSingletonInstance("org.presenter", 1, 0,
                                "ServiceItemModel", serviceItemModel.get());
