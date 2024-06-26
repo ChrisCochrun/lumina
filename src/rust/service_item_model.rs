@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod service_item_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -291,7 +291,7 @@ mod qobject {
 }
 
 use crate::obs::Obs;
-use crate::service_item_model::qobject::QList_QString;
+use crate::service_item_model::service_item_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
     QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
@@ -306,12 +306,12 @@ use std::{fs, println};
 use tar::{Archive, Builder};
 use tracing::{debug, error};
 use zstd::{Decoder, Encoder};
-use self::qobject::{
+use self::service_item_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     ServiceRoles,
 };
 
-use super::service_item_model::qobject::ServiceItemModel;
+use super::service_item_model::service_item_model::ServiceItemModel;
 
 #[derive(Clone, Debug)]
 pub struct ServiceItem {
@@ -395,7 +395,7 @@ impl Default for ServiceItemModelRust {
     }
 }
 
-impl qobject::ServiceItemModel {
+impl service_item_model::ServiceItemModel {
     pub fn setup(self: Pin<&mut Self>) {
         todo!()
     }
@@ -1380,7 +1380,7 @@ impl qobject::ServiceItemModel {
 }
 
 // QAbstractListModel implementation
-impl qobject::ServiceItemModel {
+impl service_item_model::ServiceItemModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = ServiceRoles { repr: role };
         if let Some(service_item) =

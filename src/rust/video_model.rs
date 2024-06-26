@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod video_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -176,16 +176,15 @@ mod qobject {
     }
 }
 
-
 use crate::schema::videos::dsl::*;
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QByteArray, QModelIndex, QString, QUrl, QVariant};
 use diesel::sqlite::SqliteConnection;
 use diesel::{delete, insert_into, prelude::*, update};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::pin::Pin;
 
-use self::qobject::{
+use self::video_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     VideoRoles,
 };
@@ -207,7 +206,7 @@ pub struct VideoModelRust {
     videos: Vec<self::Video>,
 }
 
-impl qobject::VideoModel {
+impl video_model::VideoModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -609,7 +608,7 @@ impl qobject::VideoModel {
 }
 
 // QAbstractListModel implementation
-impl qobject::VideoModel {
+impl video_model::VideoModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = VideoRoles { repr: role };
         if let Some(video) = self.videos.get(index.row() as usize) {

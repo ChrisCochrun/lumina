@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-pub mod qobject {
+pub mod song_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -240,7 +240,7 @@ pub mod qobject {
 
 use crate::models::*;
 use crate::schema::songs::dsl::*;
-use crate::songs::song_editor::qobject::QList_QString;
+use crate::songs::song_editor::song_editor::QList_QString;
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{
     QByteArray, QModelIndex, QString, QStringList, QVariant,
@@ -251,7 +251,7 @@ use std::collections::HashMap;
 use std::pin::Pin;
 use tracing::{debug, error};
 
-use self::qobject::{
+use self::song_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     SongRoles,
 };
@@ -292,7 +292,7 @@ pub struct SongModelRust {
     songs: Vec<Song>,
 }
 
-impl qobject::SongModel {
+impl song_model::SongModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -1074,7 +1074,7 @@ impl qobject::SongModel {
 }
 
 // QAbstractListModel implementation
-impl qobject::SongModel {
+impl song_model::SongModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = SongRoles { repr: role };
         if let Some(song) = self.songs.get(index.row() as usize) {

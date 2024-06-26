@@ -1,7 +1,7 @@
 // The purpose of this file is to provide validation
 // of whether or not a file exists
 #[cxx_qt::bridge]
-mod qobject {
+mod file_helper {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -56,7 +56,7 @@ impl Default for FileHelperRust {
     }
 }
 
-impl qobject::FileHelper {
+impl file_helper::FileHelper {
     pub fn load(self: Pin<&mut Self>, file: QUrl) -> Vec<String> {
         println!("{file}");
         vec!["hi".to_string()]

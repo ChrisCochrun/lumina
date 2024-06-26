@@ -8,7 +8,7 @@ use obws::Client;
 use std::{error::Error, pin::Pin};
 use tracing::{debug, error};
 
-use crate::obs::qobject::QList_QString;
+use crate::obs::obs::QList_QString;
 
 #[derive(Default)]
 pub struct Obs {
@@ -117,7 +117,7 @@ fn make_client() -> Client {
 }
 
 #[cxx_qt::bridge]
-mod qobject {
+mod obs {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -154,7 +154,7 @@ pub struct ObsModelRust {
     current_program_scene: QString,
 }
 
-impl qobject::ObsModel {
+impl obs::ObsModel {
     pub fn update_scenes(mut self: Pin<&mut Self>) -> QStringList {
         debug!("updating scenes");
         let mut scenes_list = QList_QString::default();

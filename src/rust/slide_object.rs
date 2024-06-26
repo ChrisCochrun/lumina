@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod slide_object {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -90,7 +90,7 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{CaseSensitivity, QString, QVariant};
 use tracing::debug;
 
-use self::qobject::QMap_QString_QVariant;
+use self::slide_object::QMap_QString_QVariant;
 
 #[derive(Clone, Debug)]
 pub struct SlideObjectRust {
@@ -139,7 +139,7 @@ impl Default for SlideObjectRust {
     }
 }
 
-impl qobject::SlideObject {
+impl slide_object::SlideObject {
     pub fn change_slide(
         mut self: Pin<&mut Self>,
         item: QMap_QString_QVariant,
@@ -149,7 +149,8 @@ impl qobject::SlideObject {
         let icount_variant = item
             .get(&QString::from("imageCount"))
             .unwrap_or(QVariant::from(&1));
-        let _count = icount_variant.value::<i32>().unwrap_or_default();
+        let _count =
+            icount_variant.value::<i32>().unwrap_or_default();
 
         let slindex = item
             .get(&QString::from("slideIndex"))

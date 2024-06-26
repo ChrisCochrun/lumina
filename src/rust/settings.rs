@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod settings {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -30,7 +30,7 @@ use configparser::ini::Ini;
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QUrl};
 use dirs;
-use std::{pin::Pin};
+use std::pin::Pin;
 
 // In order for settings to save to the ini file,
 // I'll need to create my own setting functions I think.
@@ -60,7 +60,7 @@ impl Default for SettingsRust {
     }
 }
 
-impl qobject::Settings {
+impl settings::Settings {
     pub fn setup(mut self: Pin<&mut Self>) {
         let home = dirs::config_dir();
         println!("{:?}", home);

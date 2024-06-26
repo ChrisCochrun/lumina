@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod slide_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -213,7 +213,7 @@ mod qobject {
 
 use crate::ffmpeg;
 use crate::obs::Obs;
-use crate::slide_model::qobject::QList_QString;
+use crate::slide_model::slide_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
     CaseSensitivity, QByteArray, QModelIndex, QString, QStringList,
@@ -223,7 +223,7 @@ use std::thread;
 use std::{path::PathBuf, pin::Pin};
 use tracing::{debug, error};
 
-use self::qobject::{
+use self::slide_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
     SlideRoles,
 };
@@ -308,7 +308,7 @@ impl Default for SlideModelRust {
     }
 }
 
-impl qobject::SlideModel {
+impl slide_model::SlideModel {
     pub fn add_video_thumbnail(
         mut self: Pin<&mut Self>,
         index: i32,
@@ -1270,7 +1270,7 @@ impl qobject::SlideModel {
 }
 
 // QAbstractListModel implementation
-impl qobject::SlideModel {
+impl slide_model::SlideModel {
     pub fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = SlideRoles { repr: role };
         if let Some(slide) = self.slides.get(index.row() as usize) {

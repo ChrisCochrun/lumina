@@ -59,9 +59,9 @@
 #include "cxx-qt-gen/song_model.cxxqt.h"
 #include "cxx-qt-gen/video_model.cxxqt.h"
 #include "cxx-qt-gen/image_model.cxxqt.h"
-#include "cxx-qt-gen/utilities.cxxqt.h"
+#include "cxx-qt-gen/utils.cxxqt.h"
 #include "cxx-qt-gen/song_editor.cxxqt.h"
-#include "cxx-qt-gen/obs_model.cxxqt.h"
+#include "cxx-qt-gen/obs.cxxqt.h"
 
 static QWindow *windowFromEngine(QQmlApplicationEngine *engine)
 {

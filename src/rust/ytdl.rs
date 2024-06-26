@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod ytdl {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qurl.h");
         type QUrl = cxx_qt_lib::QUrl;
@@ -40,7 +40,7 @@ pub struct YtdlRust {
     file: QUrl,
 }
 
-impl qobject::Ytdl {
+impl ytdl::Ytdl {
     pub fn get_video(mut self: Pin<&mut Self>, url: QUrl) -> bool {
         if !url.is_valid() {
             false

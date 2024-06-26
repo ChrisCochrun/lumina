@@ -1,18 +1,14 @@
 use std::pin::Pin;
 
-
 use tokio::runtime::Runtime;
 use tracing::{debug, info};
-use tracing_subscriber::{
-    EnvFilter,
-};
+use tracing_subscriber::EnvFilter;
 
-use self::qobject::{QString, QUrl};
+use self::utils::{QString, QUrl};
 
 mod db {
     use diesel::{Connection, SqliteConnection};
     use dirs::data_local_dir;
-    
 
     pub enum Model {
         Songs,
@@ -51,7 +47,7 @@ mod db {
 }
 
 #[cxx_qt::bridge]
-mod qobject {
+mod utils {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qstring.h");
         type QString = cxx_qt_lib::QString;
@@ -91,7 +87,7 @@ impl Default for UtilsRust {
     }
 }
 
-impl qobject::Utils {
+impl utils::Utils {
     pub fn setup(self: Pin<&mut Self>) {
         crate::utils::setup();
     }

@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-mod qobject {
+mod presentation_model {
     unsafe extern "C++" {
         include!(< QAbstractListModel >);
         include!("cxx-qt-lib/qhash.h");
@@ -175,7 +175,7 @@ mod qobject {
     }
 }
 
-use crate::presentation_model::qobject::QMap_QString_QVariant;
+use crate::presentation_model::presentation_model::QMap_QString_QVariant;
 use crate::reveal_js;
 use crate::schema::presentations::dsl::*;
 use cxx_qt::CxxQtType;
@@ -187,7 +187,9 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use tracing::debug;
 
-use self::qobject::{PresRoles, QHash_i32_QByteArray, QVector_i32};
+use self::presentation_model::{
+    PresRoles, QHash_i32_QByteArray, QVector_i32,
+};
 
 #[derive(Default, Clone, Debug)]
 pub struct Presentation {
@@ -205,7 +207,7 @@ pub struct PresentationModelRust {
     presentations: Vec<Presentation>,
 }
 
-impl qobject::PresentationModel {
+impl presentation_model::PresentationModel {
     pub fn clear(mut self: Pin<&mut Self>) {
         unsafe {
             self.as_mut().begin_reset_model();
@@ -579,7 +581,7 @@ impl qobject::PresentationModel {
 }
 
 // QAbstractListModel implementation
-impl qobject::PresentationModel {
+impl presentation_model::PresentationModel {
     fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
         let role = PresRoles { repr: role };
         if let Some(presentation) =
@@ -636,7 +638,6 @@ impl qobject::PresentationModel {
     }
 
     pub fn row_count(&self, _parent: &QModelIndex) -> i32 {
-        
         // println!("row count is {cnt}");
         self.presentations.len() as i32
     }

@@ -1,5 +1,5 @@
 #[cxx_qt::bridge]
-pub mod qobject {
+pub mod song_editor {
     unsafe extern "C++" {
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant =
@@ -49,7 +49,7 @@ pub mod qobject {
 // use crate::songs::song_model::qobject::SongModel;
 use cxx_qt_lib::QString;
 use std::{path::PathBuf, pin::Pin};
-use tracing::{debug};
+use tracing::debug;
 
 #[derive(Clone, Debug)]
 pub struct SongEditorRust {
@@ -94,7 +94,7 @@ impl Default for SongEditorRust {
     }
 }
 
-impl qobject::SongEditor {
+impl song_editor::SongEditor {
     fn idk(self: Pin<&mut Self>) {
         // if let Some(model) = unsafe { self.song_model().as_mut() } {
         //     let pinned_model = unsafe { Pin::new_unchecked(model) };
