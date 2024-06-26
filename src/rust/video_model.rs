@@ -176,13 +176,13 @@ mod qobject {
     }
 }
 
-use crate::models::*;
+
 use crate::schema::videos::dsl::*;
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QByteArray, QModelIndex, QString, QUrl, QVariant};
 use diesel::sqlite::SqliteConnection;
 use diesel::{delete, insert_into, prelude::*, update};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::pin::Pin;
 
 use self::qobject::{
@@ -438,7 +438,7 @@ impl qobject::VideoModel {
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
-                    video.looping = loop_value.clone();
+                    video.looping = loop_value;
                     println!("rust-video: {:?}", video.title);
                 }
                 self.as_mut().data_changed(
@@ -477,7 +477,7 @@ impl qobject::VideoModel {
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
-                    video.end_time = updated_end_time.clone();
+                    video.end_time = updated_end_time;
                 }
                 self.as_mut().data_changed(
                     model_index,
@@ -515,7 +515,7 @@ impl qobject::VideoModel {
                     .iter_mut()
                     .filter(|x| x.id == index)
                 {
-                    video.start_time = updated_start_time.clone();
+                    video.start_time = updated_start_time;
                 }
                 self.as_mut().data_changed(
                     model_index,

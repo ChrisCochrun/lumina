@@ -1,10 +1,9 @@
 use std::pin::Pin;
 
-use time::macros::format_description;
+
 use tokio::runtime::Runtime;
-use tracing::{debug, info, instrument::WithSubscriber};
+use tracing::{debug, info};
 use tracing_subscriber::{
-    fmt::{self, time::LocalTime},
     EnvFilter,
 };
 
@@ -13,7 +12,7 @@ use self::qobject::{QString, QUrl};
 mod db {
     use diesel::{Connection, SqliteConnection};
     use dirs::data_local_dir;
-    use sqlx::{Connection as SqlxConnection, Error};
+    
 
     pub enum Model {
         Songs,
@@ -97,15 +96,15 @@ impl qobject::Utils {
         crate::utils::setup();
     }
 
-    pub fn dbg(self: &Self, message: QString) {
+    pub fn dbg(&self, message: QString) {
         debug!(msg = ?message);
     }
 
-    pub fn inf(self: &Self, message: QString) {
+    pub fn inf(&self, message: QString) {
         info!(msg = ?message);
     }
 
-    pub fn url_to_string(self: &Self, url: QUrl) -> QString {
+    pub fn url_to_string(&self, url: QUrl) -> QString {
         url.path()
     }
 }

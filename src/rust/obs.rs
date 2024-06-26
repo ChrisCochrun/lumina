@@ -3,13 +3,14 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QStringList};
 use obws::responses::scenes::Scenes;
 use obws::Client;
-use std::thread::sleep;
-use std::time::Duration;
+
+
 use std::{error::Error, pin::Pin};
 use tracing::{debug, error};
 
 use crate::obs::qobject::QList_QString;
 
+#[derive(Default)]
 pub struct Obs {
     scenes: Scenes,
     client: Option<Client>,
@@ -35,15 +36,7 @@ impl Clone for Obs {
     }
 }
 
-impl Default for Obs {
-    fn default() -> Self {
-        Self {
-            scenes: Scenes::default(),
-            client: None,
-            current_program_scene: None,
-        }
-    }
-}
+
 
 impl Obs {
     pub async fn new() -> Result<Self, Box<dyn Error>> {
@@ -68,7 +61,7 @@ impl Obs {
             .iter()
             .map(|x| x.name.clone())
             .collect::<Vec<String>>();
-        if scenes.len() > 0 {
+        if !scenes.is_empty() {
             Ok(scenes)
         } else {
             Err(format!("Scenes found: {}", scenes.len()))?
@@ -80,19 +73,19 @@ impl Obs {
         scene: String,
     ) -> Result<(), Box<dyn Error>> {
         // debug!("Starting function");
-        if let Some(client) = &self.client {
+        if let Some(_client) = &self.client {
             debug!(scene, "setting scene in obs");
 
             let client = make_client();
             let runtime = tokio::runtime::Runtime::new()?;
-            let handle = runtime.spawn(async move {
+            let _handle = runtime.spawn(async move {
                 debug!("in spawn: before setting");
                 let res = client
                     .scenes()
                     .set_current_program_scene(&scene)
                     .await;
                 match res {
-                    Ok(o) => {
+                    Ok(_o) => {
                         debug!("in spawn: after setting: success")
                     }
                     Err(e) => error!(?e, "in spawn: after setting"),
@@ -118,8 +111,8 @@ impl Obs {
 fn make_client() -> Client {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let future = Client::connect("localhost", 4455, Some(""));
-    let client = runtime.block_on(future).unwrap();
-    client
+    
+    runtime.block_on(future).unwrap()
 }
 
 #[cxx_qt::bridge]

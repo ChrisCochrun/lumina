@@ -49,7 +49,7 @@ pub mod qobject {
 // use crate::songs::song_model::qobject::SongModel;
 use cxx_qt_lib::QString;
 use std::{path::PathBuf, pin::Pin};
-use tracing::{debug, debug_span, error, info, instrument};
+use tracing::{debug};
 
 #[derive(Clone, Debug)]
 pub struct SongEditorRust {
@@ -95,7 +95,7 @@ impl Default for SongEditorRust {
 }
 
 impl qobject::SongEditor {
-    fn idk(mut self: Pin<&mut Self>) {
+    fn idk(self: Pin<&mut Self>) {
         // if let Some(model) = unsafe { self.song_model().as_mut() } {
         //     let pinned_model = unsafe { Pin::new_unchecked(model) };
         //     pinned_model.update_ccli(0, QString::from("idk"));
@@ -105,10 +105,10 @@ impl qobject::SongEditor {
 
     pub fn check_verse_order(mut self: Pin<&mut Self>) {
         let vo = self.verse_order().to_string();
-        let split = vo.split(" ");
+        let split = vo.split(' ');
         debug!(verse_order = ?vo, iterator = ?split);
         for s in split {
-            if s.contains(",") || s.is_empty() {
+            if s.contains(',') || s.is_empty() {
                 self.as_mut().set_verse_order_error(true);
             } else {
                 self.as_mut().set_verse_order_error(false);

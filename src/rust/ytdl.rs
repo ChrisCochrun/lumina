@@ -44,61 +44,59 @@ impl qobject::Ytdl {
     pub fn get_video(mut self: Pin<&mut Self>, url: QUrl) -> bool {
         if !url.is_valid() {
             false
-        } else {
-            if let Some(mut data_dir) = dirs::data_local_dir() {
-                data_dir.push("lumina");
-                data_dir.push("ytdl");
-                if !data_dir.exists() {
-                    fs::create_dir(&data_dir)
-                        .expect("Could not create ytdl dir");
-                }
-                debug!(?data_dir);
-                self.as_mut().set_loading(true);
-                let thread = self.qt_thread();
-                let runtime = tokio::runtime::Runtime::new().unwrap();
-                runtime.spawn(async move {
-                    let url = url.to_string();
-                    let output_dirs = data_dir.to_str().unwrap();
-                    debug!(output_dirs);
-                    let ytdl = YoutubeDl::new(url)
-                        .socket_timeout("15")
-                        .output_directory(output_dirs)
-                        .output_template("%(title)s.%(ext)s")
-                        .download(true)
-                        .run()
-                        .unwrap();
-                    let output = ytdl.into_single_video().unwrap();
-                    debug!(
-                        output.title,
-                        output.thumbnail, output.url
-                    );
-                    let title = QString::from(&output.title);
-                    let thumbnail = QUrl::from(
-                        &output.thumbnail.unwrap_or_default(),
-                    );
-                    let mut file = String::from(output_dirs);
-                    file.push_str("/");
-                    file.push_str(&output.title);
-                    file.push_str(".");
-                    file.push_str(&output.ext.unwrap_or_default());
-                    debug!(file);
-
-                    thread.queue(move |mut qobject_ytdl| {
-                        qobject_ytdl.as_mut().set_loaded(true);
-                        qobject_ytdl.as_mut().set_loading(false);
-                        qobject_ytdl.as_mut().set_title(title);
-                        qobject_ytdl
-                            .as_mut()
-                            .set_thumbnail(thumbnail);
-                        qobject_ytdl
-                            .as_mut()
-                            .set_file(QUrl::from(&file));
-                    })
-                });
-                true
-            } else {
-                false
+        } else if let Some(mut data_dir) = dirs::data_local_dir() {
+            data_dir.push("lumina");
+            data_dir.push("ytdl");
+            if !data_dir.exists() {
+                fs::create_dir(&data_dir)
+                    .expect("Could not create ytdl dir");
             }
+            debug!(?data_dir);
+            self.as_mut().set_loading(true);
+            let thread = self.qt_thread();
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            runtime.spawn(async move {
+                let url = url.to_string();
+                let output_dirs = data_dir.to_str().unwrap();
+                debug!(output_dirs);
+                let ytdl = YoutubeDl::new(url)
+                    .socket_timeout("15")
+                    .output_directory(output_dirs)
+                    .output_template("%(title)s.%(ext)s")
+                    .download(true)
+                    .run()
+                    .unwrap();
+                let output = ytdl.into_single_video().unwrap();
+                debug!(
+                    output.title,
+                    output.thumbnail, output.url
+                );
+                let title = QString::from(&output.title);
+                let thumbnail = QUrl::from(
+                    &output.thumbnail.unwrap_or_default(),
+                );
+                let mut file = String::from(output_dirs);
+                file.push('/');
+                file.push_str(&output.title);
+                file.push('.');
+                file.push_str(&output.ext.unwrap_or_default());
+                debug!(file);
+
+                thread.queue(move |mut qobject_ytdl| {
+                    qobject_ytdl.as_mut().set_loaded(true);
+                    qobject_ytdl.as_mut().set_loading(false);
+                    qobject_ytdl.as_mut().set_title(title);
+                    qobject_ytdl
+                        .as_mut()
+                        .set_thumbnail(thumbnail);
+                    qobject_ytdl
+                        .as_mut()
+                        .set_file(QUrl::from(&file));
+                })
+            });
+            true
+        } else {
+            false
         }
     }
 

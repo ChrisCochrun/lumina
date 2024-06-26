@@ -155,7 +155,7 @@ mod qobject {
 }
 
 use crate::schema::images::dsl::*;
-use cxx_qt::{CxxQtType, Threading};
+use cxx_qt::{CxxQtType};
 use cxx_qt_lib::{QModelIndex, QString, QUrl, QVariant};
 use diesel::sqlite::SqliteConnection;
 use diesel::{delete, insert_into, prelude::*, update};
@@ -428,7 +428,7 @@ impl qobject::ImageModel {
         }
         let role_names = self.as_ref().role_names();
         let role_names_iter = role_names.iter();
-        if let Some(image) = self.rust().images.get(index as usize) {
+        if let Some(_image) = self.rust().images.get(index as usize) {
             for i in role_names_iter {
                 qvariantmap.insert(
                     QString::from(&i.1.to_string()),

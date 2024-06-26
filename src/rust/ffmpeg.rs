@@ -13,7 +13,7 @@ pub fn bg_from_video(
 ) -> Result<(), Box<dyn Error>> {
     if !screenshot.exists() {
         let output_duration = Command::new("ffprobe")
-            .args(&["-i", &video.to_string_lossy()])
+            .args(["-i", &video.to_string_lossy()])
             .output()
             .expect("failed to execute ffprobe");
         io::stderr().write_all(&output_duration.stderr).unwrap();
@@ -49,7 +49,7 @@ pub fn bg_from_video(
             debug!(hours, minutes, seconds, at_second);
         }
         let _output = Command::new("ffmpeg")
-            .args(&[
+            .args([
                 "-i",
                 &video.to_string_lossy(),
                 "-ss",
@@ -103,7 +103,7 @@ mod test {
         let result = bg_from_video(video, &screenshot);
         // let result = runtime.block_on(future);
         match result {
-            Ok(o) => assert_eq!(screenshot.exists(), true),
+            Ok(_o) => assert!(screenshot.exists()),
             Err(e) => debug_assert!(
                 false,
                 "There was an error in the runtime future. {:?}",

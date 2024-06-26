@@ -145,11 +145,11 @@ impl qobject::SlideObject {
         item: QMap_QString_QVariant,
         slide_index: i32,
     ) {
-        let current_index = self.as_ref().get_ref().slide_index();
+        let _current_index = self.as_ref().get_ref().slide_index();
         let icount_variant = item
             .get(&QString::from("imageCount"))
             .unwrap_or(QVariant::from(&1));
-        let count = icount_variant.value::<i32>().unwrap_or_default();
+        let _count = icount_variant.value::<i32>().unwrap_or_default();
 
         let slindex = item
             .get(&QString::from("slideIndex"))
@@ -434,7 +434,7 @@ impl qobject::SlideObject {
         false
     }
     pub fn play_pause(mut self: Pin<&mut Self>) -> bool {
-        let playing = self.as_ref().is_playing().clone();
+        let playing = *self.as_ref().is_playing();
         match playing {
             true => self.as_mut().set_is_playing(false),
             false => self.as_mut().set_is_playing(true),

@@ -298,7 +298,6 @@ use cxx_qt_lib::{
 };
 use dirs;
 use serde_json::{json, Value};
-use std::io::{Read, Write};
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -397,7 +396,7 @@ impl Default for ServiceItemModelRust {
 }
 
 impl qobject::ServiceItemModel {
-    pub fn setup(mut self: Pin<&mut Self>) {
+    pub fn setup(self: Pin<&mut Self>) {
         todo!()
     }
 
@@ -414,7 +413,7 @@ impl qobject::ServiceItemModel {
     pub fn remove_items(mut self: Pin<&mut Self>) {
         let mut indices = vec![];
         let mut items = self.service_items.clone();
-        for (index, item) in items.iter_mut().enumerate().filter(|(y, x)| x.selected) {
+        for (index, _item) in items.iter_mut().enumerate().filter(|(_y, x)| x.selected) {
             let index = index as i32;
             indices.push(index);
         }
@@ -434,7 +433,7 @@ impl qobject::ServiceItemModel {
                 self.as_mut().end_remove_rows();
             }
             let item = self.as_mut().get_item(*index);
-            self.as_mut().item_removed(&index, &item);
+            self.as_mut().item_removed(index, &item);
         }
     }
 
@@ -567,7 +566,7 @@ impl qobject::ServiceItemModel {
         }
         let rn = self.as_ref().role_names();
         let rn_iter = rn.iter();
-        if let Some(service_item) =
+        if let Some(_service_item) =
             self.service_items.get(index as usize)
         {
             for i in rn_iter {
@@ -705,7 +704,7 @@ impl qobject::ServiceItemModel {
             .as_ref()
             .service_items
             .iter()
-            .position(|i| i.selected == true)
+            .position(|i| i.selected)
         {
             // Here we will need to branch to get the selected items
             debug!(first_item = ?current_index);
@@ -829,7 +828,7 @@ impl qobject::ServiceItemModel {
             // println!("service_item is deactivating {:?}", i);
             service_item.active = false;
         }
-        let obs = self.as_mut().obs.clone();
+        let _obs = self.as_mut().obs.clone();
 
         if let Some(service_item) = self
             .as_mut()
@@ -919,7 +918,7 @@ impl qobject::ServiceItemModel {
             s.insert_str(0, "temp_");
             temp_dir.push(s);
             match fs::create_dir_all(&temp_dir) {
-                Ok(f) => {
+                Ok(_f) => {
                     println!("created_temp_dir: {:?}", &temp_dir)
                 }
                 Err(e) => println!("temp-dir-error: {e}"),
@@ -928,8 +927,8 @@ impl qobject::ServiceItemModel {
             temp_service_file.push("serviceitems.json");
             self.as_mut().save_progress_updated(10);
             let mut service_json: Vec<Value> = vec![];
-            let progress_fraction = items.len() as f32 / 100 as f32;
-            for (id, item) in items.iter().enumerate() {
+            let progress_fraction = items.len() as f32 / 100_f32;
+            for (_id, item) in items.iter().enumerate() {
                 let text_list = QList_QString::from(&item.text);
                 let mut text_vec = Vec::<String>::default();
 
@@ -942,7 +941,7 @@ impl qobject::ServiceItemModel {
                 );
                 println!("bg_path: {:?}", background_path);
                 let flat_background_name =
-                    background_path.file_name().clone();
+                    background_path.file_name();
                 let flat_background;
                 match flat_background_name {
                     Some(name) => {
@@ -975,7 +974,7 @@ impl qobject::ServiceItemModel {
                         println!("audio: {:?}", &name);
                         if name.to_str().unwrap() != "temp" {
                             flat_audio =
-                                name.to_str().unwrap().clone()
+                                name.to_str().unwrap()
                         } else {
                             flat_audio = "";
                         }
@@ -1055,7 +1054,7 @@ impl qobject::ServiceItemModel {
                         service_file,
                         &service_json,
                     ) {
-                        Ok(e) => {
+                        Ok(_e) => {
                             debug!(time = ?now.elapsed(), "file written");
                             std::thread::spawn(move || {
                                 debug!(time = ?now.elapsed(), "idk");
@@ -1138,8 +1137,8 @@ impl qobject::ServiceItemModel {
         datadir.push("lumina");
         datadir.push("temp");
         println!("datadir: {:?}", datadir);
-        fs::remove_dir_all(&datadir);
-        fs::create_dir_all(&datadir);
+        let _ = fs::remove_dir_all(&datadir);
+        let _ = fs::create_dir_all(&datadir);
 
         if let Ok(lf) = &lfr {
             println!("archive: {:?}", lf);
@@ -1154,14 +1153,17 @@ impl qobject::ServiceItemModel {
                 println!("filename: {:?}", file.path().unwrap());
                 println!("size: {:?}", file.size());
                 if !file_path.exists() {
-                    file.unpack_in(&datadir);
+                    match file.unpack_in(&datadir) {
+                        Ok(t) => (),
+                        Err(e) => error!("Error unpacking archive: {}", e),
+                    }
                 }
             }
 
             // older save files use servicelist.json instead of serviceitems.json
             // Let's check to see if that's the case and change it's name in the
             // temp dir.
-            for mut file in
+            for file in
                 fs::read_dir(datadir.clone()).unwrap().filter(|f| {
                     f.as_ref()
                         .map(|e| {
@@ -1176,7 +1178,7 @@ impl qobject::ServiceItemModel {
                 let mut service_path = datadir.clone();
                 service_path.push("serviceitems.json");
                 match fs::rename(file.unwrap().path(), service_path) {
-                    Ok(i) => println!("We did it captain"),
+                    Ok(_i) => println!("We did it captain"),
                     Err(e) => println!("error: {:?}", e),
                 }
             }
@@ -1186,7 +1188,7 @@ impl qobject::ServiceItemModel {
             // let mut service_list =
             //     fs::File::open(service_path).unwrap();
 
-            let mut s = fs::read_to_string(service_path).unwrap();
+            let s = fs::read_to_string(service_path).unwrap();
             // service_list.read_to_string(&mut s);
             let ds: Value = serde_json::from_str(&s).unwrap();
             for obj in ds.as_array().unwrap() {
@@ -1208,7 +1210,7 @@ impl qobject::ServiceItemModel {
                 // it exists on disk, if not use the flat version
                 let audio_string =
                     obj.get("audio").unwrap().as_str().unwrap();
-                let mut audio;
+                let audio;
                 println!("audio_on_disk: {audio_string}");
 
                 if !Path::new(&audio_string).exists() {
@@ -1242,7 +1244,7 @@ impl qobject::ServiceItemModel {
 
                 let bgstr =
                     obj.get("background").unwrap().as_str().unwrap();
-                let mut background;
+                let background;
                 println!("background_on_disk: {bgstr}");
                 let bgpath =
                     bgstr.strip_prefix("file://").unwrap_or("");
@@ -1350,7 +1352,7 @@ impl qobject::ServiceItemModel {
         }
     }
 
-    pub fn load_last_saved(mut self: Pin<&mut Self>) -> bool {
+    pub fn load_last_saved(self: Pin<&mut Self>) -> bool {
         todo!();
         // Don't actually need
     }
@@ -1505,14 +1507,14 @@ impl qobject::ServiceItemModel {
     }
 
     pub fn row_count(&self, _parent: &QModelIndex) -> i32 {
-        let cnt = self.service_items.len() as i32;
+        
         // println!("row count is {cnt}");
-        cnt
+        self.service_items.len() as i32
     }
 }
 
 impl ServiceItemModelRust {
-    pub fn save(mut model: Pin<&mut ServiceItemModel>, file: QUrl) -> bool {
+    pub fn save(_model: Pin<&mut ServiceItemModel>, _file: QUrl) -> bool {
         todo!()
     }
 }

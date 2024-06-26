@@ -249,7 +249,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel::{delete, insert_into, prelude::*, update};
 use std::collections::HashMap;
 use std::pin::Pin;
-use tracing::{debug, debug_span, error, info, instrument};
+use tracing::{debug, error};
 
 use self::qobject::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
@@ -465,7 +465,7 @@ impl qobject::SongModel {
     }
 
     fn get_indices(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         song_id: i32,
         role: SongRoles,
     ) -> (usize, QModelIndex, QVector_i32) {
@@ -955,7 +955,7 @@ impl qobject::SongModel {
     }
 
     pub fn get_lyric_list(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         index: i32,
     ) -> QStringList {
         println!("LYRIC_LIST: {index}");
@@ -980,12 +980,12 @@ impl qobject::SongModel {
                 "Intro 1", "Intro 2", "Ending 1", "Ending 2",
                 "Other 1", "Other 2", "Other 3", "Other 4",
             ];
-            let mut first_item = true;
+            let _first_item = true;
 
             let mut lyric_map = HashMap::new();
             let mut verse_title = String::from("");
             let mut lyric = String::from("");
-            for (i, line) in raw_lyrics.split("\n").enumerate() {
+            for (i, line) in raw_lyrics.split('\n').enumerate() {
                 if keywords.contains(&line) {
                     if i != 0 {
                         // println!("{verse_title}");
@@ -1002,13 +1002,13 @@ impl qobject::SongModel {
                     }
                 } else {
                     lyric.push_str(line);
-                    lyric.push_str("\n");
+                    lyric.push('\n');
                 }
             }
             lyric_map.insert(verse_title, lyric);
             // println!("da-map: {:?}", lyric_map);
 
-            for mut verse in vorder {
+            for verse in vorder {
                 let mut verse_name = "";
                 // debug!(verse = verse);
                 for word in keywords.clone() {
@@ -1033,7 +1033,7 @@ impl qobject::SongModel {
                         let split_lyrics: Vec<&str> =
                             lyric.split("\n\n").collect();
                         for lyric in split_lyrics {
-                            if lyric == "" {
+                            if lyric.is_empty() {
                                 continue;
                             }
                             lyric_list.append(QString::from(lyric));

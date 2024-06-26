@@ -472,7 +472,7 @@ impl qobject::PresentationModel {
         index: i32,
     ) -> bool {
         let binding = self.as_mut();
-        let pres = binding.presentations.get(index as usize).clone();
+        let pres = binding.presentations.get(index as usize);
         if let Some(item) = pres {
             let item = item.clone();
             binding.add_presentation(item);
@@ -636,8 +636,8 @@ impl qobject::PresentationModel {
     }
 
     pub fn row_count(&self, _parent: &QModelIndex) -> i32 {
-        let cnt = self.presentations.len() as i32;
+        
         // println!("row count is {cnt}");
-        cnt
+        self.presentations.len() as i32
     }
 }

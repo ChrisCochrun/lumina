@@ -30,7 +30,7 @@ use configparser::ini::Ini;
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QUrl};
 use dirs;
-use std::{path::PathBuf, pin::Pin};
+use std::{pin::Pin};
 
 // In order for settings to save to the ini file,
 // I'll need to create my own setting functions I think.
@@ -68,7 +68,7 @@ impl qobject::Settings {
             conf.push("lumina");
             conf.push("lumina.conf");
             match self.as_mut().rust_mut().config.load(conf) {
-                Ok(map) => {
+                Ok(_map) => {
                     // println!("{:?}", self.rust().config);
                     let sf = self
                         .as_ref()
@@ -100,7 +100,7 @@ impl qobject::Settings {
             "lastSaveFile",
             Some(file.to_string()),
         ) {
-            Some(s) => {
+            Some(_s) => {
                 println!(
                     "set-save-file: {:?}",
                     self.as_mut()

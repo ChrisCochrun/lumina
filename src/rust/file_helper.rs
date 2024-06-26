@@ -39,7 +39,7 @@ mod qobject {
 use cxx_qt_lib::{QString, QUrl};
 use rfd::FileDialog;
 use std::{path::Path, pin::Pin};
-use tracing::{debug, debug_span, error, info, instrument};
+use tracing::{debug, error};
 
 #[derive(Clone)]
 pub struct FileHelperRust {

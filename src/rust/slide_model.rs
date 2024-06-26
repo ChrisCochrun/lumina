@@ -221,7 +221,7 @@ use cxx_qt_lib::{
 };
 use std::thread;
 use std::{path::PathBuf, pin::Pin};
-use tracing::{debug, debug_span, error, info, instrument};
+use tracing::{debug, error};
 
 use self::qobject::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
@@ -355,7 +355,7 @@ impl qobject::SlideModel {
                             )
                         });
                     match result {
-                        Ok(o) => {
+                        Ok(_o) => {
                             debug!("Success in creating qt_thread")
                         }
                         Err(error) => error!(
@@ -448,7 +448,7 @@ impl qobject::SlideModel {
         slide: &Slide,
         index: i32,
     ) {
-        let mut slide = slide.clone();
+        let slide = slide.clone();
         // slide.slide_index = index;
         debug!(?slide);
 
@@ -695,7 +695,7 @@ impl qobject::SlideModel {
         let mut slide = Slide::default();
         let iter = service_item.iter();
 
-        for (key, value) in iter {
+        for (key, _value) in iter {
             debug!(?key);
             // match key.to_string().as_str() {
             //     "ty" => slide.ty = QString::from(value),
@@ -910,9 +910,7 @@ impl qobject::SlideModel {
 
         if let Some((i, slide)) = slides_iter
             .clone()
-            .enumerate()
-            .filter(|slide| slide.1.service_item_id == source_index)
-            .next()
+            .enumerate().find(|slide| slide.1.service_item_id == source_index)
         {
             debug!(index = i, ?slide);
             first_slide = i as i32;
@@ -929,10 +927,9 @@ impl qobject::SlideModel {
                 .clone()
                 .enumerate()
                 .rev()
-                .filter(|slide| {
+                .find(|slide| {
                     slide.1.service_item_id == destination_index
                 })
-                .next()
             {
                 dest_slide = i as i32;
                 dest_count = if slide.slide_count == 0 {
@@ -945,22 +942,19 @@ impl qobject::SlideModel {
                     dest_slide, dest_count
                 );
             }
-        } else {
-            if let Some((i, slide)) = slides_iter
-                .enumerate()
-                .filter(|slide| {
-                    slide.1.service_item_id == destination_index
-                })
-                .next()
-            {
-                dest_slide = i as i32;
-                dest_count = if slide.slide_count == 0 {
-                    1
-                } else {
-                    slide.slide_count
-                };
-                debug!("RUST_dest_slide: {:?}", dest_slide);
+        } else if let Some((i, slide)) = slides_iter
+            .enumerate()
+            .find(|slide| {
+                slide.1.service_item_id == destination_index
+            })
+        {
+            dest_slide = i as i32;
+            dest_count = if slide.slide_count == 0 {
+                1
+            } else {
+                slide.slide_count
             };
+            debug!("RUST_dest_slide: {:?}", dest_slide);
         }
 
         debug!(count, first_slide, dest_slide);
@@ -978,7 +972,7 @@ impl qobject::SlideModel {
         //     self.as_mut().begin_reset_model();
         // }
 
-        let rc = self.as_ref().count() - 1;
+        let _rc = self.as_ref().count() - 1;
         let tl = &self.as_ref().index(
             first_slide,
             0,
@@ -998,7 +992,7 @@ impl qobject::SlideModel {
         if count > 1 {
             if move_down {
                 debug!("While moving down, change service items id of moved slide");
-                for (i, slide) in slides_iter
+                for (i, _slide) in slides_iter
                     .clone()
                     .enumerate()
                     .filter(|x| {
@@ -1022,7 +1016,7 @@ impl qobject::SlideModel {
                 }
             } else {
                 debug!("While moving up, change service items id of moved slide");
-                for (i, slide) in slides_iter
+                for (i, _slide) in slides_iter
                     .clone()
                     .enumerate()
                     .filter(|x| x.0 >= dest_slide as usize)
@@ -1040,27 +1034,25 @@ impl qobject::SlideModel {
                     }
                 }
             }
-        } else {
-            if let Some(slide) = self
-                .as_mut()
-                .rust_mut()
-                .slides
-                .get_mut(dest_slide as usize)
-            {
-                debug!(
-                    internal_slide_index = slide.slide_index,
-                    service_item = slide.service_item_id,
-                    destination_index,
-                    "This is the slide who's service item needs changed"
-                );
-                slide.service_item_id = destination_index;
-            }
+        } else if let Some(slide) = self
+            .as_mut()
+            .rust_mut()
+            .slides
+            .get_mut(dest_slide as usize)
+        {
+            debug!(
+                internal_slide_index = slide.slide_index,
+                service_item = slide.service_item_id,
+                destination_index,
+                "This is the slide who's service item needs changed"
+            );
+            slide.service_item_id = destination_index;
         }
 
         // Change the service_item_id of the shifted slides, not the moved service_item
         if move_down {
             debug!("While moving down, change service item id");
-            for (i, slide) in slides_iter
+            for (i, _slide) in slides_iter
                 .clone()
                 .enumerate()
                 .filter(|x| x.1.service_item_id <= destination_index)
@@ -1081,7 +1073,7 @@ impl qobject::SlideModel {
             }
         } else {
             debug!("While moving up, change service item id");
-            for (i, slide) in slides_iter
+            for (i, _slide) in slides_iter
                 .clone()
                 .enumerate()
                 .filter(|x| x.0 >= (dest_slide + count) as usize)
@@ -1173,7 +1165,7 @@ impl qobject::SlideModel {
         }
         let rn = self.as_ref().role_names();
         let rn_iter = rn.iter();
-        if let Some(slide) = self.rust().slides.get(index as usize) {
+        if let Some(_slide) = self.rust().slides.get(index as usize) {
             for i in rn_iter {
                 qvariantmap.insert(
                     QString::from(&i.1.to_string()),
@@ -1193,9 +1185,7 @@ impl qobject::SlideModel {
         debug!(service_item = index, "Getting slide from this item");
         let mut id = 0;
         if let Some((i, slide)) = slides_iter
-            .enumerate()
-            .filter(|(i, slide)| slide.service_item_id == index)
-            .next()
+            .enumerate().find(|(_i, slide)| slide.service_item_id == index)
         {
             debug!(slide_id = i, ?slide);
             id = i as i32;
@@ -1425,7 +1415,7 @@ impl qobject::SlideModel {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    
 
     #[test]
     pub fn test_obs_setting_scene() {
