@@ -216,8 +216,7 @@ use crate::obs::Obs;
 use crate::slide_model::slide_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
-    CaseSensitivity, QByteArray, QModelIndex, QString, QStringList,
-    QVariant,
+    CaseSensitivity, QByteArray, QMap, QModelIndex, QString, QStringList, QVariant
 };
 use std::thread;
 use std::{path::PathBuf, pin::Pin};
@@ -230,14 +229,14 @@ use self::slide_model::{
 
 #[derive(Clone, Debug)]
 pub struct Slide {
-    text: QString,
-    ty: QString,
-    audio: QString,
-    image_background: QString,
-    video_background: QString,
-    htext_alignment: QString,
-    vtext_alignment: QString,
-    font: QString,
+    text: String,
+    ty: String,
+    audio: String,
+    image_background: String,
+    video_background: String,
+    htext_alignment: String,
+    vtext_alignment: String,
+    font: String,
     font_size: i32,
     slide_count: i32,
     slide_index: i32,
@@ -245,24 +244,24 @@ pub struct Slide {
     active: bool,
     selected: bool,
     looping: bool,
-    video_thumbnail: QString,
+    video_thumbnail: String,
     video_start_time: f32,
     video_end_time: f32,
     html: bool,
-    obs_scene: QString,
+    obs_scene: String,
 }
 
 impl Default for Slide {
     fn default() -> Self {
         Self {
-            text: QString::default(),
-            ty: QString::default(),
-            audio: QString::default(),
-            image_background: QString::default(),
-            video_background: QString::default(),
-            htext_alignment: QString::default(),
-            vtext_alignment: QString::default(),
-            font: QString::default(),
+            text: String::default(),
+            ty: String::default(),
+            audio: String::default(),
+            image_background: String::default(),
+            video_background: String::default(),
+            htext_alignment: String::default(),
+            vtext_alignment: String::default(),
+            font: String::default(),
             font_size: 50,
             slide_count: 1,
             slide_index: 0,
@@ -270,11 +269,11 @@ impl Default for Slide {
             active: false,
             selected: false,
             looping: false,
-            video_thumbnail: QString::default(),
+            video_thumbnail: String::default(),
             video_start_time: 0.0,
             video_end_time: 0.0,
             html: false,
-            obs_scene: QString::default(),
+            obs_scene: String::default(),
         }
     }
 }
@@ -329,10 +328,8 @@ impl slide_model::SlideModel {
                 let path =
                     PathBuf::from(slide.video_background.to_string());
                 let screenshot = ffmpeg::bg_path_from_video(&path);
-                let screenshot_string =
-                    QString::from(screenshot.to_str().unwrap())
-                        .insert(0, &QString::from("file://"))
-                        .to_owned();
+                let mut screenshot_string = screenshot.into_os_string().into_string().unwrap_or_default();
+                screenshot_string.insert_str(0, "file://");
                 slide.video_thumbnail = screenshot_string;
                 std::thread::spawn(move || {
                     let result =
@@ -515,54 +512,33 @@ impl slide_model::SlideModel {
             Vec::<QString>::from(&QList_QString::from(&textlist));
         // let vec_slize: &[usize] = &text_vec;
 
-        let mut slide = Slide::default();
+        let mut slide = Slide {
+            ty: extract_string(service_item, "type"),
+            text: extract_string(service_item, "text"),
+            image_background: extract_string(service_item, "imageBackground"),
+            video_background: extract_string(service_item, "videoBackground"),
+            audio: extract_string(service_item, "audio"),
+            font: extract_string(service_item, "font"),
+            htext_alignment: extract_string(service_item, "htextAlignment"),
+            vtext_alignment: extract_string(service_item, "vtextAlignment"),
+            service_item_id: index,
+            font_size: extract_value(service_item, "fontSize"),
+            slide_index: extract_value(service_item, "slideNumber"),
+            slide_count: extract_value(service_item, "slideCount"),
+            video_start_time: extract_float(service_item, "videoStartTime"),
+            video_end_time: extract_float(service_item, "videoEndTime"),
+            video_thumbnail: "".to_owned(),
+            looping: extract_bool(service_item, "loop"),
+            active: extract_bool(service_item, "active"),
+            selected: extract_bool(service_item, "selected"),
+            ..Default::default()
+        };
 
-        slide.ty = service_item
-            .get(&QString::from("type"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
-        slide.text = service_item
-            .get(&QString::from("text"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
-        slide.image_background = service_item
-            .get(&QString::from("imageBackground"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
-        slide.video_background = service_item
-            .get(&QString::from("videoBackground"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
-        slide.audio = service_item
-            .get(&QString::from("audio"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
-        slide.font = service_item
-            .get(&QString::from("font"))
-            .unwrap_or(QVariant::from(&QString::from("")))
-            .value()
-            .unwrap_or(QString::from(""));
         slide.font_size = service_item
             .get(&QString::from("fontSize"))
             .unwrap_or(QVariant::from(&50))
             .value()
             .unwrap_or(50);
-        slide.htext_alignment = service_item
-            .get(&QString::from("vtextAlignment"))
-            .unwrap_or(QVariant::from(&QString::from("center")))
-            .value()
-            .unwrap_or(QString::from("center"));
-        slide.vtext_alignment = service_item
-            .get(&QString::from("vtextAlignment"))
-            .unwrap_or(QVariant::from(&QString::from("center")))
-            .value()
-            .unwrap_or(QString::from("center"));
-        slide.service_item_id = index;
         slide.slide_index = service_item
             .get(&QString::from("slideNumber"))
             .unwrap_or(QVariant::from(&0))
@@ -573,32 +549,7 @@ impl slide_model::SlideModel {
             .unwrap_or(QVariant::from(&1))
             .value()
             .unwrap_or(1);
-        slide.video_start_time = service_item
-            .get(&QString::from("videoStartTime"))
-            .unwrap_or(QVariant::from(&0.0))
-            .value()
-            .unwrap_or(0.0);
-        slide.video_end_time = service_item
-            .get(&QString::from("videoEndTime"))
-            .unwrap_or(QVariant::from(&0.0))
-            .value()
-            .unwrap_or(0.0);
-        slide.looping = service_item
-            .get(&QString::from("loop"))
-            .unwrap_or(QVariant::from(&false))
-            .value()
-            .unwrap_or(false);
-        slide.active = service_item
-            .get(&QString::from("active"))
-            .unwrap_or(QVariant::from(&false))
-            .value()
-            .unwrap_or(false);
-        slide.selected = service_item
-            .get(&QString::from("selected"))
-            .unwrap_or(QVariant::from(&false))
-            .value()
-            .unwrap_or(false);
-        slide.video_thumbnail = QString::from("");
+        slide.video_thumbnail = String::from("");
 
         let mut binding = self.as_mut().rust_mut();
         let slides_iter = binding.slides.iter_mut();
@@ -1411,6 +1362,31 @@ impl slide_model::SlideModel {
         // debug!("row count is {cnt}");
         cnt
     }
+}
+
+/// Extracts the string from a qmap with QVariant<QStrings> in it.
+fn extract_string(item: &QMap_QString_QVariant, key: &str) -> String {
+    item.get(&QString::from(key))
+        .unwrap_or(QVariant::from(&QString::default()))
+        .value_or_default::<QString>().to_string()
+}
+
+fn extract_value(item: &QMap_QString_QVariant, key: &str) -> i32 {
+    item.get(&QString::from(key))
+        .unwrap_or(QVariant::from(&0))
+        .value_or_default::<i32>()
+}
+
+fn extract_float(item: &QMap_QString_QVariant, key: &str) -> f32 {
+    item.get(&QString::from(key))
+        .unwrap_or(QVariant::from(&0.0))
+        .value_or_default::<f32>()
+}
+
+fn extract_bool(item: &QMap_QString_QVariant, key: &str) -> bool {
+    item.get(&QString::from(key))
+        .unwrap_or(QVariant::from(&false))
+        .value_or_default::<bool>()
 }
 
 #[cfg(test)]
