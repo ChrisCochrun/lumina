@@ -20,8 +20,9 @@ pub struct Obs {
 impl fmt::Debug for Obs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Client")
-            .field("host", &"localhost")
-            .field("port", &4455)
+            .field("scenes", &self.scenes)
+            .field("client", &self.client.is_some())
+            .field("current_program_scene", &self.current_program_scene)
             .finish()
     }
 }
