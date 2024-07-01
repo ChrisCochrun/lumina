@@ -213,7 +213,6 @@ mod slide_model {
 
 use crate::ffmpeg;
 use crate::obs::Obs;
-use crate::slide_model::slide_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
     CaseSensitivity, QByteArray, QModelIndex, QString, QStringList,
@@ -225,7 +224,7 @@ use tracing::{debug, error};
 
 use self::slide_model::{
     QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
-    SlideRoles,
+    SlideRoles, QList_QString,
 };
 
 #[derive(Clone, Debug)]

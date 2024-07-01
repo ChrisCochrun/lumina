@@ -43,6 +43,15 @@ mod service_item_model {
         Id,
     }
 
+    #[qenum]
+    #[namespace = "Item"]
+    enum ItemType {
+        Song,
+        Video,
+        Image,
+        Presentation,
+    }
+
     unsafe extern "RustQt" {
         #[qobject]
         #[base = "QAbstractListModel"]
@@ -119,17 +128,7 @@ mod service_item_model {
         fn add_item(
             self: Pin<&mut ServiceItemModel>,
             name: QString,
-            ty: QString,
-            background: QString,
-            background_type: QString,
-            text: QStringList,
-            audio: QString,
-            font: QString,
-            font_size: i32,
-            slide_count: i32,
-            looping: bool,
-            video_start_time: f32,
-            video_end_time: f32,
+            ty: ItemType,
             id: i32,
         );
 
@@ -138,17 +137,7 @@ mod service_item_model {
             self: Pin<&mut ServiceItemModel>,
             index: i32,
             name: QString,
-            text: QStringList,
-            ty: QString,
-            background: QString,
-            background_type: QString,
-            audio: QString,
-            font: QString,
-            font_size: i32,
-            slide_count: i32,
-            looping: bool,
-            video_start_time: f32,
-            video_end_time: f32,
+            ty: ItemType,
             id: i32,
         );
 
@@ -294,10 +283,11 @@ use crate::obs::Obs;
 use crate::service_item_model::service_item_model::QList_QString;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
-    QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant,
+    QByteArray, QModelIndex, QString, QStringList, QUrl, QVariant, QVariantValue,
 };
 use dirs;
 use serde_json::{json, Value};
+use std::io::{Read, Write};
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -307,29 +297,41 @@ use tar::{Archive, Builder};
 use tracing::{debug, error};
 use zstd::{Decoder, Encoder};
 use self::service_item_model::{
-    QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32,
-    ServiceRoles,
+    ItemType, QHash_i32_QByteArray, QMap_QString_QVariant, QVector_i32, ServiceRoles
 };
 
 use super::service_item_model::service_item_model::ServiceItemModel;
 
+impl std::fmt::Debug for ItemType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &ItemType::Song => write!(f, "Song"),
+            &ItemType::Image => write!(f, "Image"),
+            &ItemType::Video => write!(f, "Video"),
+            &ItemType::Presentation => write!(f, "Presentation"),
+            _ => write!(f, "Unknown"),
+        }
+    }
+}
+
+impl std::fmt::Display for ItemType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &ItemType::Song => write!(f, "Song"),
+            &ItemType::Image => write!(f, "Image"),
+            &ItemType::Video => write!(f, "Video"),
+            &ItemType::Presentation => write!(f, "Presentation"),
+            _ => write!(f, "Unknown"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ServiceItem {
-    name: QString,
-    ty: QString,
-    audio: QString,
-    background: QString,
-    background_type: QString,
-    text: QStringList,
-    font: QString,
-    font_size: i32,
-    slide_count: i32,
+    name: String,
+    ty: ItemType,
     active: bool,
     selected: bool,
-    looping: bool,
-    video_start_time: f32,
-    video_end_time: f32,
-    obs_scene: QString,
     id: i32,
 }
 
@@ -342,21 +344,10 @@ impl ServiceItem {
 impl Default for ServiceItem {
     fn default() -> Self {
         Self {
-            name: QString::default(),
-            ty: QString::default(),
-            audio: QString::default(),
-            background: QString::default(),
-            background_type: QString::default(),
-            text: QStringList::default(),
-            font: QString::default(),
-            font_size: 50,
-            slide_count: 1,
+            name: String::default(),
+            ty: ItemType::Image,
             active: false,
             selected: false,
-            looping: false,
-            video_start_time: 0.0,
-            video_end_time: 0.0,
-            obs_scene: QString::default(),
             id: 0,
         }
     }
@@ -366,7 +357,6 @@ impl Default for ServiceItem {
 pub struct ServiceItemModelRust {
     id: i32,
     service_items: Vec<ServiceItem>,
-    obs: Option<Obs>,
     count: i32,
     save_progress: f32,
     saved: bool,
@@ -374,20 +364,9 @@ pub struct ServiceItemModelRust {
 
 impl Default for ServiceItemModelRust {
     fn default() -> Self {
-        let obs =
-            tokio::runtime::Runtime::new().unwrap().block_on(async {
-                match Obs::new().await {
-                    Ok(o) => Some(o),
-                    Err(e) => {
-                        error!(e);
-                        None
-                    }
-                }
-            });
         Self {
             id: 0,
             service_items: Vec::new(),
-            obs,
             count: 0,
             save_progress: 0.0,
             saved: false,
@@ -396,7 +375,7 @@ impl Default for ServiceItemModelRust {
 }
 
 impl service_item_model::ServiceItemModel {
-    pub fn setup(self: Pin<&mut Self>) {
+    pub fn setup(mut self: Pin<&mut Self>) {
         todo!()
     }
 
@@ -413,7 +392,7 @@ impl service_item_model::ServiceItemModel {
     pub fn remove_items(mut self: Pin<&mut Self>) {
         let mut indices = vec![];
         let mut items = self.service_items.clone();
-        for (index, _item) in items.iter_mut().enumerate().filter(|(_y, x)| x.selected) {
+        for (index, item) in items.iter_mut().enumerate().filter(|(y, x)| x.selected) {
             let index = index as i32;
             indices.push(index);
         }
@@ -433,39 +412,20 @@ impl service_item_model::ServiceItemModel {
                 self.as_mut().end_remove_rows();
             }
             let item = self.as_mut().get_item(*index);
-            self.as_mut().item_removed(index, &item);
+            self.as_mut().item_removed(&index, &item);
         }
     }
 
     pub fn add_item(
         mut self: Pin<&mut Self>,
         name: QString,
-        ty: QString,
-        background: QString,
-        background_type: QString,
-        text: QStringList,
-        audio: QString,
-        font: QString,
-        font_size: i32,
-        slide_count: i32,
-        looping: bool,
-        video_start_time: f32,
-        video_end_time: f32,
+        ty: ItemType,
         id: i32,
     ) {
+        let name = name.to_string();
         let service_item = ServiceItem {
             name,
             ty,
-            text,
-            background,
-            background_type,
-            audio,
-            font,
-            font_size,
-            slide_count,
-            looping,
-            video_start_time,
-            video_end_time,
             id,
             ..Default::default()
         };
@@ -499,32 +459,13 @@ impl service_item_model::ServiceItemModel {
         mut self: Pin<&mut Self>,
         index: i32,
         name: QString,
-        text: QStringList,
-        ty: QString,
-        background: QString,
-        background_type: QString,
-        audio: QString,
-        font: QString,
-        font_size: i32,
-        slide_count: i32,
-        looping: bool,
-        video_start_time: f32,
-        video_end_time: f32,
+        ty: ItemType,
         id: i32,
     ) {
+        let name = name.to_string();
         let service_item = ServiceItem {
             name,
             ty,
-            text,
-            background,
-            background_type,
-            audio,
-            font,
-            font_size,
-            slide_count,
-            looping,
-            video_start_time,
-            video_end_time,
             id,
             ..Default::default()
         };
@@ -566,7 +507,7 @@ impl service_item_model::ServiceItemModel {
         }
         let rn = self.as_ref().role_names();
         let rn_iter = rn.iter();
-        if let Some(_service_item) =
+        if let Some(service_item) =
             self.service_items.get(index as usize)
         {
             for i in rn_iter {
@@ -704,7 +645,7 @@ impl service_item_model::ServiceItemModel {
             .as_ref()
             .service_items
             .iter()
-            .position(|i| i.selected)
+            .position(|i| i.selected == true)
         {
             // Here we will need to branch to get the selected items
             debug!(first_item = ?current_index);
@@ -828,8 +769,6 @@ impl service_item_model::ServiceItemModel {
             // println!("service_item is deactivating {:?}", i);
             service_item.active = false;
         }
-        let _obs = self.as_mut().obs.clone();
-
         if let Some(service_item) = self
             .as_mut()
             .rust_mut()
@@ -837,9 +776,7 @@ impl service_item_model::ServiceItemModel {
             .get_mut(index as usize)
         {
             debug!(activating_item = index,
-                   title = ?service_item.name,
-                   background = ?service_item.background,
-                   background_type = ?service_item.background_type);
+                   title = ?service_item.name);
             service_item.active = true;
             // if let Some(obs) = obs {
             //     match obs
@@ -873,14 +810,6 @@ impl service_item_model::ServiceItemModel {
         {
             println!("service_item is activating {:?}", index);
             println!("service_item_title: {:?}", service_item.name);
-            println!(
-                "service_item_background: {:?}",
-                service_item.background
-            );
-            println!(
-                "service_item_background_type: {:?}",
-                service_item.background_type
-            );
             service_item.active = false;
             self.as_mut().data_changed(tl, br, &vector_roles);
             // We use this signal generated by our signals enum to tell QML that
@@ -918,7 +847,7 @@ impl service_item_model::ServiceItemModel {
             s.insert_str(0, "temp_");
             temp_dir.push(s);
             match fs::create_dir_all(&temp_dir) {
-                Ok(_f) => {
+                Ok(f) => {
                     println!("created_temp_dir: {:?}", &temp_dir)
                 }
                 Err(e) => println!("temp-dir-error: {e}"),
@@ -927,8 +856,8 @@ impl service_item_model::ServiceItemModel {
             temp_service_file.push("serviceitems.json");
             self.as_mut().save_progress_updated(10);
             let mut service_json: Vec<Value> = vec![];
-            let progress_fraction = items.len() as f32 / 100_f32;
-            for (_id, item) in items.iter().enumerate() {
+            let progress_fraction = items.len() as f32 / 100 as f32;
+            for (id, item) in items.iter().enumerate() {
                 let text_list = QList_QString::from(&item.text);
                 let mut text_vec = Vec::<String>::default();
 
@@ -941,7 +870,7 @@ impl service_item_model::ServiceItemModel {
                 );
                 println!("bg_path: {:?}", background_path);
                 let flat_background_name =
-                    background_path.file_name();
+                    background_path.file_name().clone();
                 let flat_background;
                 match flat_background_name {
                     Some(name) => {
@@ -974,7 +903,7 @@ impl service_item_model::ServiceItemModel {
                         println!("audio: {:?}", &name);
                         if name.to_str().unwrap() != "temp" {
                             flat_audio =
-                                name.to_str().unwrap()
+                                name.to_str().unwrap().clone()
                         } else {
                             flat_audio = "";
                         }
@@ -1054,7 +983,7 @@ impl service_item_model::ServiceItemModel {
                         service_file,
                         &service_json,
                     ) {
-                        Ok(_e) => {
+                        Ok(e) => {
                             debug!(time = ?now.elapsed(), "file written");
                             std::thread::spawn(move || {
                                 debug!(time = ?now.elapsed(), "idk");
@@ -1137,8 +1066,8 @@ impl service_item_model::ServiceItemModel {
         datadir.push("lumina");
         datadir.push("temp");
         println!("datadir: {:?}", datadir);
-        let _ = fs::remove_dir_all(&datadir);
-        let _ = fs::create_dir_all(&datadir);
+        fs::remove_dir_all(&datadir);
+        fs::create_dir_all(&datadir);
 
         if let Ok(lf) = &lfr {
             println!("archive: {:?}", lf);
@@ -1153,17 +1082,14 @@ impl service_item_model::ServiceItemModel {
                 println!("filename: {:?}", file.path().unwrap());
                 println!("size: {:?}", file.size());
                 if !file_path.exists() {
-                    match file.unpack_in(&datadir) {
-                        Ok(t) => (),
-                        Err(e) => error!("Error unpacking archive: {}", e),
-                    }
+                    file.unpack_in(&datadir);
                 }
             }
 
             // older save files use servicelist.json instead of serviceitems.json
             // Let's check to see if that's the case and change it's name in the
             // temp dir.
-            for file in
+            for mut file in
                 fs::read_dir(datadir.clone()).unwrap().filter(|f| {
                     f.as_ref()
                         .map(|e| {
@@ -1178,7 +1104,7 @@ impl service_item_model::ServiceItemModel {
                 let mut service_path = datadir.clone();
                 service_path.push("serviceitems.json");
                 match fs::rename(file.unwrap().path(), service_path) {
-                    Ok(_i) => println!("We did it captain"),
+                    Ok(i) => println!("We did it captain"),
                     Err(e) => println!("error: {:?}", e),
                 }
             }
@@ -1188,7 +1114,7 @@ impl service_item_model::ServiceItemModel {
             // let mut service_list =
             //     fs::File::open(service_path).unwrap();
 
-            let s = fs::read_to_string(service_path).unwrap();
+            let mut s = fs::read_to_string(service_path).unwrap();
             // service_list.read_to_string(&mut s);
             let ds: Value = serde_json::from_str(&s).unwrap();
             for obj in ds.as_array().unwrap() {
@@ -1203,14 +1129,23 @@ impl service_item_model::ServiceItemModel {
                 let name = QString::from(
                     obj.get("name").unwrap().as_str().unwrap(),
                 );
-                let ty = QString::from(
-                    obj.get("type").unwrap().as_str().unwrap(),
-                );
+                let ty = 
+                    obj.get("type").unwrap().as_str().unwrap();
+                let ty = match ty.to_lowercase().as_str() {
+                    "image" => ItemType::Image,
+                    "song" => ItemType::Song,
+                    "video" => ItemType::Video,
+                    "presentation" => ItemType::Presentation,
+                    other => {
+                        error!("ItemType doesn't match: {}", other);
+                        ItemType::Image
+                    },
+                };
                 // both audio and background will need to know if
                 // it exists on disk, if not use the flat version
                 let audio_string =
                     obj.get("audio").unwrap().as_str().unwrap();
-                let audio;
+                let mut audio;
                 println!("audio_on_disk: {audio_string}");
 
                 if !Path::new(&audio_string).exists() {
@@ -1244,7 +1179,7 @@ impl service_item_model::ServiceItemModel {
 
                 let bgstr =
                     obj.get("background").unwrap().as_str().unwrap();
-                let background;
+                let mut background;
                 println!("background_on_disk: {bgstr}");
                 let bgpath =
                     bgstr.strip_prefix("file://").unwrap_or("");
@@ -1328,16 +1263,6 @@ impl service_item_model::ServiceItemModel {
                 let service_item = ServiceItem {
                     name,
                     ty,
-                    text,
-                    background,
-                    background_type,
-                    audio,
-                    font,
-                    font_size,
-                    slide_count,
-                    looping,
-                    video_start_time,
-                    video_end_time,
                     ..Default::default()
                 };
                 self.as_mut().add_service_item(&service_item);
@@ -1352,7 +1277,7 @@ impl service_item_model::ServiceItemModel {
         }
     }
 
-    pub fn load_last_saved(self: Pin<&mut Self>) -> bool {
+    pub fn load_last_saved(mut self: Pin<&mut Self>) -> bool {
         todo!();
         // Don't actually need
     }
@@ -1388,46 +1313,25 @@ impl service_item_model::ServiceItemModel {
         {
             return match role {
                 ServiceRoles::Name => {
-                    QVariant::from(&service_item.name)
+                    QVariant::from(&QString::from(&service_item.name))
                 }
                 ServiceRoles::Type => {
-                    QVariant::from(&service_item.ty)
-                }
-                ServiceRoles::Audio => {
-                    QVariant::from(&service_item.audio)
-                }
-                ServiceRoles::Background => {
-                    QVariant::from(&service_item.background)
-                }
-                ServiceRoles::BackgroundType => {
-                    QVariant::from(&service_item.background_type)
-                }
-                ServiceRoles::Text => {
-                    QVariant::from(&service_item.text)
-                }
-                ServiceRoles::Font => {
-                    QVariant::from(&service_item.font)
-                }
-                ServiceRoles::FontSize => {
-                    QVariant::from(&service_item.font_size)
-                }
-                ServiceRoles::SlideCount => {
-                    QVariant::from(&service_item.slide_count)
+                    match &service_item.ty {
+                        &ItemType::Image => QVariant::from(&QString::from("Image")),
+                        &ItemType::Song => QVariant::from(&QString::from("Song")),
+                        &ItemType::Video => QVariant::from(&QString::from("Video")),
+                        &ItemType::Presentation => QVariant::from(&QString::from("Presentation")),
+                        other => {
+                            error!("{:?} is not a proper variant.", other);
+                            QVariant::from(&QString::from(""))
+                        },
+                    }
                 }
                 ServiceRoles::Active => {
                     QVariant::from(&service_item.active)
                 }
                 ServiceRoles::Selected => {
                     QVariant::from(&service_item.selected)
-                }
-                ServiceRoles::Looping => {
-                    QVariant::from(&service_item.looping)
-                }
-                ServiceRoles::VideoStartTime => {
-                    QVariant::from(&service_item.video_start_time)
-                }
-                ServiceRoles::VideoEndTime => {
-                    QVariant::from(&service_item.video_end_time)
                 }
                 ServiceRoles::Id => {
                     QVariant::from(&service_item.id)
@@ -1507,14 +1411,14 @@ impl service_item_model::ServiceItemModel {
     }
 
     pub fn row_count(&self, _parent: &QModelIndex) -> i32 {
-        
+        let cnt = self.service_items.len() as i32;
         // println!("row count is {cnt}");
-        self.service_items.len() as i32
+        cnt
     }
 }
 
 impl ServiceItemModelRust {
-    pub fn save(_model: Pin<&mut ServiceItemModel>, _file: QUrl) -> bool {
+    pub fn save(mut model: Pin<&mut ServiceItemModel>, file: QUrl) -> bool {
         todo!()
     }
 }
