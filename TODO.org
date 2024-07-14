@@ -38,6 +38,8 @@ modified   src/rust/service_item_model.rs
 #+end_src
 
 This represents an example of what it'd look like to add better types. If I can ensure to model things better I could leave out all the extra pieces in the ServiceItem struct and the Slide struct and include an ItemType. This would then let me jump to the appropriate db and get the right info for each item.
+*** Move logic of changing slides to slide_model
+Since the slide_object is merely supposed to be the view of the current slide, deciding which slide to switch to should be entirely on the slide_model, not the slide_object. This way slide_object doesn't need to know anything about the which slide is next and instead have a function to update everything to the slide returned from slide_model's new slide.
 
 ** TODO [#B] start and end times for videos                       :feature:
 This is something I couldn't get right in my head and plans and I hope rust will help me to solve it.
