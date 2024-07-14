@@ -117,6 +117,9 @@ mod slide_model {
         ) -> QMap_QString_QVariant;
 
         #[qinvokable]
+        fn next(self: Pin<&mut SlideModel>) -> QMap_QString_QVariant;
+
+        #[qinvokable]
         fn get_slide_from_service(
             self: Pin<&mut SlideModel>,
             index: i32,
@@ -218,6 +221,7 @@ use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{
     CaseSensitivity, QByteArray, QMap, QModelIndex, QString, QStringList, QVariant
 };
+use std::any::Any;
 use std::thread;
 use std::{path::PathBuf, pin::Pin};
 use tracing::{debug, error};
@@ -1125,6 +1129,16 @@ impl slide_model::SlideModel {
             }
         };
         qvariantmap
+    }
+
+    pub fn next(self: Pin<&mut Self>) -> QMap_QString_QVariant {
+        if let Some(slide) = self.rust().slides.get(self.id as usize) {
+            if slide.html {
+                // conditional logic for html slides
+            }
+            return self.get_item(self.id + 1);
+        }
+        self.get_item(self.id + 1)
     }
 
     pub fn get_slide_from_service(
