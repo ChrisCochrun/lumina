@@ -1240,22 +1240,22 @@ impl slide_model::SlideModel {
         let role = SlideRoles { repr: role };
         if let Some(slide) = self.slides.get(index.row() as usize) {
             return match role {
-                SlideRoles::Ty => QVariant::from(&slide.ty),
-                SlideRoles::Text => QVariant::from(&slide.text),
-                SlideRoles::Audio => QVariant::from(&slide.audio),
+                SlideRoles::Ty => QVariant::from(&QString::from(&slide.ty)),
+                SlideRoles::Text => QVariant::from(&QString::from(&slide.text)),
+                SlideRoles::Audio => QVariant::from(&QString::from(&slide.audio)),
                 SlideRoles::ImageBackground => {
-                    QVariant::from(&slide.image_background)
+                    QVariant::from(&QString::from(&slide.image_background))
                 }
                 SlideRoles::VideoBackground => {
-                    QVariant::from(&slide.video_background)
+                    QVariant::from(&QString::from(&slide.video_background))
                 }
                 SlideRoles::HTextAlignment => {
-                    QVariant::from(&slide.htext_alignment)
+                    QVariant::from(&QString::from(&slide.htext_alignment))
                 }
                 SlideRoles::VTextAlignment => {
-                    QVariant::from(&slide.vtext_alignment)
+                    QVariant::from(&QString::from(&slide.vtext_alignment))
                 }
-                SlideRoles::Font => QVariant::from(&slide.font),
+                SlideRoles::Font => QVariant::from(&QString::from(&slide.font)),
                 SlideRoles::FontSize => {
                     QVariant::from(&slide.font_size)
                 }
@@ -1274,7 +1274,7 @@ impl slide_model::SlideModel {
                 }
                 SlideRoles::Looping => QVariant::from(&slide.looping),
                 SlideRoles::VideoThumbnail => {
-                    QVariant::from(&slide.video_thumbnail)
+                    QVariant::from(&QString::from(&slide.video_thumbnail))
                 }
                 SlideRoles::VideoStartTime => {
                     QVariant::from(&slide.video_start_time)
@@ -1284,7 +1284,7 @@ impl slide_model::SlideModel {
                 }
                 SlideRoles::Html => QVariant::from(&slide.html),
                 SlideRoles::ObsScene => {
-                    QVariant::from(&slide.obs_scene)
+                    QVariant::from(&QString::from(&slide.obs_scene))
                 }
                 _ => QVariant::default(),
             };
