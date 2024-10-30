@@ -1,11 +1,12 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
+use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::window::Position;
 use cosmic::iced::{self, event, window, ContentFit, Font, Length, Point};
 use cosmic::iced_core::id;
 use cosmic::iced_widget::{stack, text};
 use cosmic::widget::{button, image, nav_bar};
-use cosmic::{executor, Also, Application, ApplicationExt, Element};
+use cosmic::{executor, iced_wgpu, Also, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
 use lexpr::{parse, Value};
 use miette::{miette, Result};
@@ -67,11 +68,6 @@ struct App {
     nav_model: nav_bar::Model,
     file: PathBuf,
     windows: Vec<window::Id>,
-}
-
-struct Window {
-    id: id::Id,
-    value: String,
 }
 
 #[derive(Debug, Clone)]
@@ -193,11 +189,7 @@ impl cosmic::Application for App {
             Message::CloseWindow(id) => window::close(id),
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
-                if let Some(window) = self.windows.get(&id) {
-                    cosmic::widget::text_input::focus(window.id.clone())
-                } else {
-                    Task::none()
-                }
+                Task::none()
             }
             Message::WindowClosed(id) => {
                 let window = self.windows.iter().position(|w| *w == id).unwrap();
@@ -219,17 +211,39 @@ impl cosmic::Application for App {
     }
 
     // View for presentation
-    fn view_window(&self, id: window::Id) -> Element<Message> {
-        if let Some(_window) = self.windows.get(&id) {}
+    fn view_window(&self, _id: window::Id) -> Element<Message> {
+        // let window = self.windows.iter().position(|w| *w == id).unwrap();
+        // if let Some(_window) = self.windows.get(window) {}
+        // let video = Video::new(&Url::parse("/home/chris/vids/test/camprules2024.mp4").unwrap())
         let text = text!("This is frodo").size(50);
         let text = Container::new(text).center(Length::Fill);
-        let image =
-            Container::new(image("/home/chris/pics/frodo.jpg").content_fit(ContentFit::Cover))
-                .center(Length::Fill);
+        let image = Container::new(
+            image("/home/chris/pics/frodo.jpg")
+                .content_fit(ContentFit::Cover)
+                .width(Length::Fill)
+                .height(Length::Fill),
+        );
+        // let video = Container::new(VideoPlayer::new(&video))
+        //     .width(Length::Fill)
+        //     .height(Length::Fill);
         let stack = stack!(image, text).width(Length::Fill).height(Length::Fill);
         stack.into()
     }
 }
+
+// struct VidPlayer<'a, Message, Theme, Renderer>(VideoPlayer<'a, Message, Theme, Renderer>);
+
+// impl<'a, Message, Theme, Renderer> Into<Element<'a, Message>>
+//     for VidPlayer<'a, Message, Theme, Renderer>
+// where
+//     Renderer: 'a + iced_wgpu::primitive::Renderer,
+//     Message: 'a + Clone,
+//     Theme: 'a,
+// {
+//     fn into(self) -> Element<'a, Message> {
+//         Element::new(&self)
+//     }
+// }
 
 impl App
 where
@@ -254,13 +268,15 @@ where
     }
 
     fn show_window(&mut self) -> Task<Message> {
-        let (id, task) = window::open(window::Settings {
+        let (id, spawn_window) = window::open(window::Settings {
             position: Position::Centered,
             exit_on_close_request: true,
             decorations: false,
             ..Default::default()
         });
-        task.map(|id| cosmic::app::Message::App(Message::WindowOpened(id, None)))
+        self.windows.push(id);
+        _ = self.set_window_title("Lumina Presenter".to_owned(), id);
+        spawn_window.map(|id| cosmic::app::Message::App(Message::WindowOpened(id, None)))
     }
 }
 
