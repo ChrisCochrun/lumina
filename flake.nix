@@ -38,7 +38,7 @@
             pkg-config
           ];
 
-          bi = [
+          bi = with pkgs; [
             gcc
             stdenv
             gnumake
@@ -61,6 +61,15 @@
           devShell = pkgs.mkShell {
             nativeBuildInputs = nbi;
             buildInputs = bi;
+            LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
+              with pkgs;
+              pkgs.lib.makeLibraryPath [
+                pkgs.vulkan-loader
+                pkgs.wayland
+                pkgs.wayland-protocols
+                pkgs.libxkbcommon
+              ]
+            }";
           };
           defaultPackage = naersk'.buildPackage {
             src = ./.;
