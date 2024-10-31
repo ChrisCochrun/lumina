@@ -1,6 +1,7 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::dialog::ashpd::url::Url;
+use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
 use cosmic::iced::{self, event, window, ContentFit, Font, Length, Point};
 use cosmic::iced_core::id;
@@ -18,7 +19,9 @@ use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 pub mod slide;
+pub mod ui;
 use slide::*;
+use ui::presenter::{self, Presenter};
 
 #[derive(Debug, Parser)]
 #[command(name = "lumina", version, about)]
@@ -67,12 +70,13 @@ struct App {
     core: Core,
     nav_model: nav_bar::Model,
     file: PathBuf,
+    presenter: Presenter,
     windows: Vec<window::Id>,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
-    Enchant(String),
+    Present(presenter::Message),
     File(PathBuf),
     OpenWindow,
     CloseWindow(window::Id),
@@ -108,6 +112,7 @@ impl cosmic::Application for App {
             nav_model,
             file: input.file,
             windows,
+            ..Default::default()
         };
 
         let command;
@@ -155,6 +160,23 @@ impl cosmic::Application for App {
                     window::Event::Closed => Some(Message::WindowClosed(id)),
                     _ => None,
                 }
+            } else if let iced::Event::Keyboard(key) = event {
+                match key {
+                    iced::keyboard::Event::KeyReleased {
+                        key,
+                        modified_key: _,
+                        physical_key: _,
+                        location: _,
+                        modifiers: _,
+                    } => {
+                        if key == Key::Named(iced::keyboard::key::Named::ArrowRight) {
+                            Some(Message::Present(ui::presenter::Message::NextSlide))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
             } else {
                 None
             }
@@ -163,8 +185,9 @@ impl cosmic::Application for App {
 
     fn update(&mut self, message: Message) -> cosmic::Task<cosmic::app::Message<Message>> {
         match message {
-            Message::Enchant(slide) => {
-                debug!(slide);
+            Message::Present(message) => {
+                debug!(?message);
+                self.presenter.update(message);
                 Task::none()
             }
             Message::File(file) => {
@@ -212,22 +235,9 @@ impl cosmic::Application for App {
 
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        // let window = self.windows.iter().position(|w| *w == id).unwrap();
-        // if let Some(_window) = self.windows.get(window) {}
-        // let video = Video::new(&Url::parse("/home/chris/vids/test/camprules2024.mp4").unwrap())
-        let text = text!("This is frodo").size(50);
-        let text = Container::new(text).center(Length::Fill);
-        let image = Container::new(
-            image("/home/chris/pics/frodo.jpg")
-                .content_fit(ContentFit::Cover)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        );
-        // let video = Container::new(VideoPlayer::new(&video))
-        //     .width(Length::Fill)
-        //     .height(Length::Fill);
-        let stack = stack!(image, text).width(Length::Fill).height(Length::Fill);
-        stack.into()
+        self.presenter
+            .view()
+            .map(|message| Message::Present(message))
     }
 }
 
