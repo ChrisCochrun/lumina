@@ -4,7 +4,7 @@ use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
 use cosmic::iced::{self, event, window, ContentFit, Font, Length, Point};
-use cosmic::iced_core::id;
+use cosmic::iced_core::{id, SmolStr};
 use cosmic::iced_widget::{stack, text};
 use cosmic::widget::{button, image, nav_bar};
 use cosmic::{executor, iced_wgpu, Also, Application, ApplicationExt, Element};
@@ -152,12 +152,18 @@ impl cosmic::Application for App {
         event::listen_with(|event, _, id| {
             if let iced::Event::Window(window_event) = event {
                 match window_event {
-                    window::Event::CloseRequested => Some(Message::CloseWindow(id)),
+                    window::Event::CloseRequested => {
+                        debug!("Closing window");
+                        Some(Message::CloseWindow(id))
+                    }
                     window::Event::Opened { position, .. } => {
                         debug!(?window_event, ?id);
                         Some(Message::WindowOpened(id, position))
                     }
-                    window::Event::Closed => Some(Message::WindowClosed(id)),
+                    window::Event::Closed => {
+                        debug!("Closed window");
+                        Some(Message::WindowClosed(id))
+                    }
                     _ => None,
                 }
             } else if let iced::Event::Keyboard(key) = event {
@@ -168,13 +174,27 @@ impl cosmic::Application for App {
                         physical_key: _,
                         location: _,
                         modifiers: _,
-                    } => {
-                        if key == Key::Named(iced::keyboard::key::Named::ArrowRight) {
+                    } => match key {
+                        Key::Named(iced::keyboard::key::Named::ArrowRight) => {
                             Some(Message::Present(ui::presenter::Message::NextSlide))
-                        } else {
-                            None
                         }
-                    }
+                        Key::Named(iced::keyboard::key::Named::ArrowLeft) => {
+                            Some(Message::Present(ui::presenter::Message::NextSlide))
+                        }
+                        Key::Named(iced::keyboard::key::Named::Space) => {
+                            Some(Message::Present(ui::presenter::Message::NextSlide))
+                        }
+                        Key::Character(key) => {
+                            if key == SmolStr::from("j") || key == SmolStr::from("l") {
+                                Some(Message::Present(ui::presenter::Message::NextSlide))
+                            } else if key == SmolStr::from("k") || key == SmolStr::from("h") {
+                                Some(Message::Present(ui::presenter::Message::PrevSlide))
+                            } else {
+                                None
+                            }
+                        }
+                        _ => None,
+                    },
                     _ => None,
                 }
             } else {
@@ -186,7 +206,6 @@ impl cosmic::Application for App {
     fn update(&mut self, message: Message) -> cosmic::Task<cosmic::app::Message<Message>> {
         match message {
             Message::Present(message) => {
-                debug!(?message);
                 self.presenter.update(message);
                 Task::none()
             }
@@ -217,7 +236,12 @@ impl cosmic::Application for App {
             Message::WindowClosed(id) => {
                 let window = self.windows.iter().position(|w| *w == id).unwrap();
                 self.windows.remove(window);
-                Task::none()
+                // This closes the app if using the cli example
+                if self.windows.len() == 0 {
+                    cosmic::iced::exit()
+                } else {
+                    Task::none()
+                }
             }
         }
     }
