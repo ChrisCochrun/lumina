@@ -7,7 +7,7 @@ use cosmic::{
 };
 use tracing::debug;
 
-use crate::Slide;
+use crate::core::slide::Slide;
 
 #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {

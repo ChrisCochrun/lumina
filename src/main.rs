@@ -18,9 +18,9 @@ use tracing::error;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-pub mod slide;
+pub mod core;
 pub mod ui;
-use slide::*;
+use core::slide::*;
 use ui::presenter::{self, Presenter};
 
 #[derive(Debug, Parser)]
