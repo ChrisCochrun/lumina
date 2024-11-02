@@ -145,8 +145,8 @@ pub struct Slide {
 }
 
 impl Slide {
-    pub fn background(&self) -> &PathBuf {
-        &self.background.path
+    pub fn background(&self) -> &Background {
+        &self.background
     }
 
     pub fn text(&self) -> String {

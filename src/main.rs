@@ -126,7 +126,11 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
         let initial_slide = SlideBuilder::new()
-            .background(PathBuf::from("/home/chris/vids/test/camprules2024.mp4"))
+            .background(
+                PathBuf::from("/home/chris/vids/test/chosensmol.mp4")
+                    .canonicalize()
+                    .unwrap(),
+            )
             .expect("oops video")
             .text("Hello")
             .font("Quicksand")
@@ -358,7 +362,7 @@ fn test_slide<'a>() -> Element<'a, Message> {
     {
         let font = Font::with_name("Noto Sans");
         let stack = stack!(
-            image(slide.background()),
+            image(slide.background().path.clone()),
             text(slide.text()).size(slide.font_size() as u16).font(font)
         );
 

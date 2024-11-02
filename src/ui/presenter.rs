@@ -5,7 +5,7 @@ use cosmic::{
     iced::{widget::text, ContentFit, Length},
     iced_widget::stack,
     prelude::*,
-    widget::{image, Container, Space},
+    widget::{container, image, Container, Space},
     Task,
 };
 use iced_video_player::{Video, VideoPlayer};
@@ -31,12 +31,11 @@ pub(crate) enum Message {
 impl Presenter {
     pub fn with_initial_slide(slide: Slide) -> Self {
         Self {
-            slides: vec![slide],
+            slides: vec![slide.clone()],
             current_slide: 0,
             video: {
-                if let Ok(path) =
-                    PathBuf::from("/home/chris/vids/test/chosensmol.mp4").canonicalize()
-                {
+                let path = slide.background().path.clone();
+                if path.exists() {
                     let url = Url::from_file_path(path).unwrap();
                     let result = Video::new(&url);
                     match result {
@@ -72,28 +71,35 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        // let window = self.windows.iter().position(|w| *w == id).unwrap();
-        // if let Some(_window) = self.windows.get(window) {}
         let text = text!("This is frodo").size(50);
         let text = Container::new(text).center(Length::Fill);
-        let image = Container::new(
-            image("/home/chris/pics/frodo.jpg")
-                .content_fit(ContentFit::Cover)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        );
-        let vid_container;
-        if let Some(video) = &self.video {
-            vid_container = Container::new(
-                VideoPlayer::new(video)
+        let container = match self
+            .slides
+            .get(self.current_slide as usize)
+            .unwrap()
+            .background()
+            .kind
+        {
+            crate::BackgroundKind::Image => Container::new(
+                image("/home/chris/pics/frodo.jpg")
+                    .content_fit(ContentFit::Cover)
                     .width(Length::Fill)
-                    .height(Length::Fill)
-                    .content_fit(ContentFit::Cover),
-            );
-        } else {
-            vid_container = Container::new(Space::new(0, 0));
-        }
-        let stack = stack!(image, vid_container, text)
+                    .height(Length::Fill),
+            ),
+            crate::BackgroundKind::Video => {
+                if let Some(video) = &self.video {
+                    Container::new(
+                        VideoPlayer::new(video)
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .content_fit(ContentFit::Cover),
+                    )
+                } else {
+                    Container::new(Space::new(0, 0))
+                }
+            }
+        };
+        let stack = stack!(container, text)
             .width(Length::Fill)
             .height(Length::Fill);
         stack.into()
