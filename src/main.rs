@@ -76,7 +76,7 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let initial_slide = SlideBuilder::new()
-            .background(PathBuf::from("/home/chris/vids/test/camprules2024.mp4"))
+            .background(PathBuf::from("/home/chris/vids/test/chosensmol.mp4"))
             .expect("oops video")
             .text("Hello")
             .build()
