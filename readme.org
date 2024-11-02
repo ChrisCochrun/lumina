@@ -1,0 +1,4 @@
+#+title: Lumina
+#+author: Chris Cochrun
+
+Lumina is a presentation app that works from a cli or a UI. The goal is that through a simple text file, you can describe and entire presentation and then load and control it either from the command line, or a UI. The UI also provides user friendly ways of creating the presentation to allow for flexibility for users to make something that works for developers and nerds as well 
