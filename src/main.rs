@@ -65,13 +65,31 @@ fn theme(_state: &App) -> Theme {
     Theme::dark()
 }
 
-#[derive(Default)]
 struct App {
     core: Core,
     nav_model: nav_bar::Model,
     file: PathBuf,
     presenter: Presenter,
     windows: Vec<window::Id>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        let initial_slide = SlideBuilder::new()
+            .background(PathBuf::from("/home/chris/vids/test/camprules2024.mp4"))
+            .expect("oops video")
+            .text("Hello")
+            .build()
+            .expect("oops slide");
+        let presenter = Presenter::with_initial_slide(initial_slide);
+        Self {
+            presenter,
+            core: Core::default(),
+            nav_model: nav_bar::Model::default(),
+            file: PathBuf::default(),
+            windows: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -107,12 +125,26 @@ impl cosmic::Application for App {
         if input.ui {
             windows.push(core.main_window_id().unwrap());
         }
+        let initial_slide = SlideBuilder::new()
+            .background(PathBuf::from("/home/chris/vids/test/camprules2024.mp4"))
+            .expect("oops video")
+            .text("Hello")
+            .font("Quicksand")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(true)
+            .video_start_time(0.0)
+            .video_end_time(0.0)
+            .build()
+            .expect("oops slide");
+        let presenter = Presenter::with_initial_slide(initial_slide);
+
         let mut app = App {
             core,
             nav_model,
             file: input.file,
             windows,
-            ..Default::default()
+            presenter,
         };
 
         let command;

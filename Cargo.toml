@@ -9,8 +9,6 @@ description = "A cli presentation system"
 [dependencies]
 clap = { version = "4.5.20", features = ["debug", "derive"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic", features = ["debug", "winit", "tokio", "xdg-portal", "dbus-config", "a11y", "wayland", "wgpu", "multi-window", "single-instance"] }
-# iced = { version = "0.13.1", features = ["tokio", "image", "debug", "system"] }
-# iced_aw = "0.11.0"
 lexpr = "0.2.7"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
@@ -18,4 +16,4 @@ serde = { version = "1.0.213", features = ["derive"] }
 serde-lexpr = "0.1.3"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "std", "chrono", "time", "local-time", "env-filter"] }
-# iced_video_player = "0.5.0"
+iced_video_player = { git = "https://github.com/jackpot51/iced_video_player", branch = "cosmic", features = ["wgpu"] }
