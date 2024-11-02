@@ -1,9 +1,11 @@
+use std::path::PathBuf;
+
 use cosmic::{
     dialog::ashpd::url::Url,
     iced::{widget::text, ContentFit, Length},
     iced_widget::stack,
     prelude::*,
-    widget::{image, Container},
+    widget::{image, Container, Space},
     Task,
 };
 use iced_video_player::{Video, VideoPlayer};
@@ -16,7 +18,7 @@ use crate::core::slide::Slide;
 pub(crate) struct Presenter {
     slides: Vec<Slide>,
     current_slide: i16,
-    video: Video,
+    video: Option<Video>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,14 +34,21 @@ impl Presenter {
             slides: vec![slide],
             current_slide: 0,
             video: {
-                let url = Url::from_file_path("/home/chris/vids/test/camprules2024.mp4").unwrap();
-                let result = Video::new(&url);
-                match result {
-                    Ok(v) => v,
-                    Err(e) => {
-                        // let root = e.source();
-                        panic!("Error here: {e}")
+                if let Ok(path) =
+                    PathBuf::from("/home/chris/vids/test/chosensmol.mp4").canonicalize()
+                {
+                    let url = Url::from_file_path(path).unwrap();
+                    let result = Video::new(&url);
+                    match result {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            error!("Had an error creating the video object: {e}");
+                            None
+                        }
                     }
+                } else {
+                    error!("File doesn't exist: ");
+                    None
                 }
             },
         }
@@ -73,12 +82,18 @@ impl Presenter {
                 .width(Length::Fill)
                 .height(Length::Fill),
         );
-        let video = Container::new(
-            VideoPlayer::new(&self.video)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        );
-        let stack = stack!(image, video, text)
+        let vid_container;
+        if let Some(video) = &self.video {
+            vid_container = Container::new(
+                VideoPlayer::new(video)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .content_fit(ContentFit::Cover),
+            );
+        } else {
+            vid_container = Container::new(Space::new(0, 0));
+        }
+        let stack = stack!(image, vid_container, text)
             .width(Length::Fill)
             .height(Length::Fill);
         stack.into()
