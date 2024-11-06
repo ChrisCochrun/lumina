@@ -1,11 +1,19 @@
-use lexpr::{parse::from_str_elisp, Value};
+use lexpr::{
+    parse::{from_str_elisp, Options},
+    Parser, Value,
+};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fmt::Display,
     path::{Path, PathBuf},
+    str::FromStr,
 };
+
+use crate::core::lisp::Symbol;
+
+use super::lisp::get_lists;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TextAlignment {
@@ -259,9 +267,18 @@ impl SlideBuilder {
     }
 }
 
+#[derive(Debug, Clone, Default)]
 struct Image {
-    source: String,
-    fit: String,
+    pub source: String,
+    pub fit: String,
+    pub children: Vec<String>,
+}
+impl Image {
+    fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
 }
 
 fn build_image_bg(atom: &Value, image_map: &mut HashMap<String, String>, map_index: usize) {
@@ -299,22 +316,37 @@ fn build_image_bg(atom: &Value, image_map: &mut HashMap<String, String>, map_ind
     }
 }
 
-#[cfg(test)]
-mod test {
-    use lexpr::{parse::Options, Parser};
-    use pretty_assertions::assert_eq;
-    use serde_lexpr::from_str;
-    use std::fs::read_to_string;
-    use tracing::debug;
-
-    use super::*;
-
-    fn test_slide() -> Slide {
-        Slide::default()
+fn build_slide(exp: Value) -> Result<Slide> {
+    let mut slide_builder = SlideBuilder::new();
+    let mut keyword = "idk";
+    for value in exp.as_cons().unwrap().to_vec().0 {
+        let mut vecs = vec![vec![]];
+        match value {
+            Value::Symbol(symbol) => {}
+            Value::Keyword(keyword) => {}
+            Value::String(string) => {}
+            Value::Number(num) => {}
+            Value::Cons(cons) => {
+                vecs.push(get_lists(&value));
+            }
+            _ => {}
+        }
     }
 
-    fn print_list(atom: &Value) {
-        match atom {
+    todo!()
+}
+
+fn build_slides(
+    cons: &lexpr::Cons,
+    mut current_symbol: Symbol,
+    mut slide_builder: SlideBuilder,
+) -> SlideBuilder {
+    for value in cons.list_iter() {
+        dbg!(&current_symbol);
+        match value {
+            Value::Cons(v) => {
+                slide_builder = build_slides(&v, current_symbol.clone(), slide_builder);
+            }
             Value::Nil => {
                 dbg!(Value::Nil);
             }
@@ -329,25 +361,10 @@ mod test {
             }
             Value::Symbol(symbol) => {
                 dbg!(symbol);
-                match symbol.as_ref() {
-                    "image" => {
-                        dbg!("This is an image");
-                    }
-                    "slide" => {
-                        dbg!("This is a slide");
-                    }
-                    "text" => {
-                        dbg!("This is a text");
-                    }
-                    _ => {}
-                }
+                current_symbol = Symbol::from_str(symbol).unwrap_or_default();
             }
             Value::Keyword(keyword) => {
                 dbg!(keyword);
-            }
-            Value::Cons(v) => {
-                print_list(v.car());
-                print_list(v.cdr());
             }
             Value::Null => {
                 dbg!("null");
@@ -362,14 +379,22 @@ mod test {
                 dbg!(v);
             }
         }
-        // if atom.is_list() {
-        //     for atom in atom.list_iter().unwrap() {
-        //         dbg!(atom);
-        //         print_list(atom);
-        //     }
-        // } else {
-        //     dbg!(atom);
-        // }
+    }
+    slide_builder
+}
+
+#[cfg(test)]
+mod test {
+    use lexpr::{parse::Options, Datum, Parser};
+    use pretty_assertions::assert_eq;
+    use serde_lexpr::from_str;
+    use std::fs::read_to_string;
+    use tracing::debug;
+
+    use super::*;
+
+    fn test_slide() -> Slide {
+        Slide::default()
     }
 
     #[test]
@@ -380,7 +405,10 @@ mod test {
         for atom in parser.value_iter() {
             match atom {
                 Ok(atom) => {
-                    print_list(&atom);
+                    let symbol = Symbol::None;
+                    let slide_builder = SlideBuilder::new();
+                    atom.as_cons()
+                        .map(|c| build_slides(c, symbol, slide_builder));
                 }
                 Err(e) => {
                     dbg!(e);
