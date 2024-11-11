@@ -27,9 +27,10 @@ pub(crate) enum Keyword {
     ImageFit(ImageFit),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumString)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, EnumString)]
 pub(crate) enum ImageFit {
     #[strum(ascii_case_insensitive)]
+    #[default]
     Cover,
     #[strum(ascii_case_insensitive)]
     Fill,

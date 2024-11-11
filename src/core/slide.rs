@@ -316,25 +316,25 @@ fn build_image_bg(atom: &Value, image_map: &mut HashMap<String, String>, map_ind
     }
 }
 
-fn build_slide(exp: Value) -> Result<Slide> {
-    let mut slide_builder = SlideBuilder::new();
-    let mut keyword = "idk";
-    for value in exp.as_cons().unwrap().to_vec().0 {
-        let mut vecs = vec![vec![]];
-        match value {
-            Value::Symbol(symbol) => {}
-            Value::Keyword(keyword) => {}
-            Value::String(string) => {}
-            Value::Number(num) => {}
-            Value::Cons(cons) => {
-                vecs.push(get_lists(&value));
-            }
-            _ => {}
-        }
-    }
+// fn build_slide(exp: Value) -> Result<Slide> {
+//     let mut slide_builder = SlideBuilder::new();
+//     let mut keyword = "idk";
+//     for value in exp.as_cons().unwrap().to_vec().0 {
+//         let mut vecs = vec![vec![]];
+//         match value {
+//             Value::Symbol(symbol) => {}
+//             Value::Keyword(keyword) => {}
+//             Value::String(string) => {}
+//             Value::Number(num) => {}
+//             Value::Cons(cons) => {
+//                 vecs.push(get_lists(&value));
+//             }
+//             _ => {}
+//         }
+//     }
 
-    todo!()
-}
+//     todo!()
+// }
 
 fn build_slides(
     cons: &lexpr::Cons,
@@ -428,5 +428,20 @@ mod test {
         let slide: Slide = from_str(&lisp).expect("oops");
         let test_slide = test_slide();
         assert_eq!(slide, test_slide)
+    }
+
+    #[test]
+    fn test_ron_deserialize() {
+        let slide = read_to_string("./test_presentation.ron").expect("Problem getting file read");
+        match ron::from_str::<Vec<Slide>>(&slide) {
+            Ok(s) => {
+                dbg!(s);
+                assert!(true)
+            }
+            Err(e) => {
+                dbg!(e);
+                assert!(false)
+            }
+        }
     }
 }

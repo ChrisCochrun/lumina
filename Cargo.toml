@@ -19,3 +19,4 @@ tracing-subscriber = { version = "0.3.18", features = ["fmt", "std", "chrono", "
 iced_video_player = { git = "https://github.com/jackpot51/iced_video_player", branch = "cosmic", features = ["wgpu"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
+ron = "0.8.1"

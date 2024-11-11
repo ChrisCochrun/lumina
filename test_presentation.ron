@@ -1,0 +1,31 @@
+[
+    (
+        id: 0,
+        background: Background(
+            path: "~/pics/frodo.jpg",
+            kind: Image
+        ),
+        text: "This is Frodo",
+        font: "Quicksand",
+        font_size: 50,
+        text_alignment: MiddleCenter,
+        video_loop: false,
+        video_start_time: 0.0,
+        video_end_time: 0.0,
+    ),
+
+    (
+        id: 0,
+        background: Background(
+            path: "~/vids/test/chosensmol.mp4",
+            kind: Video
+        ),
+        text: "This is Frodo",
+        font: "Quicksand",
+        font_size: 50,
+        text_alignment: MiddleCenter,
+        video_loop: false,
+        video_start_time: 0.0,
+        video_end_time: 0.0,
+    )
+]
