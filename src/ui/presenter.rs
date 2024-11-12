@@ -3,9 +3,11 @@ use std::path::PathBuf;
 use cosmic::{
     dialog::ashpd::url::Url,
     iced::{widget::text, ContentFit, Length},
-    iced_widget::stack,
+    iced_widget::{row, stack},
     prelude::*,
-    widget::{container, image, Container, Space},
+    widget::{
+        button, container, icon::Named, image, Container, Space,
+    },
     Task,
 };
 use iced_video_player::{Video, VideoPlayer};
@@ -16,9 +18,9 @@ use crate::core::slide::Slide;
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
-    slides: Vec<Slide>,
-    current_slide: i16,
-    video: Option<Video>,
+    pub slides: Vec<Slide>,
+    pub current_slide: i16,
+    pub video: Option<Video>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,7 +55,10 @@ impl Presenter {
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Task<cosmic::app::Message<Message>> {
+    pub fn update(
+        &mut self,
+        message: Message,
+    ) -> Task<cosmic::app::Message<Message>> {
         match message {
             Message::NextSlide => {
                 debug!("next slide");

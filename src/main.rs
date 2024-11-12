@@ -3,12 +3,18 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
-use cosmic::iced::{self, event, window, ContentFit, Font, Length, Point};
+use cosmic::iced::{
+    self, event, window, ContentFit, Font, Length, Point,
+};
 use cosmic::iced_core::{id, SmolStr};
-use cosmic::iced_widget::{stack, text};
-use cosmic::widget::{button, image, nav_bar};
-use cosmic::{executor, iced_wgpu, Also, Application, ApplicationExt, Element};
+use cosmic::iced_widget::{row, stack, text};
+use cosmic::widget::icon::{self, Named};
+use cosmic::widget::{button, image, nav_bar, Space};
+use cosmic::{
+    executor, iced_wgpu, Also, Application, ApplicationExt, Element,
+};
 use cosmic::{widget::Container, Theme};
+use iced_video_player::VideoPlayer;
 use lexpr::{parse, Value};
 use miette::{miette, Result};
 use std::collections::HashMap;
@@ -34,8 +40,9 @@ struct Cli {
 }
 
 fn main() -> Result<()> {
-    let timer =
-        tracing_subscriber::fmt::time::ChronoLocal::new("%Y-%m-%d_%I:%M:%S%.6f %P".to_owned());
+    let timer = tracing_subscriber::fmt::time::ChronoLocal::new(
+        "%Y-%m-%d_%I:%M:%S%.6f %P".to_owned(),
+    );
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
         .parse_lossy("lumina=debug");
@@ -55,10 +62,12 @@ fn main() -> Result<()> {
     if args.ui {
         settings = Settings::default().debug(false);
     } else {
-        settings = Settings::default().debug(false).no_main_window(true);
+        settings =
+            Settings::default().debug(false).no_main_window(true);
     }
 
-    Ok(cosmic::app::run::<App>(settings, args).map_err(|e| miette!("Invalid things... {}", e))?)
+    Ok(cosmic::app::run::<App>(settings, args)
+        .map_err(|e| miette!("Invalid things... {}", e))?)
 }
 
 fn theme(_state: &App) -> Theme {
@@ -76,7 +85,9 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let initial_slide = SlideBuilder::new()
-            .background(PathBuf::from("/home/chris/vids/test/chosensmol.mp4"))
+            .background(PathBuf::from(
+                "/home/chris/vids/test/chosensmol.mp4",
+            ))
             .expect("oops video")
             .text("Hello")
             .build()
@@ -106,14 +117,17 @@ impl cosmic::Application for App {
     type Executor = executor::Default;
     type Flags = Cli;
     type Message = Message;
-    const APP_ID: &'static str = "org.chriscochrun.Lumina";
+    const APP_ID: &'static str = "lumina";
     fn core(&self) -> &Core {
         &self.core
     }
     fn core_mut(&mut self) -> &mut Core {
         &mut self.core
     }
-    fn init(core: Core, input: Self::Flags) -> (Self, Task<Self::Message>) {
+    fn init(
+        core: Core,
+        input: Self::Flags,
+    ) -> (Self, Task<Self::Message>) {
         debug!("init");
         let mut nav_model = nav_bar::Model::default();
 
@@ -127,9 +141,11 @@ impl cosmic::Application for App {
         }
         let initial_slide = SlideBuilder::new()
             .background(
-                PathBuf::from("/home/chris/vids/test/chosensmol.mp4")
-                    .canonicalize()
-                    .unwrap(),
+                PathBuf::from(
+                    "/home/chris/vids/test/camprules2024.mp4",
+                )
+                .canonicalize()
+                .unwrap(),
             )
             .expect("oops video")
             .text("Hello")
@@ -167,7 +183,10 @@ impl cosmic::Application for App {
     }
 
     /// Called when a navigation item is selected.
-    fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<Self::Message> {
+    fn on_nav_select(
+        &mut self,
+        id: nav_bar::Id,
+    ) -> Task<Self::Message> {
         self.nav_model.activate(id);
         self.update_title()
     }
@@ -184,7 +203,9 @@ impl cosmic::Application for App {
         vec![]
     }
 
-    fn subscription(&self) -> cosmic::iced_futures::Subscription<Self::Message> {
+    fn subscription(
+        &self,
+    ) -> cosmic::iced_futures::Subscription<Self::Message> {
         event::listen_with(|event, _, id| {
             if let iced::Event::Window(window_event) = event {
                 match window_event {
@@ -211,20 +232,34 @@ impl cosmic::Application for App {
                         location: _,
                         modifiers: _,
                     } => match key {
-                        Key::Named(iced::keyboard::key::Named::ArrowRight) => {
-                            Some(Message::Present(ui::presenter::Message::NextSlide))
-                        }
-                        Key::Named(iced::keyboard::key::Named::ArrowLeft) => {
-                            Some(Message::Present(ui::presenter::Message::NextSlide))
-                        }
-                        Key::Named(iced::keyboard::key::Named::Space) => {
-                            Some(Message::Present(ui::presenter::Message::NextSlide))
-                        }
+                        Key::Named(
+                            iced::keyboard::key::Named::ArrowRight,
+                        ) => Some(Message::Present(
+                            ui::presenter::Message::NextSlide,
+                        )),
+                        Key::Named(
+                            iced::keyboard::key::Named::ArrowLeft,
+                        ) => Some(Message::Present(
+                            ui::presenter::Message::NextSlide,
+                        )),
+                        Key::Named(
+                            iced::keyboard::key::Named::Space,
+                        ) => Some(Message::Present(
+                            ui::presenter::Message::NextSlide,
+                        )),
                         Key::Character(key) => {
-                            if key == SmolStr::from("j") || key == SmolStr::from("l") {
-                                Some(Message::Present(ui::presenter::Message::NextSlide))
-                            } else if key == SmolStr::from("k") || key == SmolStr::from("h") {
-                                Some(Message::Present(ui::presenter::Message::PrevSlide))
+                            if key == SmolStr::from("j")
+                                || key == SmolStr::from("l")
+                            {
+                                Some(Message::Present(
+                                    ui::presenter::Message::NextSlide,
+                                ))
+                            } else if key == SmolStr::from("k")
+                                || key == SmolStr::from("h")
+                            {
+                                Some(Message::Present(
+                                    ui::presenter::Message::PrevSlide,
+                                ))
                             } else {
                                 None
                             }
@@ -239,7 +274,10 @@ impl cosmic::Application for App {
         })
     }
 
-    fn update(&mut self, message: Message) -> cosmic::Task<cosmic::app::Message<Message>> {
+    fn update(
+        &mut self,
+        message: Message,
+    ) -> cosmic::Task<cosmic::app::Message<Message>> {
         match message {
             Message::Present(message) => {
                 self.presenter.update(message);
@@ -252,17 +290,25 @@ impl cosmic::Application for App {
             Message::OpenWindow => {
                 let count = self.windows.len() + 1;
 
-                let (id, spawn_window) = window::open(window::Settings {
-                    position: Position::Centered,
-                    exit_on_close_request: count % 2 == 0,
-                    decorations: false,
-                    ..Default::default()
-                });
+                let (id, spawn_window) =
+                    window::open(window::Settings {
+                        position: Position::Centered,
+                        exit_on_close_request: count % 2 == 0,
+                        decorations: false,
+                        ..Default::default()
+                    });
 
                 self.windows.push(id);
-                _ = self.set_window_title(format!("window_{}", count), id);
+                _ = self.set_window_title(
+                    format!("window_{}", count),
+                    id,
+                );
 
-                spawn_window.map(|id| cosmic::app::Message::App(Message::WindowOpened(id, None)))
+                spawn_window.map(|id| {
+                    cosmic::app::Message::App(Message::WindowOpened(
+                        id, None,
+                    ))
+                })
             }
             Message::CloseWindow(id) => window::close(id),
             Message::WindowOpened(id, _) => {
@@ -270,7 +316,11 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::WindowClosed(id) => {
-                let window = self.windows.iter().position(|w| *w == id).unwrap();
+                let window = self
+                    .windows
+                    .iter()
+                    .position(|w| *w == id)
+                    .unwrap();
                 self.windows.remove(window);
                 // This closes the app if using the cli example
                 if self.windows.len() == 0 {
@@ -286,11 +336,54 @@ impl cosmic::Application for App {
     fn view(&self) -> Element<Message> {
         let text = text!("This is frodo").size(20);
         let text = Container::new(text).center(Length::Fill);
-        let image =
-            Container::new(image("/home/chris/pics/frodo.jpg").content_fit(ContentFit::Cover))
-                .center(Length::FillPortion(2));
-        let stack = stack!(image, text).width(Length::Fill).height(Length::Fill);
-        stack.into()
+        let slide = self
+            .presenter
+            .slides
+            .get(self.presenter.current_slide as usize)
+            .unwrap();
+        let container = match slide.background().kind {
+            crate::BackgroundKind::Image => Container::new(
+                image("/home/chris/pics/frodo.jpg")
+                    .content_fit(ContentFit::Cover)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            ),
+            crate::BackgroundKind::Video => {
+                if let Some(video) = &self.presenter.video {
+                    Container::new(
+                        VideoPlayer::new(&video)
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .content_fit(ContentFit::Contain),
+                    )
+                    .center(Length::Fill)
+                } else {
+                    Container::new(Space::new(0, 0))
+                }
+            }
+        };
+        let preview = stack!(container, text);
+        let icon_left = icon::from_name("arrow-left").size(50).scale(2).prefer_svg(true);
+        debug!(?icon_left);
+        let icon_right = icon::from_name("arrow-right").size(50).scale(2).prefer_svg(true);
+        debug!(?icon_right);
+        let row = row![
+            Container::new(
+                button::icon(icon_left)
+                    .width(Length::Fill)
+            )
+            .center(Length::FillPortion(1)),
+            preview.width(Length::FillPortion(3)),
+            Container::new(
+                button::icon(icon_right)
+                    .width(Length::Fill)
+            )
+            .center(Length::FillPortion(1)),
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(20);
+        row.into()
     }
 
     // View for presentation
@@ -300,20 +393,6 @@ impl cosmic::Application for App {
             .map(|message| Message::Present(message))
     }
 }
-
-// struct VidPlayer<'a, Message, Theme, Renderer>(VideoPlayer<'a, Message, Theme, Renderer>);
-
-// impl<'a, Message, Theme, Renderer> Into<Element<'a, Message>>
-//     for VidPlayer<'a, Message, Theme, Renderer>
-// where
-//     Renderer: 'a + iced_wgpu::primitive::Renderer,
-//     Message: 'a + Clone,
-//     Theme: 'a,
-// {
-//     fn into(self) -> Element<'a, Message> {
-//         Element::new(&self)
-//     }
-// }
 
 impl App
 where
@@ -346,7 +425,9 @@ where
         });
         self.windows.push(id);
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
-        spawn_window.map(|id| cosmic::app::Message::App(Message::WindowOpened(id, None)))
+        spawn_window.map(|id| {
+            cosmic::app::Message::App(Message::WindowOpened(id, None))
+        })
     }
 }
 
@@ -363,7 +444,9 @@ fn test_slide<'a>() -> Element<'a, Message> {
         let font = Font::with_name("Noto Sans");
         let stack = stack!(
             image(slide.background().path.clone()),
-            text(slide.text()).size(slide.font_size() as u16).font(font)
+            text(slide.text())
+                .size(slide.font_size() as u16)
+                .font(font)
         );
 
         stack.into()
@@ -371,81 +454,6 @@ fn test_slide<'a>() -> Element<'a, Message> {
         text("Slide is broken").into()
     }
 }
-
-// fn build_slide<'a>(
-//     lisp_data: &Value,
-//     layer: LayerContainer<'a, Message, Renderer>,
-// ) -> LayerContainer<'a, Message, Renderer> {
-//     let current_symbol;
-//     // let current_element;
-//     let slide_builder = SlideBuilder::new();
-//     for atom in lisp_data.list_iter().unwrap() {
-//         match atom {
-//             Value::Symbol(symbol) => {
-//                 let symbol = atom.as_symbol().unwrap();
-//                 debug!(symbol);
-//                 match symbol {
-//                     "slide" => {
-//                         current_symbol = "slide";
-//                         debug!("I am a slide");
-//                         return layer;
-//                     }
-//                     "song" => {
-//                         current_symbol = "song";
-//                         debug!("I am a song");
-//                         return layer;
-//                     }
-//                     "image" => {
-//                         current_symbol = "image";
-//                         debug!("I am an image");
-//                         return layer;
-//                     }
-//                     "text" => {
-//                         current_symbol = "text";
-//                         debug!("I am some text");
-//                         return layer;
-//                     }
-//                     _ => {
-//                         error!("We shouldn't get here");
-//                         return layer;
-//                     }
-//                 }
-//                 return layer;
-//             }
-//             Value::Keyword(keyword) => {
-//                 debug!(keyword);
-//                 return layer;
-//             }
-//             Value::Cons(cons) => {
-//                 debug!(?cons);
-//                 let stack = build_slide(cons.car(), layer);
-//                 return stack;
-//             }
-//             Value::String(string) => {
-//                 debug!(string);
-//                 return layer;
-//             }
-//             Value::Bool(b) => {
-//                 debug!(b);
-//                 return layer;
-//             }
-//             Value::Number(int) => {
-//                 debug!(?int);
-//                 return layer;
-//             }
-//             _ => {
-//                 debug!("idk");
-//                 return layer;
-//             }
-//         }
-//     }
-//     layer
-// }
-
-// fn create_image(item: Value) -> Element<Message> {
-//     // We expect this value to look like (image :source "./something.jpg")
-//     todo!()
-// }
 
 #[cfg(test)]
 mod test {
