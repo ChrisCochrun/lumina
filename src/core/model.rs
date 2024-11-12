@@ -1,6 +1,7 @@
 use std::mem::replace;
 
-use color_eyre::eyre::{eyre, Result};
+use cosmic::{executor, iced::Executor, Task};
+use miette::{miette, IntoDiagnostic, Result};
 use sqlx::{Connection, SqliteConnection};
 
 #[derive(Debug)]
@@ -24,7 +25,7 @@ impl<T> Model<T> {
             let _old_item = replace(current_item, item);
             Ok(())
         } else {
-            Err(eyre!(
+            Err(miette!(
                 "Item doesn't exist in model. Id was {}",
                 index
             ))
@@ -36,8 +37,7 @@ impl<T> Model<T> {
         Ok(())
     }
 
-    pub fn get_item(&self, index: i32) -> Option<&T>
-    {
+    pub fn get_item(&self, index: i32) -> Option<&T> {
         self.items.get(index as usize)
     }
 
@@ -54,19 +54,16 @@ impl<T> Model<T> {
     }
 }
 
-impl<T> Default for Model<T> {
-    fn default() -> Self {
-        Self {
-            items: vec![],
-            db: {
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    get_db().await
-                })
-            }
-        }
-    }
-}
+// impl<T> Default for Model<T> {
+//     fn default() -> Self {
+//         Self {
+//             items: vec![],
+//             db: {
+//                 get_db().await
+//             }
+//         }
+//     }
+// }
 
 pub async fn get_db() -> SqliteConnection {
     let mut data = dirs::data_local_dir().unwrap();
@@ -82,19 +79,25 @@ pub async fn get_db() -> SqliteConnection {
 pub trait Modeling {
     type Item;
 
-    fn setup_db() -> SqliteConnection {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let mut data = dirs::data_local_dir().unwrap();
-        data.push("lumina");
-        data.push("library-db.sqlite3");
-        let mut db_url = String::from("sqlite://");
-        db_url.push_str(data.to_str().unwrap());
-        rt.block_on(async {
-            SqliteConnection::connect(&db_url)
-                .await
-                .expect("problems")
-        })
-    }
+    // fn setup_db() -> SqliteConnection {
+    //     let rt = executor::Default::new().unwrap();
+    //     let rt = executor::multi::Executor::new().unwrap();
+    //     let mut data = dirs::data_local_dir().unwrap();
+    //     data.push("lumina");
+    //     data.push("library-db.sqlite3");
+    //     let mut db_url = String::from("sqlite://");
+    //     db_url.push_str(data.to_str().unwrap());
+    //     rt.spawn(async {
+    //         SqliteConnection::connect(&db_url)
+    //             .await
+    //             .expect("problems")
+    //     });
+    //     rt.enter(async {
+    //         SqliteConnection::connect(&db_url)
+    //             .await
+    //             .expect("problems")
+    //     });
+    // }
 }
 
 #[cfg(test)]

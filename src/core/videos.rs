@@ -1,5 +1,6 @@
-use crate::model::Model;
-use color_eyre::eyre::Result;
+use super::model::Model;
+use cosmic::{executor, iced::Executor};
+use miette::{Result, miette, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
 use std::path::PathBuf;
@@ -16,27 +17,22 @@ pub struct Video {
 }
 
 impl Model<Video> {
-    pub fn load_from_db(&mut self) {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let result = query_as!(Video, r#"SELECT title as "title!", filePath as "path!", startTime as "start_time!: f32", endTime as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(&mut self.db).await;
-            match result {
-                Ok(v) => {
-                    for video in v.into_iter() {
-                        let _ = self.add_item(video);
-                    }
+    pub async fn load_from_db(&mut self) {
+        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(&mut self.db).await;
+        match result {
+            Ok(v) => {
+                for video in v.into_iter() {
+                    let _ = self.add_item(video);
                 }
-                Err(e) => error!("There was an error in converting videos: {e}"),
             }
-        });
+            Err(e) => error!("There was an error in converting videos: {e}"),
+        };
     }
 }
 
-
 pub async fn get_video_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Video> {
-    Ok(query_as!(Video, r#"SELECT title as "title!", filePath as "path!", startTime as "start_time!: f32", endTime as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await?)
+    Ok(query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()?)
 }
-
 
 #[cfg(test)]
 mod test {
@@ -51,37 +47,39 @@ mod test {
         }
     }
 
-    #[test]
-    pub fn test_db_and_model() {
-        let mut video_model: Model<Video> = Model::default();
-        video_model.load_from_db();
+    #[tokio::test]
+    async fn test_db_and_model() {
+        let mut video_model: Model<Video> = Model {
+            items: vec![],
+            db: crate::core::model::get_db().await
+        };
+        video_model.load_from_db().await;
         if let Some(video) = video_model.find(|v| v.id == 73) {
-            let test_video = test_video("Getting started with Tokio. The ultimate starter guide to writing async Rust.".into());
+            let test_video = test_video(
+                "Getting started with Tokio. The ultimate starter guide to writing async Rust."
+                    .into(),
+            );
             assert_eq!(test_video.title, video.title);
         } else {
             assert!(false);
         }
     }
 
-    #[test]
-    pub fn test_add_video() {
+    #[tokio::test]
+    async fn test_add_video() {
         let video = test_video("A new video".into());
-        let mut video_model: Model<Video> = Model::default();
+        let mut video_model: Model<Video> = Model {
+            items: vec![],
+            db: crate::core::model::get_db().await
+        };
         let result = video_model.add_item(video.clone());
         let new_video = test_video("A newer video".into());
         match result {
             Ok(_) => {
                 assert_eq!(&video, video_model.find(|v| v.id == 0).unwrap());
-                assert_ne!(
-                    &new_video,
-                    video_model.find(|v| v.id == 0).unwrap()
-                );
+                assert_ne!(&new_video, video_model.find(|v| v.id == 0).unwrap());
             }
-            Err(e) => assert!(
-                false,
-                "There was an error adding the video: {:?}",
-                e
-            ),
+            Err(e) => assert!(false, "There was an error adding the video: {:?}", e),
         }
     }
 }

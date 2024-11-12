@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT title as \"title!\", file_path as \"path!\", start_time as \"start_time!: f32\", end_time as \"end_time!: f32\", loop as \"looping!\", id as \"id: i32\" from videos",
+  "describe": {
+    "columns": [
+      {
+        "name": "title!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "path!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "start_time!: f32",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "end_time!: f32",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "looping!",
+        "ordinal": 4,
+        "type_info": "Bool"
+      },
+      {
+        "name": "id: i32",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "f6c1c41a68b04f939301d6bb897cf79915ef389eedb009daef3be737709266f8"
+}

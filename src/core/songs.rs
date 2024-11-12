@@ -1,13 +1,14 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use color_eyre::eyre::{eyre, Context, Result};
+use cosmic::{executor, iced::Executor};
+use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as, sqlite::SqliteRow, FromRow, Row, SqliteConnection};
 use tracing::{debug, error};
 
-use crate::{
-    model::{get_db, Model},
-    slides::{Background, TextAlignment},
+use super::{
+    model::{Model},
+    slide::{Background, TextAlignment},
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,11 +27,9 @@ pub struct Song {
 }
 
 const VERSE_KEYWORDS: [&str; 24] = [
-    "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Verse 5", "Verse 6",
-    "Verse 7", "Verse 8", "Chorus 1", "Chorus 2", "Chorus 3",
-    "Chorus 4", "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
-    "Intro 1", "Intro 2", "Ending 1", "Ending 2", "Other 1",
-    "Other 2", "Other 3", "Other 4",
+    "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Verse 5", "Verse 6", "Verse 7", "Verse 8",
+    "Chorus 1", "Chorus 2", "Chorus 3", "Chorus 4", "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
+    "Intro 1", "Intro 2", "Ending 1", "Ending 2", "Other 1", "Other 2", "Other 3", "Other 4",
 ];
 
 impl FromRow<'_, SqliteRow> for Song {
@@ -49,14 +48,21 @@ impl FromRow<'_, SqliteRow> for Song {
                 let str: &str = row.try_get(0)?;
                 str.split(' ').map(|s| s.to_string()).collect()
             }),
-            background: Some({
+            background: {
                 let string: String = row.try_get(7)?;
-                Background::try_from(string)?
-            }),
+                match Background::try_from(string) {
+                    Ok(background) => Some(background),
+                    Err(_) => None,
+                }
+
+            },
             text_alignment: Some({
                 let horizontal_alignment: String = row.try_get(3)?;
                 let vertical_alignment: String = row.try_get(4)?;
-                match (horizontal_alignment.to_lowercase().as_str(), vertical_alignment.to_lowercase().as_str()) {
+                match (
+                    horizontal_alignment.to_lowercase().as_str(),
+                    vertical_alignment.to_lowercase().as_str(),
+                ) {
                     ("left", "top") => TextAlignment::TopLeft,
                     ("left", "center") => TextAlignment::MiddleLeft,
                     ("left", "bottom") => TextAlignment::BottomLeft,
@@ -66,7 +72,7 @@ impl FromRow<'_, SqliteRow> for Song {
                     ("right", "top") => TextAlignment::TopRight,
                     ("right", "center") => TextAlignment::MiddleRight,
                     ("right", "bottom") => TextAlignment::BottomRight,
-                    _ => TextAlignment::MiddleCenter
+                    _ => TextAlignment::MiddleCenter,
                 }
             }),
             font: row.try_get(6)?,
@@ -75,35 +81,30 @@ impl FromRow<'_, SqliteRow> for Song {
     }
 }
 
-
-pub async  fn get_song_from_db(index: i32, db: &mut SqliteConnection) -> Result<Song> {
-    let row = query(r#"SELECT vorder as "verse_order!", fontSize as "font_size!: i32", backgroundType as "background_type!", horizontalTextAlignment as "horizontal_text_alignment!", verticalTextAlignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32" from songs where id = $1"#).bind(index).fetch_one(db).await?;
-    Ok(Song::from_row(&row)?)
+pub async fn get_song_from_db(index: i32, db: &mut SqliteConnection) -> Result<Song> {
+    let row = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32" from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
+    Ok(Song::from_row(&row).into_diagnostic()?)
 }
 
-
 impl Model<Song> {
-    pub fn load_from_db(&mut self) {
+    pub async fn load_from_db(&mut self) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let result = query(r#"SELECT vorder as "verse_order!", fontSize as "font_size!: i32", backgroundType as "background_type!", horizontalTextAlignment as "horizontal_text_alignment!", verticalTextAlignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(&mut self.db).await;
-            match result {
-                Ok(s) => {
-                    for song in s.into_iter() {
-                        match Song::from_row(&song) {
-                            Ok(song) => {
-                                let _ = self.add_item(song);
-                            },
-                            Err(e) => error!("Could not convert song: {e}"),
-                        };
+        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(&mut self.db).await;
+        match result {
+            Ok(s) => {
+                for song in s.into_iter() {
+                    match Song::from_row(&song) {
+                        Ok(song) => {
+                            let _ = self.add_item(song);
+                        },
+                        Err(e) => error!("Could not convert song: {e}"),
                     };
-                },
-                Err(e) => {
-                    error!("There was an error in converting songs: {e}");
-                },
-            }
-        })
+                };
+            },
+            Err(e) => {
+                error!("There was an error in converting songs: {e}");
+            },
+        }
     }
 }
 
@@ -111,15 +112,11 @@ impl Song {
     pub fn get_lyrics(&self) -> Result<Vec<String>> {
         let mut lyric_list = Vec::new();
         if self.lyrics.is_none() {
-            return Err(eyre!("There is no lyrics here"));
+            return Err(miette!("There is no lyrics here"));
         } else if self.verse_order.is_none() {
-            return Err(eyre!("There is no verse_order here"));
-        } else if self
-            .verse_order
-            .clone()
-            .is_some_and(|v| v.is_empty())
-        {
-            return Err(eyre!("There is no verse_order here"));
+            return Err(miette!("There is no verse_order here"));
+        } else if self.verse_order.clone().is_some_and(|v| v.is_empty()) {
+            return Err(miette!("There is no verse_order here"));
         }
         if let Some(raw_lyrics) = self.lyrics.clone() {
             let raw_lyrics = raw_lyrics.as_str();
@@ -148,21 +145,16 @@ impl Song {
                 let mut verse_name = "";
                 debug!(verse = verse);
                 for word in VERSE_KEYWORDS {
-                    let end_verse =
-                        verse.get(1..2).unwrap_or_default();
-                    let beg_verse =
-                        verse.get(0..1).unwrap_or_default();
-                    if word.starts_with(beg_verse)
-                        && word.ends_with(end_verse)
-                    {
+                    let end_verse = verse.get(1..2).unwrap_or_default();
+                    let beg_verse = verse.get(0..1).unwrap_or_default();
+                    if word.starts_with(beg_verse) && word.ends_with(end_verse) {
                         verse_name = word;
                         continue;
                     }
                 }
                 if let Some(lyric) = lyric_map.get(verse_name) {
                     if lyric.contains("\n\n") {
-                        let split_lyrics: Vec<&str> =
-                            lyric.split("\n\n").collect();
+                        let split_lyrics: Vec<&str> = lyric.split("\n\n").collect();
                         for lyric in split_lyrics {
                             if lyric.is_empty() {
                                 continue;
@@ -181,7 +173,7 @@ impl Song {
             }
             Ok(lyric_list)
         } else {
-            Err(eyre!("There are no lyrics"))
+            Err(miette!("There are no lyrics"))
         }
     }
 }
@@ -254,12 +246,11 @@ From the day
 You saved my soul"
                 .to_string(),
         );
-        song.verse_order =
-            "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
-                .to_string()
-                .split(' ')
-                .map(|s| Some(s.to_string()))
-                .collect();
+        song.verse_order = "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
+            .to_string()
+            .split(' ')
+            .map(|s| Some(s.to_string()))
+            .collect();
         let lyrics = song.get_lyrics();
         match lyrics {
             Ok(lyrics) => {
@@ -271,40 +262,47 @@ You saved my soul"
         }
     }
 
-    #[test]
-    pub fn test_db_and_model() {
-        let mut song_model: Model<Song> = Model::default();
-        song_model.load_from_db();
+    async fn model() -> Model<Song> {
+        let song_model: Model<Song> = Model {
+            items: vec![],
+            db: crate::core::model::get_db().await
+        };
+        song_model
+    }
+
+    #[tokio::test]
+    async fn test_db_and_model() {
+        let mut song_model = model().await;
+        song_model.load_from_db().await;
         if let Some(song) = song_model.find(|s| s.id == 7) {
             let test_song = test_song();
             assert_eq!(&test_song, song);
         } else {
+            dbg!(song_model);
             assert!(false);
         }
     }
 
     #[tokio::test]
-    pub async fn test_song_from_db() {
+    async fn test_song_from_db() {
         let song = test_song();
-        let result = get_song_from_db(7, &mut get_db().await).await;
+        let mut db = model().await.db;
+        let result = get_song_from_db(7, &mut db).await;
         match result {
             Ok(db_song) => assert_eq!(song, db_song),
             Err(e) => assert!(false, "{e}"),
         }
     }
 
-    #[test]
-    pub fn test_update() {
+    #[tokio::test]
+    async fn test_update() {
         let song = test_song();
         let cloned_song = song.clone();
-        let mut song_model: Model<Song> = Model::default();
-        song_model.load_from_db();
+        let mut song_model: Model<Song> = model().await;
+        song_model.load_from_db().await;
 
         match song_model.update_item(song, 2) {
-            Ok(()) => assert_eq!(
-                &cloned_song,
-                song_model.find(|s| s.id == 7).unwrap()
-            ),
+            Ok(()) => assert_eq!(&cloned_song, song_model.find(|s| s.id == 7).unwrap()),
             Err(e) => assert!(false, "{e}"),
         }
     }

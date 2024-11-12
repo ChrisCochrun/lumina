@@ -1,10 +1,10 @@
-use std::path::PathBuf;
-use color_eyre::eyre::Result;
+use miette::{miette, Result, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, query, sqlite::SqliteRow, Row, SqliteConnection};
+use std::path::PathBuf;
 use tracing::error;
 
-use crate::model::Model;
+use super::model::Model;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PresKind {
@@ -54,34 +54,38 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    pub fn load_from_db(&mut self) {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let result = query!(r#"SELECT id as "id: i32", title, filePath as "path", html from presentations"#).fetch_all(&mut self.db).await;
-            match result {
-                Ok(v) => {
-                    for presentation in v.into_iter() {
-                        let _ = self.add_item(Presentation {
-                            id: presentation.id,
-                            title: presentation.title,
-                            path: presentation.path.into(),
-                            kind: if presentation.html {
-                                PresKind::Html
-                            } else {
-                                PresKind::Pdf
-                            }
-                        });
-                    }
+    pub async fn load_from_db(&mut self) {
+        let result = query!(
+            r#"SELECT id as "id: i32", title, file_path as "path", html from presentations"#
+        )
+            .fetch_all(&mut self.db)
+            .await;
+        match result {
+            Ok(v) => {
+                for presentation in v.into_iter() {
+                    let _ = self.add_item(Presentation {
+                        id: presentation.id,
+                        title: presentation.title,
+                        path: presentation.path.into(),
+                        kind: if presentation.html {
+                            PresKind::Html
+                        } else {
+                            PresKind::Pdf
+                        },
+                    });
                 }
-                Err(e) => error!("There was an error in converting presentations: {e}"),
             }
-        });
+            Err(e) => error!("There was an error in converting presentations: {e}"),
+        }
     }
 }
 
-pub async fn get_presentation_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Presentation> {
-    let row = query(r#"SELECT id as "id: i32", title, filePath as "path", html from presentations where id = $1"#).bind(database_id).fetch_one(db).await?;
-    Ok(Presentation::from_row(&row)?)
+pub async fn get_presentation_from_db(
+    database_id: i32,
+    db: &mut SqliteConnection,
+) -> Result<Presentation> {
+    let row = query(r#"SELECT id as "id: i32", title, file_path as "path", html from presentations where id = $1"#).bind(database_id).fetch_one(db).await.into_diagnostic()?;
+    Ok(Presentation::from_row(&row).into_diagnostic()?)
 }
 
 #[cfg(test)]
@@ -106,11 +110,13 @@ mod test {
         assert_eq!(pres.get_kind(), &PresKind::Pdf)
     }
 
-    #[test]
-    pub fn test_db_and_model() {
-        let mut presentation_model: Model<Presentation> =
-            Model::default();
-        presentation_model.load_from_db();
+    #[tokio::test]
+    async fn test_db_and_model() {
+        let mut presentation_model: Model<Presentation> = Model {
+            items: vec![],
+            db: crate::core::model::get_db().await
+        };
+        presentation_model.load_from_db().await;
         if let Some(presentation) = presentation_model.find(|p| p.id == 54) {
             let test_presentation = test_presentation();
             assert_eq!(&test_presentation, presentation);

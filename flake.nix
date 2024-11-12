@@ -64,6 +64,8 @@
             # yt-dlp
 
             just
+            sqlx-cli
+            cargo-watch
           ];
         in rec
         {

@@ -1,9 +1,9 @@
-use color_eyre::eyre::Result;
+use miette::Result;
 
-use crate::images::Image;
-use crate::presentations::Presentation;
-use crate::songs::Song;
-use crate::videos::Video;
+use super::images::Image;
+use super::presentations::Presentation;
+use super::songs::Song;
+use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
 
@@ -71,7 +71,7 @@ impl ServiceItemModel {
 mod test {
     use std::path::PathBuf;
 
-    use crate::presentations::PresKind;
+    use crate::core::presentations::PresKind;
 
     use super::*;
     use pretty_assertions::{assert_eq, assert_ne};
@@ -94,7 +94,6 @@ mod test {
         }
     }
 
-
     #[test]
     pub fn test_service_item() {
         let song = test_song();
@@ -105,9 +104,12 @@ mod test {
         match service_model.add_item(&song) {
             Ok(_) => {
                 assert_eq!(ServiceItemKind::Song, service_model.items[0].kind);
-                assert_eq!(ServiceItemKind::Presentation(PresKind::Html), pres_item.kind);
+                assert_eq!(
+                    ServiceItemKind::Presentation(PresKind::Html),
+                    pres_item.kind
+                );
                 assert_eq!(service_item, service_model.items[0]);
-            },
+            }
             Err(e) => panic!("Problem adding item: {:?}", e),
         }
     }
