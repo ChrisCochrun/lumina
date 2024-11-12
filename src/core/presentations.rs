@@ -1,12 +1,16 @@
-use miette::{miette, Result, IntoDiagnostic};
+use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::FromRow, query, sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{
+    prelude::FromRow, query, sqlite::SqliteRow, Row, SqliteConnection,
+};
 use std::path::PathBuf;
 use tracing::error;
 
 use super::model::Model;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub enum PresKind {
     Html,
     #[default]
@@ -14,7 +18,9 @@ pub enum PresKind {
     Generic,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub struct Presentation {
     pub id: i32,
     pub title: String,
@@ -75,7 +81,9 @@ impl Model<Presentation> {
                     });
                 }
             }
-            Err(e) => error!("There was an error in converting presentations: {e}"),
+            Err(e) => error!(
+                "There was an error in converting presentations: {e}"
+            ),
         }
     }
 }
@@ -114,10 +122,12 @@ mod test {
     async fn test_db_and_model() {
         let mut presentation_model: Model<Presentation> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await
+            db: crate::core::model::get_db().await,
         };
         presentation_model.load_from_db().await;
-        if let Some(presentation) = presentation_model.find(|p| p.id == 54) {
+        if let Some(presentation) =
+            presentation_model.find(|p| p.id == 54)
+        {
             let test_presentation = test_presentation();
             assert_eq!(&test_presentation, presentation);
         } else {

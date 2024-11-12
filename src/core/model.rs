@@ -71,9 +71,7 @@ pub async fn get_db() -> SqliteConnection {
     data.push("library-db.sqlite3");
     let mut db_url = String::from("sqlite://");
     db_url.push_str(data.to_str().unwrap());
-    SqliteConnection::connect(&db_url)
-        .await
-        .expect("problems")
+    SqliteConnection::connect(&db_url).await.expect("problems")
 }
 
 pub trait Modeling {

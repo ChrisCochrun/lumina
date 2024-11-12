@@ -15,7 +15,9 @@ use crate::core::lisp::Symbol;
 
 use super::lisp::get_lists;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub enum TextAlignment {
     TopLeft,
     TopCenter,
@@ -39,7 +41,9 @@ impl From<Value> for TextAlignment {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub struct Background {
     pub path: PathBuf,
     pub kind: BackgroundKind,
@@ -113,16 +117,23 @@ pub enum ParseError {
 impl std::error::Error for ParseError {}
 
 impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         let message = match self {
-            Self::NonBackgroundFile => "The file is not a recognized image or video type",
+            Self::NonBackgroundFile => {
+                "The file is not a recognized image or video type"
+            }
             Self::DoesNotExist => "This file doesn't exist",
         };
         write!(f, "Error: {message}")
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub enum BackgroundKind {
     #[default]
     Image,
@@ -139,7 +150,9 @@ impl From<String> for BackgroundKind {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
+)]
 pub struct Slide {
     id: i32,
     background: Background,
@@ -170,7 +183,9 @@ impl Slide {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
+)]
 pub struct SlideBuilder {
     background: Option<Background>,
     text: Option<String>,
@@ -187,7 +202,10 @@ impl SlideBuilder {
         Self::default()
     }
 
-    pub(crate) fn background(mut self, background: PathBuf) -> Result<Self, ParseError> {
+    pub(crate) fn background(
+        mut self,
+        background: PathBuf,
+    ) -> Result<Self, ParseError> {
         let background = Background::try_from(background)?;
         let _ = self.background.insert(background);
         Ok(self)
@@ -208,7 +226,10 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn text_alignment(mut self, text_alignment: TextAlignment) -> Self {
+    pub(crate) fn text_alignment(
+        mut self,
+        text_alignment: TextAlignment,
+    ) -> Self {
         let _ = self.text_alignment.insert(text_alignment);
         self
     }
@@ -218,12 +239,18 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn video_start_time(mut self, video_start_time: f32) -> Self {
+    pub(crate) fn video_start_time(
+        mut self,
+        video_start_time: f32,
+    ) -> Self {
         let _ = self.video_start_time.insert(video_start_time);
         self
     }
 
-    pub(crate) fn video_end_time(mut self, video_end_time: f32) -> Self {
+    pub(crate) fn video_end_time(
+        mut self,
+        video_end_time: f32,
+    ) -> Self {
         let _ = self.video_end_time.insert(video_end_time);
         self
     }
@@ -281,7 +308,11 @@ impl Image {
     }
 }
 
-fn build_image_bg(atom: &Value, image_map: &mut HashMap<String, String>, map_index: usize) {
+fn build_image_bg(
+    atom: &Value,
+    image_map: &mut HashMap<String, String>,
+    map_index: usize,
+) {
     // This needs to be the cons that contains (image . ...)
     // the image is a symbol and the rest are keywords and other maps
     if atom.is_symbol() {
@@ -289,7 +320,9 @@ fn build_image_bg(atom: &Value, image_map: &mut HashMap<String, String>, map_ind
         return;
     }
 
-    for atom in atom.list_iter().unwrap().map(|a| a.as_cons().unwrap()) {
+    for atom in
+        atom.list_iter().unwrap().map(|a| a.as_cons().unwrap())
+    {
         if atom.car() == &Value::Symbol("image".into()) {
             build_image_bg(atom.cdr(), image_map, map_index);
         } else {
@@ -345,7 +378,11 @@ fn build_slides(
         dbg!(&current_symbol);
         match value {
             Value::Cons(v) => {
-                slide_builder = build_slides(&v, current_symbol.clone(), slide_builder);
+                slide_builder = build_slides(
+                    &v,
+                    current_symbol.clone(),
+                    slide_builder,
+                );
             }
             Value::Nil => {
                 dbg!(Value::Nil);
@@ -361,7 +398,8 @@ fn build_slides(
             }
             Value::Symbol(symbol) => {
                 dbg!(symbol);
-                current_symbol = Symbol::from_str(symbol).unwrap_or_default();
+                current_symbol =
+                    Symbol::from_str(symbol).unwrap_or_default();
             }
             Value::Keyword(keyword) => {
                 dbg!(keyword);
@@ -399,16 +437,19 @@ mod test {
 
     #[test]
     fn test_lexp_serialize() {
-        let lisp = read_to_string("./test_presentation.lisp").expect("oops");
+        let lisp =
+            read_to_string("./test_presentation.lisp").expect("oops");
         println!("{lisp}");
-        let mut parser = Parser::from_str_custom(&lisp, Options::elisp());
+        let mut parser =
+            Parser::from_str_custom(&lisp, Options::elisp());
         for atom in parser.value_iter() {
             match atom {
                 Ok(atom) => {
                     let symbol = Symbol::None;
                     let slide_builder = SlideBuilder::new();
-                    atom.as_cons()
-                        .map(|c| build_slides(c, symbol, slide_builder));
+                    atom.as_cons().map(|c| {
+                        build_slides(c, symbol, slide_builder)
+                    });
                 }
                 Err(e) => {
                     dbg!(e);
@@ -432,7 +473,8 @@ mod test {
 
     #[test]
     fn test_ron_deserialize() {
-        let slide = read_to_string("./test_presentation.ron").expect("Problem getting file read");
+        let slide = read_to_string("./test_presentation.ron")
+            .expect("Problem getting file read");
         match ron::from_str::<Vec<Slide>>(&slide) {
             Ok(s) => {
                 dbg!(s);

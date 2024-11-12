@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use super::presentations::PresKind;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub enum ServiceItemKind {
     #[default]
     Song,
@@ -22,7 +24,9 @@ impl std::fmt::Display for ServiceItemKind {
             Self::Video => "video".to_owned(),
             Self::Presentation(PresKind::Html) => "html".to_owned(),
             Self::Presentation(PresKind::Pdf) => "pdf".to_owned(),
-            Self::Presentation(PresKind::Generic) => "presentation".to_owned(),
+            Self::Presentation(PresKind::Generic) => {
+                "presentation".to_owned()
+            }
             Self::Content => "content".to_owned(),
         };
         write!(f, "{s}")
@@ -36,7 +40,9 @@ impl TryFrom<String> for ServiceItemKind {
             "song" => Ok(Self::Song),
             "image" => Ok(Self::Image),
             "video" => Ok(Self::Video),
-            "presentation" => Ok(Self::Presentation(PresKind::Generic)),
+            "presentation" => {
+                Ok(Self::Presentation(PresKind::Generic))
+            }
             "html" => Ok(Self::Presentation(PresKind::Html)),
             "pdf" => Ok(Self::Presentation(PresKind::Pdf)),
             "content" => Ok(Self::Content),
@@ -51,7 +57,9 @@ impl From<ServiceItemKind> for String {
             ServiceItemKind::Song => "song".to_owned(),
             ServiceItemKind::Video => "video".to_owned(),
             ServiceItemKind::Image => "image".to_owned(),
-            ServiceItemKind::Presentation(_) => "presentation".to_owned(),
+            ServiceItemKind::Presentation(_) => {
+                "presentation".to_owned()
+            }
             ServiceItemKind::Content => "content".to_owned(),
         }
     }
@@ -65,7 +73,10 @@ pub enum ParseError {
 impl Error for ParseError {}
 
 impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         let message = match self {
             Self::UnknownType => "The type does not exist. It needs to be one of 'song', 'video', 'image', 'presentation', or 'content'",
         };

@@ -3,15 +3,20 @@ use std::{collections::HashMap, path::PathBuf};
 use cosmic::{executor, iced::Executor};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as, sqlite::SqliteRow, FromRow, Row, SqliteConnection};
+use sqlx::{
+    query, query_as, sqlite::SqliteRow, FromRow, Row,
+    SqliteConnection,
+};
 use tracing::{debug, error};
 
 use super::{
-    model::{Model},
+    model::Model,
     slide::{Background, TextAlignment},
 };
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub struct Song {
     pub id: i32,
     pub title: String,
@@ -27,9 +32,11 @@ pub struct Song {
 }
 
 const VERSE_KEYWORDS: [&str; 24] = [
-    "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Verse 5", "Verse 6", "Verse 7", "Verse 8",
-    "Chorus 1", "Chorus 2", "Chorus 3", "Chorus 4", "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
-    "Intro 1", "Intro 2", "Ending 1", "Ending 2", "Other 1", "Other 2", "Other 3", "Other 4",
+    "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Verse 5", "Verse 6",
+    "Verse 7", "Verse 8", "Chorus 1", "Chorus 2", "Chorus 3",
+    "Chorus 4", "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
+    "Intro 1", "Intro 2", "Ending 1", "Ending 2", "Other 1",
+    "Other 2", "Other 3", "Other 4",
 ];
 
 impl FromRow<'_, SqliteRow> for Song {
@@ -54,7 +61,6 @@ impl FromRow<'_, SqliteRow> for Song {
                     Ok(background) => Some(background),
                     Err(_) => None,
                 }
-
             },
             text_alignment: Some({
                 let horizontal_alignment: String = row.try_get(3)?;
@@ -67,8 +73,12 @@ impl FromRow<'_, SqliteRow> for Song {
                     ("left", "center") => TextAlignment::MiddleLeft,
                     ("left", "bottom") => TextAlignment::BottomLeft,
                     ("center", "top") => TextAlignment::TopCenter,
-                    ("center", "center") => TextAlignment::MiddleCenter,
-                    ("center", "bottom") => TextAlignment::BottomCenter,
+                    ("center", "center") => {
+                        TextAlignment::MiddleCenter
+                    }
+                    ("center", "bottom") => {
+                        TextAlignment::BottomCenter
+                    }
                     ("right", "top") => TextAlignment::TopRight,
                     ("right", "center") => TextAlignment::MiddleRight,
                     ("right", "bottom") => TextAlignment::BottomRight,
@@ -81,7 +91,10 @@ impl FromRow<'_, SqliteRow> for Song {
     }
 }
 
-pub async fn get_song_from_db(index: i32, db: &mut SqliteConnection) -> Result<Song> {
+pub async fn get_song_from_db(
+    index: i32,
+    db: &mut SqliteConnection,
+) -> Result<Song> {
     let row = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32" from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
     Ok(Song::from_row(&row).into_diagnostic()?)
 }
@@ -96,14 +109,16 @@ impl Model<Song> {
                     match Song::from_row(&song) {
                         Ok(song) => {
                             let _ = self.add_item(song);
-                        },
-                        Err(e) => error!("Could not convert song: {e}"),
+                        }
+                        Err(e) => {
+                            error!("Could not convert song: {e}")
+                        }
                     };
-                };
-            },
+                }
+            }
             Err(e) => {
                 error!("There was an error in converting songs: {e}");
-            },
+            }
         }
     }
 }
@@ -115,7 +130,11 @@ impl Song {
             return Err(miette!("There is no lyrics here"));
         } else if self.verse_order.is_none() {
             return Err(miette!("There is no verse_order here"));
-        } else if self.verse_order.clone().is_some_and(|v| v.is_empty()) {
+        } else if self
+            .verse_order
+            .clone()
+            .is_some_and(|v| v.is_empty())
+        {
             return Err(miette!("There is no verse_order here"));
         }
         if let Some(raw_lyrics) = self.lyrics.clone() {
@@ -145,16 +164,21 @@ impl Song {
                 let mut verse_name = "";
                 debug!(verse = verse);
                 for word in VERSE_KEYWORDS {
-                    let end_verse = verse.get(1..2).unwrap_or_default();
-                    let beg_verse = verse.get(0..1).unwrap_or_default();
-                    if word.starts_with(beg_verse) && word.ends_with(end_verse) {
+                    let end_verse =
+                        verse.get(1..2).unwrap_or_default();
+                    let beg_verse =
+                        verse.get(0..1).unwrap_or_default();
+                    if word.starts_with(beg_verse)
+                        && word.ends_with(end_verse)
+                    {
                         verse_name = word;
                         continue;
                     }
                 }
                 if let Some(lyric) = lyric_map.get(verse_name) {
                     if lyric.contains("\n\n") {
-                        let split_lyrics: Vec<&str> = lyric.split("\n\n").collect();
+                        let split_lyrics: Vec<&str> =
+                            lyric.split("\n\n").collect();
                         for lyric in split_lyrics {
                             if lyric.is_empty() {
                                 continue;
@@ -246,11 +270,12 @@ From the day
 You saved my soul"
                 .to_string(),
         );
-        song.verse_order = "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
-            .to_string()
-            .split(' ')
-            .map(|s| Some(s.to_string()))
-            .collect();
+        song.verse_order =
+            "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
+                .to_string()
+                .split(' ')
+                .map(|s| Some(s.to_string()))
+                .collect();
         let lyrics = song.get_lyrics();
         match lyrics {
             Ok(lyrics) => {
@@ -265,7 +290,7 @@ You saved my soul"
     async fn model() -> Model<Song> {
         let song_model: Model<Song> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await
+            db: crate::core::model::get_db().await,
         };
         song_model
     }
@@ -302,7 +327,10 @@ You saved my soul"
         song_model.load_from_db().await;
 
         match song_model.update_item(song, 2) {
-            Ok(()) => assert_eq!(&cloned_song, song_model.find(|s| s.id == 7).unwrap()),
+            Ok(()) => assert_eq!(
+                &cloned_song,
+                song_model.find(|s| s.id == 7).unwrap()
+            ),
             Err(e) => assert!(false, "{e}"),
         }
     }

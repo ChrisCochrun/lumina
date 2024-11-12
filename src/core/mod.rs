@@ -1,9 +1,9 @@
 pub mod images;
 pub mod kinds;
 pub mod lisp;
+pub mod model;
 pub mod presentations;
 pub mod service_items;
 pub mod slide;
 pub mod songs;
 pub mod videos;
-pub mod model;

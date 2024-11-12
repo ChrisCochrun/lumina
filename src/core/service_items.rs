@@ -52,7 +52,9 @@ impl From<&Image> for ServiceItem {
 impl From<&Presentation> for ServiceItem {
     fn from(presentation: &Presentation) -> Self {
         Self {
-            kind: ServiceItemKind::Presentation(presentation.kind.clone()),
+            kind: ServiceItemKind::Presentation(
+                presentation.kind.clone(),
+            ),
             database_id: presentation.id,
             ..Default::default()
         }
@@ -60,7 +62,10 @@ impl From<&Presentation> for ServiceItem {
 }
 
 impl ServiceItemModel {
-    fn add_item(&mut self, item: impl Into<ServiceItem>) -> Result<()> {
+    fn add_item(
+        &mut self,
+        item: impl Into<ServiceItem>,
+    ) -> Result<()> {
         let service_item: ServiceItem = item.into();
         self.items.push(service_item);
         Ok(())
@@ -103,7 +108,10 @@ mod test {
         let mut service_model = ServiceItemModel::default();
         match service_model.add_item(&song) {
             Ok(_) => {
-                assert_eq!(ServiceItemKind::Song, service_model.items[0].kind);
+                assert_eq!(
+                    ServiceItemKind::Song,
+                    service_model.items[0].kind
+                );
                 assert_eq!(
                     ServiceItemKind::Presentation(PresKind::Html),
                     pres_item.kind
