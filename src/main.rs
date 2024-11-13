@@ -1,26 +1,20 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
-use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
 use cosmic::iced::{
     self, event, window, ContentFit, Font, Length, Point,
 };
-use cosmic::iced_core::{id, SmolStr};
-use cosmic::iced_widget::{row, stack, text};
-use cosmic::widget::icon::{self, Named};
-use cosmic::widget::{button, image, nav_bar, Space};
-use cosmic::{
-    executor, iced_wgpu, Also, Application, ApplicationExt, Element,
-};
+use cosmic::iced_core::SmolStr;
+use cosmic::iced_widget::{row, stack};
+use cosmic::widget::icon;
+use cosmic::widget::tooltip::Position as TPosition;
+use cosmic::widget::{button, image, nav_bar, text, tooltip, Space};
+use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
 use iced_video_player::VideoPlayer;
-use lexpr::{parse, Value};
 use miette::{miette, Result};
-use std::collections::HashMap;
-use std::fs::read_to_string;
 use std::path::PathBuf;
-use tracing::error;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
@@ -192,15 +186,49 @@ impl cosmic::Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![button::standard("Open Window")
-            .on_press(Message::OpenWindow)
-            .into()]
+        vec![]
     }
     fn header_center(&self) -> Vec<Element<Self::Message>> {
         vec![]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
-        vec![]
+        let window_open = self.windows.len() > 1;
+        let presenter_window = self.windows.get(1);
+        vec![tooltip(
+            button::custom(
+                row!(
+                    Container::new(
+                        icon::from_name(if window_open {
+                            "dialog-close"
+                        } else {
+                            "view-presentation-symbolic"
+                        })
+                        .scale(3)
+                    )
+                    .center_y(Length::Fill),
+                    text::body(if window_open {
+                        "Close Presentation"
+                    } else {
+                        "Open Presentation"
+                    })
+                )
+                .padding(5)
+                .spacing(5),
+            )
+            .class(cosmic::theme::style::Button::HeaderBar)
+            .on_press(if window_open {
+                Message::CloseWindow(*presenter_window.unwrap())
+            } else {
+                Message::OpenWindow
+            }),
+            "Open Window",
+            TPosition::Bottom,
+        )
+        .into()]
+    }
+
+    fn footer(&self) -> Option<Element<Self::Message>> {
+        Some(text::body("Sux").into())
     }
 
     fn subscription(
@@ -281,6 +309,7 @@ impl cosmic::Application for App {
         match message {
             Message::Present(message) => {
                 self.presenter.update(message);
+                self.core.nav_bar_toggle();
                 Task::none()
             }
             Message::File(file) => {
@@ -334,7 +363,7 @@ impl cosmic::Application for App {
 
     // Main window view
     fn view(&self) -> Element<Message> {
-        let text = text!("This is frodo").size(20);
+        let text = text::body("This is frodo").size(20);
         let text = Container::new(text).center(Length::Fill);
         let slide = self
             .presenter
@@ -363,22 +392,28 @@ impl cosmic::Application for App {
             }
         };
         let preview = stack!(container, text);
-        let icon_left = icon::from_name("arrow-left").size(50).scale(2).prefer_svg(true);
-        debug!(?icon_left);
-        let icon_right = icon::from_name("arrow-right").size(50).scale(2).prefer_svg(true);
-        debug!(?icon_right);
+        let icon_left = icon::from_name("arrow-left");
+        let icon_right = icon::from_name("arrow-right");
         let row = row![
             Container::new(
                 button::icon(icon_left)
-                    .width(Length::Fill)
+                    .icon_size(128)
+                    .tooltip("Previous Slide")
+                    .width(128)
             )
-            .center(Length::FillPortion(1)),
+            .center_y(Length::Fill)
+            .align_right(Length::Fill)
+            .width(Length::FillPortion(1)),
             preview.width(Length::FillPortion(3)),
             Container::new(
                 button::icon(icon_right)
-                    .width(Length::Fill)
+                    .icon_size(128)
+                    .tooltip("Next Slide")
+                    .width(128)
             )
-            .center(Length::FillPortion(1)),
+            .center_y(Length::Fill)
+            .align_left(Length::Fill)
+            .width(Length::FillPortion(1)),
         ]
         .width(Length::Fill)
         .height(Length::Fill)
