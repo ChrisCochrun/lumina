@@ -309,7 +309,7 @@ impl cosmic::Application for App {
         match message {
             Message::Present(message) => {
                 self.presenter.update(message);
-                self.core.nav_bar_toggle();
+                // self.core.nav_bar_toggle();
                 Task::none()
             }
             Message::File(file) => {
@@ -400,6 +400,9 @@ impl cosmic::Application for App {
                     .icon_size(128)
                     .tooltip("Previous Slide")
                     .width(128)
+                    .on_press(Message::Present(
+                        presenter::Message::PrevSlide
+                    ))
             )
             .center_y(Length::Fill)
             .align_right(Length::Fill)
@@ -410,6 +413,9 @@ impl cosmic::Application for App {
                     .icon_size(128)
                     .tooltip("Next Slide")
                     .width(128)
+                    .on_press(Message::Present(
+                        presenter::Message::NextSlide
+                    ))
             )
             .center_y(Length::Fill)
             .align_left(Length::Fill)
