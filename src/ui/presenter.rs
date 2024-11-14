@@ -17,8 +17,8 @@ use tracing::{debug, error};
 use crate::core::slide::Slide;
 
 // #[derive(Default, Clone, Debug)]
-pub(crate) struct Presenter {
-    pub slides: Vec<Slide>,
+pub(crate) struct Presenter<'a> {
+    pub slides: &'a Vec<Slide>,
     pub current_slide: i16,
     pub video: Option<Video>,
 }
@@ -30,30 +30,37 @@ pub(crate) enum Message {
     SlideChange(u8),
 }
 
-impl Presenter {
-    pub fn with_initial_slide(slide: Slide) -> Self {
+impl<'a> Presenter<'a> {
+    pub fn with_app_slides(slides: &'a Vec<Slide>) -> Self {
         Self {
-            slides: vec![slide.clone()],
+            slides: slides,
             current_slide: 0,
-            video: {
-                let path = slide.background().path.clone();
-                if path.exists() {
-                    let url = Url::from_file_path(path).unwrap();
-                    let result = Video::new(&url);
-                    match result {
-                        Ok(v) => Some(v),
-                        Err(e) => {
-                            error!("Had an error creating the video object: {e}");
-                            None
-                        }
-                    }
-                } else {
-                    error!("File doesn't exist: ");
-                    None
-                }
-            },
+            video: None,
         }
     }
+    // pub fn with_initial_slide(slide: Slide) -> Self {
+    //     Self {
+    //         slides: vec![slide.clone()],
+    //         current_slide: 0,
+    //         video: {
+    //             let path = slide.background().path.clone();
+    //             if path.exists() {
+    //                 let url = Url::from_file_path(path).unwrap();
+    //                 let result = Video::new(&url);
+    //                 match result {
+    //                     Ok(v) => Some(v),
+    //                     Err(e) => {
+    //                         error!("Had an error creating the video object: {e}");
+    //                         None
+    //                     }
+    //                 }
+    //             } else {
+    //                 error!("File doesn't exist: ");
+    //                 None
+    //             }
+    //         },
+    //     }
+    // }
 
     pub fn update(
         &mut self,

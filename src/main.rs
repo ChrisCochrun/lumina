@@ -68,15 +68,16 @@ fn theme(_state: &App) -> Theme {
     Theme::dark()
 }
 
-struct App {
+struct App<'a> {
     core: Core,
     nav_model: nav_bar::Model,
     file: PathBuf,
-    presenter: Presenter,
+    presenter: Presenter<'a>,
     windows: Vec<window::Id>,
+    slides: Vec<Slide>,
 }
 
-impl Default for App {
+impl Default for App<'_> {
     fn default() -> Self {
         let initial_slide = SlideBuilder::new()
             .background(PathBuf::from(
@@ -86,13 +87,15 @@ impl Default for App {
             .text("Hello")
             .build()
             .expect("oops slide");
-        let presenter = Presenter::with_initial_slide(initial_slide);
+        let slides = vec![initial_slide];
+        let presenter = Presenter::with_app_slides(&slides);
         Self {
             presenter,
             core: Core::default(),
             nav_model: nav_bar::Model::default(),
             file: PathBuf::default(),
             windows: vec![],
+            slides: vec![initial_slide],
         }
     }
 }
@@ -151,7 +154,8 @@ impl cosmic::Application for App {
             .video_end_time(0.0)
             .build()
             .expect("oops slide");
-        let presenter = Presenter::with_initial_slide(initial_slide);
+        let presenter =
+            Presenter::with_initial_slide(initial_slide.clone());
 
         let mut app = App {
             core,
@@ -159,6 +163,7 @@ impl cosmic::Application for App {
             file: input.file,
             windows,
             presenter,
+            slides: vec![initial_slide],
         };
 
         let command;
