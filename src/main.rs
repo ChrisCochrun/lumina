@@ -1,5 +1,6 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
+use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
 use cosmic::iced::{
@@ -12,7 +13,7 @@ use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{button, image, nav_bar, text, tooltip, Space};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
-use iced_video_player::VideoPlayer;
+use iced_video_player::{Video, VideoPlayer};
 use miette::{miette, Result};
 use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
@@ -68,16 +69,18 @@ fn theme(_state: &App) -> Theme {
     Theme::dark()
 }
 
-struct App<'a> {
+struct App {
     core: Core,
     nav_model: nav_bar::Model,
     file: PathBuf,
-    presenter: Presenter<'a>,
+    presenter: Presenter,
     windows: Vec<window::Id>,
     slides: Vec<Slide>,
+    current_slide: Slide,
+    current_video: Option<Video>
 }
 
-impl Default for App<'_> {
+impl Default for App {
     fn default() -> Self {
         let initial_slide = SlideBuilder::new()
             .background(PathBuf::from(
@@ -88,14 +91,15 @@ impl Default for App<'_> {
             .build()
             .expect("oops slide");
         let slides = vec![initial_slide];
-        let presenter = Presenter::with_app_slides(&slides);
+        let presenter = Presenter::with_app_slides(slides.clone());
         Self {
             presenter,
             core: Core::default(),
             nav_model: nav_bar::Model::default(),
             file: PathBuf::default(),
             windows: vec![],
-            slides: vec![initial_slide],
+            slides,
+            current_slide: initial_slide.clone(),
         }
     }
 }
@@ -154,8 +158,9 @@ impl cosmic::Application for App {
             .video_end_time(0.0)
             .build()
             .expect("oops slide");
+        let slides = vec![initial_slide];
         let presenter =
-            Presenter::with_initial_slide(initial_slide.clone());
+            Presenter::with_app_slides(slides.clone());
 
         let mut app = App {
             core,
@@ -163,7 +168,7 @@ impl cosmic::Application for App {
             file: input.file,
             windows,
             presenter,
-            slides: vec![initial_slide],
+            slides
         };
 
         let command;
@@ -375,6 +380,7 @@ impl cosmic::Application for App {
             .slides
             .get(self.presenter.current_slide as usize)
             .unwrap();
+        debug!("rewritten");
         let container = match slide.background().kind {
             crate::BackgroundKind::Image => Container::new(
                 image("/home/chris/pics/frodo.jpg")
@@ -434,9 +440,8 @@ impl cosmic::Application for App {
 
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        self.presenter
-            .view()
-            .map(|message| Message::Present(message))
+        let video = self.current_slide.background().path.clone();
+        presenter::slide_view(&self.current_slide, &self.current_video).map(|message|Message::Present(message))
     }
 }
 
