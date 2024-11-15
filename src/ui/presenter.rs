@@ -3,7 +3,7 @@ use std::{path::PathBuf, rc::Rc};
 use cosmic::{
     dialog::ashpd::url::Url,
     iced::{widget::text, ContentFit, Length},
-    iced_widget::{row, stack},
+    iced_widget::{row, stack, Stack},
     prelude::*,
     widget::{
         button, container, icon::Named, image, Container, Space,
@@ -140,7 +140,7 @@ impl Presenter {
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
     video: &'a Option<Video>,
-) -> Element<'a, Message> {
+) -> Stack<'a, crate::Message, cosmic::Theme> {
     let text = text!("{}", slide.text()).size(50);
     let text = Container::new(text).center(Length::Fill);
     let container = match slide.background().kind {
@@ -154,7 +154,7 @@ pub(crate) fn slide_view<'a>(
             if let Some(video) = video {
                 Container::new(
                     VideoPlayer::new(video)
-                        .width(Length::Fill)
+                        .width(Length::Shrink)
                         .height(Length::Fill)
                         .content_fit(ContentFit::Cover),
                 )
@@ -163,8 +163,7 @@ pub(crate) fn slide_view<'a>(
             }
         }
     };
-    let stack = stack!(container, text)
-        .width(Length::Fill)
-        .height(Length::Fill);
-    stack.into()
+    stack!(container, text)
+    // .width(Length::Fill)
+    // .height(Length::Fill)
 }

@@ -16,6 +16,7 @@ use cosmic::{widget::Container, Theme};
 use iced_video_player::{Video, VideoPlayer};
 use miette::{miette, Result};
 use std::path::PathBuf;
+use tracing::error;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
@@ -55,8 +56,10 @@ fn main() -> Result<()> {
 
     let settings;
     if args.ui {
+        debug!("main view");
         settings = Settings::default().debug(false);
     } else {
+        debug!("window view");
         settings =
             Settings::default().debug(false).no_main_window(true);
     }
@@ -77,7 +80,8 @@ struct App {
     windows: Vec<window::Id>,
     slides: Vec<Slide>,
     current_slide: Slide,
-    current_video: Option<Video>
+    active_video: Option<Video>,
+    preview_video: Option<Video>,
 }
 
 impl Default for App {
@@ -90,8 +94,44 @@ impl Default for App {
             .text("Hello")
             .build()
             .expect("oops slide");
-        let slides = vec![initial_slide];
+        let slides = vec![initial_slide.clone()];
         let presenter = Presenter::with_app_slides(slides.clone());
+        let active_video = match initial_slide.background().kind {
+            crate::BackgroundKind::Image => None,
+            crate::BackgroundKind::Video => {
+                if let Ok(video) = &Url::from_file_path(
+                    &initial_slide.background().path,
+                ) {
+                    match Video::new(video) {
+                        Ok(video) => Some(video),
+                        Err(e) => {
+                            error!("Problem loading initial video from slide: {e}");
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            }
+        };
+        let preview_video = match initial_slide.background().kind {
+            crate::BackgroundKind::Image => None,
+            crate::BackgroundKind::Video => {
+                if let Ok(video) = &Url::from_file_path(
+                    &initial_slide.background().path,
+                ) {
+                    match Video::new(video) {
+                        Ok(video) => Some(video),
+                        Err(e) => {
+                            error!("Problem loading initial video from slide: {e}");
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            }
+        };
         Self {
             presenter,
             core: Core::default(),
@@ -99,7 +139,9 @@ impl Default for App {
             file: PathBuf::default(),
             windows: vec![],
             slides,
-            current_slide: initial_slide.clone(),
+            current_slide: initial_slide,
+            active_video,
+            preview_video,
         }
     }
 }
@@ -112,6 +154,7 @@ enum Message {
     CloseWindow(window::Id),
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
+    ToggleMuteVideo,
 }
 
 impl cosmic::Application for App {
@@ -140,6 +183,7 @@ impl cosmic::Application for App {
         if input.ui {
             windows.push(core.main_window_id().unwrap());
         }
+
         let initial_slide = SlideBuilder::new()
             .background(
                 PathBuf::from(
@@ -158,23 +202,74 @@ impl cosmic::Application for App {
             .video_end_time(0.0)
             .build()
             .expect("oops slide");
-        let slides = vec![initial_slide];
-        let presenter =
-            Presenter::with_app_slides(slides.clone());
 
+        let slides = vec![initial_slide.clone()];
+        let presenter = Presenter::with_app_slides(slides.clone());
+        let active_video = match initial_slide.background().kind {
+            crate::BackgroundKind::Image => None,
+            crate::BackgroundKind::Video => {
+                if let Ok(video) = &Url::from_file_path(
+                    &initial_slide.background().path,
+                ) {
+                    match Video::new(video) {
+                        Ok(mut video) => {
+                            video.set_looping(
+                                initial_slide.video_loop(),
+                            );
+                            Some(video)
+                        }
+                        Err(e) => {
+                            error!("Problem loading initial video from slide: {e}");
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            }
+        };
+        let preview_video = match initial_slide.background().kind {
+            crate::BackgroundKind::Image => None,
+            crate::BackgroundKind::Video => {
+                if let Ok(video) = &Url::from_file_path(
+                    &initial_slide.background().path,
+                ) {
+                    match Video::new(video) {
+                        Ok(mut video) => {
+                            video.set_looping(
+                                initial_slide.video_loop(),
+                            );
+                            video.set_muted(true);
+                            Some(video)
+                        }
+                        Err(e) => {
+                            error!("Problem loading initial video from slide: {e}");
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            }
+        };
         let mut app = App {
-            core,
-            nav_model,
-            file: input.file,
-            windows,
             presenter,
-            slides
+            core,
+            nav_model: nav_bar::Model::default(),
+            file: PathBuf::default(),
+            windows: vec![],
+            slides,
+            current_slide: initial_slide,
+            active_video,
+            preview_video,
         };
 
         let command;
         if input.ui {
+            debug!("main view");
             command = app.update_title()
         } else {
+            debug!("window view");
             command = app.show_window()
         };
 
@@ -226,10 +321,13 @@ impl cosmic::Application for App {
                 .spacing(5),
             )
             .class(cosmic::theme::style::Button::HeaderBar)
-            .on_press(if window_open {
-                Message::CloseWindow(*presenter_window.unwrap())
-            } else {
-                Message::OpenWindow
+            .on_press({
+                debug!(window_open);
+                if window_open {
+                    Message::CloseWindow(*presenter_window.unwrap())
+                } else {
+                    Message::OpenWindow
+                }
             }),
             "Open Window",
             TPosition::Bottom,
@@ -368,41 +466,22 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
+            Message::ToggleMuteVideo => {
+                if let Some(video) = &mut self.active_video {
+                    video.set_muted(true);
+                }
+                Task::none()
+            }
         }
     }
 
     // Main window view
     fn view(&self) -> Element<Message> {
-        let text = text::body("This is frodo").size(20);
-        let text = Container::new(text).center(Length::Fill);
-        let slide = self
-            .presenter
-            .slides
-            .get(self.presenter.current_slide as usize)
-            .unwrap();
-        debug!("rewritten");
-        let container = match slide.background().kind {
-            crate::BackgroundKind::Image => Container::new(
-                image("/home/chris/pics/frodo.jpg")
-                    .content_fit(ContentFit::Cover)
-                    .width(Length::Fill)
-                    .height(Length::Fill),
-            ),
-            crate::BackgroundKind::Video => {
-                if let Some(video) = &self.presenter.video {
-                    Container::new(
-                        VideoPlayer::new(&video)
-                            .width(Length::Fill)
-                            .height(Length::Fill)
-                            .content_fit(ContentFit::Contain),
-                    )
-                    .center(Length::Fill)
-                } else {
-                    Container::new(Space::new(0, 0))
-                }
-            }
-        };
-        let preview = stack!(container, text);
+        debug!("Main view");
+        let preview = presenter::slide_view(
+            &self.current_slide,
+            &self.preview_video,
+        );
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
         let row = row![
@@ -440,8 +519,9 @@ impl cosmic::Application for App {
 
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let video = self.current_slide.background().path.clone();
-        presenter::slide_view(&self.current_slide, &self.current_video).map(|message|Message::Present(message))
+        debug!("window");
+        presenter::slide_view(&self.current_slide, &self.active_video)
+            .into()
     }
 }
 

@@ -181,6 +181,10 @@ impl Slide {
     pub fn font(&self) -> String {
         self.font.clone()
     }
+
+    pub fn video_loop(&self) -> bool {
+        self.video_loop
+    }
 }
 
 #[derive(
