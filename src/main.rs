@@ -7,7 +7,7 @@ use cosmic::iced::{
     self, event, window, ContentFit, Font, Length, Point,
 };
 use cosmic::iced_core::SmolStr;
-use cosmic::iced_widget::{row, stack};
+use cosmic::iced_widget::{column, row, stack};
 use cosmic::widget::icon;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{button, image, nav_bar, text, tooltip, Space};
@@ -80,8 +80,6 @@ struct App {
     windows: Vec<window::Id>,
     slides: Vec<Slide>,
     current_slide: Slide,
-    active_video: Option<Video>,
-    preview_video: Option<Video>,
 }
 
 impl Default for App {
@@ -96,42 +94,6 @@ impl Default for App {
             .expect("oops slide");
         let slides = vec![initial_slide.clone()];
         let presenter = Presenter::with_app_slides(slides.clone());
-        let active_video = match initial_slide.background().kind {
-            crate::BackgroundKind::Image => None,
-            crate::BackgroundKind::Video => {
-                if let Ok(video) = &Url::from_file_path(
-                    &initial_slide.background().path,
-                ) {
-                    match Video::new(video) {
-                        Ok(video) => Some(video),
-                        Err(e) => {
-                            error!("Problem loading initial video from slide: {e}");
-                            None
-                        }
-                    }
-                } else {
-                    None
-                }
-            }
-        };
-        let preview_video = match initial_slide.background().kind {
-            crate::BackgroundKind::Image => None,
-            crate::BackgroundKind::Video => {
-                if let Ok(video) = &Url::from_file_path(
-                    &initial_slide.background().path,
-                ) {
-                    match Video::new(video) {
-                        Ok(video) => Some(video),
-                        Err(e) => {
-                            error!("Problem loading initial video from slide: {e}");
-                            None
-                        }
-                    }
-                } else {
-                    None
-                }
-            }
-        };
         Self {
             presenter,
             core: Core::default(),
@@ -140,8 +102,6 @@ impl Default for App {
             windows: vec![],
             slides,
             current_slide: initial_slide,
-            active_video,
-            preview_video,
         }
     }
 }
@@ -154,7 +114,6 @@ enum Message {
     CloseWindow(window::Id),
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
-    ToggleMuteVideo,
 }
 
 impl cosmic::Application for App {
@@ -203,55 +162,29 @@ impl cosmic::Application for App {
             .build()
             .expect("oops slide");
 
-        let slides = vec![initial_slide.clone()];
+        let second_slide = SlideBuilder::new()
+            .background(
+                PathBuf::from("/home/chris/pics/frodo.jpg")
+                    .canonicalize()
+                    .unwrap(),
+            )
+            .expect("oops video")
+            .text("Hello")
+            .font("Quicksand")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(false)
+            .video_start_time(0.0)
+            .video_end_time(0.0)
+            .build()
+            .expect("oops slide");
+
+        let slides = vec![
+            initial_slide.clone(),
+            second_slide.clone(),
+            second_slide.clone(),
+        ];
         let presenter = Presenter::with_app_slides(slides.clone());
-        let active_video = match initial_slide.background().kind {
-            crate::BackgroundKind::Image => None,
-            crate::BackgroundKind::Video => {
-                if let Ok(video) = &Url::from_file_path(
-                    &initial_slide.background().path,
-                ) {
-                    match Video::new(video) {
-                        Ok(mut video) => {
-                            video.set_looping(
-                                initial_slide.video_loop(),
-                            );
-                            Some(video)
-                        }
-                        Err(e) => {
-                            error!("Problem loading initial video from slide: {e}");
-                            None
-                        }
-                    }
-                } else {
-                    None
-                }
-            }
-        };
-        let preview_video = match initial_slide.background().kind {
-            crate::BackgroundKind::Image => None,
-            crate::BackgroundKind::Video => {
-                if let Ok(video) = &Url::from_file_path(
-                    &initial_slide.background().path,
-                ) {
-                    match Video::new(video) {
-                        Ok(mut video) => {
-                            video.set_looping(
-                                initial_slide.video_loop(),
-                            );
-                            video.set_muted(true);
-                            Some(video)
-                        }
-                        Err(e) => {
-                            error!("Problem loading initial video from slide: {e}");
-                            None
-                        }
-                    }
-                } else {
-                    None
-                }
-            }
-        };
         let mut app = App {
             presenter,
             core,
@@ -260,8 +193,6 @@ impl cosmic::Application for App {
             windows: vec![],
             slides,
             current_slide: initial_slide,
-            active_video,
-            preview_video,
         };
 
         let command;
@@ -466,12 +397,6 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
-            Message::ToggleMuteVideo => {
-                if let Some(video) = &mut self.active_video {
-                    video.set_muted(true);
-                }
-                Task::none()
-            }
         }
     }
 
@@ -517,7 +442,18 @@ impl cosmic::Application for App {
         .width(Length::Fill)
         .height(Length::Fill)
         .spacing(20);
-        row.into()
+
+        let column = column![
+            Container::new(row).center_y(Length::Fill),
+            Container::new(
+                self.presenter
+                    .slide_preview()
+                    .map(|m| Message::Present(m))
+            )
+            .center_y(Length::Shrink)
+        ];
+
+        column.into()
     }
 
     // View for presentation
