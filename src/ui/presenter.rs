@@ -130,10 +130,10 @@ impl Presenter {
                 }
             }
         };
-        let stack = stack!(container, text)
+        stack!(container, text)
             .width(Length::Fill)
-            .height(Length::Fill);
-        stack.into()
+            .height(Length::Fill)
+            .into()
     }
 }
 

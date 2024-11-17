@@ -478,10 +478,7 @@ impl cosmic::Application for App {
     // Main window view
     fn view(&self) -> Element<Message> {
         debug!("Main view");
-        let preview = presenter::slide_view(
-            &self.current_slide,
-            &self.preview_video,
-        );
+        let preview = self.presenter.view();
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
         let row = row![
@@ -497,7 +494,13 @@ impl cosmic::Application for App {
             .center_y(Length::Fill)
             .align_right(Length::Fill)
             .width(Length::FillPortion(1)),
-            preview.width(Length::FillPortion(3)),
+            Container::new(
+                Container::new(preview.map(|m| Message::Present(m)))
+                    .center(Length::Fill)
+                    .max_height(270)
+            )
+            .center_y(Length::Fill)
+            .width(Length::FillPortion(3)),
             Container::new(
                 button::icon(icon_right)
                     .icon_size(128)
@@ -520,8 +523,7 @@ impl cosmic::Application for App {
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         debug!("window");
-        presenter::slide_view(&self.current_slide, &self.active_video)
-            .into()
+        self.presenter.view().map(|m| Message::Present(m))
     }
 }
 
