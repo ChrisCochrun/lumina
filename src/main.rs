@@ -84,10 +84,12 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let initial_slide = SlideBuilder::new()
-            .background(PathBuf::from(
-                "/home/chris/vids/test/chosensmol.mp4",
-            ))
-            .expect("oops video")
+            .background(
+                Background::try_from(
+                    "/home/chris/vids/test/chosensmol.mp4",
+                )
+                .unwrap(),
+            )
             .text("Hello")
             .build()
             .expect("oops slide");
@@ -144,13 +146,11 @@ impl cosmic::Application for App {
 
         let initial_slide = SlideBuilder::new()
             .background(
-                PathBuf::from(
+                Background::try_from(
                     "/home/chris/vids/test/camprules2024.mp4",
                 )
-                .canonicalize()
                 .unwrap(),
             )
-            .expect("oops video")
             .text("")
             .font("Quicksand")
             .font_size(50)
@@ -163,11 +163,9 @@ impl cosmic::Application for App {
 
         let second_slide = SlideBuilder::new()
             .background(
-                PathBuf::from("/home/chris/pics/frodo.jpg")
-                    .canonicalize()
+                Background::try_from("/home/chris/pics/frodo.jpg")
                     .unwrap(),
             )
-            .expect("oops video")
             .text("Hello")
             .font("Quicksand")
             .font_size(50)
@@ -180,11 +178,9 @@ impl cosmic::Application for App {
 
         let tetrary_slide = SlideBuilder::new()
             .background(
-                PathBuf::from("/home/chris/pics/wojaks/reddit_the_xenomorph_s bigass wojak folder/Chads/ChristianChad_x16_drawing.png")
-                    .canonicalize()
+                Background::try_from("/home/chris/pics/wojaks/reddit_the_xenomorph_s bigass wojak folder/Chads/ChristianChad_x16_drawing.png")
                     .unwrap(),
             )
-            .expect("oops video")
             .text("Hello")
             .font("Quicksand")
             .font_size(50)
@@ -583,8 +579,10 @@ where
 
 fn test_slide<'a>() -> Element<'a, Message> {
     if let Ok(slide) = SlideBuilder::new()
-        .background(PathBuf::from("/home/chris/pics/frodo.jpg"))
-        .unwrap()
+        .background(
+            Background::try_from("/home/chris/pics/frodo.jpg")
+                .unwrap(),
+        )
         .text("This is a frodo")
         .text_alignment(TextAlignment::TopCenter)
         .font_size(50)

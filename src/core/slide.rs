@@ -222,8 +222,7 @@ fn lisp_to_background(lisp: &Value) -> Background {
                 v == Value::Keyword(Keyword::from("source"))
             }) {
                 let path = list[source + 1];
-                let path = String::from(path);
-                Background::from(path)
+                Background::try_from(&path)
             } else {
                 Background::default()
             }
@@ -365,46 +364,46 @@ impl Image {
     }
 }
 
-fn build_image_bg(
-    atom: &Value,
-    image_map: &mut HashMap<String, String>,
-    map_index: usize,
-) {
-    // This needs to be the cons that contains (image . ...)
-    // the image is a symbol and the rest are keywords and other maps
-    if atom.is_symbol() {
-        // We shouldn't get a symbol
-        return;
-    }
+// fn build_image_bg(
+//     atom: &Value,
+//     image_map: &mut HashMap<String, String>,
+//     map_index: usize,
+// ) {
+//     // This needs to be the cons that contains (image . ...)
+//     // the image is a symbol and the rest are keywords and other maps
+//     if atom.is_symbol() {
+//         // We shouldn't get a symbol
+//         return;
+//     }
 
-    for atom in
-        atom.list_iter().unwrap().map(|a| a.as_cons().unwrap())
-    {
-        if atom.car() == &Value::Symbol("image".into()) {
-            build_image_bg(atom.cdr(), image_map, map_index);
-        } else {
-            let atom = atom.car();
-            match atom {
-                Value::Keyword(keyword) => {
-                    image_map.insert(keyword.to_string(), "".into());
-                    build_image_bg(atom, image_map, map_index);
-                }
-                Value::Symbol(symbol) => {
-                    // let mut key;
-                    // let image_map = image_map
-                    //     .iter_mut()
-                    //     .enumerate()
-                    //     .filter(|(i, e)| i == &map_index)
-                    //     .map(|(i, (k, v))| v.push_str(symbol))
-                    //     .collect();
-                    build_image_bg(atom, image_map, map_index);
-                }
-                Value::String(string) => {}
-                _ => {}
-            }
-        }
-    }
-}
+//     for atom in
+//         atom.list_iter().unwrap().map(|a| a.as_cons().unwrap())
+//     {
+//         if atom.car() == &Value::Symbol("image".into()) {
+//             build_image_bg(atom.cdr(), image_map, map_index);
+//         } else {
+//             let atom = atom.car();
+//             match atom {
+//                 Value::Keyword(keyword) => {
+//                     image_map.insert(keyword.to_string(), "".into());
+//                     build_image_bg(atom, image_map, map_index);
+//                 }
+//                 Value::Symbol(symbol) => {
+//                     // let mut key;
+//                     // let image_map = image_map
+//                     //     .iter_mut()
+//                     //     .enumerate()
+//                     //     .filter(|(i, e)| i == &map_index)
+//                     //     .map(|(i, (k, v))| v.push_str(symbol))
+//                     //     .collect();
+//                     build_image_bg(atom, image_map, map_index);
+//                 }
+//                 Value::String(string) => {}
+//                 _ => {}
+//             }
+//         }
+//     }
+// }
 
 // fn build_slide(exp: Value) -> Result<Slide> {
 //     let mut slide_builder = SlideBuilder::new();
@@ -426,57 +425,57 @@ fn build_image_bg(
 //     todo!()
 // }
 
-fn build_slides(
-    cons: &lexpr::Cons,
-    mut current_symbol: Symbol,
-    mut slide_builder: SlideBuilder,
-) -> SlideBuilder {
-    for value in cons.list_iter() {
-        dbg!(&current_symbol);
-        match value {
-            Value::Cons(v) => {
-                slide_builder = build_slides(
-                    &v,
-                    current_symbol.clone(),
-                    slide_builder,
-                );
-            }
-            Value::Nil => {
-                dbg!(Value::Nil);
-            }
-            Value::Bool(boolean) => {
-                dbg!(boolean);
-            }
-            Value::Number(number) => {
-                dbg!(number);
-            }
-            Value::String(string) => {
-                dbg!(string);
-            }
-            Value::Symbol(symbol) => {
-                dbg!(symbol);
-                current_symbol =
-                    Symbol::from_str(symbol).unwrap_or_default();
-            }
-            Value::Keyword(keyword) => {
-                dbg!(keyword);
-            }
-            Value::Null => {
-                dbg!("null");
-            }
-            Value::Char(c) => {
-                dbg!(c);
-            }
-            Value::Bytes(b) => {
-                dbg!(b);
-            }
-            Value::Vector(v) => {
-                dbg!(v);
-            }
-        }
-    }
-    slide_builder
-}
+// fn build_slides(
+//     cons: &lexpr::Cons,
+//     mut current_symbol: Symbol,
+//     mut slide_builder: SlideBuilder,
+// ) -> SlideBuilder {
+//     for value in cons.list_iter() {
+//         dbg!(&current_symbol);
+//         match value {
+//             Value::Cons(v) => {
+//                 slide_builder = build_slides(
+//                     &v,
+//                     current_symbol.clone(),
+//                     slide_builder,
+//                 );
+//             }
+//             Value::Nil => {
+//                 dbg!(Value::Nil);
+//             }
+//             Value::Bool(boolean) => {
+//                 dbg!(boolean);
+//             }
+//             Value::Number(number) => {
+//                 dbg!(number);
+//             }
+//             Value::String(string) => {
+//                 dbg!(string);
+//             }
+//             Value::Symbol(symbol) => {
+//                 dbg!(symbol);
+//                 current_symbol =
+//                     Symbol::from_str(symbol).unwrap_or_default();
+//             }
+//             Value::Keyword(keyword) => {
+//                 dbg!(keyword);
+//             }
+//             Value::Null => {
+//                 dbg!("null");
+//             }
+//             Value::Char(c) => {
+//                 dbg!(c);
+//             }
+//             Value::Bytes(b) => {
+//                 dbg!(b);
+//             }
+//             Value::Vector(v) => {
+//                 dbg!(v);
+//             }
+//         }
+//     }
+//     slide_builder
+// }
 
 #[cfg(test)]
 mod test {
