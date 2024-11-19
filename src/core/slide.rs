@@ -10,8 +10,6 @@ use std::{
 
 use crate::core::lisp::Symbol;
 
-use super::lisp::get_lists;
-
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
 )]
@@ -207,11 +205,31 @@ fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
         slide.background(lisp_to_background(background));
     } else {
         slide.background(Background::default());
+    };
+    match slide.build() {
+        Ok(slide) => slide,
+        Err(e) => {
+            miette!("Shoot! Slide didn't build: {e}");
+            Slide::default()
+        }
     }
 }
 
-fn lisp_to_background(lisp: &Value) {
-    todo!()
+fn lisp_to_background(lisp: &Value) -> Background {
+    match lisp {
+        Value::List(list) => {
+            if let Some(source) = list.iter().position(|v| {
+                v == Value::Keyword(Keyword::from("source"))
+            }) {
+                let path = list[source + 1];
+                let path = String::from(path);
+                Background::from(path)
+            } else {
+                Background::default()
+            }
+        }
+        _ => Background::default(),
+    }
 }
 
 #[derive(
@@ -233,13 +251,21 @@ impl SlideBuilder {
         Self::default()
     }
 
-    pub(crate) fn background(
+    pub(crate) fn background_path(
         mut self,
         background: PathBuf,
     ) -> Result<Self, ParseError> {
         let background = Background::try_from(background)?;
         let _ = self.background.insert(background);
         Ok(self)
+    }
+
+    pub(crate) fn background(
+        mut self,
+        background: Background,
+    ) -> Self {
+        self.background.insert(background);
+        self
     }
 
     pub(crate) fn text(mut self, text: impl Into<String>) -> Self {
