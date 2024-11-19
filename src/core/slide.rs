@@ -1,7 +1,4 @@
-use lexpr::{
-    parse::{from_str_elisp, Options},
-    Parser, Value,
-};
+use crisp::types::{Keyword, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -185,6 +182,36 @@ impl Slide {
     pub fn video_loop(&self) -> bool {
         self.video_loop
     }
+}
+
+impl From<Value> for Slide {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::List(list) => lisp_to_slide(list),
+            _ => Slide::default(),
+        }
+    }
+}
+
+fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
+    let mut slide = SlideBuilder::new();
+    let background_position = if let Some(background) =
+        lisp.position(|v| Value::Keyword(Keyword::from("background")))
+    {
+        background + 1
+    } else {
+        0
+    };
+
+    if let Some(background) = lisp.get(background_position) {
+        slide.background(lisp_to_background(background));
+    } else {
+        slide.background(Background::default());
+    }
+}
+
+fn lisp_to_background(lisp: &Value) {
+    todo!()
 }
 
 #[derive(

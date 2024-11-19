@@ -2,8 +2,8 @@ default:
     just --list
 build:
     RUST_LOG=debug cargo build
-run: 
-    RUST_LOG=debug cargo run -- -i ~/dev/lumina-iced/test_presentation.lisp
+run ui=' ' file='~/dev/lumina-iced/test_presentation.lisp': 
+    RUST_LOG=debug cargo run -- {{ui}} {{file}}
 clean:
     RUST_LOG=debug cargo clean
 test:

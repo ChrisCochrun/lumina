@@ -1,26 +1,25 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
-use cosmic::dialog::ashpd::url::Url;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::Position;
-use cosmic::iced::{
-    self, event, window, ContentFit, Font, Length, Point,
-};
+use cosmic::iced::{self, event, window, Font, Length, Point};
 use cosmic::iced_core::SmolStr;
 use cosmic::iced_widget::{column, row, stack};
-use cosmic::widget::icon;
+use cosmic::prelude::*;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{button, image, nav_bar, text, tooltip, Space};
+use cosmic::widget::{
+    button, image, nav_bar, text, tooltip, Responsive, Space,
+};
+use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
-use iced_video_player::{Video, VideoPlayer};
 use miette::{miette, Result};
 use std::path::PathBuf;
-use tracing::error;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 pub mod core;
+pub mod lisp;
 pub mod ui;
 use core::slide::*;
 use ui::presenter::{self, Presenter};
@@ -93,7 +92,7 @@ impl Default for App {
             .build()
             .expect("oops slide");
         let slides = vec![initial_slide.clone()];
-        let presenter = Presenter::with_app_slides(slides.clone());
+        let presenter = Presenter::with_slides(slides.clone());
         Self {
             presenter,
             core: Core::default(),
@@ -152,7 +151,7 @@ impl cosmic::Application for App {
                 .unwrap(),
             )
             .expect("oops video")
-            .text("Hello")
+            .text("")
             .font("Quicksand")
             .font_size(50)
             .text_alignment(TextAlignment::MiddleCenter)
@@ -179,12 +178,26 @@ impl cosmic::Application for App {
             .build()
             .expect("oops slide");
 
-        let slides = vec![
-            initial_slide.clone(),
-            second_slide.clone(),
-            second_slide.clone(),
-        ];
-        let presenter = Presenter::with_app_slides(slides.clone());
+        let tetrary_slide = SlideBuilder::new()
+            .background(
+                PathBuf::from("/home/chris/pics/wojaks/reddit_the_xenomorph_s bigass wojak folder/Chads/ChristianChad_x16_drawing.png")
+                    .canonicalize()
+                    .unwrap(),
+            )
+            .expect("oops video")
+            .text("Hello")
+            .font("Quicksand")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(false)
+            .video_start_time(0.0)
+            .video_end_time(0.0)
+            .build()
+            .expect("oops slide");
+
+        let slides =
+            vec![initial_slide.clone(), second_slide, tetrary_slide];
+        let presenter = Presenter::with_slides(slides.clone());
         let mut app = App {
             presenter,
             core,
@@ -347,7 +360,7 @@ impl cosmic::Application for App {
     ) -> cosmic::Task<cosmic::app::Message<Message>> {
         match message {
             Message::Present(message) => {
-                self.presenter.update(message);
+                let _ = self.presenter.update(message);
                 // self.core.nav_bar_toggle();
                 Task::none()
             }
@@ -403,9 +416,47 @@ impl cosmic::Application for App {
     // Main window view
     fn view(&self) -> Element<Message> {
         debug!("Main view");
-        let preview = self.presenter.view();
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
+
+        let video_range: f32 =
+            if let Some(video) = &self.presenter.video {
+                let duration = video.duration();
+                duration.as_secs_f32()
+            } else {
+                0.0
+            };
+
+        let video_pos = if let Some(video) = &self.presenter.video {
+            let range = video.position();
+            range.as_secs_f32()
+        } else {
+            0.0
+        };
+
+        let video_button_icon =
+            if let Some(video) = &self.presenter.video {
+                if video.paused() {
+                    button::icon(icon::from_name("media-play"))
+                        .tooltip("Play")
+                        .on_press(Message::Present(
+                            presenter::Message::StartVideo,
+                        ))
+                } else {
+                    button::icon(icon::from_name("media-pause"))
+                        .tooltip("Pause")
+                        .on_press(Message::Present(
+                            presenter::Message::StartVideo,
+                        ))
+                }
+            } else {
+                button::icon(icon::from_name("media-play"))
+                    .tooltip("Play")
+                    .on_press(Message::Present(
+                        presenter::Message::StartVideo,
+                    ))
+            };
+
         let row = row![
             Container::new(
                 button::icon(icon_left)
@@ -419,13 +470,43 @@ impl cosmic::Application for App {
             .center_y(Length::Fill)
             .align_right(Length::Fill)
             .width(Length::FillPortion(1)),
-            Container::new(
-                Container::new(preview.map(|m| Message::Present(m)))
-                    .center(Length::Fill)
-                    .max_height(270)
-            )
+            Container::new(column![
+                Space::with_height(Length::Fill),
+                Responsive::new(move |size| {
+                    let height = size.width * 9.0 / 16.0;
+                    Container::new(
+                        self.presenter
+                            .view()
+                            .map(|m| Message::Present(m)),
+                    )
+                    .width(Length::Fill)
+                    .height(height)
+                    .into()
+                }),
+                Container::new(
+                    row![
+                        video_button_icon,
+                        Container::new(slider(
+                            0.0..=video_range,
+                            video_pos,
+                            |pos| {
+                                Message::Present(
+                                    presenter::Message::VideoPos(pos),
+                                )
+                            }
+                        ))
+                        .center_x(Length::Fill)
+                        .padding([7, 0, 0, 0])
+                    ]
+                    .padding(5)
+                )
+                .align_top(Length::Shrink)
+                .height(Length::Shrink)
+                .center_x(Length::Fill),
+                Space::with_height(Length::Fill)
+            ])
             .center_y(Length::Fill)
-            .width(Length::FillPortion(3)),
+            .center_x(Length::FillPortion(3)),
             Container::new(
                 button::icon(icon_right)
                     .icon_size(128)
@@ -526,7 +607,6 @@ fn test_slide<'a>() -> Element<'a, Message> {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
     use pretty_assertions::assert_eq;
 
@@ -539,7 +619,6 @@ mod test {
     // fn test_lisp() {
     //     let slide = test_slide();
     //     if let Ok(data) = lexpr::parse::from_str_elisp(slide.as_str()) {
-    //         println!("{data:?}");
     //         assert_eq!(slide, data)
     //     } else {
     //         assert!(false)
