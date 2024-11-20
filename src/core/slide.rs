@@ -199,6 +199,9 @@ impl From<Value> for Slide {
 }
 
 fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
+    const DEFAULT_BACKGROUND_LOCATION: usize = 1;
+    const DEFAULT_TEXT_LOCATION: usize = 0;
+
     let mut slide = SlideBuilder::new();
     let background_position = if let Some(background) =
         lisp.iter().position(|v| {
@@ -206,7 +209,7 @@ fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
         }) {
         background + 1
     } else {
-        1
+        DEFAULT_BACKGROUND_LOCATION
     };
 
     dbg!(&background_position);
@@ -219,7 +222,8 @@ fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
 
     let text_position = lisp.iter().position(|v| match v {
         Value::List(vec) => {
-            vec[0] == Value::Symbol(Symbol::from("text"))
+            vec[DEFAULT_TEXT_LOCATION]
+                == Value::Symbol(Symbol::from("text"))
         }
         _ => false,
     });
