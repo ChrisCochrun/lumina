@@ -155,9 +155,7 @@ impl cosmic::Application for App {
                 match lisp {
                     Value::List(vec) => {
                         for value in vec {
-                            let inner_vector = vec![];
-                            let mut inner_vector =
-                                parse_lisp(value, inner_vector);
+                            let mut inner_vector = parse_lisp(value);
                             slide_vector.append(&mut inner_vector);
                         }
                     }

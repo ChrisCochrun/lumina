@@ -2,7 +2,7 @@ use crisp::types::{Symbol, Value};
 
 use crate::Slide;
 
-pub fn parse_lisp(value: Value, vector: Vec<Slide>) -> Vec<Slide> {
+pub fn parse_lisp(value: Value) -> Vec<Slide> {
     match &value {
         Value::List(vec) => match &vec[0] {
             Value::Symbol(Symbol(s)) if s == "slide" => {
@@ -40,8 +40,7 @@ mod test {
             Value::List(value) => {
                 let mut slide_vec = vec![];
                 for value in value {
-                    let inner_vector = vec![];
-                    let mut vec = parse_lisp(value, inner_vector);
+                    let mut vec = parse_lisp(value);
                     slide_vec.append(&mut vec);
                 }
                 assert_eq!(slide_vec, test_vec)
