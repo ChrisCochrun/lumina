@@ -13,8 +13,12 @@ use cosmic::widget::{
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
+use crisp::types::Value;
+use lisp::parse_lisp;
 use miette::{miette, Result};
+use std::fs::read_to_string;
 use std::path::PathBuf;
+use tracing::warn;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
@@ -144,6 +148,29 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
 
+        let slides = match read_to_string(input.file) {
+            Ok(lisp) => {
+                let mut slide_vector = vec![];
+                let lisp = crisp::reader::read(&lisp);
+                match lisp {
+                    Value::List(vec) => {
+                        for value in vec {
+                            let inner_vector = vec![];
+                            let mut inner_vector =
+                                parse_lisp(value, inner_vector);
+                            slide_vector.append(&mut inner_vector);
+                        }
+                    }
+                    _ => todo!(),
+                }
+                slide_vector
+            }
+            Err(e) => {
+                warn!("Missing file or could not read: {e}");
+                vec![]
+            }
+        };
+
         let initial_slide = SlideBuilder::new()
             .background(
                 Background::try_from(
@@ -191,8 +218,8 @@ impl cosmic::Application for App {
             .build()
             .expect("oops slide");
 
-        let slides =
-            vec![initial_slide.clone(), second_slide, tetrary_slide];
+        // let slides =
+        //     vec![initial_slide.clone(), second_slide, tetrary_slide];
         let presenter = Presenter::with_slides(slides.clone());
         let mut app = App {
             presenter,
