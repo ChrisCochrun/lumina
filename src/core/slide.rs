@@ -46,9 +46,7 @@ pub struct Background {
 impl TryFrom<String> for Background {
     type Error = ParseError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let value = value.trim_start_matches("file://");
-        let path = PathBuf::from(value);
-        Background::try_from(path)
+        Background::try_from(value.as_str())
     }
 }
 
@@ -81,7 +79,8 @@ impl TryFrom<PathBuf> for Background {
 impl TryFrom<&str> for Background {
     type Error = ParseError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value.starts_with("~") {
+        let value = value.trim_start_matches("file://");
+        if value.contains("~") {
             if let Some(home) = dirs::home_dir() {
                 if let Some(home) = home.to_str() {
                     let value = value.replace("~", home);
@@ -190,7 +189,6 @@ impl Slide {
 
 impl From<Value> for Slide {
     fn from(value: Value) -> Self {
-        dbg!(&value);
         match value {
             Value::List(list) => lisp_to_slide(list),
             _ => Slide::default(),
@@ -212,9 +210,7 @@ fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
         DEFAULT_BACKGROUND_LOCATION
     };
 
-    dbg!(&background_position);
     if let Some(background) = lisp.get(background_position) {
-        dbg!(&background);
         slide = slide.background(lisp_to_background(background));
     } else {
         slide = slide.background(Background::default());
@@ -254,12 +250,10 @@ fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
         .video_loop(false)
         .video_start_time(0.0)
         .video_end_time(0.0);
-    dbg!(&slide);
 
     match slide.build() {
         Ok(slide) => slide,
         Err(e) => {
-            dbg!(&e);
             error!("Shoot! Slide didn't build: {e}");
             Slide::default()
         }
@@ -303,16 +297,14 @@ fn lisp_to_background(lisp: &Value) -> Background {
                 v == &Value::Keyword(Keyword::from("source"))
             }) {
                 let source = &list[source + 1];
-                dbg!(&source);
                 match source {
                     Value::String(s) => {
                         match Background::try_from(s.as_str()) {
-                            Ok(background) => {
-                                dbg!(&background);
-                                background
-                            }
+                            Ok(background) => background,
                             Err(e) => {
-                                dbg!("Couldn't load background: ", e);
+                                error!(
+                                    "Couldn't load background: {e}"
+                                );
                                 Background::default()
                             }
                         }
@@ -465,7 +457,6 @@ impl Image {
 mod test {
     use pretty_assertions::assert_eq;
     use std::fs::read_to_string;
-    use tracing::debug;
 
     use super::*;
 
@@ -496,7 +487,6 @@ mod test {
     fn test_lisp_serialize() {
         let lisp =
             read_to_string("./test_presentation.lisp").expect("oops");
-        println!("{lisp}");
         let lisp_value = crisp::reader::read(&lisp);
         match lisp_value {
             Value::List(value) => {
@@ -505,7 +495,6 @@ mod test {
                 assert_eq!(slide, test_slide);
 
                 let second_slide = Slide::from(value[1].clone());
-                dbg!(&second_slide);
                 let second_test_slide = test_second_slide();
                 assert_eq!(second_slide, second_test_slide)
             }
@@ -519,11 +508,9 @@ mod test {
             .expect("Problem getting file read");
         match ron::from_str::<Vec<Slide>>(&slide) {
             Ok(s) => {
-                dbg!(s);
                 assert!(true)
             }
             Err(e) => {
-                dbg!(e);
                 assert!(false)
             }
         }
