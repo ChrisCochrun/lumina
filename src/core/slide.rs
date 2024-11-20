@@ -219,9 +219,13 @@ fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {
             if let Some(source) = list.iter().position(|v| {
-                v == Value::Keyword(Keyword::from("source"))
+                v == &Value::Keyword(Keyword::from("source"))
             }) {
-                let path = list[source + 1];
+                let source = list[source + 1];
+                match source {
+                    Value::String(s) =>
+                }
+
                 Background::try_from(&path)
             } else {
                 Background::default()
