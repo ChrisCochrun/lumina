@@ -62,10 +62,8 @@ mod test {
             db: crate::core::model::get_db().await,
         };
         image_model.load_from_db().await;
-        dbg!(&image_model.items);
         if let Some(image) = image_model.find(|i| i.id == 3) {
             let test_image = test_image("nccq5".into());
-            dbg!(&test_image);
             assert_eq!(test_image.title, image.title);
         } else {
             assert!(false);
