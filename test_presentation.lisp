@@ -1,6 +1,6 @@
-(slide :background (image :source "~/pics/frodo.jpg" :fit crop)
-       (text "This is frodo" :font-size 50))
-(slide (video :source "~/vids/test/chosensmol.mp4" :fit fill))
+(slide :background (image :source "~/pics/frodo.jpg" :fit fill)
+       (text "This is frodo" :font-size 70))
+(slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
 (song :author "Jordan Feliz" :ccli 97987
       :font "Quicksand" :font-size 80
       :title "The River"

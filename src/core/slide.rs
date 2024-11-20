@@ -1,4 +1,4 @@
-use crisp::types::{Keyword, Value};
+use crisp::types::{Keyword, Symbol, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -7,8 +7,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-
-use crate::core::lisp::Symbol;
+use tracing::error;
 
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
@@ -49,42 +48,32 @@ impl TryFrom<String> for Background {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let value = value.trim_start_matches("file://");
         let path = PathBuf::from(value);
-        if !path.exists() {
-            return Err(ParseError::DoesNotExist);
-        }
-        let extension = value.rsplit_once('.').unwrap_or_default();
-        match extension.1 {
-            "jpg" | "png" | "webp" | "html" => Ok(Self {
-                path,
-                kind: BackgroundKind::Image,
-            }),
-            "mp4" | "mkv" | "webm" => Ok(Self {
-                path,
-                kind: BackgroundKind::Video,
-            }),
-            _ => Err(ParseError::NonBackgroundFile),
-        }
+        Background::try_from(path)
     }
 }
 
 impl TryFrom<PathBuf> for Background {
     type Error = ParseError;
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        let extension = value
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default();
-        match extension {
-            "jpg" | "png" | "webp" | "html" => Ok(Self {
-                path: value,
-                kind: BackgroundKind::Image,
-            }),
-            "mp4" | "mkv" | "webm" => Ok(Self {
-                path: value,
-                kind: BackgroundKind::Video,
-            }),
-            _ => Err(ParseError::NonBackgroundFile),
+        if let Ok(value) = value.canonicalize() {
+            let extension = value
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+            match extension {
+                "jpg" | "png" | "webp" | "html" => Ok(Self {
+                    path: value,
+                    kind: BackgroundKind::Image,
+                }),
+                "mp4" | "mkv" | "webm" => Ok(Self {
+                    path: value,
+                    kind: BackgroundKind::Video,
+                }),
+                _ => Err(ParseError::NonBackgroundFile),
+            }
+        } else {
+            Err(ParseError::CannotCanonicalize)
         }
     }
 }
@@ -92,14 +81,27 @@ impl TryFrom<PathBuf> for Background {
 impl TryFrom<&str> for Background {
     type Error = ParseError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(Self::try_from(String::from(value))?)
+        if value.starts_with("~") {
+            if let Some(home) = dirs::home_dir() {
+                if let Some(home) = home.to_str() {
+                    let value = value.replace("~", home);
+                    Self::try_from(PathBuf::from(value))
+                } else {
+                    Self::try_from(PathBuf::from(value))
+                }
+            } else {
+                Self::try_from(PathBuf::from(value))
+            }
+        } else {
+            Self::try_from(PathBuf::from(value))
+        }
     }
 }
 
 impl TryFrom<&Path> for Background {
     type Error = ParseError;
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
-        Ok(Self::try_from(PathBuf::from(value))?)
+        Self::try_from(PathBuf::from(value))
     }
 }
 
@@ -107,6 +109,7 @@ impl TryFrom<&Path> for Background {
 pub enum ParseError {
     NonBackgroundFile,
     DoesNotExist,
+    CannotCanonicalize,
 }
 
 impl std::error::Error for ParseError {}
@@ -121,6 +124,9 @@ impl Display for ParseError {
                 "The file is not a recognized image or video type"
             }
             Self::DoesNotExist => "This file doesn't exist",
+            Self::CannotCanonicalize => {
+                "Could not canonicalize this file"
+            }
         };
         write!(f, "Error: {message}")
     }
@@ -184,6 +190,7 @@ impl Slide {
 
 impl From<Value> for Slide {
     fn from(value: Value) -> Self {
+        dbg!(&value);
         match value {
             Value::List(list) => lisp_to_slide(list),
             _ => Slide::default(),
@@ -194,24 +201,94 @@ impl From<Value> for Slide {
 fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
     let mut slide = SlideBuilder::new();
     let background_position = if let Some(background) =
-        lisp.position(|v| Value::Keyword(Keyword::from("background")))
-    {
+        lisp.iter().position(|v| {
+            v == &Value::Keyword(Keyword::from("background"))
+        }) {
         background + 1
     } else {
-        0
+        1
     };
 
+    dbg!(&background_position);
     if let Some(background) = lisp.get(background_position) {
-        slide.background(lisp_to_background(background));
+        dbg!(&background);
+        slide = slide.background(lisp_to_background(background));
     } else {
-        slide.background(Background::default());
+        slide = slide.background(Background::default());
     };
+
+    let text_position = lisp.iter().position(|v| match v {
+        Value::List(vec) => {
+            vec[0] == Value::Symbol(Symbol::from("text"))
+        }
+        _ => false,
+    });
+
+    if let Some(text_position) = text_position {
+        if let Some(text) = lisp.get(text_position) {
+            slide = slide.text(lisp_to_text(text));
+        } else {
+            slide = slide.text("");
+        }
+    } else {
+        slide = slide.text("");
+    }
+
+    if let Some(text_position) = text_position {
+        if let Some(text) = lisp.get(text_position) {
+            slide = slide.font_size(lisp_to_font_size(text));
+        } else {
+            slide = slide.font_size(0);
+        }
+    } else {
+        slide = slide.font_size(0);
+    }
+
+    slide = slide
+        .font("Quicksand")
+        .text_alignment(TextAlignment::MiddleCenter)
+        .video_loop(false)
+        .video_start_time(0.0)
+        .video_end_time(0.0);
+    dbg!(&slide);
+
     match slide.build() {
         Ok(slide) => slide,
         Err(e) => {
-            miette!("Shoot! Slide didn't build: {e}");
+            dbg!(&e);
+            error!("Shoot! Slide didn't build: {e}");
             Slide::default()
         }
+    }
+}
+
+fn lisp_to_font_size(lisp: &Value) -> i32 {
+    match lisp {
+        Value::List(list) => {
+            if let Some(font_size_position) =
+                list.iter().position(|v| {
+                    v == &Value::Keyword(Keyword::from("font-size"))
+                })
+            {
+                if let Some(font_size_value) =
+                    list.get(font_size_position + 1)
+                {
+                    font_size_value.into()
+                } else {
+                    50
+                }
+            } else {
+                50
+            }
+        }
+        _ => 50,
+    }
+}
+
+fn lisp_to_text(lisp: &Value) -> impl Into<String> {
+    match lisp {
+        Value::List(list) => list[1].clone(),
+        _ => "".into(),
     }
 }
 
@@ -221,12 +298,23 @@ fn lisp_to_background(lisp: &Value) -> Background {
             if let Some(source) = list.iter().position(|v| {
                 v == &Value::Keyword(Keyword::from("source"))
             }) {
-                let source = list[source + 1];
+                let source = &list[source + 1];
+                dbg!(&source);
                 match source {
-                    Value::String(s) =>
+                    Value::String(s) => {
+                        match Background::try_from(s.as_str()) {
+                            Ok(background) => {
+                                dbg!(&background);
+                                background
+                            }
+                            Err(e) => {
+                                dbg!("Couldn't load background: ", e);
+                                Background::default()
+                            }
+                        }
+                    }
+                    _ => Background::default(),
                 }
-
-                Background::try_from(&path)
             } else {
                 Background::default()
             }
@@ -267,7 +355,7 @@ impl SlideBuilder {
         mut self,
         background: Background,
     ) -> Self {
-        self.background.insert(background);
+        let _ = self.background.insert(background);
         self
     }
 
@@ -360,6 +448,7 @@ struct Image {
     pub fit: String,
     pub children: Vec<String>,
 }
+
 impl Image {
     fn new() -> Self {
         Self {
@@ -368,167 +457,56 @@ impl Image {
     }
 }
 
-// fn build_image_bg(
-//     atom: &Value,
-//     image_map: &mut HashMap<String, String>,
-//     map_index: usize,
-// ) {
-//     // This needs to be the cons that contains (image . ...)
-//     // the image is a symbol and the rest are keywords and other maps
-//     if atom.is_symbol() {
-//         // We shouldn't get a symbol
-//         return;
-//     }
-
-//     for atom in
-//         atom.list_iter().unwrap().map(|a| a.as_cons().unwrap())
-//     {
-//         if atom.car() == &Value::Symbol("image".into()) {
-//             build_image_bg(atom.cdr(), image_map, map_index);
-//         } else {
-//             let atom = atom.car();
-//             match atom {
-//                 Value::Keyword(keyword) => {
-//                     image_map.insert(keyword.to_string(), "".into());
-//                     build_image_bg(atom, image_map, map_index);
-//                 }
-//                 Value::Symbol(symbol) => {
-//                     // let mut key;
-//                     // let image_map = image_map
-//                     //     .iter_mut()
-//                     //     .enumerate()
-//                     //     .filter(|(i, e)| i == &map_index)
-//                     //     .map(|(i, (k, v))| v.push_str(symbol))
-//                     //     .collect();
-//                     build_image_bg(atom, image_map, map_index);
-//                 }
-//                 Value::String(string) => {}
-//                 _ => {}
-//             }
-//         }
-//     }
-// }
-
-// fn build_slide(exp: Value) -> Result<Slide> {
-//     let mut slide_builder = SlideBuilder::new();
-//     let mut keyword = "idk";
-//     for value in exp.as_cons().unwrap().to_vec().0 {
-//         let mut vecs = vec![vec![]];
-//         match value {
-//             Value::Symbol(symbol) => {}
-//             Value::Keyword(keyword) => {}
-//             Value::String(string) => {}
-//             Value::Number(num) => {}
-//             Value::Cons(cons) => {
-//                 vecs.push(get_lists(&value));
-//             }
-//             _ => {}
-//         }
-//     }
-
-//     todo!()
-// }
-
-// fn build_slides(
-//     cons: &lexpr::Cons,
-//     mut current_symbol: Symbol,
-//     mut slide_builder: SlideBuilder,
-// ) -> SlideBuilder {
-//     for value in cons.list_iter() {
-//         dbg!(&current_symbol);
-//         match value {
-//             Value::Cons(v) => {
-//                 slide_builder = build_slides(
-//                     &v,
-//                     current_symbol.clone(),
-//                     slide_builder,
-//                 );
-//             }
-//             Value::Nil => {
-//                 dbg!(Value::Nil);
-//             }
-//             Value::Bool(boolean) => {
-//                 dbg!(boolean);
-//             }
-//             Value::Number(number) => {
-//                 dbg!(number);
-//             }
-//             Value::String(string) => {
-//                 dbg!(string);
-//             }
-//             Value::Symbol(symbol) => {
-//                 dbg!(symbol);
-//                 current_symbol =
-//                     Symbol::from_str(symbol).unwrap_or_default();
-//             }
-//             Value::Keyword(keyword) => {
-//                 dbg!(keyword);
-//             }
-//             Value::Null => {
-//                 dbg!("null");
-//             }
-//             Value::Char(c) => {
-//                 dbg!(c);
-//             }
-//             Value::Bytes(b) => {
-//                 dbg!(b);
-//             }
-//             Value::Vector(v) => {
-//                 dbg!(v);
-//             }
-//         }
-//     }
-//     slide_builder
-// }
-
 #[cfg(test)]
 mod test {
-    use lexpr::{parse::Options, Datum, Parser};
     use pretty_assertions::assert_eq;
-    use serde_lexpr::from_str;
     use std::fs::read_to_string;
     use tracing::debug;
 
     use super::*;
 
     fn test_slide() -> Slide {
-        Slide::default()
+        Slide {
+            text: "This is frodo".to_string(),
+            background: Background::try_from("~/pics/frodo.jpg")
+                .unwrap(),
+            font: "Quicksand".to_string(),
+            font_size: 70,
+            ..Default::default()
+        }
+    }
+
+    fn test_second_slide() -> Slide {
+        Slide {
+            text: "".to_string(),
+            background: Background::try_from(
+                "~/vids/test/camprules2024.mp4",
+            )
+            .unwrap(),
+            font: "Quicksand".to_string(),
+            ..Default::default()
+        }
     }
 
     #[test]
-    fn test_lexp_serialize() {
+    fn test_lisp_serialize() {
         let lisp =
             read_to_string("./test_presentation.lisp").expect("oops");
         println!("{lisp}");
-        let mut parser =
-            Parser::from_str_custom(&lisp, Options::elisp());
-        for atom in parser.value_iter() {
-            match atom {
-                Ok(atom) => {
-                    let symbol = Symbol::None;
-                    let slide_builder = SlideBuilder::new();
-                    atom.as_cons().map(|c| {
-                        build_slides(c, symbol, slide_builder)
-                    });
-                }
-                Err(e) => {
-                    dbg!(e);
-                }
+        let lisp_value = crisp::reader::read(&lisp);
+        match lisp_value {
+            Value::List(value) => {
+                let slide = Slide::from(value[0].clone());
+                let test_slide = test_slide();
+                assert_eq!(slide, test_slide);
+
+                let second_slide = Slide::from(value[1].clone());
+                dbg!(&second_slide);
+                let second_test_slide = test_second_slide();
+                assert_eq!(second_slide, second_test_slide)
             }
+            _ => panic!("this should be a lisp"),
         }
-        // parser.map(|atom| match atom {
-        //     Ok(atom) => dbg!(atom),
-        //     Err(e) => dbg!(e),
-        // });
-        // let lispy = from_str_elisp(&lisp).expect("oops");
-        // if lispy.is_list() {
-        //     for atom in lispy.list_iter().unwrap() {
-        //         print_list(atom);
-        //     }
-        // }
-        let slide: Slide = from_str(&lisp).expect("oops");
-        let test_slide = test_slide();
-        assert_eq!(slide, test_slide)
     }
 
     #[test]

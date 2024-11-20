@@ -577,32 +577,6 @@ where
     }
 }
 
-fn test_slide<'a>() -> Element<'a, Message> {
-    if let Ok(slide) = SlideBuilder::new()
-        .background(
-            Background::try_from("/home/chris/pics/frodo.jpg")
-                .unwrap(),
-        )
-        .text("This is a frodo")
-        .text_alignment(TextAlignment::TopCenter)
-        .font_size(50)
-        .font("Quicksand")
-        .build()
-    {
-        let font = Font::with_name("Noto Sans");
-        let stack = stack!(
-            image(slide.background().path.clone()),
-            text(slide.text())
-                .size(slide.font_size() as u16)
-                .font(font)
-        );
-
-        stack.into()
-    } else {
-        text("Slide is broken").into()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;

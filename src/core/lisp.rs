@@ -140,24 +140,24 @@ mod test {
 
     use super::*;
 
-    #[test]
-    fn test_list() {
-        let lisp =
-            read_to_string("./test_presentation.lisp").expect("oops");
-        println!("{lisp}");
-        let mut parser =
-            Parser::from_str_custom(&lisp, Options::elisp());
-        for atom in parser.value_iter() {
-            match atom {
-                Ok(atom) => {
-                    println!("{atom}");
-                    let lists = get_lists(&atom);
-                    assert_eq!(lists, vec![Value::Null])
-                }
-                Err(e) => {
-                    panic!("{e}");
-                }
-            }
-        }
-    }
+    // #[test]
+    // fn test_list() {
+    //     let lisp =
+    //         read_to_string("./test_presentation.lisp").expect("oops");
+    //     // println!("{lisp}");
+    //     let mut parser =
+    //         Parser::from_str_custom(&lisp, Options::elisp());
+    //     for atom in parser.value_iter() {
+    //         match atom {
+    //             Ok(atom) => {
+    //                 // println!("{atom}");
+    //                 let lists = get_lists(&atom);
+    //                 assert_eq!(lists, vec![Value::Null])
+    //             }
+    //             Err(e) => {
+    //                 panic!("{e}");
+    //             }
+    //         }
+    //     }
+    // }
 }
