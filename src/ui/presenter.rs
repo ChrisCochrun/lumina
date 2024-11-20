@@ -146,7 +146,8 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let text = text!("This is frodo").size(50);
+        let text = text!("{}", self.current_slide.text())
+            .size(self.current_slide.font_size() as u16);
         let text = Container::new(text).center(Length::Fill);
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
