@@ -169,55 +169,7 @@ impl cosmic::Application for App {
             }
         };
 
-        let initial_slide = SlideBuilder::new()
-            .background(
-                Background::try_from(
-                    "/home/chris/vids/test/camprules2024.mp4",
-                )
-                .unwrap(),
-            )
-            .text("")
-            .font("Quicksand")
-            .font_size(50)
-            .text_alignment(TextAlignment::MiddleCenter)
-            .video_loop(true)
-            .video_start_time(0.0)
-            .video_end_time(0.0)
-            .build()
-            .expect("oops slide");
-
-        let second_slide = SlideBuilder::new()
-            .background(
-                Background::try_from("/home/chris/pics/frodo.jpg")
-                    .unwrap(),
-            )
-            .text("Hello")
-            .font("Quicksand")
-            .font_size(50)
-            .text_alignment(TextAlignment::MiddleCenter)
-            .video_loop(false)
-            .video_start_time(0.0)
-            .video_end_time(0.0)
-            .build()
-            .expect("oops slide");
-
-        let tetrary_slide = SlideBuilder::new()
-            .background(
-                Background::try_from("/home/chris/pics/wojaks/reddit_the_xenomorph_s bigass wojak folder/Chads/ChristianChad_x16_drawing.png")
-                    .unwrap(),
-            )
-            .text("Hello")
-            .font("Quicksand")
-            .font_size(50)
-            .text_alignment(TextAlignment::MiddleCenter)
-            .video_loop(false)
-            .video_start_time(0.0)
-            .video_end_time(0.0)
-            .build()
-            .expect("oops slide");
-
-        // let slides =
-        //     vec![initial_slide.clone(), second_slide, tetrary_slide];
+        let current_slide = slides[0].clone();
         let presenter = Presenter::with_slides(slides.clone());
         let mut app = App {
             presenter,
@@ -226,7 +178,7 @@ impl cosmic::Application for App {
             file: PathBuf::default(),
             windows: vec![],
             slides,
-            current_slide: initial_slide,
+            current_slide,
         };
 
         let command;
