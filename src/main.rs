@@ -315,6 +315,11 @@ impl cosmic::Application for App {
         match message {
             Message::Present(message) => {
                 let _ = self.presenter.update(message);
+                if self.presentation_open {
+                    if let Some(video) = &mut self.presenter.video {
+                        video.set_muted(false);
+                    }
+                }
                 // self.core.nav_bar_toggle();
                 Task::none()
             }
@@ -356,6 +361,9 @@ impl cosmic::Application for App {
                 debug!(?id, "Window opened");
                 if id > self.core.main_window_id().unwrap() {
                     self.presentation_open = true;
+                    if let Some(video) = &mut self.presenter.video {
+                        video.set_muted(false);
+                    }
                     warn!(self.presentation_open);
                     window::change_mode(id, Mode::Fullscreen)
                 } else {
@@ -376,6 +384,9 @@ impl cosmic::Application for App {
                     cosmic::iced::exit()
                 } else {
                     self.presentation_open = false;
+                    if let Some(video) = &mut self.presenter.video {
+                        video.set_muted(true);
+                    }
                     Task::none()
                 }
             }
@@ -440,15 +451,15 @@ impl cosmic::Application for App {
             .align_right(Length::Fill)
             .width(Length::FillPortion(1)),
             Container::new(column![
-                Space::with_height(Length::Fill),
-                Responsive::new(move |size| {
+                Responsive::new(|size| {
+                    debug!(?size);
                     let height = size.width * 9.0 / 16.0;
+                    debug!(?height);
                     Container::new(
                         self.presenter
                             .view()
                             .map(|m| Message::Present(m)),
                     )
-                    .width(Length::Fill)
                     .height(height)
                     .into()
                 }),
@@ -469,13 +480,10 @@ impl cosmic::Application for App {
                     ]
                     .padding(5)
                 )
-                .align_top(Length::Shrink)
-                .height(Length::Shrink)
                 .center_x(Length::Fill),
-                Space::with_height(Length::Fill)
             ])
             .center_y(Length::Fill)
-            .center_x(Length::FillPortion(3)),
+            .width(Length::FillPortion(3)),
             Container::new(
                 button::icon(icon_right)
                     .icon_size(128)
