@@ -12,11 +12,15 @@ use iced_video_player::{Position, Video, VideoPlayer};
 use miette::{Context, IntoDiagnostic, Result};
 use tracing::{debug, error, info};
 
-use crate::{core::slide::Slide, BackgroundKind};
+use crate::{
+    core::{service_items::ServiceItem, slide::Slide},
+    BackgroundKind,
+};
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
     pub slides: Vec<Slide>,
+    pub items: Vec<ServiceItem>,
     pub current_slide: Slide,
     pub current_slide_index: u16,
     pub video: Option<Video>,
@@ -36,6 +40,7 @@ impl Presenter {
     pub fn with_slides(slides: Vec<Slide>) -> Self {
         Self {
             slides: slides.clone(),
+            items: vec![],
             current_slide: slides[0].clone(),
             current_slide_index: 0,
             video: {
