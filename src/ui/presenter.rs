@@ -146,8 +146,14 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let text = text!("{}", self.current_slide.text())
-            .size(self.current_slide.font_size() as u16);
+        let font_size = if self.current_slide.font_size() > 0 {
+            self.current_slide.font_size() as u16
+        } else {
+            50
+        };
+        let text = text(self.current_slide.text())
+            .size(font_size)
+            .line_height(20.0);
         let text = Container::new(text).center(Length::Fill);
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
@@ -195,8 +201,9 @@ impl Presenter {
     }
 
     fn slide_delegate(slide: &Slide) -> Element<Message> {
-        let text =
-            text!("{}", slide.text()).size(slide.font_size() as u16);
+        let text = text!("{}", slide.text())
+            .size(slide.font_size() as u16)
+            .line_height(1.0);
         let text = Container::new(text).center(Length::Fill);
         let container = match slide.background().kind {
             crate::BackgroundKind::Image => Container::new(
