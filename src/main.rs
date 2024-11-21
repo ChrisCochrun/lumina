@@ -1,7 +1,7 @@
 use clap::{command, Parser};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::Key;
-use cosmic::iced::window::Position;
+use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{self, event, window, Font, Length, Point};
 use cosmic::iced_core::SmolStr;
 use cosmic::iced_widget::{column, row, stack};
@@ -18,8 +18,8 @@ use lisp::parse_lisp;
 use miette::{miette, Result};
 use std::fs::read_to_string;
 use std::path::PathBuf;
-use tracing::warn;
 use tracing::{debug, level_filters::LevelFilter};
+use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
 
 pub mod core;
@@ -83,6 +83,7 @@ struct App {
     windows: Vec<window::Id>,
     slides: Vec<Slide>,
     current_slide: Slide,
+    presentation_open: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +91,7 @@ enum Message {
     Present(presenter::Message),
     File(PathBuf),
     OpenWindow,
-    CloseWindow(window::Id),
+    CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
 }
@@ -113,9 +114,6 @@ impl cosmic::Application for App {
         debug!("init");
         let mut nav_model = nav_bar::Model::default();
 
-        nav_model.insert().text("Preview").data("Preview");
-
-        nav_model.activate_position(0);
         let mut windows = vec![];
 
         if input.ui {
@@ -145,14 +143,22 @@ impl cosmic::Application for App {
 
         let current_slide = slides[0].clone();
         let presenter = Presenter::with_slides(slides.clone());
+
+        for slide in slides.clone() {
+            nav_model.insert().text(slide.text()).data(slide);
+        }
+
+        nav_model.activate_position(0);
+
         let mut app = App {
             presenter,
             core,
-            nav_model: nav_bar::Model::default(),
+            nav_model,
             file: PathBuf::default(),
-            windows: vec![],
+            windows,
             slides,
             current_slide,
+            presentation_open: false,
         };
 
         let command;
@@ -188,13 +194,17 @@ impl cosmic::Application for App {
         vec![]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
-        let window_open = self.windows.len() > 1;
         let presenter_window = self.windows.get(1);
+        let text = if self.presentation_open {
+            text::body("Close Presentation")
+        } else {
+            text::body("Open Presentation")
+        };
         vec![tooltip(
             button::custom(
                 row!(
                     Container::new(
-                        icon::from_name(if window_open {
+                        icon::from_name(if self.presentation_open {
                             "dialog-close"
                         } else {
                             "view-presentation-symbolic"
@@ -202,32 +212,29 @@ impl cosmic::Application for App {
                         .scale(3)
                     )
                     .center_y(Length::Fill),
-                    text::body(if window_open {
-                        "Close Presentation"
-                    } else {
-                        "Open Presentation"
-                    })
+                    text
                 )
                 .padding(5)
                 .spacing(5),
             )
             .class(cosmic::theme::style::Button::HeaderBar)
             .on_press({
-                debug!(window_open);
-                if window_open {
-                    Message::CloseWindow(*presenter_window.unwrap())
+                if self.presentation_open {
+                    Message::CloseWindow(
+                        presenter_window.map(|id| *id),
+                    )
                 } else {
                     Message::OpenWindow
                 }
             }),
-            "Open Window",
+            "Start Presentation",
             TPosition::Bottom,
         )
         .into()]
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
-        Some(text::body("Sux").line_height(1.0).into())
+        Some(text::body("Sux").into())
     }
 
     fn subscription(
@@ -238,7 +245,7 @@ impl cosmic::Application for App {
                 match window_event {
                     window::Event::CloseRequested => {
                         debug!("Closing window");
-                        Some(Message::CloseWindow(id))
+                        Some(Message::CloseWindow(Some(id)))
                     }
                     window::Event::Opened { position, .. } => {
                         debug!(?window_event, ?id);
@@ -338,22 +345,37 @@ impl cosmic::Application for App {
                     ))
                 })
             }
-            Message::CloseWindow(id) => window::close(id),
+            Message::CloseWindow(id) => {
+                if let Some(id) = id {
+                    window::close(id)
+                } else {
+                    Task::none()
+                }
+            }
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
-                Task::none()
+                if id > self.core.main_window_id().unwrap() {
+                    self.presentation_open = true;
+                    warn!(self.presentation_open);
+                    window::change_mode(id, Mode::Fullscreen)
+                } else {
+                    Task::none()
+                }
             }
             Message::WindowClosed(id) => {
-                let window = self
-                    .windows
-                    .iter()
-                    .position(|w| *w == id)
-                    .unwrap();
+                warn!("Closing window: {id}");
+                let Some(window) =
+                    self.windows.iter().position(|w| *w == id)
+                else {
+                    error!("Nothing matches this window id: {id}");
+                    return Task::none();
+                };
                 self.windows.remove(window);
                 // This closes the app if using the cli example
                 if self.windows.len() == 0 {
                     cosmic::iced::exit()
                 } else {
+                    self.presentation_open = false;
                     Task::none()
                 }
             }
