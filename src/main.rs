@@ -85,32 +85,6 @@ struct App {
     current_slide: Slide,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        let initial_slide = SlideBuilder::new()
-            .background(
-                Background::try_from(
-                    "/home/chris/vids/test/chosensmol.mp4",
-                )
-                .unwrap(),
-            )
-            .text("Hello")
-            .build()
-            .expect("oops slide");
-        let slides = vec![initial_slide.clone()];
-        let presenter = Presenter::with_slides(slides.clone());
-        Self {
-            presenter,
-            core: Core::default(),
-            nav_model: nav_bar::Model::default(),
-            file: PathBuf::default(),
-            windows: vec![],
-            slides,
-            current_slide: initial_slide,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 enum Message {
     Present(presenter::Message),
@@ -253,7 +227,7 @@ impl cosmic::Application for App {
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
-        Some(text::body("Sux").into())
+        Some(text::body("Sux").line_height(1.0).into())
     }
 
     fn subscription(
