@@ -446,43 +446,46 @@ impl cosmic::Application for App {
                     ))
             };
 
-        let slide_preview = Container::new(
-            column![
-                Responsive::new(|size| {
-                    debug!(?size);
-                    let height = size.width * 9.0 / 16.0;
-                    debug!(?height);
+        let slide_preview = column![
+            Space::with_height(Length::Fill),
+            Responsive::new(|size| {
+                debug!(?size);
+                let height = size.width * 9.0 / 16.0;
+                debug!(?height);
+                Container::new(
                     Container::new(
                         self.presenter
                             .view()
                             .map(|m| Message::Present(m)),
                     )
-                    .height(height)
-                    .max_height(height)
-                    .into()
-                }),
-                Container::new(
-                    row![
-                        video_button_icon,
-                        Container::new(slider(
-                            0.0..=video_range,
-                            video_pos,
-                            |pos| {
-                                Message::Present(
-                                    presenter::Message::VideoPos(pos),
-                                )
-                            }
-                        ))
-                        .center_x(Length::Fill)
-                        .padding([7, 0, 0, 0])
-                    ]
-                    .padding(5)
+                    .height(height),
                 )
-                .center_x(Length::Fill),
-            ]
-            .spacing(3),
-        )
-        .center_y(Length::Shrink);
+                .align_bottom(Length::Fill)
+                .into()
+            }),
+            Container::new(if self.presenter.video.is_some() {
+                row![
+                    video_button_icon,
+                    Container::new(slider(
+                        0.0..=video_range,
+                        video_pos,
+                        |pos| {
+                            Message::Present(
+                                presenter::Message::VideoPos(pos),
+                            )
+                        }
+                    ))
+                    .center_x(Length::Fill)
+                    .padding([7, 0, 0, 0])
+                ]
+                .padding(5)
+            } else {
+                row![]
+            })
+            .center_x(Length::Fill),
+            Space::with_height(Length::Fill),
+        ]
+        .spacing(3);
 
         let row = row![
             Container::new(
@@ -496,7 +499,7 @@ impl cosmic::Application for App {
             )
             .center_y(Length::Fill)
             .align_right(Length::Fill)
-            .width(Length::FillPortion(1)),
+            .width(Length::FillPortion(2)),
             Container::new(slide_preview)
                 .center_y(Length::Fill)
                 .width(Length::FillPortion(3)),
@@ -511,7 +514,7 @@ impl cosmic::Application for App {
             )
             .center_y(Length::Fill)
             .align_left(Length::Fill)
-            .width(Length::FillPortion(1)),
+            .width(Length::FillPortion(2)),
         ]
         .width(Length::Fill)
         .height(Length::Fill)
