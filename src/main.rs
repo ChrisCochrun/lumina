@@ -7,6 +7,7 @@ use cosmic::iced_core::SmolStr;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
+use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, image, nav_bar, text, tooltip, Responsive, Space,
@@ -180,6 +181,12 @@ impl cosmic::Application for App {
     /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
     fn nav_model(&self) -> Option<&nav_bar::Model> {
         Some(&self.nav_model)
+    }
+
+    fn nav_bar(
+        &self,
+    ) -> Option<Element<cosmic::app::Message<Message>>> {
+        None
     }
 
     /// Called when a navigation item is selected.
