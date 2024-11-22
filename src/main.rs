@@ -5,6 +5,7 @@ use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{self, event, window, Font, Length, Point};
 use cosmic::iced_core::SmolStr;
 use cosmic::iced_widget::{column, row, stack};
+use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
@@ -84,6 +85,7 @@ struct App {
     slides: Vec<Slide>,
     current_slide: Slide,
     presentation_open: bool,
+    cli_mode: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +96,7 @@ enum Message {
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
+    Quit,
 }
 
 impl cosmic::Application for App {
@@ -159,6 +162,7 @@ impl cosmic::Application for App {
             slides,
             current_slide,
             presentation_open: false,
+            cli_mode: !input.ui,
         };
 
         let command;
@@ -294,6 +298,8 @@ impl cosmic::Application for App {
                                 Some(Message::Present(
                                     ui::presenter::Message::PrevSlide,
                                 ))
+                            } else if key == SmolStr::from("q") {
+                                Some(Message::Quit)
                             } else {
                                 None
                             }
@@ -359,7 +365,9 @@ impl cosmic::Application for App {
             }
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
-                if id > self.core.main_window_id().unwrap() {
+                if self.cli_mode
+                    || id > self.core.main_window_id().unwrap()
+                {
                     self.presentation_open = true;
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
@@ -381,7 +389,7 @@ impl cosmic::Application for App {
                 self.windows.remove(window);
                 // This closes the app if using the cli example
                 if self.windows.len() == 0 {
-                    cosmic::iced::exit()
+                    self.update(Message::Quit)
                 } else {
                     self.presentation_open = false;
                     if let Some(video) = &mut self.presenter.video {
@@ -390,6 +398,7 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
+            Message::Quit => cosmic::iced::exit(),
         }
     }
 
@@ -437,20 +446,8 @@ impl cosmic::Application for App {
                     ))
             };
 
-        let row = row![
-            Container::new(
-                button::icon(icon_left)
-                    .icon_size(128)
-                    .tooltip("Previous Slide")
-                    .width(128)
-                    .on_press(Message::Present(
-                        presenter::Message::PrevSlide
-                    ))
-            )
-            .center_y(Length::Fill)
-            .align_right(Length::Fill)
-            .width(Length::FillPortion(1)),
-            Container::new(column![
+        let slide_preview = Container::new(
+            column![
                 Responsive::new(|size| {
                     debug!(?size);
                     let height = size.width * 9.0 / 16.0;
@@ -461,6 +458,7 @@ impl cosmic::Application for App {
                             .map(|m| Message::Present(m)),
                     )
                     .height(height)
+                    .max_height(height)
                     .into()
                 }),
                 Container::new(
@@ -481,9 +479,27 @@ impl cosmic::Application for App {
                     .padding(5)
                 )
                 .center_x(Length::Fill),
-            ])
+            ]
+            .spacing(3),
+        )
+        .center_y(Length::Shrink);
+
+        let row = row![
+            Container::new(
+                button::icon(icon_left)
+                    .icon_size(128)
+                    .tooltip("Previous Slide")
+                    .width(128)
+                    .on_press(Message::Present(
+                        presenter::Message::PrevSlide
+                    ))
+            )
             .center_y(Length::Fill)
-            .width(Length::FillPortion(3)),
+            .align_right(Length::Fill)
+            .width(Length::FillPortion(1)),
+            Container::new(slide_preview)
+                .center_y(Length::Fill)
+                .width(Length::FillPortion(3)),
             Container::new(
                 button::icon(icon_right)
                     .icon_size(128)
@@ -508,10 +524,11 @@ impl cosmic::Application for App {
                     .slide_preview()
                     .map(|m| Message::Present(m))
             )
-            .center_y(Length::Shrink)
+            .center_y(100)
         ];
 
-        column.into()
+        let element: Element<Message> = column.into();
+        element.debug(true)
     }
 
     // View for presentation

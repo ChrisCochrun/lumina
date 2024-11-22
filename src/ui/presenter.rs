@@ -222,10 +222,13 @@ impl Presenter {
                 Container::new(Space::new(Length::Fill, Length::Fill))
             }
         };
-        stack!(container.center(Length::Fill), text)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        Container::new(
+            stack!(container.center(Length::Fill), text)
+                .width(Length::Fill)
+                .height(Length::Fill),
+        )
+        .padding(10)
+        .into()
     }
 
     fn reset_video(&mut self) {
