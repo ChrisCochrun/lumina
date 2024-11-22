@@ -183,11 +183,34 @@ impl cosmic::Application for App {
         Some(&self.nav_model)
     }
 
-    fn nav_bar(
-        &self,
-    ) -> Option<Element<cosmic::app::Message<Message>>> {
-        None
-    }
+    // fn nav_bar(
+    //     &self,
+    // ) -> Option<Element<cosmic::app::Message<Message>>> {
+    //     if !self.core().nav_bar_active() {
+    //         return None;
+    //     }
+
+    //     let nav_model = self.nav_model()?;
+
+    //     let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
+    //         cosmic::app::Message::Cosmic(cosmic::Message::NavBar(id))
+    //     })
+    //     .on_context(|id| {
+    //         Message::Cosmic(cosmic::Message::NavBarContext(id))
+    //     })
+    //     .context_menu(
+    //         self.nav_context_menu(self.core.nav_bar_context()),
+    //     )
+    //     .into_container()
+    //     // XXX both must be shrink to avoid flex layout from ignoring it
+    //     .width(iced::Length::Shrink)
+    //     .height(iced::Length::Shrink);
+
+    //     if !self.core().is_condensed() {
+    //         nav = nav.max_width(280);
+    //     }
+    //     Some(nav.into())
+    // }
 
     /// Called when a navigation item is selected.
     fn on_nav_select(
@@ -411,7 +434,6 @@ impl cosmic::Application for App {
 
     // Main window view
     fn view(&self) -> Element<Message> {
-        debug!("Main view");
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
 
@@ -422,13 +444,6 @@ impl cosmic::Application for App {
             } else {
                 0.0
             };
-
-        let video_pos = if let Some(video) = &self.presenter.video {
-            let range = video.position();
-            range.as_secs_f32()
-        } else {
-            0.0
-        };
 
         let video_button_icon =
             if let Some(video) = &self.presenter.video {
@@ -456,9 +471,7 @@ impl cosmic::Application for App {
         let slide_preview = column![
             Space::with_height(Length::Fill),
             Responsive::new(|size| {
-                debug!(?size);
                 let height = size.width * 9.0 / 16.0;
-                debug!(?height);
                 Container::new(
                     Container::new(
                         self.presenter
@@ -473,15 +486,18 @@ impl cosmic::Application for App {
             Container::new(if self.presenter.video.is_some() {
                 row![
                     video_button_icon,
-                    Container::new(slider(
-                        0.0..=video_range,
-                        video_pos,
-                        |pos| {
-                            Message::Present(
-                                presenter::Message::VideoPos(pos),
-                            )
-                        }
-                    ))
+                    Container::new(
+                        slider(
+                            0.0..=video_range,
+                            self.presenter.video_position,
+                            |pos| {
+                                Message::Present(
+                                    presenter::Message::VideoPos(pos),
+                                )
+                            }
+                        )
+                        .step(0.1)
+                    )
                     .center_x(Length::Fill)
                     .padding([7, 0, 0, 0])
                 ]

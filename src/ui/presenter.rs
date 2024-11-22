@@ -24,6 +24,7 @@ pub(crate) struct Presenter {
     pub current_slide: Slide,
     pub current_slide_index: u16,
     pub video: Option<Video>,
+    pub video_position: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +35,7 @@ pub(crate) enum Message {
     EndVideo,
     StartVideo,
     VideoPos(f32),
+    VideoFrame,
 }
 
 impl Presenter {
@@ -66,6 +68,7 @@ impl Presenter {
                     None
                 }
             },
+            video_position: 0.0,
         }
     }
 
@@ -147,6 +150,13 @@ impl Presenter {
                 }
                 Task::none()
             }
+            Message::VideoFrame => {
+                if let Some(video) = &self.video {
+                    self.video_position =
+                        video.position().as_secs_f32();
+                }
+                Task::none()
+            }
         }
     }
 
@@ -182,6 +192,7 @@ impl Presenter {
                             .width(Length::Fill)
                             .height(Length::Fill)
                             .on_end_of_stream(Message::EndVideo)
+                            .on_new_frame(Message::VideoFrame)
                             .content_fit(ContentFit::Cover),
                     )
                 } else {
