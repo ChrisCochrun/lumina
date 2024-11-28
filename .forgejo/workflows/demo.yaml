@@ -1,7 +1,7 @@
 on: [push]
 jobs:
   test:
-    runs-on: docker
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v3
