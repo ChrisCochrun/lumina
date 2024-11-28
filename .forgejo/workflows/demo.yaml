@@ -1,11 +1,15 @@
 on: [push]
 jobs:
   test:
-    runs-on: native
+    runs-on: docker
     steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
       - uses: https://git.madhouse-project.org/actions/nix/install@main
         with:
           install-url: "https://nixos.org/nix/install"
+
       - name: Run something in a development environment
         uses: https://git.madhouse-project.org/actions/nix/develop@main
         with:
