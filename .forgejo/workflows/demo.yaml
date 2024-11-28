@@ -14,3 +14,5 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - run: nix develop
+
+        -run: just build
