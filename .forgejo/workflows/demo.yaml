@@ -3,4 +3,4 @@ jobs:
   test:
     runs-on: docker
     steps:
-      - uses: https://git.madhouse-project.org/actions/nix/develop
+      - uses: https://git.madhouse-project.org/actions/nix/develop@main
