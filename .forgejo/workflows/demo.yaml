@@ -3,4 +3,13 @@ jobs:
   test:
     runs-on: native
     steps:
-      - uses: https://git.madhouse-project.org/actions/nix/develop@main
+      - uses: https://git.madhouse-project.org/actions/nix/install@main
+        with:
+          install-url: "https://nixos.org/nix/install"
+      - name: Run something in a development environment
+        uses: https://git.madhouse-project.org/actions/nix/develop@main
+        with:
+          flake: .
+          package: # no default, see above
+          run: |
+            # No default here, either!      
