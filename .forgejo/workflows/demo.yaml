@@ -13,6 +13,7 @@ jobs:
       - uses: https://github.com/cachix/install-nix-action@v27
         with:
           nix_path: nixpkgs=channel:nixos-unstable
+
       - run: nix develop
 
-        -run: just build
+      - run: just build
