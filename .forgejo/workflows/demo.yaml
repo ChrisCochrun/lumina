@@ -1,6 +1,6 @@
 on: [push]
 jobs:
   test:
-    runs-on: docker
+    runs-on: native
     steps:
       - uses: https://git.madhouse-project.org/actions/nix/develop@main
