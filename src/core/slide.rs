@@ -290,7 +290,7 @@ fn lisp_to_text(lisp: &Value) -> impl Into<String> {
     }
 }
 
-fn lisp_to_background(lisp: &Value) -> Background {
+pub fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {
             if let Some(source) = list.iter().position(|v| {

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use cosmic::{executor, iced::Executor};
+use crisp::types::{Keyword, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -8,6 +9,8 @@ use sqlx::{
     SqliteConnection,
 };
 use tracing::{debug, error};
+
+use crate::core::slide;
 
 use super::{
     model::Model,
@@ -89,6 +92,142 @@ impl FromRow<'_, SqliteRow> for Song {
             font_size: row.try_get(1)?,
         })
     }
+}
+
+impl From<Value> for Song {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::List(list) => lisp_to_song(list),
+            _ => Self::default(),
+        }
+    }
+}
+
+fn lisp_to_song(list: Vec<Value>) -> Song {
+    const DEFAULT_SONG_ID: i32 = 0;
+    const DEFAULT_SONG_LOCATION: usize = 0;
+
+    // I probably shouldn't rely upon default locations for these
+    // It's very unlikely that users of this method of song creation
+    // would use them in this order, so instead, since these items are all
+    // options, let's just treat them as if they don't exist if there isn't
+    // a keyword found in the list.
+    const DEFAULT_BACKGROUND_LOCATION: usize = 1;
+    let background_position = if let Some(background) =
+        list.iter().position(|v| {
+            v == &Value::Keyword(Keyword::from("background"))
+        }) {
+        background + 1
+    } else {
+        DEFAULT_BACKGROUND_LOCATION
+    };
+
+    let background =
+        if let Some(background) = list.get(background_position) {
+            Some(slide::lisp_to_background(background))
+        } else {
+            None
+        };
+
+    const DEFAULT_AUTHOR_LOCATION: usize = 1;
+    let author_position = if let Some(author) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("author")))
+    {
+        author + 1
+    } else {
+        DEFAULT_AUTHOR_LOCATION
+    };
+
+    let author = if let Some(author) = list.get(author_position) {
+        Some(String::from(author))
+    } else {
+        None
+    };
+
+    const DEFAULT_CCLI_LOCATION: usize = 1;
+    let ccli_position = if let Some(ccli) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
+    {
+        ccli + 1
+    } else {
+        DEFAULT_CCLI_LOCATION
+    };
+
+    let ccli = if let Some(ccli) = list.get(ccli_position) {
+        Some(i32::from(ccli))
+    } else {
+        None
+    };
+
+    const DEFAULT_FONT_LOCATION: usize = 1;
+    let font_position = if let Some(font) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("font")))
+    {
+        font + 1
+    } else {
+        DEFAULT_FONT_LOCATION
+    };
+
+    let font = if let Some(font) = list.get(font_position) {
+        Some(String::from(font))
+    } else {
+        None
+    };
+
+    const DEFAULT_FONT_SIZE_LOCATION: usize = 1;
+    let font_size_position = if let Some(font_size) =
+        list.iter().position(|v| {
+            v == &Value::Keyword(Keyword::from("font-size"))
+        }) {
+        font_size + 1
+    } else {
+        DEFAULT_FONT_SIZE_LOCATION
+    };
+
+    let font_size =
+        if let Some(font_size) = list.get(font_size_position) {
+            Some(i32::from(font_size))
+        } else {
+            None
+        };
+
+    const DEFAULT_TITLE_LOCATION: usize = 1;
+    let title_position = if let Some(title) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("title")))
+    {
+        title + 1
+    } else {
+        DEFAULT_TITLE_LOCATION
+    };
+
+    let title = if let Some(title) = list.get(title_position) {
+        String::from(title)
+    } else {
+        String::from("song")
+    };
+
+    const DEFAULT_VERSE_ORDER_LOCATION: usize = 1;
+    let verse_order_position = if let Some(verse_order) =
+        list.iter().position(|v| {
+            v == &Value::Keyword(Keyword::from("verse-order"))
+        }) {
+        verse_order + 1
+    } else {
+        DEFAULT_VERSE_ORDER_LOCATION
+    };
+
+    let verse_order =
+        if let Some(verse_order) = list.get(verse_order_position) {
+            Some(String::from(verse_order))
+        } else {
+            None
+        };
+
+    todo!()
 }
 
 pub async fn get_song_from_db(
