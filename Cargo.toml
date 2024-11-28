@@ -23,5 +23,5 @@ ron = "0.8.1"
 sqlx = { version = "0.8.2", features = ["sqlite"] }
 dirs = "5.0.1"
 tokio = "1.41.1"
-crisp = { path = "../crisp" }
+crisp = { git = "https://git.tfcconnection.org/chris/crisp" }
 

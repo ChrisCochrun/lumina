@@ -1251,6 +1251,7 @@ dependencies = [
 [[package]]
 name = "crisp"
 version = "0.1.0"
+source = "git+https://git.tfcconnection.org/chris/crisp#c3abe2fe48dc891322548d4fa900062772486bd3"
 dependencies = [
  "lazy_static",
  "miette",
