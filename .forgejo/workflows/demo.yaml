@@ -8,7 +8,7 @@ jobs:
 
       - run: | 
           apt update
-          apt install python3
+          apt install sudo
 
       - uses: https://github.com/cachix/install-nix-action@v27
         with:
