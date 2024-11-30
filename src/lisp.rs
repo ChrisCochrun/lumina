@@ -33,7 +33,7 @@ mod test {
     #[test]
     fn test_parsing_lisp() {
         let lisp =
-            read_to_string("./test_presentation.lisp").expect("oops");
+            read_to_string("./test_slides.lisp").expect("oops");
         let lisp_value = crisp::reader::read(&lisp);
         let test_vec = vec![test_slide(), test_second_slide()];
         match lisp_value {
