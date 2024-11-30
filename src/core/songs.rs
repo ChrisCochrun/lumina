@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use cosmic::{executor, iced::Executor};
-use crisp::types::{Keyword, Value};
+use crisp::types::{Keyword, Symbol, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -222,10 +222,66 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let verse_order =
         if let Some(verse_order) = list.get(verse_order_position) {
-            Some(String::from(verse_order))
+            match verse_order {
+                Value::List(vals) => Some(
+                    vals.into_iter()
+                        .map(|v| String::from(v))
+                        .collect::<Vec<String>>(),
+                ),
+                _ => None,
+            }
         } else {
             None
         };
+
+    let first_text_postiion = if let Some(pos) =
+        list.iter().position(|v| match v {
+            Value::List(inner) => match &inner[0] {
+                Value::Symbol(Symbol(text)) => {
+                    text.contains("v1")
+                        || text.contains("text")
+                        || text.contains("c1")
+                }
+                _ => false,
+            },
+            _ => false,
+        }) {
+        pos
+    } else {
+        1
+    };
+
+    let lyric_elements = &list[first_text_postiion..];
+
+    let mut lyric_list = if let Some(ref verse_order) = verse_order {
+        Vec::with_capacity(verse_order.capacity())
+    } else {
+        vec![]
+    };
+
+    for element in lyric_elements {
+        let Value::List(lyric) = element else {
+            continue;
+        };
+        let Value::Symbol(Symbol(verse)) = &lyric[0] else {
+            continue;
+        };
+
+        let lyric = String::from(&lyric[1]);
+        let Some(ref verse_order) = verse_order else {
+            lyric_list.push(lyric);
+            continue;
+        };
+
+        let Some(verse_pos) =
+            verse_order.iter().position(|v| v == verse)
+        else {
+            error!("Should be a verse here");
+            continue;
+        };
+
+        lyric_list.insert(verse_pos, lyric);
+    }
 
     todo!()
 }
