@@ -85,6 +85,11 @@
           defaultPackage = naersk'.buildPackage {
             src = ./.;
           };
+          packages = {
+            default = naersk'.buildPackage {
+              src = ./.;
+            };
+          };
         }
       );
 }
