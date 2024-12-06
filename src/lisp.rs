@@ -1,3 +1,5 @@
+use std::{fs::read_to_string, path::PathBuf};
+
 use crisp::types::{Symbol, Value};
 use tracing::error;
 
@@ -21,7 +23,20 @@ pub fn parse_lisp(value: Value) -> Vec<Slide> {
                 }
             }
             Value::Symbol(Symbol(s)) if s == "load" => {
-                vec![Slide::default()]
+                let Ok(path) = PathBuf::from(String::from(&vec[1]))
+                    .canonicalize()
+                else {
+                    return vec![Slide::default()];
+                };
+                let lisp = read_to_string(path).expect("oops");
+                let lisp_value = crisp::reader::read(&lisp);
+                match lisp_value {
+                    Value::List(value) => value
+                        .into_iter()
+                        .flat_map(|v| parse_lisp(v))
+                        .collect(),
+                    _ => panic!("Should not be"),
+                }
             }
             _ => todo!(),
         },
@@ -77,6 +92,8 @@ mod test {
                 assert_eq!(first_lisp_slide, &test_vec[0]);
                 assert_eq!(second_lisp_slide, &test_vec[1]);
                 assert_eq!(third_lisp_slide, &test_vec[2]);
+
+                assert_eq!(slide_vec, test_vec);
             }
             _ => panic!("this should be a lisp"),
         }
