@@ -8,3 +8,6 @@ clean:
     RUST_LOG=debug cargo clean
 test:
     RUST_LOG=debug cargo test --benches --tests --all-features -- --nocapture
+
+alias r := run
+alias c := clean

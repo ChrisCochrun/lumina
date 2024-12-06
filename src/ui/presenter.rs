@@ -2,10 +2,17 @@ use std::{path::PathBuf, rc::Rc, time::Duration};
 
 use cosmic::{
     dialog::ashpd::url::Url,
-    iced::{widget::text, Background, Color, ContentFit, Length},
+    iced::{
+        font::{Family, Stretch, Style, Weight},
+        widget::text,
+        Background, Color, ContentFit, Font, Length,
+    },
     iced_widget::stack,
     prelude::*,
-    widget::{container, image, Container, Row, Space},
+    widget::{
+        canvas::path::lyon_path::geom::euclid::num::Floor, container,
+        image, Container, Responsive, Row, Space,
+    },
     Task,
 };
 use iced_video_player::{Position, Video, VideoPlayer};
@@ -161,13 +168,31 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let font_size = if self.current_slide.font_size() > 0 {
-            self.current_slide.font_size() as u16
-        } else {
-            50
+        let family = Family::Name("Quicksand");
+        let weight = Weight::Normal;
+        let stretch = Stretch::Normal;
+        let style = Style::Normal;
+        let font = Font {
+            family,
+            weight,
+            stretch,
+            style,
         };
-        let text = text(self.current_slide.text()).size(font_size);
-        let text = Container::new(text).center(Length::Fill);
+        let text = Responsive::new(move |size| {
+            let font_size = if self.current_slide.font_size() > 0 {
+                (size.width / self.current_slide.font_size() as f32)
+                    * 3.0
+            } else {
+                50.0
+            };
+            debug!(size.width);
+            debug!(font_size);
+            let text = text(self.current_slide.text())
+                .size(font_size)
+                .font(font);
+            let text = Container::new(text).center(Length::Fill);
+            text.into()
+        });
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
@@ -223,12 +248,16 @@ impl Presenter {
         let text = text(slide.text()).size(font_size);
         let text = Container::new(text).center(Length::Fill);
         let container = match slide.background().kind {
-            crate::BackgroundKind::Image => Container::new(
-                image("/home/chris/pics/frodo.jpg")
-                    .content_fit(ContentFit::Cover)
-                    .width(Length::Fill)
-                    .height(Length::Fill),
-            ),
+            crate::BackgroundKind::Image => {
+                let path = slide.background().path.clone();
+
+                Container::new(
+                    image(path)
+                        .content_fit(ContentFit::Cover)
+                        .width(Length::Fill)
+                        .height(Length::Fill),
+                )
+            }
             crate::BackgroundKind::Video => {
                 Container::new(Space::new(Length::Fill, Length::Fill))
             }

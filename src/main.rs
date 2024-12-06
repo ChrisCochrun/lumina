@@ -550,6 +550,7 @@ impl cosmic::Application for App {
                     .slide_preview()
                     .map(|m| Message::Present(m))
             )
+            .width(Length::Fill)
             .center_y(100)
         ];
 
