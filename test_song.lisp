@@ -6,11 +6,90 @@
       :audio "file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3"
       :verse-order (i1 v1 v2 c1 v3 c1 v4 c1 b1 b1 e1 e2)
       (i1 "Death Was Arrested\nNorth Point Worship")
-      (c1 "Oh, Your grace so free,\nWashes over me\n\nYou have made me new,\nNow life begins with You\n\nIt's Your endless love,\nPouring down on us\n\nYou have made us new,\nNow life begins with You")
-      (b1 "Oh, we're free, free,\nForever we're free\n\nCome join the song\nOf all the redeemed\n\nYes, we're free, free,\nForever amen\n\nWhen death was arrested\nAnd my life began\n\nOh, we're free, free,\nForever we're free\n\nCome join the song\nOf all the redeemed\n\nYes, we're free, free,\nForever amen\n\nWhen death was arrested\nAnd my life began")
-      (e1 "When death was arrested\nAnd my life began\n\nThat's when death was arrested\nAnd my life began")
-      (e2 "")
-      (v1 "Alone in my sorrow\nAnd dead in my sin\n\nLost without hope\nWith no place to begin\n\nYour love made a way\nTo let mercy come in\n\nWhen death was arrested\nAnd my life began")
-      (v2 "Ash was redeemed\nOnly beauty remains\n\nMy orphan heart\nWas given a name\n\nMy mourning grew quiet,\nMy feet rose to dance\n\nWhen death was arrested\nAnd my life began")
-      (v3 "Released from my chains,\nI'm a prisoner no more\n\nMy shame was a ransom\nHe faithfully bore\n\nHe cancelled my debt and\nHe called me His friend\n\nWhen death was arrested\nAnd my life began")
-      (v4 "Our Savior displayed\nOn a criminal's cross\n\nDarkness rejoiced as though\nHeaven had lost\n\nBut then Jesus arose\nWith our freedom in hand\n\nThat's when death was arrested\nAnd my life began\n\nThat's when death was arrested\nAnd my life began"))
+      (v1 "Alone in my sorrow
+And dead in my sin
+
+Lost without hope
+With no place to begin
+
+Your love made a way
+To let mercy come in
+
+When death was arrested
+And my life began")
+      (v2 "Ash was redeemed
+Only beauty remains
+
+My orphan heart
+Was given a name
+
+My mourning grew quiet,
+My feet rose to dance
+
+When death was arrested
+And my life began")
+      (c1 "Oh, Your grace so free,
+Washes over me
+
+You have made me new,
+Now life begins with You
+
+It's Your endless love,
+Pouring down on us
+
+You have made us new,
+Now life begins with You")
+      (v3 "Released from my chains,
+I'm a prisoner no more
+
+My shame was a ransom
+He faithfully bore
+
+He cancelled my debt and
+He called me His friend
+
+When death was arrested
+And my life began")
+      (v4 "Our Savior displayed
+On a criminal's cross
+
+Darkness rejoiced as though
+Heaven had lost
+
+But then Jesus arose
+With our freedom in hand
+
+That's when death was arrested
+And my life began
+
+That's when death was arrested
+And my life began")
+      (b1 "Oh, we're free, free,
+Forever we're free
+
+Come join the song
+Of all the redeemed
+
+Yes, we're free, free,
+Forever amen
+
+When death was arrested
+And my life began
+
+Oh, we're free, free,
+Forever we're free
+
+Come join the song
+Of all the redeemed
+
+Yes, we're free, free,
+Forever amen
+
+When death was arrested
+And my life began")
+      (e1 "When death was arrested
+And my life began
+
+That's when death was arrested
+And my life began")
+      )

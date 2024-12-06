@@ -241,64 +241,49 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let mut lyrics = vec![];
 
-    if let Some(ref verse_order) = verse_order {
-        for verse in verse_order {
-            for element in lyric_elements {
-                let Value::List(lyric) = element else {
-                    continue;
-                };
-                let Value::Symbol(Symbol(lyric_verse)) = &lyric[0]
-                else {
-                    continue;
-                };
+    for element in lyric_elements {
+        let Value::List(lyric) = element else {
+            continue;
+        };
+        let Value::Symbol(Symbol(lyric_verse)) = &lyric[0] else {
+            continue;
+        };
 
-                let lyric = String::from(&lyric[1]);
+        let lyric = String::from(&lyric[1]);
 
-                println!("{lyric}");
+        let verse_title = match lyric_verse.as_str() {
+            "i1" => r#"\n\nIntro 1\n"#,
+            "i2" => r#"\n\nIntro 1\n"#,
+            "v1" => r#"\n\nVerse 1\n"#,
+            "v2" => r#"\n\nVerse 2\n"#,
+            "v3" => r#"\n\nVerse 3\n"#,
+            "v4" => r#"\n\nVerse 4\n"#,
+            "v5" => r#"\n\nVerse 5\n"#,
+            "c1" => r#"\n\nChorus 1\n"#,
+            "c2" => r#"\n\nChorus 2\n"#,
+            "c3" => r#"\n\nChorus 3\n"#,
+            "c4" => r#"\n\nChorus 4\n"#,
+            "b1" => r#"\n\nBridge 1\n"#,
+            "b2" => r#"\n\nBridge 2\n"#,
+            "e1" => r#"\n\nEnding 1\n"#,
+            "e2" => r#"\n\nEnding 2\n"#,
+            "o1" => r#"\n\nOther 1\n"#,
+            "o2" => r#"\n\nOther 2\n"#,
+            _ => "",
+        };
 
-                let verse_title = match lyric_verse.as_str() {
-                    "i1" => r#"\n\nIntro 1\n"#,
-                    "i2" => r#"\n\nIntro 1\n"#,
-                    "v1" => r#"\n\nVerse 1\n"#,
-                    "v2" => r#"\n\nVerse 2\n"#,
-                    "v3" => r#"\n\nVerse 3\n"#,
-                    "v4" => r#"\n\nVerse 4\n"#,
-                    "v5" => r#"\n\nVerse 5\n"#,
-                    "c1" => r#"\n\nChorus 1\n"#,
-                    "c2" => r#"\n\nChorus 2\n"#,
-                    "c3" => r#"\n\nChorus 3\n"#,
-                    "c4" => r#"\n\nChorus 4\n"#,
-                    "b1" => r#"\n\nBridge 1\n"#,
-                    "b2" => r#"\n\nBridge 2\n"#,
-                    "e1" => r#"\n\nEnding 1\n"#,
-                    "e2" => r#"\n\nEnding 2\n"#,
-                    "o1" => r#"\n\nOther 1\n"#,
-                    "o2" => r#"\n\nOther 2\n"#,
-                    _ => "",
-                };
-
-                let lyric = format!("{verse_title}{lyric}");
-                println!("{lyric}");
-                if &lyric_verse.to_uppercase() == verse {
-                    lyrics.push(lyric);
-                }
-            }
-        }
-    } else {
-        for element in lyric_elements {
-            let Value::List(lyric) = element else {
-                continue;
-            };
-            let lyric =
-                format!("{}{}", String::from(&lyric[1]), "\n");
-            lyrics.push(lyric);
-        }
+        let lyric = format!("{verse_title}{lyric}");
+        println!("lyric_final: {lyric}");
+        let lyric = lyric.replace(
+            "\\n", r#"
+"#,
+        );
+        lyrics.push(lyric);
     }
 
     let lyrics: String =
         lyrics.iter().flat_map(|s| s.chars()).collect();
-    let lyrics = lyrics.replace(r#"\"#, "\\");
-    let lyrics = lyrics.trim_start_matches("\\n\\n").to_string();
+    let lyrics = lyrics.trim_start().to_string();
 
     Song {
         id,
@@ -605,10 +590,10 @@ You saved my soul"
     #[test]
     pub fn test_lisp_conversion() {
         let value = test_lisp_song();
-        let song = Song::from(value);
+        let lisp_song = Song::from(value);
         let test_song = test_song();
-        println!("{}", test_song.lyrics.clone().unwrap());
-        println!("{}", song.lyrics.clone().unwrap());
-        assert_eq!(test_song, song);
+        println!("test_song: {}", test_song.lyrics.clone().unwrap());
+        println!("lisp_song: {}", lisp_song.lyrics.clone().unwrap());
+        assert_eq!(test_song, lisp_song);
     }
 }
