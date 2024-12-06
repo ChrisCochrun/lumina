@@ -27,7 +27,13 @@ pub enum TextAlignment {
 
 impl From<Value> for TextAlignment {
     fn from(value: Value) -> Self {
-        if value == Value::Symbol("middle-center".into()) {
+        Self::from(&value)
+    }
+}
+
+impl From<&Value> for TextAlignment {
+    fn from(value: &Value) -> Self {
+        if value == &Value::Symbol("center".into()) {
             Self::MiddleCenter
         } else {
             Self::TopCenter

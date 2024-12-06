@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use cosmic::{executor, iced::Executor};
 use crisp::types::{Keyword, Symbol, Value};
@@ -124,7 +124,6 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let background =
         if let Some(background) = list.get(background_position) {
-            dbg!(&background);
             Some(slide::lisp_to_background(background))
         } else {
             None
@@ -146,21 +145,38 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
         None
     };
 
-    const DEFAULT_CCLI_LOCATION: usize = 1;
-    let ccli_position = if let Some(ccli) = list
+    const DEFAULT_AUDIO_LOCATION: usize = 1;
+    let audio_position = if let Some(audio) = list
         .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
+        .position(|v| v == &Value::Keyword(Keyword::from("audio")))
     {
-        ccli + 1
+        audio + 1
     } else {
-        DEFAULT_CCLI_LOCATION
+        DEFAULT_AUDIO_LOCATION
     };
 
-    let ccli = if let Some(ccli) = list.get(ccli_position) {
-        Some(i32::from(ccli).to_string())
+    let audio = if let Some(audio) = list.get(audio_position) {
+        Some(PathBuf::from(String::from(audio)))
     } else {
         None
     };
+
+    const DEFAULT_CCLI_LOCATION: usize = 1;
+    let ccli = if let Some(ccli) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
+    {
+        let pos = ccli + 1;
+        list.get(pos).map(|c| i32::from(c).to_string())
+    } else {
+        None
+    };
+
+    // let ccli = if let Some(ccli) = list.get(ccli_position) {
+    //     Some(i32::from(ccli).to_string())
+    // } else {
+    //     None
+    // };
 
     const DEFAULT_FONT_LOCATION: usize = 1;
     let font_position = if let Some(font) = list
@@ -211,6 +227,24 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
         String::from("song")
     };
 
+    const DEFAULT_TEXT_ALIGNMENT_LOCATION: usize = 1;
+    let text_alignment_position = if let Some(text_alignment) =
+        list.iter().position(|v| {
+            v == &Value::Keyword(Keyword::from("text-alignment"))
+        }) {
+        text_alignment + 1
+    } else {
+        DEFAULT_TEXT_ALIGNMENT_LOCATION
+    };
+
+    let text_alignment = if let Some(text_alignment) =
+        list.get(text_alignment_position)
+    {
+        Some(TextAlignment::from(text_alignment))
+    } else {
+        Some(TextAlignment::TopCenter)
+    };
+
     const DEFAULT_VERSE_ORDER_LOCATION: usize = 1;
     let verse_order_position = if let Some(verse_order) =
         list.iter().position(|v| {
@@ -226,7 +260,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
             match verse_order {
                 Value::List(vals) => Some(
                     vals.into_iter()
-                        .map(|v| String::from(v))
+                        .map(|v| String::from(v).to_uppercase())
                         .collect::<Vec<String>>(),
                 ),
                 _ => None,
@@ -243,6 +277,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
                         text.contains("v1")
                             || text.contains("text")
                             || text.contains("c1")
+                            || text.contains("i1")
                     }
                     _ => false,
                 } && match &inner[1] {
@@ -261,42 +296,77 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let mut lyrics = vec![];
 
-    for element in lyric_elements {
-        let Value::List(lyric) = element else {
-            continue;
-        };
-        let Value::Symbol(Symbol(verse)) = &lyric[0] else {
-            continue;
-        };
+    if let Some(ref verse_order) = verse_order {
+        for verse in verse_order {
+            for element in lyric_elements {
+                let Value::List(lyric) = element else {
+                    continue;
+                };
+                let Value::Symbol(Symbol(lyric_verse)) = &lyric[0]
+                else {
+                    continue;
+                };
 
-        let lyric = format!("{}{}", String::from(&lyric[1]), "\n");
-        let Some(ref verse_order) = verse_order else {
+                let lyric = String::from(&lyric[1]);
+
+                println!("{lyric}");
+
+                let verse_title = match lyric_verse.as_str() {
+                    "i1" => r#"\n\nIntro 1\n"#,
+                    "i2" => r#"\n\nIntro 1\n"#,
+                    "v1" => r#"\n\nVerse 1\n"#,
+                    "v2" => r#"\n\nVerse 2\n"#,
+                    "v3" => r#"\n\nVerse 3\n"#,
+                    "v4" => r#"\n\nVerse 4\n"#,
+                    "v5" => r#"\n\nVerse 5\n"#,
+                    "c1" => r#"\n\nChorus 1\n"#,
+                    "c2" => r#"\n\nChorus 2\n"#,
+                    "c3" => r#"\n\nChorus 3\n"#,
+                    "c4" => r#"\n\nChorus 4\n"#,
+                    "b1" => r#"\n\nBridge 1\n"#,
+                    "b2" => r#"\n\nBridge 2\n"#,
+                    "e1" => r#"\n\nEnding 1\n"#,
+                    "e2" => r#"\n\nEnding 2\n"#,
+                    "o1" => r#"\n\nOther 1\n"#,
+                    "o2" => r#"\n\nOther 2\n"#,
+                    _ => "",
+                };
+
+                let lyric = format!("{verse_title}{lyric}");
+                println!("{lyric}");
+                if &lyric_verse.to_uppercase() == verse {
+                    lyrics.push(lyric);
+                }
+            }
+        }
+    } else {
+        for element in lyric_elements {
+            let Value::List(lyric) = element else {
+                continue;
+            };
+            let lyric =
+                format!("{}{}", String::from(&lyric[1]), "\n");
             lyrics.push(lyric);
-            continue;
-        };
-
-        let Some(verse_pos) =
-            verse_order.iter().position(|v| v == verse)
-        else {
-            error!("Should be a verse here");
-            continue;
-        };
-
-        lyrics.insert(verse_pos, lyric);
+        }
     }
 
-    let lyrics = lyrics.iter().flat_map(|s| s.chars()).collect();
+    let lyrics: String =
+        lyrics.iter().flat_map(|s| s.chars()).collect();
+    let lyrics = lyrics.replace(r#"\"#, "\\");
+    let lyrics = lyrics.trim_start_matches("\\n\\n").to_string();
 
     Song {
-        id: 0,
+        id: DEFAULT_SONG_ID,
         title,
         lyrics: Some(lyrics),
         author,
+        audio,
         ccli,
         verse_order,
         background,
         font,
         font_size,
+        text_alignment,
         ..Default::default()
     }
 }
@@ -592,6 +662,8 @@ You saved my soul"
         let value = test_lisp_song();
         let song = Song::from(value);
         let test_song = test_song();
+        println!("{}", test_song.lyrics.clone().unwrap());
+        println!("{}", song.lyrics.clone().unwrap());
         assert_eq!(test_song, song);
     }
 }
