@@ -124,6 +124,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let background =
         if let Some(background) = list.get(background_position) {
+            dbg!(&background);
             Some(slide::lisp_to_background(background))
         } else {
             None
@@ -156,7 +157,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
     };
 
     let ccli = if let Some(ccli) = list.get(ccli_position) {
-        Some(i32::from(ccli))
+        Some(i32::from(ccli).to_string())
     } else {
         None
     };
@@ -236,14 +237,19 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let first_text_postiion = if let Some(pos) =
         list.iter().position(|v| match v {
-            Value::List(inner) => match &inner[0] {
-                Value::Symbol(Symbol(text)) => {
-                    text.contains("v1")
-                        || text.contains("text")
-                        || text.contains("c1")
-                }
-                _ => false,
-            },
+            Value::List(inner) => {
+                (match &inner[0] {
+                    Value::Symbol(Symbol(text)) => {
+                        text.contains("v1")
+                            || text.contains("text")
+                            || text.contains("c1")
+                    }
+                    _ => false,
+                } && match &inner[1] {
+                    Value::String(_) => true,
+                    _ => false,
+                })
+            }
             _ => false,
         }) {
         pos
@@ -253,11 +259,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
 
     let lyric_elements = &list[first_text_postiion..];
 
-    let mut lyric_list = if let Some(ref verse_order) = verse_order {
-        Vec::with_capacity(verse_order.capacity())
-    } else {
-        vec![]
-    };
+    let mut lyrics = vec![];
 
     for element in lyric_elements {
         let Value::List(lyric) = element else {
@@ -267,9 +269,9 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
             continue;
         };
 
-        let lyric = String::from(&lyric[1]);
+        let lyric = format!("{}{}", String::from(&lyric[1]), "\n");
         let Some(ref verse_order) = verse_order else {
-            lyric_list.push(lyric);
+            lyrics.push(lyric);
             continue;
         };
 
@@ -280,10 +282,23 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
             continue;
         };
 
-        lyric_list.insert(verse_pos, lyric);
+        lyrics.insert(verse_pos, lyric);
     }
 
-    todo!()
+    let lyrics = lyrics.iter().flat_map(|s| s.chars()).collect();
+
+    Song {
+        id: 0,
+        title,
+        lyrics: Some(lyrics),
+        author,
+        ccli,
+        verse_order,
+        background,
+        font,
+        font_size,
+        ..Default::default()
+    }
 }
 
 pub async fn get_song_from_db(
@@ -399,6 +414,8 @@ impl Song {
 
 #[cfg(test)]
 mod test {
+    use std::fs::read_to_string;
+
     use super::*;
     use pretty_assertions::{assert_eq, assert_ne};
 
@@ -559,5 +576,21 @@ You saved my soul"
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(60)
         }
+    }
+
+    fn test_lisp_song() -> Value {
+        let lisp = read_to_string("./test_song.lisp").expect("oops");
+        let lisp_value = crisp::reader::read(&lisp);
+        match lisp_value {
+            Value::List(v) => v.get(0).unwrap().clone(),
+            _ => Value::Nil,
+        }
+    }
+
+    #[test]
+    pub fn test_lisp_conversion() {
+        let value = test_lisp_song();
+        let song = Song::from(value);
+        assert!(false, "{:?}", song);
     }
 }

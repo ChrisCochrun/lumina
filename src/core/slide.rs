@@ -53,25 +53,31 @@ impl TryFrom<String> for Background {
 impl TryFrom<PathBuf> for Background {
     type Error = ParseError;
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        if let Ok(value) = value.canonicalize() {
-            let extension = value
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-            match extension {
-                "jpg" | "png" | "webp" | "html" => Ok(Self {
-                    path: value,
-                    kind: BackgroundKind::Image,
-                }),
-                "mp4" | "mkv" | "webm" => Ok(Self {
-                    path: value,
-                    kind: BackgroundKind::Video,
-                }),
-                _ => Err(ParseError::NonBackgroundFile),
+        match value.canonicalize() {
+            Ok(value) => {
+                let extension = value
+                    .extension()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or_default();
+                match extension {
+                    "jpeg" | "jpg" | "png" | "webp" | "html" => {
+                        Ok(Self {
+                            path: value,
+                            kind: BackgroundKind::Image,
+                        })
+                    }
+                    "mp4" | "mkv" | "webm" => Ok(Self {
+                        path: value,
+                        kind: BackgroundKind::Video,
+                    }),
+                    _ => Err(ParseError::NonBackgroundFile),
+                }
             }
-        } else {
-            Err(ParseError::CannotCanonicalize)
+            Err(e) => {
+                error!("Couldn't canonicalize: {e}");
+                Err(ParseError::CannotCanonicalize)
+            }
         }
     }
 }
@@ -80,7 +86,7 @@ impl TryFrom<&str> for Background {
     type Error = ParseError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = value.trim_start_matches("file://");
-        if value.contains("~") {
+        if value.starts_with("~") {
             if let Some(home) = dirs::home_dir() {
                 if let Some(home) = home.to_str() {
                     let value = value.replace("~", home);
@@ -91,6 +97,8 @@ impl TryFrom<&str> for Background {
             } else {
                 Self::try_from(PathBuf::from(value))
             }
+        } else if value.starts_with("./") {
+            Err(ParseError::CannotCanonicalize)
         } else {
             Self::try_from(PathBuf::from(value))
         }
@@ -290,22 +298,49 @@ fn lisp_to_text(lisp: &Value) -> impl Into<String> {
     }
 }
 
+// Need to return a Result here so that we can propogate
+// errors and then handle them appropriately
 pub fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {
+            let kind = list[0].clone();
             if let Some(source) = list.iter().position(|v| {
                 v == &Value::Keyword(Keyword::from("source"))
             }) {
                 let source = &list[source + 1];
                 match source {
                     Value::String(s) => {
-                        match Background::try_from(s.as_str()) {
-                            Ok(background) => background,
-                            Err(e) => {
-                                error!(
-                                    "Couldn't load background: {e}"
-                                );
-                                Background::default()
+                        if s.starts_with("./") {
+                            let Some(home) = dirs::home_dir() else {
+                                panic!("Should always be there");
+                            };
+                            let Some(home) = home.to_str() else {
+                                panic!("Should always be there");
+                            };
+                            let mut home = home.to_string();
+                            home.push_str("/");
+
+                            let s = s.replace("./", &home);
+                            dbg!(&s);
+                            match Background::try_from(s.as_str()) {
+                                Ok(background) => background,
+                                Err(e) => {
+                                    dbg!(&e);
+                                    error!(
+                                        "Couldn't load background: {e}"
+                                    );
+                                    Background::default()
+                                }
+                            }
+                        } else {
+                            match Background::try_from(s.as_str()) {
+                                Ok(background) => background,
+                                Err(e) => {
+                                    error!(
+                                        "Couldn't load background: {e}"
+                                    );
+                                    Background::default()
+                                }
                             }
                         }
                     }
