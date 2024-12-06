@@ -591,6 +591,7 @@ You saved my soul"
     pub fn test_lisp_conversion() {
         let value = test_lisp_song();
         let song = Song::from(value);
-        assert!(false, "{:?}", song);
+        let test_song = test_song();
+        assert_eq!(test_song, song);
     }
 }
