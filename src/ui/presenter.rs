@@ -168,7 +168,7 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let family = Family::Name("Quicksand");
+        let family = Family::Name("VictorMono Nerd Font");
         let weight = Weight::Normal;
         let stretch = Stretch::Normal;
         let style = Style::Normal;
