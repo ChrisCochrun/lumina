@@ -107,167 +107,112 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
     const DEFAULT_SONG_ID: i32 = 0;
     const DEFAULT_SONG_LOCATION: usize = 0;
 
-    // I probably shouldn't rely upon default locations for these
-    // It's very unlikely that users of this method of song creation
-    // would use them in this order, so instead, since these items are all
-    // options, let's just treat them as if they don't exist if there isn't
-    // a keyword found in the list.
-    const DEFAULT_BACKGROUND_LOCATION: usize = 1;
-    let background_position = if let Some(background) =
+    let id = if let Some(key_pos) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("id")))
+    {
+        let pos = key_pos + 1;
+        list.get(pos).map(|c| i32::from(c)).unwrap_or_default()
+    } else {
+        DEFAULT_SONG_ID
+    };
+
+    let background = if let Some(key_pos) =
         list.iter().position(|v| {
             v == &Value::Keyword(Keyword::from("background"))
         }) {
-        background + 1
+        let pos = key_pos + 1;
+        list.get(pos).map(|b| slide::lisp_to_background(b))
     } else {
-        DEFAULT_BACKGROUND_LOCATION
+        None
     };
 
-    let background =
-        if let Some(background) = list.get(background_position) {
-            Some(slide::lisp_to_background(background))
-        } else {
-            None
-        };
-
-    const DEFAULT_AUTHOR_LOCATION: usize = 1;
-    let author_position = if let Some(author) = list
+    let author = if let Some(key_pos) = list
         .iter()
         .position(|v| v == &Value::Keyword(Keyword::from("author")))
     {
-        author + 1
-    } else {
-        DEFAULT_AUTHOR_LOCATION
-    };
-
-    let author = if let Some(author) = list.get(author_position) {
-        Some(String::from(author))
+        let pos = key_pos + 1;
+        list.get(pos).map(|a| String::from(a))
     } else {
         None
     };
 
-    const DEFAULT_AUDIO_LOCATION: usize = 1;
-    let audio_position = if let Some(audio) = list
+    let audio = if let Some(key_pos) = list
         .iter()
         .position(|v| v == &Value::Keyword(Keyword::from("audio")))
     {
-        audio + 1
-    } else {
-        DEFAULT_AUDIO_LOCATION
-    };
-
-    let audio = if let Some(audio) = list.get(audio_position) {
-        Some(PathBuf::from(String::from(audio)))
+        let pos = key_pos + 1;
+        list.get(pos).map(|a| PathBuf::from(String::from(a)))
     } else {
         None
     };
 
-    const DEFAULT_CCLI_LOCATION: usize = 1;
-    let ccli = if let Some(ccli) = list
+    let ccli = if let Some(key_pos) = list
         .iter()
         .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
     {
-        let pos = ccli + 1;
+        let pos = key_pos + 1;
         list.get(pos).map(|c| i32::from(c).to_string())
     } else {
         None
     };
 
-    // let ccli = if let Some(ccli) = list.get(ccli_position) {
-    //     Some(i32::from(ccli).to_string())
-    // } else {
-    //     None
-    // };
-
-    const DEFAULT_FONT_LOCATION: usize = 1;
-    let font_position = if let Some(font) = list
+    let font = if let Some(key_pos) = list
         .iter()
         .position(|v| v == &Value::Keyword(Keyword::from("font")))
     {
-        font + 1
-    } else {
-        DEFAULT_FONT_LOCATION
-    };
-
-    let font = if let Some(font) = list.get(font_position) {
-        Some(String::from(font))
+        let pos = key_pos + 1;
+        list.get(pos).map(|f| String::from(f))
     } else {
         None
     };
 
-    const DEFAULT_FONT_SIZE_LOCATION: usize = 1;
-    let font_size_position = if let Some(font_size) =
-        list.iter().position(|v| {
-            v == &Value::Keyword(Keyword::from("font-size"))
-        }) {
-        font_size + 1
+    let font_size = if let Some(key_pos) = list.iter().position(|v| {
+        v == &Value::Keyword(Keyword::from("font-size"))
+    }) {
+        let pos = key_pos + 1;
+        list.get(pos).map(|f| i32::from(f))
     } else {
-        DEFAULT_FONT_SIZE_LOCATION
+        None
     };
 
-    let font_size =
-        if let Some(font_size) = list.get(font_size_position) {
-            Some(i32::from(font_size))
-        } else {
-            None
-        };
-
-    const DEFAULT_TITLE_LOCATION: usize = 1;
-    let title_position = if let Some(title) = list
+    let title = if let Some(key_pos) = list
         .iter()
         .position(|v| v == &Value::Keyword(Keyword::from("title")))
     {
-        title + 1
-    } else {
-        DEFAULT_TITLE_LOCATION
-    };
-
-    let title = if let Some(title) = list.get(title_position) {
-        String::from(title)
+        let pos = key_pos + 1;
+        list.get(pos)
+            .map(|t| String::from(t))
+            .unwrap_or(String::from("song"))
     } else {
         String::from("song")
     };
 
-    const DEFAULT_TEXT_ALIGNMENT_LOCATION: usize = 1;
-    let text_alignment_position = if let Some(text_alignment) =
+    let text_alignment = if let Some(key_pos) =
         list.iter().position(|v| {
             v == &Value::Keyword(Keyword::from("text-alignment"))
         }) {
-        text_alignment + 1
+        let pos = key_pos + 1;
+        list.get(pos).map(|t| TextAlignment::from(t))
     } else {
-        DEFAULT_TEXT_ALIGNMENT_LOCATION
+        None
     };
 
-    let text_alignment = if let Some(text_alignment) =
-        list.get(text_alignment_position)
-    {
-        Some(TextAlignment::from(text_alignment))
-    } else {
-        Some(TextAlignment::TopCenter)
-    };
-
-    const DEFAULT_VERSE_ORDER_LOCATION: usize = 1;
-    let verse_order_position = if let Some(verse_order) =
+    let verse_order = if let Some(key_pos) =
         list.iter().position(|v| {
             v == &Value::Keyword(Keyword::from("verse-order"))
         }) {
-        verse_order + 1
+        let pos = key_pos + 1;
+        list.get(pos).map(|v| match v {
+            Value::List(vals) => vals
+                .into_iter()
+                .map(|v| String::from(v).to_uppercase())
+                .collect::<Vec<String>>(),
+            _ => vec![],
+        })
     } else {
-        DEFAULT_VERSE_ORDER_LOCATION
+        None
     };
-
-    let verse_order =
-        if let Some(verse_order) = list.get(verse_order_position) {
-            match verse_order {
-                Value::List(vals) => Some(
-                    vals.into_iter()
-                        .map(|v| String::from(v).to_uppercase())
-                        .collect::<Vec<String>>(),
-                ),
-                _ => None,
-            }
-        } else {
-            None
-        };
 
     let first_text_postiion = if let Some(pos) =
         list.iter().position(|v| match v {
@@ -356,7 +301,7 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
     let lyrics = lyrics.trim_start_matches("\\n\\n").to_string();
 
     Song {
-        id: DEFAULT_SONG_ID,
+        id,
         title,
         lyrics: Some(lyrics),
         author,
