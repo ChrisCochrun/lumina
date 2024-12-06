@@ -103,7 +103,7 @@ impl From<Value> for Song {
     }
 }
 
-fn lisp_to_song(list: Vec<Value>) -> Song {
+pub fn lisp_to_song(list: Vec<Value>) -> Song {
     const DEFAULT_SONG_ID: i32 = 0;
     const DEFAULT_SONG_LOCATION: usize = 0;
 
@@ -273,7 +273,6 @@ fn lisp_to_song(list: Vec<Value>) -> Song {
         };
 
         let lyric = format!("{verse_title}{lyric}");
-        println!("lyric_final: {lyric}");
         let lyric = lyric.replace(
             "\\n", r#"
 "#,
@@ -592,8 +591,6 @@ You saved my soul"
         let value = test_lisp_song();
         let lisp_song = Song::from(value);
         let test_song = test_song();
-        println!("test_song: {}", test_song.lyrics.clone().unwrap());
-        println!("lisp_song: {}", lisp_song.lyrics.clone().unwrap());
         assert_eq!(test_song, lisp_song);
     }
 }

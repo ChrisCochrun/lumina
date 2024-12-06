@@ -91,5 +91,4 @@ And my life began")
 And my life began
 
 That's when death was arrested
-And my life began")
-      )
+And my life began"))

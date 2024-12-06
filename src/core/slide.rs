@@ -9,6 +9,8 @@ use std::{
 };
 use tracing::error;
 
+use super::songs::Song;
+
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
 )]
@@ -174,6 +176,7 @@ pub struct Slide {
     font: String,
     font_size: i32,
     text_alignment: TextAlignment,
+    audio: Option<PathBuf>,
     video_loop: bool,
     video_start_time: f32,
     video_end_time: f32,
@@ -199,10 +202,42 @@ impl Slide {
     pub fn video_loop(&self) -> bool {
         self.video_loop
     }
+
+    pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
+        let lyrics = song.get_lyrics()?;
+        let slides: Vec<Slide> = lyrics
+            .iter()
+            .map(|l| {
+                let song = song.clone();
+                SlideBuilder::new()
+                    .background(song.background.unwrap_or_default())
+                    .font(song.font.unwrap_or_default())
+                    .font_size(song.font_size.unwrap_or_default())
+                    .text_alignment(
+                        song.text_alignment.unwrap_or_default(),
+                    )
+                    .audio(song.audio.unwrap_or_default())
+                    .video_loop(true)
+                    .video_start_time(0.0)
+                    .video_end_time(0.0)
+                    .text(l)
+                    .build()
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        Ok(slides)
+    }
 }
 
 impl From<Value> for Slide {
     fn from(value: Value) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl From<&Value> for Slide {
+    fn from(value: &Value) -> Self {
         match value {
             Value::List(list) => lisp_to_slide(list),
             _ => Slide::default(),
@@ -210,7 +245,7 @@ impl From<Value> for Slide {
     }
 }
 
-fn lisp_to_slide(lisp: Vec<Value>) -> Slide {
+fn lisp_to_slide(lisp: &Vec<Value>) -> Slide {
     const DEFAULT_BACKGROUND_LOCATION: usize = 1;
     const DEFAULT_TEXT_LOCATION: usize = 0;
 
@@ -327,11 +362,9 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
                             home.push_str("/");
 
                             let s = s.replace("./", &home);
-                            dbg!(&s);
                             match Background::try_from(s.as_str()) {
                                 Ok(background) => background,
                                 Err(e) => {
-                                    dbg!(&e);
                                     error!(
                                         "Couldn't load background: {e}"
                                     );
@@ -368,6 +401,7 @@ pub struct SlideBuilder {
     text: Option<String>,
     font: Option<String>,
     font_size: Option<i32>,
+    audio: Option<PathBuf>,
     text_alignment: Option<TextAlignment>,
     video_loop: Option<bool>,
     video_start_time: Option<f32>,
@@ -398,6 +432,11 @@ impl SlideBuilder {
 
     pub(crate) fn text(mut self, text: impl Into<String>) -> Self {
         let _ = self.text.insert(text.into());
+        self
+    }
+
+    pub(crate) fn audio(mut self, audio: impl Into<PathBuf>) -> Self {
+        let _ = self.audio.insert(audio.into());
         self
     }
 
@@ -471,6 +510,7 @@ impl SlideBuilder {
             font,
             font_size,
             text_alignment,
+            audio: self.audio,
             video_loop,
             video_start_time,
             video_end_time,
