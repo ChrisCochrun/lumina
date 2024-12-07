@@ -1,21 +1,22 @@
-use std::{path::PathBuf, rc::Rc, time::Duration};
+use std::time::Duration;
 
 use cosmic::{
     dialog::ashpd::url::Url,
     iced::{
         font::{Family, Stretch, Style, Weight},
         widget::text,
-        Background, Color, ContentFit, Font, Length,
+        Background, Border, Color, ContentFit, Font, Length, Shadow,
+        Vector,
     },
     iced_widget::{
         scrollable::{Direction, Scrollbar},
         stack,
     },
     prelude::*,
+    theme::CosmicTheme,
     widget::{
-        canvas::path::lyon_path::geom::euclid::num::Floor, container,
-        image, mouse_area, responsive, scrollable, Container,
-        Responsive, Row, Space,
+        container, image, mouse_area, responsive, scrollable,
+        Container, Responsive, Row, Space,
     },
     Task,
 };
@@ -36,6 +37,7 @@ pub(crate) struct Presenter {
     pub current_slide_index: u16,
     pub video: Option<Video>,
     pub video_position: f32,
+    hovered_slide: i32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +49,7 @@ pub(crate) enum Message {
     StartVideo,
     VideoPos(f32),
     VideoFrame,
+    HoverDelegate(i32),
 }
 
 impl Presenter {
@@ -80,6 +83,7 @@ impl Presenter {
                 }
             },
             video_position: 0.0,
+            hovered_slide: -1,
         }
     }
 
@@ -167,6 +171,10 @@ impl Presenter {
                 }
                 Task::none()
             }
+            Message::HoverDelegate(slide) => {
+                self.hovered_slide = slide;
+                Task::none()
+            }
         }
     }
 
@@ -198,26 +206,26 @@ impl Presenter {
                         Color::BLACK,
                     ))
                 })
-                .width(Length::Fill)
-                .height(Length::Fill);
+                .width(size.width)
+                .height(size.height);
             let container = match self.current_slide.background().kind
             {
-                crate::BackgroundKind::Image => {
+                BackgroundKind::Image => {
                     let path =
                         self.current_slide.background().path.clone();
                     Container::new(
                         image(path)
                             .content_fit(ContentFit::Cover)
-                            .width(Length::Fill)
-                            .height(Length::Fill),
+                            .width(size.width)
+                            .height(size.height),
                     )
                 }
-                crate::BackgroundKind::Video => {
+                BackgroundKind::Video => {
                     if let Some(video) = &self.video {
                         Container::new(
                             VideoPlayer::new(video)
-                                .width(Length::Fill)
-                                .height(Length::Fill)
+                                .width(size.width)
+                                .height(size.height)
                                 .on_end_of_stream(Message::EndVideo)
                                 .on_new_frame(Message::VideoFrame)
                                 .content_fit(ContentFit::Cover),
@@ -241,7 +249,7 @@ impl Presenter {
             items.push(self.slide_delegate(slide));
         }
         let row =
-            scrollable(Row::from_vec(items).spacing(10).padding(10))
+            scrollable(Row::from_vec(items).spacing(10).padding(15))
                 .direction(Direction::Horizontal(Scrollbar::new()))
                 .height(Length::Fill)
                 .width(Length::Fill);
@@ -262,6 +270,9 @@ impl Presenter {
             stretch,
             style,
         };
+        let slide_id =
+            self.slides.iter().position(|s| s == slide).unwrap()
+                as i32;
         let text = Responsive::new(move |size| {
             let font_size = if slide.font_size() > 0 {
                 (size.width / slide.font_size() as f32) * 3.0
@@ -273,26 +284,23 @@ impl Presenter {
             text.into()
         });
         let container = match slide.background().kind {
-            crate::BackgroundKind::Image => {
+            BackgroundKind::Image => {
                 let path = slide.background().path.clone();
 
                 Container::new(
                     image(path)
                         .content_fit(ContentFit::Contain)
-                        .width(Length::Fill)
-                        .height(Length::Fill),
+                        .border_radius([10.0; 4]),
                 )
             }
-            crate::BackgroundKind::Video => {
-                Container::new(Space::new(0, 0))
-                    .style(|_| {
-                        container::background(Background::Color(
-                            Color::BLACK,
-                        ))
-                    })
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-            }
+            BackgroundKind::Video => Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(Background::Color(
+                        Color::BLACK,
+                    ))
+                })
+                .width(Length::Fill)
+                .height(Length::Fill),
         };
         let delegate = mouse_area(
             Container::new(
@@ -300,10 +308,41 @@ impl Presenter {
                     .width(Length::Fill)
                     .height(Length::Fill),
             )
+            .style(move |_| {
+                let theme = cosmic::iced::Theme::Dark;
+                let hovered = self.hovered_slide == slide_id;
+                container::Style {
+                    background: Some(Background::Color(
+                        theme.palette().background,
+                    )),
+                    shadow: Shadow {
+                        color: Color::BLACK,
+                        offset: {
+                            if hovered {
+                                Vector::new(5.0, 5.0)
+                            } else {
+                                Vector::new(0.0, 0.0)
+                            }
+                        },
+                        blur_radius: {
+                            if hovered {
+                                10.0
+                            } else {
+                                0.0
+                            }
+                        },
+                    },
+                    border: Border::default().rounded(10.0),
+                    ..Default::default()
+                }
+            })
+            .center_x(100.0 * 16.0 / 9.0)
             .height(100)
-            .width(100.0 * 16.0 / 9.0)
             .padding(10),
         )
+        .interaction(cosmic::iced::mouse::Interaction::Pointer)
+        .on_enter(Message::HoverDelegate(slide_id))
+        .on_exit(Message::HoverDelegate(-1))
         .on_press({
             let id =
                 self.slides.iter().position(|s| s == slide).unwrap();

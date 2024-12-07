@@ -543,7 +543,7 @@ impl cosmic::Application for App {
             )
             .clip(true)
             .width(Length::Fill)
-            .center_y(120)
+            .center_y(130)
         ];
 
         let element: Element<Message> = column.into();
