@@ -7,11 +7,15 @@ use cosmic::{
         widget::text,
         Background, Color, ContentFit, Font, Length,
     },
-    iced_widget::stack,
+    iced_widget::{
+        scrollable::{Direction, Scrollbar},
+        stack,
+    },
     prelude::*,
     widget::{
         canvas::path::lyon_path::geom::euclid::num::Floor, container,
-        image, Container, Responsive, Row, Space,
+        image, mouse_area, scrollable, Container, Responsive, Row,
+        Space,
     },
     Task,
 };
@@ -92,9 +96,8 @@ impl Presenter {
                     debug!("no more slides");
                     return Task::none();
                 }
-                self.current_slide_index += 1;
                 self.update(Message::SlideChange(
-                    self.current_slide_index,
+                    self.current_slide_index + 1,
                 ))
             }
             Message::PrevSlide => {
@@ -103,13 +106,13 @@ impl Presenter {
                     debug!("beginning slides");
                     return Task::none();
                 }
-                self.current_slide_index -= 1;
                 self.update(Message::SlideChange(
-                    self.current_slide_index,
+                    self.current_slide_index - 1,
                 ))
             }
             Message::SlideChange(id) => {
                 debug!(id, "slide changed");
+                self.current_slide_index = id;
                 if let Some(slide) = self.slides.get(id as usize) {
                     self.current_slide = slide.clone();
                 }
@@ -185,8 +188,6 @@ impl Presenter {
             } else {
                 50.0
             };
-            debug!(size.width);
-            debug!(font_size);
             let text = text(self.current_slide.text())
                 .size(font_size)
                 .font(font);
@@ -234,12 +235,17 @@ impl Presenter {
     pub fn slide_preview(&self) -> Element<Message> {
         let mut items = vec![];
         for slide in self.slides.iter() {
-            items.push(Self::slide_delegate(slide));
+            items.push(self.slide_delegate(slide));
         }
-        Row::from_vec(items).spacing(10).padding(10).into()
+        let row =
+            scrollable(Row::from_vec(items).spacing(10).padding(10))
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .height(Length::Fill)
+                .width(Length::Fill);
+        row.into()
     }
 
-    fn slide_delegate(slide: &Slide) -> Element<Message> {
+    fn slide_delegate(&self, slide: &Slide) -> Element<Message> {
         let font_size = if slide.font_size() > 0 {
             slide.font_size() as u16
         } else {
@@ -262,13 +268,23 @@ impl Presenter {
                 Container::new(Space::new(Length::Fill, Length::Fill))
             }
         };
-        Container::new(
-            stack!(container.center(Length::Fill), text)
-                .width(Length::Fill)
-                .height(Length::Fill),
+        let delegate = mouse_area(
+            Container::new(
+                stack!(container.center(Length::Fill), text)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            )
+            .center(Length::Fill)
+            .height(100)
+            .width(100)
+            .padding(10),
         )
-        .padding(10)
-        .into()
+        .on_press({
+            let id =
+                self.slides.iter().position(|s| s == slide).unwrap();
+            Message::SlideChange(id as u16)
+        });
+        delegate.into()
     }
 
     fn reset_video(&mut self) {
