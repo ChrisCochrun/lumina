@@ -14,8 +14,8 @@ use cosmic::{
     prelude::*,
     widget::{
         canvas::path::lyon_path::geom::euclid::num::Floor, container,
-        image, mouse_area, scrollable, Container, Responsive, Row,
-        Space,
+        image, mouse_area, responsive, scrollable, Container,
+        Responsive, Row, Space,
     },
     Task,
 };
@@ -171,17 +171,17 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let family = Family::Name("VictorMono Nerd Font");
-        let weight = Weight::Normal;
-        let stretch = Stretch::Normal;
-        let style = Style::Normal;
-        let font = Font {
-            family,
-            weight,
-            stretch,
-            style,
-        };
-        let text = Responsive::new(move |size| {
+        responsive(|size| {
+            let family = Family::Name("VictorMono Nerd Font");
+            let weight = Weight::Normal;
+            let stretch = Stretch::Normal;
+            let style = Style::Normal;
+            let font = Font {
+                family,
+                weight,
+                stretch,
+                style,
+            };
             let font_size = if self.current_slide.font_size() > 0 {
                 (size.width / self.current_slide.font_size() as f32)
                     * 3.0
@@ -192,44 +192,47 @@ impl Presenter {
                 .size(font_size)
                 .font(font);
             let text = Container::new(text).center(Length::Fill);
-            text.into()
-        });
-        let black = Container::new(Space::new(0, 0))
-            .style(|_| {
-                container::background(Background::Color(Color::BLACK))
-            })
-            .width(Length::Fill)
-            .height(Length::Fill);
-        let container = match self.current_slide.background().kind {
-            crate::BackgroundKind::Image => {
-                let path =
-                    self.current_slide.background().path.clone();
-                Container::new(
-                    image(path)
-                        .content_fit(ContentFit::Contain)
-                        .width(Length::Fill)
-                        .height(Length::Fill),
-                )
-            }
-            crate::BackgroundKind::Video => {
-                if let Some(video) = &self.video {
+            let black = Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(Background::Color(
+                        Color::BLACK,
+                    ))
+                })
+                .width(Length::Fill)
+                .height(Length::Fill);
+            let container = match self.current_slide.background().kind
+            {
+                crate::BackgroundKind::Image => {
+                    let path =
+                        self.current_slide.background().path.clone();
                     Container::new(
-                        VideoPlayer::new(video)
+                        image(path)
+                            .content_fit(ContentFit::Cover)
                             .width(Length::Fill)
-                            .height(Length::Fill)
-                            .on_end_of_stream(Message::EndVideo)
-                            .on_new_frame(Message::VideoFrame)
-                            .content_fit(ContentFit::Cover),
+                            .height(Length::Fill),
                     )
-                } else {
-                    Container::new(Space::new(0, 0))
                 }
-            }
-        };
-        stack!(black, container.center(Length::Fill), text)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+                crate::BackgroundKind::Video => {
+                    if let Some(video) = &self.video {
+                        Container::new(
+                            VideoPlayer::new(video)
+                                .width(Length::Fill)
+                                .height(Length::Fill)
+                                .on_end_of_stream(Message::EndVideo)
+                                .on_new_frame(Message::VideoFrame)
+                                .content_fit(ContentFit::Cover),
+                        )
+                    } else {
+                        Container::new(Space::new(0, 0))
+                    }
+                }
+            };
+            stack!(black, container.center(Length::Fill), text)
+                .width(size.width)
+                .height(size.width * 9.0 / 16.0)
+                .into()
+        })
+        .into()
     }
 
     pub fn slide_preview(&self) -> Element<Message> {
@@ -245,27 +248,50 @@ impl Presenter {
         row.into()
     }
 
-    fn slide_delegate(&self, slide: &Slide) -> Element<Message> {
-        let font_size = if slide.font_size() > 0 {
-            slide.font_size() as u16
-        } else {
-            50
+    fn slide_delegate<'a>(
+        &'a self,
+        slide: &'a Slide,
+    ) -> Element<'a, Message> {
+        let family = Family::Name("VictorMono Nerd Font");
+        let weight = Weight::Normal;
+        let stretch = Stretch::Normal;
+        let style = Style::Normal;
+        let font = Font {
+            family,
+            weight,
+            stretch,
+            style,
         };
-        let text = text(slide.text()).size(font_size);
-        let text = Container::new(text).center(Length::Fill);
+        let text = Responsive::new(move |size| {
+            let font_size = if slide.font_size() > 0 {
+                (size.width / slide.font_size() as f32) * 3.0
+            } else {
+                50.0
+            };
+            let text = text(slide.text()).size(font_size).font(font);
+            let text = Container::new(text).center(Length::Fill);
+            text.into()
+        });
         let container = match slide.background().kind {
             crate::BackgroundKind::Image => {
                 let path = slide.background().path.clone();
 
                 Container::new(
                     image(path)
-                        .content_fit(ContentFit::Cover)
+                        .content_fit(ContentFit::Contain)
                         .width(Length::Fill)
                         .height(Length::Fill),
                 )
             }
             crate::BackgroundKind::Video => {
-                Container::new(Space::new(Length::Fill, Length::Fill))
+                Container::new(Space::new(0, 0))
+                    .style(|_| {
+                        container::background(Background::Color(
+                            Color::BLACK,
+                        ))
+                    })
+                    .width(Length::Fill)
+                    .height(Length::Fill)
             }
         };
         let delegate = mouse_area(
@@ -274,9 +300,8 @@ impl Presenter {
                     .width(Length::Fill)
                     .height(Length::Fill),
             )
-            .center(Length::Fill)
             .height(100)
-            .width(100)
+            .width(100.0 * 16.0 / 9.0)
             .padding(10),
         )
         .on_press({

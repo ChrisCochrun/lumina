@@ -470,19 +470,10 @@ impl cosmic::Application for App {
 
         let slide_preview = column![
             Space::with_height(Length::Fill),
-            Responsive::new(|size| {
-                let height = size.width * 9.0 / 16.0;
-                Container::new(
-                    Container::new(
-                        self.presenter
-                            .view()
-                            .map(|m| Message::Present(m)),
-                    )
-                    .height(height),
-                )
-                .align_bottom(Length::Fill)
-                .into()
-            }),
+            Container::new(
+                self.presenter.view().map(|m| Message::Present(m)),
+            )
+            .align_bottom(Length::Fill),
             Container::new(if self.presenter.video.is_some() {
                 row![
                     video_button_icon,
@@ -552,11 +543,11 @@ impl cosmic::Application for App {
             )
             .clip(true)
             .width(Length::Fill)
-            .center_y(100)
+            .center_y(120)
         ];
 
         let element: Element<Message> = column.into();
-        element.debug(true)
+        element
     }
 
     // View for presentation
