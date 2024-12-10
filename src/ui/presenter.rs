@@ -4,7 +4,6 @@ use cosmic::{
     dialog::ashpd::url::Url,
     iced::{
         font::{Family, Stretch, Style, Weight},
-        widget::text,
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
@@ -14,7 +13,7 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable,
+        container, image, mouse_area, responsive, scrollable, text,
         Container, Responsive, Row, Space,
     },
     Task,
@@ -51,44 +50,10 @@ pub(crate) enum Message {
     StartVideo,
     VideoPos(f32),
     VideoFrame,
-    HoverDelegate(i32),
+    HoveredSlide(i32),
 }
 
 impl Presenter {
-    pub fn with_slides(slides: Vec<Slide>) -> Self {
-        Self {
-            slides: slides.clone(),
-            items: ServiceItemModel::default(),
-            current_slide: slides[0].clone(),
-            current_slide_index: 0,
-            video: {
-                if let Some(slide) = slides.get(0) {
-                    let path = slide.background().path.clone();
-                    if path.exists() {
-                        let url = Url::from_file_path(path).unwrap();
-                        let result = Video::new(&url);
-                        match result {
-                            Ok(mut v) => {
-                                v.set_paused(true);
-                                Some(v)
-                            }
-                            Err(e) => {
-                                error!("Had an error creating the video object: {e}");
-                                None
-                            }
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            },
-            video_position: 0.0,
-            hovered_slide: -1,
-        }
-    }
-
     pub fn with_items(items: ServiceItemModel) -> Self {
         let slides = if let Ok(slides) = items.to_slides() {
             slides
@@ -212,7 +177,7 @@ impl Presenter {
                 }
                 Task::none()
             }
-            Message::HoverDelegate(slide) => {
+            Message::HoveredSlide(slide) => {
                 self.hovered_slide = slide;
                 Task::none()
             }
@@ -266,7 +231,7 @@ impl Presenter {
                         Container::new(
                             VideoPlayer::new(video)
                                 .width(size.width)
-                                .height(size.height)
+                                .height(size.width * 9.0 / 16.0)
                                 .on_end_of_stream(Message::EndVideo)
                                 .on_new_frame(Message::VideoFrame)
                                 .content_fit(ContentFit::Cover),
@@ -349,41 +314,46 @@ impl Presenter {
                     .width(Length::Fill)
                     .height(Length::Fill),
             )
-            .style(move |_| {
-                let theme = cosmic::iced::Theme::Dark;
+            .style(move |t| {
+                let mut style = container::Style::default();
+                let theme = t.cosmic();
                 let hovered = self.hovered_slide == slide_id;
-                container::Style {
-                    background: Some(Background::Color(
-                        theme.palette().background,
-                    )),
-                    shadow: Shadow {
-                        color: Color::BLACK,
-                        offset: {
-                            if hovered {
-                                Vector::new(5.0, 5.0)
-                            } else {
-                                Vector::new(0.0, 0.0)
-                            }
-                        },
-                        blur_radius: {
-                            if hovered {
-                                10.0
-                            } else {
-                                0.0
-                            }
-                        },
+                style.background = Some(Background::Color(
+                    if self.current_slide_index as i32 == slide_id {
+                        theme.accent.base.into()
+                    } else if hovered {
+                        theme.accent.hover.into()
+                    } else {
+                        theme.palette.neutral_3.into()
                     },
-                    border: Border::default().rounded(10.0),
-                    ..Default::default()
-                }
+                ));
+                style.border = Border::default().rounded(10.0);
+                style.shadow = Shadow {
+                    color: Color::BLACK,
+                    offset: {
+                        if hovered {
+                            Vector::new(5.0, 5.0)
+                        } else {
+                            Vector::new(0.0, 0.0)
+                        }
+                    },
+                    blur_radius: {
+                        if hovered {
+                            10.0
+                        } else {
+                            0.0
+                        }
+                    },
+                };
+                style
             })
             .center_x(100.0 * 16.0 / 9.0)
             .height(100)
             .padding(10),
         )
         .interaction(cosmic::iced::mouse::Interaction::Pointer)
-        .on_enter(Message::HoverDelegate(slide_id))
-        .on_exit(Message::HoverDelegate(-1))
+        .on_enter(Message::HoveredSlide(slide_id))
+        .on_exit(Message::HoveredSlide(-1))
         .on_press({
             let id =
                 self.slides.iter().position(|s| s == slide).unwrap();
