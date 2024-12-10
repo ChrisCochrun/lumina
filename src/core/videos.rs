@@ -1,5 +1,10 @@
-use super::model::Model;
+use crate::{Background, SlideBuilder, TextAlignment};
+
+use super::{
+    model::Model, service_items::ServiceTrait, slide::Slide,
+};
 use cosmic::{executor, iced::Executor};
+use crisp::types::Value;
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
@@ -16,6 +21,51 @@ pub struct Video {
     pub start_time: Option<f32>,
     pub end_time: Option<f32>,
     pub looping: bool,
+}
+
+impl From<Value> for Video {
+    fn from(value: Value) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl From<&Value> for Video {
+    fn from(value: &Value) -> Self {
+        todo!()
+    }
+}
+
+impl ServiceTrait for Video {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn id(&self) -> i32 {
+        self.id
+    }
+
+    fn to_slides(&self) -> Result<Vec<Slide>> {
+        let slide = SlideBuilder::new()
+            .background(
+                Background::try_from(self.path.clone())
+                    .into_diagnostic()?,
+            )
+            .text("")
+            .audio("")
+            .font("")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(self.looping)
+            .video_start_time(self.start_time.unwrap_or(0.0))
+            .video_end_time(self.end_time.unwrap_or(0.0))
+            .build()?;
+
+        Ok(vec![slide])
+    }
+
+    fn box_clone(&self) -> Box<dyn ServiceTrait> {
+        Box::new((*self).clone())
+    }
 }
 
 impl Model<Video> {

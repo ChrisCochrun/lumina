@@ -1,4 +1,7 @@
-use super::model::Model;
+use crate::{Background, Slide, SlideBuilder, TextAlignment};
+
+use super::{model::Model, service_items::ServiceTrait};
+use crisp::types::{Keyword, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
@@ -12,6 +15,74 @@ pub struct Image {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
+}
+
+impl From<Value> for Image {
+    fn from(value: Value) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl From<&Value> for Image {
+    fn from(value: &Value) -> Self {
+        match value {
+            Value::List(list) => {
+                let path = if let Some(path_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from("source"))
+                    }) {
+                    let pos = path_pos + 1;
+                    list.get(pos)
+                        .map(|p| PathBuf::from(String::from(p)))
+                } else {
+                    None
+                };
+
+                let title = path.clone().map(|p| {
+                    p.to_str().unwrap_or_default().to_string()
+                });
+                Self {
+                    title: title.unwrap_or_default(),
+                    path: path.unwrap_or_default(),
+                    ..Default::default()
+                }
+            }
+            _ => todo!(),
+        }
+    }
+}
+
+impl ServiceTrait for Image {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn id(&self) -> i32 {
+        self.id
+    }
+
+    fn to_slides(&self) -> Result<Vec<Slide>> {
+        let slide = SlideBuilder::new()
+            .background(
+                Background::try_from(self.path.clone())
+                    .into_diagnostic()?,
+            )
+            .text("")
+            .audio("")
+            .font("")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(false)
+            .video_start_time(0.0)
+            .video_end_time(0.0)
+            .build()?;
+
+        Ok(vec![slide])
+    }
+
+    fn box_clone(&self) -> Box<dyn ServiceTrait> {
+        Box::new((*self).clone())
+    }
 }
 
 impl Model<Image> {

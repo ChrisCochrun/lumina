@@ -1,4 +1,5 @@
 use clap::{command, Parser};
+use core::service_items::ServiceItem;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::{Mode, Position};
@@ -93,6 +94,8 @@ struct App {
 enum Message {
     Present(presenter::Message),
     File(PathBuf),
+    DndEnter(ServiceItem),
+    DndDrop(ServiceItem),
     OpenWindow,
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
@@ -429,6 +432,8 @@ impl cosmic::Application for App {
                 }
             }
             Message::Quit => cosmic::iced::exit(),
+            Message::DndEnter(service_item) => todo!(),
+            Message::DndDrop(service_item) => todo!(),
         }
     }
 

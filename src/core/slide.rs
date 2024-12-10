@@ -228,6 +228,10 @@ impl Slide {
 
         Ok(slides)
     }
+
+    // pub fn slides_from_item(item: &ServiceItem) -> Result<Vec<Self>> {
+    //     todo!()
+    // }
 }
 
 impl From<Value> for Slide {

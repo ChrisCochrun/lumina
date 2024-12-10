@@ -1,3 +1,4 @@
+use crisp::types::Value;
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -6,7 +7,9 @@ use sqlx::{
 use std::path::PathBuf;
 use tracing::error;
 
-use super::model::Model;
+use crate::{Background, Slide, SlideBuilder, TextAlignment};
+
+use super::{model::Model, service_items::ServiceTrait};
 
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
@@ -26,6 +29,51 @@ pub struct Presentation {
     pub title: String,
     pub path: PathBuf,
     pub kind: PresKind,
+}
+
+impl From<Value> for Presentation {
+    fn from(value: Value) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl From<&Value> for Presentation {
+    fn from(value: &Value) -> Self {
+        todo!()
+    }
+}
+
+impl ServiceTrait for Presentation {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn id(&self) -> i32 {
+        self.id
+    }
+
+    fn to_slides(&self) -> Result<Vec<Slide>> {
+        let slide = SlideBuilder::new()
+            .background(
+                Background::try_from(self.path.clone())
+                    .into_diagnostic()?,
+            )
+            .text("")
+            .audio("")
+            .font("")
+            .font_size(50)
+            .text_alignment(TextAlignment::MiddleCenter)
+            .video_loop(false)
+            .video_start_time(0.0)
+            .video_end_time(0.0)
+            .build()?;
+
+        Ok(vec![slide])
+    }
+
+    fn box_clone(&self) -> Box<dyn ServiceTrait> {
+        Box::new((*self).clone())
+    }
 }
 
 impl Presentation {

@@ -10,10 +10,11 @@ use sqlx::{
 };
 use tracing::{debug, error};
 
-use crate::core::slide;
+use crate::{core::slide, Slide, SlideBuilder};
 
 use super::{
     model::Model,
+    service_items::ServiceTrait,
     slide::{Background, TextAlignment},
 };
 
@@ -32,6 +33,47 @@ pub struct Song {
     pub text_alignment: Option<TextAlignment>,
     pub font: Option<String>,
     pub font_size: Option<i32>,
+}
+
+impl ServiceTrait for Song {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn id(&self) -> i32 {
+        self.id
+    }
+
+    fn to_slides(&self) -> Result<Vec<Slide>> {
+        let lyrics = self.get_lyrics()?;
+        let slides: Vec<Slide> = lyrics
+            .iter()
+            .map(|l| {
+                SlideBuilder::new()
+                    .background(
+                        self.background.clone().unwrap_or_default(),
+                    )
+                    .font(self.font.clone().unwrap_or_default())
+                    .font_size(self.font_size.unwrap_or_default())
+                    .text_alignment(
+                        self.text_alignment.unwrap_or_default(),
+                    )
+                    .audio(self.audio.clone().unwrap_or_default())
+                    .video_loop(true)
+                    .video_start_time(0.0)
+                    .video_end_time(0.0)
+                    .text(l)
+                    .build()
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        Ok(slides)
+    }
+
+    fn box_clone(&self) -> Box<dyn ServiceTrait> {
+        Box::new((*self).clone())
+    }
 }
 
 const VERSE_KEYWORDS: [&str; 24] = [

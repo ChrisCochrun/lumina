@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use cosmic::{
     dialog::ashpd::url::Url,
@@ -13,7 +13,6 @@ use cosmic::{
         stack,
     },
     prelude::*,
-    theme::CosmicTheme,
     widget::{
         container, image, mouse_area, responsive, scrollable,
         Container, Responsive, Row, Space,
@@ -25,14 +24,17 @@ use miette::{Context, IntoDiagnostic, Result};
 use tracing::{debug, error, info};
 
 use crate::{
-    core::{service_items::ServiceItem, slide::Slide},
+    core::{
+        service_items::{ServiceItem, ServiceItemModel},
+        slide::Slide,
+    },
     BackgroundKind,
 };
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
     pub slides: Vec<Slide>,
-    pub items: Vec<ServiceItem>,
+    pub items: ServiceItemModel,
     pub current_slide: Slide,
     pub current_slide_index: u16,
     pub video: Option<Video>,
@@ -56,7 +58,47 @@ impl Presenter {
     pub fn with_slides(slides: Vec<Slide>) -> Self {
         Self {
             slides: slides.clone(),
-            items: vec![],
+            items: ServiceItemModel::default(),
+            current_slide: slides[0].clone(),
+            current_slide_index: 0,
+            video: {
+                if let Some(slide) = slides.get(0) {
+                    let path = slide.background().path.clone();
+                    if path.exists() {
+                        let url = Url::from_file_path(path).unwrap();
+                        let result = Video::new(&url);
+                        match result {
+                            Ok(mut v) => {
+                                v.set_paused(true);
+                                Some(v)
+                            }
+                            Err(e) => {
+                                error!("Had an error creating the video object: {e}");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            },
+            video_position: 0.0,
+            hovered_slide: -1,
+        }
+    }
+
+    pub fn with_items(items: Vec<ServiceItem>) -> Self {
+        let items = ServiceItemModel::from(items);
+        let slides = if let Ok(slides) = items.to_slides() {
+            slides
+        } else {
+            vec![]
+        };
+        Self {
+            slides: slides.clone(),
+            items: items.into(),
             current_slide: slides[0].clone(),
             current_slide_index: 0,
             video: {
