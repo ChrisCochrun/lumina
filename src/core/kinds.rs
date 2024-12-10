@@ -16,7 +16,7 @@ pub enum ServiceItemKind {
     Song(Song),
     Video(Video),
     Image(Image),
-    Presentation((Presentation, PresKind)),
+    Presentation(Presentation),
     Content(Slide),
 }
 
@@ -26,7 +26,7 @@ impl std::fmt::Display for ServiceItemKind {
             Self::Song(s) => "song".to_owned(),
             Self::Image(i) => "image".to_owned(),
             Self::Video(v) => "video".to_owned(),
-            Self::Presentation((p, k)) => "html".to_owned(),
+            Self::Presentation(p) => "html".to_owned(),
             Self::Content(s) => "content".to_owned(),
         };
         write!(f, "{s}")

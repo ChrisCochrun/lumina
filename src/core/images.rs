@@ -39,7 +39,11 @@ impl From<&Value> for Image {
                 };
 
                 let title = path.clone().map(|p| {
-                    p.to_str().unwrap_or_default().to_string()
+                    let path =
+                        p.to_str().unwrap_or_default().to_string();
+                    let title =
+                        path.rsplit_once("/").unwrap_or_default().1;
+                    title.to_string()
                 });
                 Self {
                     title: title.unwrap_or_default(),

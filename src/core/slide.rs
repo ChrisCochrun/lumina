@@ -60,8 +60,22 @@ impl TryFrom<String> for Background {
 
 impl TryFrom<PathBuf> for Background {
     type Error = ParseError;
-    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        match value.canonicalize() {
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let path = if path.starts_with("~") {
+            let path = path.to_str().unwrap().to_string();
+            let path = path.trim_start_matches("file://");
+            let home = dirs::home_dir()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
+            let path = path.replace("~", &home);
+            PathBuf::from(path)
+        } else {
+            path
+        };
+
+        match path.canonicalize() {
             Ok(value) => {
                 let extension = value
                     .extension()
@@ -83,7 +97,7 @@ impl TryFrom<PathBuf> for Background {
                 }
             }
             Err(e) => {
-                error!("Couldn't canonicalize: {e}");
+                error!("Couldn't canonicalize: {e} {:?}", path);
                 Err(ParseError::CannotCanonicalize)
             }
         }

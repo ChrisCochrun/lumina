@@ -1,5 +1,5 @@
 use clap::{command, Parser};
-use core::service_items::ServiceItem;
+use core::service_items::{ServiceItem, ServiceItemModel};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::{Mode, Position};
@@ -127,7 +127,7 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let slides = match read_to_string(input.file) {
+        let items = match read_to_string(input.file) {
             Ok(lisp) => {
                 let mut slide_vector = vec![];
                 let lisp = crisp::reader::read(&lisp);
@@ -148,11 +148,17 @@ impl cosmic::Application for App {
             }
         };
 
+        let items = ServiceItemModel::from(items);
+        let presenter = Presenter::with_items(items.clone());
+        let slides = if let Ok(slides) = items.to_slides() {
+            slides
+        } else {
+            vec![]
+        };
         let current_slide = slides[0].clone();
-        let presenter = Presenter::with_slides(slides.clone());
 
-        for slide in slides.clone() {
-            nav_model.insert().text(slide.text()).data(slide);
+        for item in items.iter() {
+            nav_model.insert().text(item.title()).data(item.clone());
         }
 
         nav_model.activate_position(0);

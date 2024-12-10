@@ -4,7 +4,7 @@ use super::{
     model::Model, service_items::ServiceTrait, slide::Slide,
 };
 use cosmic::{executor, iced::Executor};
-use crisp::types::Value;
+use crisp::types::{Keyword, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
@@ -31,7 +31,76 @@ impl From<Value> for Video {
 
 impl From<&Value> for Video {
     fn from(value: &Value) -> Self {
-        todo!()
+        match value {
+            Value::List(list) => {
+                let path = if let Some(path_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from("source"))
+                    }) {
+                    let pos = path_pos + 1;
+                    list.get(pos)
+                        .map(|p| PathBuf::from(String::from(p)))
+                } else {
+                    None
+                };
+
+                let title = path.clone().map(|p| {
+                    let path =
+                        p.to_str().unwrap_or_default().to_string();
+                    let title =
+                        path.rsplit_once("/").unwrap_or_default().1;
+                    title.to_string()
+                });
+
+                let start_time = if let Some(start_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from(
+                            "start-time",
+                        ))
+                    }) {
+                    let pos = start_pos + 1;
+                    list.get(pos).map(|p| i32::from(p) as f32)
+                } else {
+                    None
+                };
+
+                let end_time = if let Some(end_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from(
+                            "end-time",
+                        ))
+                    }) {
+                    let pos = end_pos + 1;
+                    list.get(pos).map(|p| i32::from(p) as f32)
+                } else {
+                    None
+                };
+
+                let looping = if let Some(loop_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from("loop"))
+                    }) {
+                    let pos = loop_pos + 1;
+                    list.get(pos)
+                        .map(|l| {
+                            String::from(l) == "true".to_string()
+                        })
+                        .unwrap_or_default()
+                } else {
+                    false
+                };
+
+                Self {
+                    title: title.unwrap_or_default(),
+                    path: path.unwrap_or_default(),
+                    start_time,
+                    end_time,
+                    looping,
+                    ..Default::default()
+                }
+            }
+            _ => todo!(),
+        }
     }
 }
 

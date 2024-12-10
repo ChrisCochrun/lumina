@@ -89,8 +89,7 @@ impl Presenter {
         }
     }
 
-    pub fn with_items(items: Vec<ServiceItem>) -> Self {
-        let items = ServiceItemModel::from(items);
+    pub fn with_items(items: ServiceItemModel) -> Self {
         let slides = if let Ok(slides) = items.to_slides() {
             slides
         } else {

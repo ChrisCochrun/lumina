@@ -1,4 +1,4 @@
-use crisp::types::Value;
+use crisp::types::{Keyword, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -39,7 +39,30 @@ impl From<Value> for Presentation {
 
 impl From<&Value> for Presentation {
     fn from(value: &Value) -> Self {
-        todo!()
+        match value {
+            Value::List(list) => {
+                let path = if let Some(path_pos) =
+                    list.iter().position(|v| {
+                        v == &Value::Keyword(Keyword::from("source"))
+                    }) {
+                    let pos = path_pos + 1;
+                    list.get(pos)
+                        .map(|p| PathBuf::from(String::from(p)))
+                } else {
+                    None
+                };
+
+                let title = path.clone().map(|p| {
+                    p.to_str().unwrap_or_default().to_string()
+                });
+                Self {
+                    title: title.unwrap_or_default(),
+                    path: path.unwrap_or_default(),
+                    ..Default::default()
+                }
+            }
+            _ => todo!(),
+        }
     }
 }
 

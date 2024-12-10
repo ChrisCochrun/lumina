@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use crisp::types::{Keyword, Symbol, Value};
 use miette::Result;
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::Slide;
 
@@ -21,12 +23,16 @@ pub struct ServiceItem {
 }
 
 impl ServiceItem {
-    pub fn to_slide(&self) -> Result<Vec<Slide>> {
+    pub fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    pub fn to_slides(&self) -> Result<Vec<Slide>> {
         match &self.kind {
             ServiceItemKind::Song(song) => song.to_slides(),
             ServiceItemKind::Video(video) => video.to_slides(),
             ServiceItemKind::Image(image) => image.to_slides(),
-            ServiceItemKind::Presentation((presentation, _)) => {
+            ServiceItemKind::Presentation(presentation) => {
                 presentation.to_slides()
             }
             ServiceItemKind::Content(slide) => {
@@ -124,10 +130,26 @@ impl From<&Value> for ServiceItem {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ServiceItemModel {
     items: Vec<ServiceItem>,
 }
+
+impl Deref for ServiceItemModel {
+    type Target = Vec<ServiceItem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.items
+    }
+}
+
+// impl Iterator for ServiceItemModel {
+//     type Item = ServiceItem;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         *self.items.iter().next()
+//     }
+// }
 
 impl From<Vec<ServiceItem>> for ServiceItemModel {
     fn from(items: Vec<ServiceItem>) -> Self {
@@ -171,10 +193,7 @@ impl From<&Image> for ServiceItem {
 impl From<&Presentation> for ServiceItem {
     fn from(presentation: &Presentation) -> Self {
         Self {
-            kind: ServiceItemKind::Presentation((
-                presentation.clone(),
-                presentation.kind.clone(),
-            )),
+            kind: ServiceItemKind::Presentation(presentation.clone()),
             database_id: presentation.id,
             title: presentation.title.clone(),
             ..Default::default()
@@ -196,7 +215,11 @@ impl ServiceItemModel {
         Ok(self
             .items
             .iter()
-            .filter_map(|item| item.to_slide().ok())
+            .filter_map(|item| {
+                let slides = item.to_slides().ok();
+                debug!(?slides);
+                slides
+            })
             .flatten()
             .collect::<Vec<Slide>>())
     }
@@ -251,26 +274,26 @@ mod test {
         }
     }
 
-    // #[test]
-    // pub fn test_service_item() {
-    //     let song = test_song();
-    //     let service_item = ServiceItem::from(&song);
-    //     let pres = test_presentation();
-    //     let pres_item = ServiceItem::from(&pres);
-    //     let mut service_model = ServiceItemModel::default();
-    //     match service_model.add_item(&song) {
-    //         Ok(_) => {
-    //             assert_eq!(
-    //                 ServiceItemKind::Song,
-    //                 service_model.items[0].kind
-    //             );
-    //             assert_eq!(
-    //                 ServiceItemKind::Presentation(PresKind::Html),
-    //                 pres_item.kind
-    //             );
-    //             assert_eq!(service_item, service_model.items[0]);
-    //         }
-    //         Err(e) => panic!("Problem adding item: {:?}", e),
-    //     }
-    // }
+    #[test]
+    pub fn test_service_item() {
+        let song = test_song();
+        let service_item = ServiceItem::from(&song);
+        let pres = test_presentation();
+        let pres_item = ServiceItem::from(&pres);
+        let mut service_model = ServiceItemModel::default();
+        match service_model.add_item(&song) {
+            Ok(_) => {
+                assert_eq!(
+                    ServiceItemKind::Song(song),
+                    service_model.items[0].kind
+                );
+                assert_eq!(
+                    ServiceItemKind::Presentation(pres),
+                    pres_item.kind
+                );
+                assert_eq!(service_item, service_model.items[0]);
+            }
+            Err(e) => panic!("Problem adding item: {:?}", e),
+        }
+    }
 }
