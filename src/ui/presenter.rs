@@ -1,4 +1,10 @@
-use std::{rc::Rc, time::Duration};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+    thread,
+    time::Duration,
+};
 
 use cosmic::{
     dialog::ashpd::url::Url,
@@ -20,6 +26,10 @@ use cosmic::{
 };
 use iced_video_player::{Position, Video, VideoPlayer};
 use miette::{Context, IntoDiagnostic, Result};
+use rodio::{
+    source::{self, SineWave, Source},
+    Decoder, OutputStream, Sink,
+};
 use tracing::{debug, error, info};
 
 use crate::{
@@ -38,6 +48,8 @@ pub(crate) struct Presenter {
     pub current_slide_index: u16,
     pub video: Option<Video>,
     pub video_position: f32,
+    pub audio: Option<PathBuf>,
+    sink: Sink,
     hovered_slide: i32,
 }
 
@@ -48,6 +60,8 @@ pub(crate) enum Message {
     SlideChange(u16),
     EndVideo,
     StartVideo,
+    StartAudio,
+    EndAudio,
     VideoPos(f32),
     VideoFrame,
     HoveredSlide(i32),
@@ -88,8 +102,14 @@ impl Presenter {
                     None
                 }
             },
+            audio: slides[0].audio(),
             video_position: 0.0,
             hovered_slide: -1,
+            sink: {
+                let (_stream, stream_handle) =
+                    OutputStream::try_default().unwrap();
+                Sink::try_new(&stream_handle).unwrap()
+            },
         }
     }
 
@@ -130,6 +150,28 @@ impl Presenter {
                     let _ = video.restart_stream();
                 }
                 self.reset_video();
+                if let Some(audio) = &mut self.current_slide.audio() {
+                    debug!("{:?}", audio);
+                    let audio = audio.to_str().unwrap().to_string();
+                    let Some(audio) =
+                        audio.strip_prefix(r#"file://"#)
+                    else {
+                        debug!("no audio");
+                        return Task::none();
+                    };
+                    debug!("{:?}", audio);
+                    let audio = PathBuf::from(audio);
+                    debug!("{:?}", audio);
+                    if audio.exists() {
+                        debug!("audio exists");
+                        if self.audio != Some(audio.clone()) {
+                            self.audio = Some(audio);
+                            let _ = self.update(Message::StartAudio);
+                        } else {
+                            let _ = self.update(Message::EndAudio);
+                        }
+                    }
+                }
                 Task::none()
             }
             Message::EndVideo => {
@@ -181,6 +223,22 @@ impl Presenter {
                 self.hovered_slide = slide;
                 Task::none()
             }
+            Message::StartAudio => {
+                if let Some(audio) = &mut self.audio {
+                    let audio = audio.clone();
+                    Task::perform(
+                        self.start_audio(audio.clone()),
+                        |_| {
+                            cosmic::app::Message::App(
+                                Message::EndAudio,
+                            )
+                        },
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::EndAudio => Task::none(),
         }
     }
 
@@ -386,5 +444,12 @@ impl Presenter {
                 }
             }
         }
+    }
+
+    async fn start_audio(&'static self, audio: PathBuf) {
+        let file = BufReader::new(File::open(audio).unwrap());
+        let source = Decoder::new(file).unwrap();
+        self.sink.append(source);
+        self.sink.sleep_until_end();
     }
 }

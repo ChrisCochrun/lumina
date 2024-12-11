@@ -36,6 +36,7 @@
             wayland-protocols
             libxkbcommon
             pkg-config
+            alsa-lib
             gst_all_1.gst-devtools
             gst_all_1.gst-libav
             gst_all_1.gst-plugins-bad

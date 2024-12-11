@@ -217,6 +217,10 @@ impl Slide {
         self.video_loop
     }
 
+    pub fn audio(&self) -> Option<PathBuf> {
+        self.audio.clone()
+    }
+
     pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
         let lyrics = song.get_lyrics()?;
         let slides: Vec<Slide> = lyrics
