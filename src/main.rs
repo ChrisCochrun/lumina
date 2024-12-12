@@ -362,21 +362,21 @@ impl cosmic::Application for App {
             Message::Present(message) => {
                 debug!(?message);
                 let task = self.presenter.update(message);
-                debug!("Past");
                 if self.presentation_open {
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
                     }
                 }
+                debug!("Past");
                 // self.core.nav_bar_toggle();
-                task.then(|x| {
-                    debug!(?x);
-                    Task::none()
-                })
-                // task.map(|x| {
+                // task.then(|x| {
                 //     debug!(?x);
-                //     cosmic::app::Message::App(Message::None)
+                //     Task::none()
                 // })
+                task.map(|x| {
+                    debug!(?x);
+                    cosmic::app::Message::App(Message::None)
+                })
                 // Task::batch([task])
             }
             Message::File(file) => {

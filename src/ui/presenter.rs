@@ -1,6 +1,4 @@
-use std::{
-    fs::File, io::BufReader, path::PathBuf, sync::Arc, time::Duration,
-};
+use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
     dialog::ashpd::url::Url,
@@ -200,7 +198,7 @@ impl Presenter {
             Message::VideoPos(position) => {
                 if let Some(video) = &mut self.video {
                     let position = Position::Time(
-                        Duration::from_secs_f32(position),
+                        std::time::Duration::from_secs_f32(position),
                     );
                     match video.seek(position, false) {
                         Ok(_) => debug!(
@@ -229,13 +227,14 @@ impl Presenter {
                 if let Some(audio) = &mut self.audio {
                     let audio = audio.clone();
                     debug!("hi");
-                    Task::perform(
+                    let task = Task::perform(
                         start_audio(Arc::clone(&self.sink.1), audio),
                         |_| {
                             debug!("inside task");
                             cosmic::app::Message::App(Message::None)
                         },
-                    )
+                    );
+                    task.chain(Task::none())
                 } else {
                     Task::none()
                 }
@@ -471,8 +470,11 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     let empty = sink.empty();
     let paused = sink.is_paused();
     debug!(empty, paused);
-    // sink.sleep_until_end();
-    tokio::time::sleep(Duration::from_secs(10));
+    sink.sleep_until_end();
+    // tokio::time::sleep(Duration::from_secs(10));
+    let stream = cosmic::iced::time::every(
+        cosmic::iced::time::Duration::from_secs(1),
+    );
     debug!(empty, paused, "Finished running");
     // });
 }
