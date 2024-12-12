@@ -101,6 +101,7 @@ enum Message {
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
     Quit,
+    None,
 }
 
 impl cosmic::Application for App {
@@ -359,14 +360,24 @@ impl cosmic::Application for App {
     ) -> cosmic::Task<cosmic::app::Message<Message>> {
         match message {
             Message::Present(message) => {
-                let _ = self.presenter.update(message);
+                debug!(?message);
+                let task = self.presenter.update(message);
+                debug!("Past");
                 if self.presentation_open {
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
                     }
                 }
                 // self.core.nav_bar_toggle();
-                Task::none()
+                task.then(|x| {
+                    debug!(?x);
+                    Task::none()
+                })
+                // task.map(|x| {
+                //     debug!(?x);
+                //     cosmic::app::Message::App(Message::None)
+                // })
+                // Task::batch([task])
             }
             Message::File(file) => {
                 self.file = file;
@@ -440,6 +451,7 @@ impl cosmic::Application for App {
             Message::Quit => cosmic::iced::exit(),
             Message::DndEnter(service_item) => todo!(),
             Message::DndDrop(service_item) => todo!(),
+            Message::None => Task::none(),
         }
     }
 

@@ -1,10 +1,5 @@
 use std::{
-    fs::File,
-    io::BufReader,
-    path::{Path, PathBuf},
-    sync::Arc,
-    thread,
-    time::Duration,
+    fs::File, io::BufReader, path::PathBuf, sync::Arc, time::Duration,
 };
 
 use cosmic::{
@@ -26,18 +21,11 @@ use cosmic::{
     Task,
 };
 use iced_video_player::{Position, Video, VideoPlayer};
-use miette::{Context, IntoDiagnostic, Result};
-use rodio::{
-    source::{self, SineWave, Source},
-    Decoder, OutputStream, Sink,
-};
-use tracing::{debug, error, info};
+use rodio::{Decoder, OutputStream, Sink};
+use tracing::{debug, error};
 
 use crate::{
-    core::{
-        service_items::{ServiceItem, ServiceItemModel},
-        slide::Slide,
-    },
+    core::{service_items::ServiceItemModel, slide::Slide},
     BackgroundKind,
 };
 
@@ -66,6 +54,7 @@ pub(crate) enum Message {
     VideoPos(f32),
     VideoFrame,
     HoveredSlide(i32),
+    None,
 }
 
 impl Presenter {
@@ -239,17 +228,23 @@ impl Presenter {
             Message::StartAudio => {
                 if let Some(audio) = &mut self.audio {
                     let audio = audio.clone();
-                    start_audio(
-                        Arc::clone(&self.sink.1),
-                        audio.clone(),
-                    );
+                    debug!("hi");
+                    Task::perform(
+                        start_audio(Arc::clone(&self.sink.1), audio),
+                        |_| {
+                            debug!("inside task");
+                            cosmic::app::Message::App(Message::None)
+                        },
+                    )
+                } else {
+                    Task::none()
                 }
-                Task::none()
             }
             Message::EndAudio => {
                 self.sink.1.stop();
                 Task::none()
             }
+            Message::None => Task::none(),
         }
     }
 
@@ -464,19 +459,20 @@ impl Presenter {
     }
 }
 
-fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
-    thread::spawn(move || {
-        let file = BufReader::new(File::open(audio).unwrap());
-        debug!(?file);
-        let source = Decoder::new(file).unwrap();
-        let empty = sink.empty();
-        let paused = sink.is_paused();
-        debug!(empty, paused);
-        sink.append(source);
-        let empty = sink.empty();
-        let paused = sink.is_paused();
-        debug!(empty, paused);
-        sink.sleep_until_end();
-        debug!(empty, paused, "Finished running");
-    });
+async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+    // thread::spawn(move || {
+    let file = BufReader::new(File::open(audio).unwrap());
+    debug!(?file);
+    let source = Decoder::new(file).unwrap();
+    let empty = sink.empty();
+    let paused = sink.is_paused();
+    debug!(empty, paused);
+    sink.append(source);
+    let empty = sink.empty();
+    let paused = sink.is_paused();
+    debug!(empty, paused);
+    // sink.sleep_until_end();
+    tokio::time::sleep(Duration::from_secs(10));
+    debug!(empty, paused, "Finished running");
+    // });
 }
