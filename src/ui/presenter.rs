@@ -389,7 +389,10 @@ impl Presenter {
                 style.shadow = Shadow {
                     color: Color::BLACK,
                     offset: {
-                        if hovered {
+                        if self.current_slide_index as i32 == slide_id
+                        {
+                            Vector::new(5.0, 5.0)
+                        } else if hovered {
                             Vector::new(5.0, 5.0)
                         } else {
                             Vector::new(0.0, 0.0)
