@@ -1,4 +1,6 @@
-use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
+use std::{
+    fs::File, io::BufReader, path::PathBuf, sync::Arc, thread,
+};
 
 use cosmic::{
     dialog::ashpd::url::Url,
@@ -8,13 +10,15 @@ use cosmic::{
         Vector,
     },
     iced_widget::{
-        scrollable::{Direction, Scrollbar},
+        scrollable::{
+            scroll_by, AbsoluteOffset, Direction, Scrollbar,
+        },
         stack,
     },
     prelude::*,
     widget::{
         container, image, mouse_area, responsive, scrollable, text,
-        Container, Responsive, Row, Space,
+        Container, Id, Responsive, Row, Space,
     },
     Task,
 };
@@ -38,6 +42,7 @@ pub(crate) struct Presenter {
     pub audio: Option<PathBuf>,
     sink: (OutputStream, Arc<Sink>),
     hovered_slide: i32,
+    scroll_id: Id,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -101,6 +106,7 @@ impl Presenter {
                     Arc::new(Sink::try_new(&stream_handle).unwrap()),
                 )
             },
+            scroll_id: Id::unique(),
         }
     }
 
@@ -133,6 +139,7 @@ impl Presenter {
             }
             Message::SlideChange(id) => {
                 debug!(id, "slide changed");
+                let right = self.current_slide_index < id;
                 self.current_slide_index = id;
                 if let Some(slide) = self.slides.get(id as usize) {
                     self.current_slide = slide.clone();
@@ -140,6 +147,20 @@ impl Presenter {
                 if let Some(video) = &mut self.video {
                     let _ = video.restart_stream();
                 }
+
+                let offset = AbsoluteOffset {
+                    x: {
+                        if right {
+                            200.0
+                        } else {
+                            -200.0
+                        }
+                    },
+                    y: 0.0,
+                };
+                let op: Task<Message> =
+                    scroll_by(self.scroll_id.clone(), offset);
+
                 self.reset_video();
                 if let Some(audio) = &mut self.current_slide.audio() {
                     let audio = audio.to_str().unwrap().to_string();
@@ -172,7 +193,7 @@ impl Presenter {
                         let _ = self.update(Message::EndAudio);
                     }
                 }
-                Task::none()
+                op.map(|x| cosmic::app::Message::App(x))
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -227,17 +248,9 @@ impl Presenter {
                 if let Some(audio) = &mut self.audio {
                     let audio = audio.clone();
                     debug!("hi");
-                    let task = Task::perform(
-                        start_audio(Arc::clone(&self.sink.1), audio),
-                        |_| {
-                            debug!("inside task");
-                            cosmic::app::Message::App(Message::None)
-                        },
-                    );
-                    task.chain(Task::none())
-                } else {
-                    Task::none()
+                    start_audio(Arc::clone(&self.sink.1), audio);
                 }
+                Task::none()
             }
             Message::EndAudio => {
                 self.sink.1.stop();
@@ -321,7 +334,8 @@ impl Presenter {
             scrollable(Row::from_vec(items).spacing(10).padding(15))
                 .direction(Direction::Horizontal(Scrollbar::new()))
                 .height(Length::Fill)
-                .width(Length::Fill);
+                .width(Length::Fill)
+                .id(self.scroll_id.clone());
         row.into()
     }
 
@@ -458,23 +472,23 @@ impl Presenter {
     }
 }
 
-async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
-    // thread::spawn(move || {
-    let file = BufReader::new(File::open(audio).unwrap());
-    debug!(?file);
-    let source = Decoder::new(file).unwrap();
-    let empty = sink.empty();
-    let paused = sink.is_paused();
-    debug!(empty, paused);
-    sink.append(source);
-    let empty = sink.empty();
-    let paused = sink.is_paused();
-    debug!(empty, paused);
-    sink.sleep_until_end();
-    // tokio::time::sleep(Duration::from_secs(10));
-    let stream = cosmic::iced::time::every(
-        cosmic::iced::time::Duration::from_secs(1),
-    );
-    debug!(empty, paused, "Finished running");
-    // });
+fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+    thread::spawn(move || {
+        let file = BufReader::new(File::open(audio).unwrap());
+        debug!(?file);
+        let source = Decoder::new(file).unwrap();
+        let empty = sink.empty();
+        let paused = sink.is_paused();
+        debug!(empty, paused);
+        sink.append(source);
+        let empty = sink.empty();
+        let paused = sink.is_paused();
+        debug!(empty, paused);
+        sink.sleep_until_end();
+        // tokio::time::sleep(Duration::from_secs(10));
+        // let stream = cosmic::iced::time::every(
+        //     cosmic::iced::time::Duration::from_secs(1),
+        // );
+        debug!(empty, paused, "Finished running");
+    });
 }

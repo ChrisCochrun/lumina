@@ -1,5 +1,6 @@
 use clap::{command, Parser};
 use core::service_items::{ServiceItem, ServiceItemModel};
+use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::{Mode, Position};
@@ -11,7 +12,8 @@ use cosmic::prelude::*;
 use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, image, nav_bar, text, tooltip, Responsive, Space,
+    button, context_drawer, image, nav_bar, text, tooltip,
+    Responsive, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
@@ -354,6 +356,22 @@ impl cosmic::Application for App {
         })
     }
 
+    fn context_drawer(
+        &self,
+    ) -> Option<
+        cosmic::app::context_drawer::ContextDrawer<Self::Message>,
+    > {
+        Some(ContextDrawer {
+            title: Some("Context".into()),
+            header_actions: vec![],
+            header: Some("hi".into()),
+            content: "Sup".into(),
+            footer: Some("foot".into()),
+            on_close: Message::None,
+        });
+        None
+    }
+
     fn update(
         &mut self,
         message: Message,
@@ -373,10 +391,11 @@ impl cosmic::Application for App {
                 //     debug!(?x);
                 //     Task::none()
                 // })
-                task.map(|x| {
+                let task = task.map(|x| {
                     debug!(?x);
-                    cosmic::app::Message::App(Message::None)
-                })
+                    cosmic::app::Message::None
+                });
+                task
                 // Task::batch([task])
             }
             Message::File(file) => {
