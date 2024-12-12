@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
+    sync::Arc,
     thread,
     time::Duration,
 };
@@ -49,7 +50,7 @@ pub(crate) struct Presenter {
     pub video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
-    sink: Sink,
+    sink: (OutputStream, Arc<Sink>),
     hovered_slide: i32,
 }
 
@@ -106,9 +107,12 @@ impl Presenter {
             video_position: 0.0,
             hovered_slide: -1,
             sink: {
-                let (_stream, stream_handle) =
+                let (stream, stream_handle) =
                     OutputStream::try_default().unwrap();
-                Sink::try_new(&stream_handle).unwrap()
+                (
+                    stream,
+                    Arc::new(Sink::try_new(&stream_handle).unwrap()),
+                )
             },
         }
     }
@@ -151,25 +155,34 @@ impl Presenter {
                 }
                 self.reset_video();
                 if let Some(audio) = &mut self.current_slide.audio() {
-                    debug!("{:?}", audio);
                     let audio = audio.to_str().unwrap().to_string();
-                    let Some(audio) =
-                        audio.strip_prefix(r#"file://"#)
-                    else {
-                        debug!("no audio");
-                        return Task::none();
+                    let audio = if let Some(audio) =
+                        audio.strip_prefix(r"file://")
+                    {
+                        audio
+                    } else {
+                        audio.as_str()
                     };
-                    debug!("{:?}", audio);
                     let audio = PathBuf::from(audio);
                     debug!("{:?}", audio);
                     if audio.exists() {
                         debug!("audio exists");
-                        if self.audio != Some(audio.clone()) {
-                            self.audio = Some(audio);
-                            let _ = self.update(Message::StartAudio);
-                        } else {
-                            let _ = self.update(Message::EndAudio);
+                        match &self.audio {
+                            Some(aud) if aud != &audio => {
+                                self.audio = Some(audio.clone());
+                                let _ =
+                                    self.update(Message::StartAudio);
+                            }
+                            Some(_) => (),
+                            None => {
+                                self.audio = Some(audio.clone());
+                                let _ =
+                                    self.update(Message::StartAudio);
+                            }
                         }
+                    } else {
+                        self.audio = None;
+                        let _ = self.update(Message::EndAudio);
                     }
                 }
                 Task::none()
@@ -226,19 +239,17 @@ impl Presenter {
             Message::StartAudio => {
                 if let Some(audio) = &mut self.audio {
                     let audio = audio.clone();
-                    Task::perform(
-                        self.start_audio(audio.clone()),
-                        |_| {
-                            cosmic::app::Message::App(
-                                Message::EndAudio,
-                            )
-                        },
-                    )
-                } else {
-                    Task::none()
+                    start_audio(
+                        Arc::clone(&self.sink.1),
+                        audio.clone(),
+                    );
                 }
+                Task::none()
             }
-            Message::EndAudio => Task::none(),
+            Message::EndAudio => {
+                self.sink.1.stop();
+                Task::none()
+            }
         }
     }
 
@@ -399,7 +410,10 @@ impl Presenter {
                         }
                     },
                     blur_radius: {
-                        if hovered {
+                        if self.current_slide_index as i32 == slide_id
+                        {
+                            10.0
+                        } else if hovered {
                             10.0
                         } else {
                             0.0
@@ -448,11 +462,21 @@ impl Presenter {
             }
         }
     }
+}
 
-    async fn start_audio(&'static self, audio: PathBuf) {
+fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+    thread::spawn(move || {
         let file = BufReader::new(File::open(audio).unwrap());
+        debug!(?file);
         let source = Decoder::new(file).unwrap();
-        self.sink.append(source);
-        self.sink.sleep_until_end();
-    }
+        let empty = sink.empty();
+        let paused = sink.is_paused();
+        debug!(empty, paused);
+        sink.append(source);
+        let empty = sink.empty();
+        let paused = sink.is_paused();
+        debug!(empty, paused);
+        sink.sleep_until_end();
+        debug!(empty, paused, "Finished running");
+    });
 }
