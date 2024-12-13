@@ -1,0 +1,7 @@
+#+TITLE: The Task list for Lumina
+
+
+* TODO Develop ui for libraries
+* TODO Develop ui for settings
+* TODO Find a way for text to pass through a service item to a slide i.e. content piece
+* TODO Develop library system for slides that are more than images or video i.e. content
