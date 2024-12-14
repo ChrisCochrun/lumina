@@ -173,7 +173,6 @@ impl Presenter {
                     let audio = PathBuf::from(audio);
                     debug!("{:?}", audio);
                     if audio.exists() {
-                        debug!("audio exists");
                         match &self.audio {
                             Some(aud) if aud != &audio => {
                                 self.audio = Some(audio.clone());
@@ -191,7 +190,7 @@ impl Presenter {
                         };
                     } else {
                         self.audio = None;
-                        let _ = self.update(Message::EndAudio);
+                        tasks.push(self.update(Message::EndAudio));
                     }
                 }
                 Task::batch(tasks)
