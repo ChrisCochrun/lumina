@@ -11,7 +11,8 @@ use cosmic::{
     },
     iced_widget::{
         scrollable::{
-            scroll_by, AbsoluteOffset, Direction, Scrollbar,
+            scroll_by, scroll_to, AbsoluteOffset, Direction,
+            Scrollbar,
         },
         stack,
     },
@@ -150,16 +151,17 @@ impl Presenter {
 
                 let offset = AbsoluteOffset {
                     x: {
-                        if right {
-                            200.0
+                        if self.current_slide_index > 2 {
+                            self.current_slide_index as f32 * 187.5
+                                - 187.5
                         } else {
-                            -200.0
+                            0.0
                         }
                     },
                     y: 0.0,
                 };
                 let op: Task<Message> =
-                    scroll_by(self.scroll_id.clone(), offset);
+                    scroll_to(self.scroll_id.clone(), offset);
 
                 self.reset_video();
                 if let Some(audio) = &mut self.current_slide.audio() {
