@@ -157,8 +157,8 @@ impl Presenter {
                     },
                     y: 0.0,
                 };
-                let op: Task<Message> =
-                    scroll_to(self.scroll_id.clone(), offset);
+                let mut tasks = vec![];
+                tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
                 self.reset_video();
                 if let Some(audio) = &mut self.current_slide.audio() {
@@ -177,22 +177,24 @@ impl Presenter {
                         match &self.audio {
                             Some(aud) if aud != &audio => {
                                 self.audio = Some(audio.clone());
-                                let _ =
-                                    self.update(Message::StartAudio);
+                                tasks.push(
+                                    self.update(Message::StartAudio),
+                                );
                             }
                             Some(_) => (),
                             None => {
                                 self.audio = Some(audio.clone());
-                                let _ =
-                                    self.update(Message::StartAudio);
+                                tasks.push(
+                                    self.update(Message::StartAudio),
+                                );
                             }
-                        }
+                        };
                     } else {
                         self.audio = None;
                         let _ = self.update(Message::EndAudio);
                     }
                 }
-                op
+                Task::batch(tasks)
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -246,13 +248,13 @@ impl Presenter {
             Message::StartAudio => {
                 if let Some(audio) = &mut self.audio {
                     let audio = audio.clone();
-                    debug!("hi");
-                    start_audio(Arc::clone(&self.sink.1), audio);
+                    Task::perform(
+                        start_audio(Arc::clone(&self.sink.1), audio),
+                        |_| Message::None,
+                    )
+                } else {
+                    Task::none()
                 }
-                Task::perform(
-                    async { debug!("inside async") },
-                    |_| Message::None,
-                )
             }
             Message::EndAudio => {
                 self.sink.1.stop();
@@ -320,6 +322,71 @@ impl Presenter {
                 }
             };
             stack!(black, container.center(Length::Fill), text)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+        })
+        .into()
+    }
+
+    pub fn view_preview(&self) -> Element<Message> {
+        responsive(|size| {
+            let family = Family::Name("VictorMono Nerd Font");
+            let weight = Weight::Normal;
+            let stretch = Stretch::Normal;
+            let style = Style::Normal;
+            let font = Font {
+                family,
+                weight,
+                stretch,
+                style,
+            };
+            let font_size = if self.current_slide.font_size() > 0 {
+                (size.width / self.current_slide.font_size() as f32)
+                    * 3.0
+            } else {
+                50.0
+            };
+            let text = text(self.current_slide.text())
+                .size(font_size)
+                .font(font);
+            let text = Container::new(text).center(Length::Fill);
+            let black = Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(Background::Color(
+                        Color::BLACK,
+                    ))
+                })
+                .width(size.width)
+                .height(size.height);
+            let container = match self.current_slide.background().kind
+            {
+                BackgroundKind::Image => {
+                    let path =
+                        self.current_slide.background().path.clone();
+                    Container::new(
+                        image(path)
+                            .content_fit(ContentFit::Cover)
+                            .width(size.width)
+                            .height(size.height),
+                    )
+                }
+                BackgroundKind::Video => {
+                    if let Some(video) = &self.video {
+                        Container::new(
+                            VideoPlayer::new(video)
+                                .width(size.width)
+                                .height(size.width * 9.0 / 16.0)
+                                .on_end_of_stream(Message::EndVideo)
+                                .on_new_frame(Message::VideoFrame)
+                                .content_fit(ContentFit::Cover),
+                        )
+                    } else {
+                        Container::new(Space::new(0, 0))
+                    }
+                }
+            };
+            stack!(black, container.center(Length::Fill), text)
                 .width(size.width)
                 .height(size.width * 9.0 / 16.0)
                 .into()
@@ -327,7 +394,7 @@ impl Presenter {
         .into()
     }
 
-    pub fn slide_preview(&self) -> Element<Message> {
+    pub fn preview_bar(&self) -> Element<Message> {
         let mut items = vec![];
         for slide in self.slides.iter() {
             items.push(self.slide_delegate(slide));
@@ -474,23 +541,12 @@ impl Presenter {
     }
 }
 
-fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
-    thread::spawn(move || {
-        let file = BufReader::new(File::open(audio).unwrap());
-        debug!(?file);
-        let source = Decoder::new(file).unwrap();
-        let empty = sink.empty();
-        let paused = sink.is_paused();
-        debug!(empty, paused);
-        sink.append(source);
-        let empty = sink.empty();
-        let paused = sink.is_paused();
-        debug!(empty, paused);
-        sink.sleep_until_end();
-        // tokio::time::sleep(Duration::from_secs(10));
-        // let stream = cosmic::iced::time::every(
-        //     cosmic::iced::time::Duration::from_secs(1),
-        // );
-        debug!(empty, paused, "Finished running");
-    });
+async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+    let file = BufReader::new(File::open(audio).unwrap());
+    debug!(?file);
+    let source = Decoder::new(file).unwrap();
+    sink.append(source);
+    let empty = sink.empty();
+    let paused = sink.is_paused();
+    debug!(empty, paused, "Finished running");
 }

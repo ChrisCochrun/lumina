@@ -381,29 +381,10 @@ impl cosmic::Application for App {
                         video.set_muted(false);
                     }
                 }
-                let task = self.presenter.update(message);
-                debug!("Past");
-                // let task = Task::perform(
-                //     async { debug!("inside async") },
-                //     |_| cosmic::app::Message::App(Message::None),
-                // );
-                // self.core.nav_bar_toggle();
-                task.then(move |x| {
+                self.presenter.update(message).map(|x| {
                     debug!(?x);
-                    Task::perform(
-                        async move {
-                            println!("hi");
-                            debug!(?x);
-                        },
-                        |_| cosmic::app::Message::App(Message::None),
-                    )
+                    cosmic::app::Message::App(Message::None)
                 })
-                // let task = task.map(|x| {
-                //     debug!(?x);
-                //     cosmic::app::Message::App(Message::None)
-                // });
-                // task.chain(Task::none())
-                // task
             }
             Message::File(file) => {
                 self.file = file;
@@ -520,7 +501,9 @@ impl cosmic::Application for App {
         let slide_preview = column![
             Space::with_height(Length::Fill),
             Container::new(
-                self.presenter.view().map(|m| Message::Present(m)),
+                self.presenter
+                    .view_preview()
+                    .map(|m| Message::Present(m)),
             )
             .align_bottom(Length::Fill),
             Container::new(if self.presenter.video.is_some() {
@@ -587,7 +570,7 @@ impl cosmic::Application for App {
             Container::new(row).center_y(Length::Fill),
             Container::new(
                 self.presenter
-                    .slide_preview()
+                    .preview_bar()
                     .map(|m| Message::Present(m))
             )
             .clip(true)
