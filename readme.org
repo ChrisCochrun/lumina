@@ -1,7 +1,9 @@
 #+title: Lumina
 #+author: Chris Cochrun
 
-Lumina is a presentation app that works from a cli or a UI. The goal is that through a simple text file, you can describe and entire presentation and then load and control it either from the command line, or a UI. The UI also provides user friendly ways of creating the presentation to allow for flexibility for users to make something that works for developers and nerds as well 
+Lumina is a presentation app that works from a cli or a UI. The goal is that through a simple text file, you can describe an entire presentation and then load and control it either from the command line, or a UI. The UI also provides user friendly ways of creating the presentation to allow for flexibility for users to make something that works for developers and nerds as well as regular folk. 
 
 * Why build this?
 Well for one, I want more experience developing things and I don't have a good tool for this kind of thing on Linux.
+
+Primarily, I don't think there is a good tool for this kind of thing on Linux. On Windows and Mac there is ProPresenter or Proclaim. Both amazing presentation software built for churches or worship centers and can be used by others for other things too, but incredible tools. I want to have a similar tool on Linux. The available tools out there now are often old, broken, or very difficult to use. I want something incredibly easy, with very sane or at least very customizable keyboard controls that allow me to quickly build a presentation and make it VERY easy to run it too.
