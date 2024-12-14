@@ -265,7 +265,8 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         responsive(|size| {
-            let family = Family::Name("VictorMono Nerd Font");
+            let font = self.current_slide.font().into_boxed_str();
+            let family = Family::Name(Box::leak(font));
             let weight = Weight::Normal;
             let stretch = Stretch::Normal;
             let style = Style::Normal;
@@ -330,7 +331,8 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         responsive(|size| {
-            let family = Family::Name("VictorMono Nerd Font");
+            let font = self.current_slide.font().into_boxed_str();
+            let family = Family::Name(Box::leak(font));
             let weight = Weight::Normal;
             let stretch = Stretch::Normal;
             let style = Style::Normal;

@@ -2,7 +2,7 @@
        (text "This is frodo" :font-size 70))
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
 (song :id 7 :author "North Point Worship"
-      :font "Quicksand Bold" :font-size 60
+      :font "Quicksand" :font-size 60
       :title "Death Was Arrested"
       :background (image :source "file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)
       :text-alignment center
