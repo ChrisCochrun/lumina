@@ -372,31 +372,38 @@ impl cosmic::Application for App {
         None
     }
 
-    fn update(
-        &mut self,
-        message: Message,
-    ) -> cosmic::Task<cosmic::app::Message<Message>> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Present(message) => {
                 debug!(?message);
-                let task = self.presenter.update(message);
                 if self.presentation_open {
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
                     }
                 }
+                let task = self.presenter.update(message);
                 debug!("Past");
+                // let task = Task::perform(
+                //     async { debug!("inside async") },
+                //     |_| cosmic::app::Message::App(Message::None),
+                // );
                 // self.core.nav_bar_toggle();
-                // task.then(|x| {
-                //     debug!(?x);
-                //     Task::none()
-                // })
-                let task = task.map(|x| {
+                task.then(move |x| {
                     debug!(?x);
-                    cosmic::app::Message::None
-                });
-                task
-                // Task::batch([task])
+                    Task::perform(
+                        async move {
+                            println!("hi");
+                            debug!(?x);
+                        },
+                        |_| cosmic::app::Message::App(Message::None),
+                    )
+                })
+                // let task = task.map(|x| {
+                //     debug!(?x);
+                //     cosmic::app::Message::App(Message::None)
+                // });
+                // task.chain(Task::none())
+                // task
             }
             Message::File(file) => {
                 self.file = file;

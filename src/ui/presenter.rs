@@ -111,10 +111,7 @@ impl Presenter {
         }
     }
 
-    pub fn update(
-        &mut self,
-        message: Message,
-    ) -> Task<cosmic::app::Message<Message>> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::NextSlide => {
                 debug!("next slide");
@@ -195,7 +192,7 @@ impl Presenter {
                         let _ = self.update(Message::EndAudio);
                     }
                 }
-                op.map(|x| cosmic::app::Message::App(x))
+                op
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -252,7 +249,10 @@ impl Presenter {
                     debug!("hi");
                     start_audio(Arc::clone(&self.sink.1), audio);
                 }
-                Task::none()
+                Task::perform(
+                    async { debug!("inside async") },
+                    |_| Message::None,
+                )
             }
             Message::EndAudio => {
                 self.sink.1.stop();
