@@ -2,14 +2,18 @@ use clap::{command, Parser};
 use core::service_items::{ServiceItem, ServiceItemModel};
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::keyboard::Key;
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Font, Length, Point};
+use cosmic::iced::{
+    self, event, window, Font, Length, Padding, Point,
+};
 use cosmic::iced_core::SmolStr;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
 use cosmic::widget::aspect_ratio::aspect_ratio_container;
+use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, context_drawer, image, nav_bar, text, tooltip,
@@ -195,34 +199,46 @@ impl cosmic::Application for App {
         Some(&self.nav_model)
     }
 
-    // fn nav_bar(
-    //     &self,
-    // ) -> Option<Element<cosmic::app::Message<Message>>> {
-    //     if !self.core().nav_bar_active() {
-    //         return None;
-    //     }
+    fn nav_bar(
+        &self,
+    ) -> Option<Element<cosmic::app::Message<Message>>> {
+        if !self.core().nav_bar_active() {
+            return None;
+        }
 
-    //     let nav_model = self.nav_model()?;
+        let nav_model = self.nav_model()?;
 
-    //     let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-    //         cosmic::app::Message::Cosmic(cosmic::Message::NavBar(id))
-    //     })
-    //     .on_context(|id| {
-    //         Message::Cosmic(cosmic::Message::NavBarContext(id))
-    //     })
-    //     .context_menu(
-    //         self.nav_context_menu(self.core.nav_bar_context()),
-    //     )
-    //     .into_container()
-    //     // XXX both must be shrink to avoid flex layout from ignoring it
-    //     .width(iced::Length::Shrink)
-    //     .height(iced::Length::Shrink);
+        let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
+            cosmic::app::Message::Cosmic(
+                cosmic::app::cosmic::Message::NavBar(id),
+            )
+        })
+        .on_context(|id| {
+            cosmic::app::Message::Cosmic(
+                cosmic::app::cosmic::Message::NavBarContext(id),
+            )
+        })
+        .context_menu(None)
+        .into_container()
+        // XXX both must be shrink to avoid flex layout from ignoring it
+        .width(Length::Shrink)
+        .height(Length::Shrink);
 
-    //     if !self.core().is_condensed() {
-    //         nav = nav.max_width(280);
-    //     }
-    //     Some(nav.into())
-    // }
+        if !self.core().is_condensed() {
+            nav = nav.max_width(280);
+        }
+
+        let column = column![
+            text::heading("Service List").center().width(280),
+            nav
+        ]
+        .spacing(10);
+        let padding = Padding::new(0.0).top(20);
+        let container = Container::new(column)
+            .style(|t| nav_bar_style(t))
+            .padding(padding);
+        Some(container.into())
+    }
 
     /// Called when a navigation item is selected.
     fn on_nav_select(
@@ -230,6 +246,7 @@ impl cosmic::Application for App {
         id: nav_bar::Id,
     ) -> Task<Self::Message> {
         self.nav_model.activate(id);
+        debug!(?id);
         self.update_title()
     }
 
