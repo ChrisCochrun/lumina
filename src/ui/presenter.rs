@@ -5,6 +5,7 @@ use std::{
 use cosmic::{
     dialog::ashpd::url::Url,
     iced::{
+        alignment::Horizontal,
         font::{Family, Stretch, Style, Weight},
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
@@ -19,7 +20,7 @@ use cosmic::{
     prelude::*,
     widget::{
         container, image, mouse_area, responsive, scrollable, text,
-        Container, Id, Responsive, Row, Space,
+        Column, Container, Id, Responsive, Row, Space, Text,
     },
     Task,
 };
@@ -282,10 +283,40 @@ impl Presenter {
             } else {
                 50.0
             };
-            let text = text(self.current_slide.text())
-                .size(font_size)
-                .font(font);
-            let text = Container::new(text).center(Length::Fill);
+            let slide_text = self.current_slide.text();
+            let lines = slide_text.lines();
+            let line_size = lines.clone().count();
+            // debug!(?lines);
+            let text: Vec<Element<Message>> = lines
+                .map(|t| {
+                    text(t.to_string())
+                        .size(font_size)
+                        .font(font)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Center)
+                        .into()
+                })
+                .collect();
+            let texts = Column::with_children(text);
+            // let text = text(self.current_slide.text())
+            //     .size(font_size)
+            //     .font(font)
+            //     .align_x(Horizontal::Center);
+            let text = Container::new(texts).center(Length::Fill);
+            let text_background = Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.3),
+                    )
+                })
+                .width(size.width)
+                .height(
+                    font_size * line_size as f32 * line_size as f32,
+                );
+            let text_stack = stack!(text_background, text);
+            let text_container =
+                Container::new(text_stack).center(Length::Fill);
             let black = Container::new(Space::new(0, 0))
                 .style(|_| {
                     container::background(Background::Color(
@@ -321,10 +352,14 @@ impl Presenter {
                     }
                 }
             };
-            stack!(black, container.center(Length::Fill), text)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into()
+            stack!(
+                black,
+                container.center(Length::Fill),
+                text_container
+            )
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
         })
         .into()
     }
