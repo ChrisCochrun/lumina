@@ -8,5 +8,24 @@
 * TODO Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
 * TODO Find a way to load and discover every font on the system for slide building
+This may not be necessary since it is possible to create a font using =Box::leak()=.
+#+begin_src rust
+let font = self.current_slide.font().into_boxed_str();
+let family = Family::Name(Box::leak(font));
+let weight = Weight::Normal;
+let stretch = Stretch::Normal;
+let style = Style::Normal;
+let font = Font {
+    family,
+    weight,
+    stretch,
+    style,
+};
+#+end_src
+
+This code creates a font by leaking the Box to a ='static &str=. I just am not sure if the &str stays around in memory after the view function. If it does, then it's not on the stack anymore and should be fine, but if it isn't cleaned up then we will have a memory leak.
+
+Krimzin on Discord told me that maybe the =update= method is a better place for this Box to be created or updated and then maybe I could generate the view from there.
+
 * TODO Build library to see all available songs, images, videos, presentations, and slides
 * TODO Build editors for each possible item
