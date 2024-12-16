@@ -17,7 +17,7 @@ use cosmic::{
     prelude::*,
     widget::{
         container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Responsive, Row, Space, Text,
+        Column, Container, Id, Responsive, Row, Space,
     },
     Task,
 };
@@ -63,18 +63,14 @@ pub(crate) enum Message {
 
 impl Presenter {
     pub fn with_items(items: ServiceItemModel) -> Self {
-        let slides = if let Ok(slides) = items.to_slides() {
-            slides
-        } else {
-            vec![]
-        };
+        let slides = items.to_slides().unwrap_or_default();
         Self {
             slides: slides.clone(),
-            items: items.into(),
+            items: items,
             current_slide: slides[0].clone(),
             current_slide_index: 0,
             video: {
-                if let Some(slide) = slides.get(0) {
+                if let Some(slide) = slides.first() {
                     let path = slide.background().path.clone();
                     if path.exists() {
                         let url = Url::from_file_path(path).unwrap();

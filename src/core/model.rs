@@ -1,7 +1,7 @@
 use std::mem::replace;
 
-use cosmic::{executor, iced::Executor, Task};
-use miette::{miette, IntoDiagnostic, Result};
+use cosmic::iced::Executor;
+use miette::{miette, Result};
 use sqlx::{Connection, SqliteConnection};
 
 #[derive(Debug)]

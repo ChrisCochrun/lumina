@@ -1,11 +1,9 @@
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{miette, Result};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
     fmt::Display,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use tracing::error;
 
@@ -381,7 +379,7 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
                                 panic!("Should always be there");
                             };
                             let mut home = home.to_string();
-                            home.push_str("/");
+                            home.push('/');
 
                             let s = s.replace("./", &home);
                             match Background::try_from(s.as_str()) {

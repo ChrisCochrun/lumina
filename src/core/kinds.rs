@@ -6,7 +6,7 @@ use crate::Slide;
 
 use super::{
     images::Image,
-    presentations::{PresKind, Presentation},
+    presentations::Presentation,
     songs::Song,
     videos::Video,
 };

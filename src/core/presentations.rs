@@ -1,5 +1,5 @@
 use crisp::types::{Keyword, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     prelude::FromRow, query, sqlite::SqliteRow, Row, SqliteConnection,
@@ -164,7 +164,7 @@ pub async fn get_presentation_from_db(
     db: &mut SqliteConnection,
 ) -> Result<Presentation> {
     let row = query(r#"SELECT id as "id: i32", title, file_path as "path", html from presentations where id = $1"#).bind(database_id).fetch_one(db).await.into_diagnostic()?;
-    Ok(Presentation::from_row(&row).into_diagnostic()?)
+    Presentation::from_row(&row).into_diagnostic()
 }
 
 #[cfg(test)]

@@ -1,12 +1,8 @@
 use std::{fs::read_to_string, path::PathBuf};
 
 use crisp::types::{Symbol, Value};
-use tracing::error;
 
-use crate::{
-    core::{service_items::ServiceItem, songs::lisp_to_song},
-    Slide,
-};
+use crate::core::service_items::ServiceItem;
 
 pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
     match &value {
@@ -28,7 +24,7 @@ pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
                 match lisp_value {
                     Value::List(value) => value
                         .into_iter()
-                        .flat_map(|v| parse_lisp(v))
+                        .flat_map(parse_lisp)
                         .collect(),
                     _ => panic!("Should not be"),
                 }

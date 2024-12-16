@@ -3,9 +3,9 @@ use crate::{Background, SlideBuilder, TextAlignment};
 use super::{
     model::Model, service_items::ServiceTrait, slide::Slide,
 };
-use cosmic::{executor, iced::Executor};
+use cosmic::iced::Executor;
 use crisp::types::{Keyword, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
 use std::path::PathBuf;
@@ -83,7 +83,7 @@ impl From<&Value> for Video {
                     let pos = loop_pos + 1;
                     list.get(pos)
                         .map(|l| {
-                            String::from(l) == "true".to_string()
+                            String::from(l) == *"true"
                         })
                         .unwrap_or_default()
                 } else {
@@ -157,7 +157,7 @@ pub async fn get_video_from_db(
     database_id: i32,
     db: &mut SqliteConnection,
 ) -> Result<Video> {
-    Ok(query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()?)
+    query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
 #[cfg(test)]

@@ -5,18 +5,17 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
-    self, event, window, Font, Length, Padding, Point,
+    self, event, window, Length, Padding, Point,
 };
 use cosmic::iced_core::SmolStr;
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row, stack};
+use cosmic::iced_widget::{column, row};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, context_drawer, image, nav_bar, text, tooltip, MouseArea,
-    Responsive, Space,
+    button, nav_bar, text, tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
@@ -75,8 +74,8 @@ fn main() -> Result<()> {
             Settings::default().debug(false).no_main_window(true);
     }
 
-    Ok(cosmic::app::run::<App>(settings, args)
-        .map_err(|e| miette!("Invalid things... {}", e))?)
+    cosmic::app::run::<App>(settings, args)
+        .map_err(|e| miette!("Invalid things... {}", e))
 }
 
 fn theme(_state: &App) -> Theme {
@@ -159,11 +158,7 @@ impl cosmic::Application for App {
 
         let items = ServiceItemModel::from(items);
         let presenter = Presenter::with_items(items.clone());
-        let slides = if let Ok(slides) = items.to_slides() {
-            slides
-        } else {
-            vec![]
-        };
+        let slides = items.to_slides().unwrap_or_default();
         let current_slide = slides[0].clone();
 
         for item in items.iter() {
@@ -239,7 +234,7 @@ impl cosmic::Application for App {
         .spacing(10);
         let padding = Padding::new(0.0).top(20);
         let container = Container::new(column)
-            .style(|t| nav_bar_style(t))
+            .style(nav_bar_style)
             .padding(padding);
         Some(container.into())
     }
@@ -288,7 +283,7 @@ impl cosmic::Application for App {
             .on_press({
                 if self.presentation_open {
                     Message::CloseWindow(
-                        presenter_window.map(|id| *id),
+                        presenter_window.copied(),
                     )
                 } else {
                     Message::OpenWindow
@@ -351,14 +346,14 @@ impl cosmic::Application for App {
     ) -> Option<
         cosmic::app::context_drawer::ContextDrawer<Self::Message>,
     > {
-        Some(ContextDrawer {
+        ContextDrawer {
             title: Some("Context".into()),
             header_actions: vec![],
             header: Some("hi".into()),
             content: "Sup".into(),
             footer: Some("foot".into()),
             on_close: Message::None,
-        });
+        };
         None
     }
 
@@ -390,23 +385,23 @@ impl cosmic::Application for App {
                         presenter::Message::NextSlide,
                     )),
                     (Key::Character(k), _)
-                        if k == SmolStr::from("j")
-                            || k == SmolStr::from("l") =>
+                        if k == *"j"
+                            || k == *"l" =>
                     {
                         self.update(Message::Present(
                             presenter::Message::NextSlide,
                         ))
                     }
                     (Key::Character(k), _)
-                        if k == SmolStr::from("k")
-                            || k == SmolStr::from("h") =>
+                        if k == *"k"
+                            || k == *"h" =>
                     {
                         self.update(Message::Present(
                             presenter::Message::PrevSlide,
                         ))
                     }
                     (Key::Character(k), _)
-                        if k == SmolStr::from("q") =>
+                        if k == *"q" =>
                     {
                         self.update(Message::Quit)
                     }
@@ -484,7 +479,7 @@ impl cosmic::Application for App {
                 };
                 self.windows.remove(window);
                 // This closes the app if using the cli example
-                if self.windows.len() == 0 {
+                if self.windows.is_empty() {
                     self.update(Message::Quit)
                 } else {
                     self.presentation_open = false;
@@ -542,7 +537,7 @@ impl cosmic::Application for App {
             Container::new(
                 self.presenter
                     .view_preview()
-                    .map(|m| Message::Present(m)),
+                    .map(Message::Present),
             )
             .align_bottom(Length::Fill),
             Container::new(if self.presenter.video.is_some() {
@@ -618,7 +613,7 @@ impl cosmic::Application for App {
             Container::new(
                 self.presenter
                     .preview_bar()
-                    .map(|m| Message::Present(m))
+                    .map(Message::Present)
             )
             .clip(true)
             .width(Length::Fill)
@@ -632,7 +627,7 @@ impl cosmic::Application for App {
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         debug!("window");
-        self.presenter.view().map(|m| Message::Present(m))
+        self.presenter.view().map(Message::Present)
     }
 }
 

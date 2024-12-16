@@ -1,11 +1,11 @@
-use std::{collections::HashMap, fmt::Display, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
-use cosmic::{executor, iced::Executor};
+use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    query, query_as, sqlite::SqliteRow, FromRow, Row,
+    query, sqlite::SqliteRow, FromRow, Row,
     SqliteConnection,
 };
 use tracing::{debug, error};
@@ -154,7 +154,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         .position(|v| v == &Value::Keyword(Keyword::from("id")))
     {
         let pos = key_pos + 1;
-        list.get(pos).map(|c| i32::from(c)).unwrap_or_default()
+        list.get(pos).map(i32::from).unwrap_or_default()
     } else {
         DEFAULT_SONG_ID
     };
@@ -164,7 +164,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
             v == &Value::Keyword(Keyword::from("background"))
         }) {
         let pos = key_pos + 1;
-        list.get(pos).map(|b| slide::lisp_to_background(b))
+        list.get(pos).map(slide::lisp_to_background)
     } else {
         None
     };
@@ -174,7 +174,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         .position(|v| v == &Value::Keyword(Keyword::from("author")))
     {
         let pos = key_pos + 1;
-        list.get(pos).map(|a| String::from(a))
+        list.get(pos).map(String::from)
     } else {
         None
     };
@@ -204,7 +204,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         .position(|v| v == &Value::Keyword(Keyword::from("font")))
     {
         let pos = key_pos + 1;
-        list.get(pos).map(|f| String::from(f))
+        list.get(pos).map(String::from)
     } else {
         None
     };
@@ -213,7 +213,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         v == &Value::Keyword(Keyword::from("font-size"))
     }) {
         let pos = key_pos + 1;
-        list.get(pos).map(|f| i32::from(f))
+        list.get(pos).map(i32::from)
     } else {
         None
     };
@@ -224,7 +224,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
     {
         let pos = key_pos + 1;
         list.get(pos)
-            .map(|t| String::from(t))
+            .map(String::from)
             .unwrap_or(String::from("song"))
     } else {
         String::from("song")
@@ -235,7 +235,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
             v == &Value::Keyword(Keyword::from("text-alignment"))
         }) {
         let pos = key_pos + 1;
-        list.get(pos).map(|t| TextAlignment::from(t))
+        list.get(pos).map(TextAlignment::from)
     } else {
         None
     };
@@ -247,7 +247,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         let pos = key_pos + 1;
         list.get(pos).map(|v| match v {
             Value::List(vals) => vals
-                .into_iter()
+                .iter()
                 .map(|v| String::from(v).to_uppercase())
                 .collect::<Vec<String>>(),
             _ => vec![],
@@ -256,8 +256,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         None
     };
 
-    let first_text_postiion = if let Some(pos) =
-        list.iter().position(|v| match v {
+    let first_text_postiion = list.iter().position(|v| match v {
             Value::List(inner) => {
                 (match &inner[0] {
                     Value::Symbol(Symbol(text)) => {
@@ -273,11 +272,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
                 })
             }
             _ => false,
-        }) {
-        pos
-    } else {
-        1
-    };
+        }).unwrap_or(1);
 
     let lyric_elements = &list[first_text_postiion..];
 
@@ -347,7 +342,7 @@ pub async fn get_song_from_db(
     db: &mut SqliteConnection,
 ) -> Result<Song> {
     let row = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32" from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
-    Ok(Song::from_row(&row).into_diagnostic()?)
+    Song::from_row(&row).into_diagnostic()
 }
 
 impl Model<Song> {

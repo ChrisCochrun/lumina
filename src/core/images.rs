@@ -2,7 +2,7 @@ use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::{model::Model, service_items::ServiceTrait};
 use crisp::types::{Keyword, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
 use std::path::PathBuf;
@@ -114,7 +114,7 @@ pub async fn get_image_from_db(
     database_id: i32,
     db: &mut SqliteConnection,
 ) -> Result<Image> {
-    Ok(query_as!(Image, r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()?)
+    query_as!(Image, r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
 #[cfg(test)]
