@@ -66,7 +66,7 @@ impl Presenter {
         let slides = items.to_slides().unwrap_or_default();
         Self {
             slides: slides.clone(),
-            items: items,
+            items,
             current_slide: slides[0].clone(),
             current_slide_index: 0,
             video: {

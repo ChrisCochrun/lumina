@@ -7,7 +7,6 @@ use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
     self, event, window, Length, Padding, Point,
 };
-use cosmic::iced_core::SmolStr;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
 use cosmic::prelude::ElementExt;
