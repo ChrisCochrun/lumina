@@ -46,6 +46,7 @@
             gst_all_1.gst-plugins-rs
             gst_all_1.gst-vaapi
             gst_all_1.gstreamer
+            gst_all_1.gstreamermm
           ];
 
           bi = with pkgs; [

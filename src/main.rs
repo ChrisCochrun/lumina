@@ -2,21 +2,20 @@ use clap::{command, Parser};
 use core::service_items::{ServiceItem, ServiceItemModel};
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
-use cosmic::iced::alignment::Horizontal;
-use cosmic::iced::keyboard::Key;
+use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
     self, event, window, Font, Length, Padding, Point,
 };
 use cosmic::iced_core::SmolStr;
+use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
-use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, context_drawer, image, nav_bar, text, tooltip,
+    button, context_drawer, image, nav_bar, text, tooltip, MouseArea,
     Responsive, Space,
 };
 use cosmic::widget::{icon, slider};
@@ -94,6 +93,8 @@ struct App {
     current_slide: Slide,
     presentation_open: bool,
     cli_mode: bool,
+    library_open: bool,
+    library_width: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -107,6 +108,7 @@ enum Message {
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
     Quit,
+    Key(Key, Modifiers),
     None,
 }
 
@@ -180,6 +182,8 @@ impl cosmic::Application for App {
             current_slide,
             presentation_open: false,
             cli_mode: !input.ui,
+            library_open: true,
+            library_width: 60.0,
         };
 
         let command;
@@ -300,75 +304,44 @@ impl cosmic::Application for App {
         Some(text::body("Sux").into())
     }
 
-    fn subscription(
-        &self,
-    ) -> cosmic::iced_futures::Subscription<Self::Message> {
+    fn subscription(&self) -> Subscription<Self::Message> {
         event::listen_with(|event, _, id| {
-            if let iced::Event::Window(window_event) = event {
-                match window_event {
-                    window::Event::CloseRequested => {
-                        debug!("Closing window");
-                        Some(Message::CloseWindow(Some(id)))
-                    }
-                    window::Event::Opened { position, .. } => {
-                        debug!(?window_event, ?id);
-                        Some(Message::WindowOpened(id, position))
-                    }
-                    window::Event::Closed => {
-                        debug!("Closed window");
-                        Some(Message::WindowClosed(id))
-                    }
-                    _ => None,
-                }
-            } else if let iced::Event::Keyboard(key) = event {
-                match key {
-                    iced::keyboard::Event::KeyReleased {
+            // debug!(?event);
+            match event {
+                iced::Event::Keyboard(event) => match event {
+                    iced::keyboard::Event::KeyPressed {
                         key,
-                        modified_key: _,
-                        physical_key: _,
-                        location: _,
-                        modifiers: _,
-                    } => match key {
-                        Key::Named(
-                            iced::keyboard::key::Named::ArrowRight,
-                        ) => Some(Message::Present(
-                            ui::presenter::Message::NextSlide,
-                        )),
-                        Key::Named(
-                            iced::keyboard::key::Named::ArrowLeft,
-                        ) => Some(Message::Present(
-                            ui::presenter::Message::NextSlide,
-                        )),
-                        Key::Named(
-                            iced::keyboard::key::Named::Space,
-                        ) => Some(Message::Present(
-                            ui::presenter::Message::NextSlide,
-                        )),
-                        Key::Character(key) => {
-                            if key == SmolStr::from("j")
-                                || key == SmolStr::from("l")
-                            {
-                                Some(Message::Present(
-                                    ui::presenter::Message::NextSlide,
-                                ))
-                            } else if key == SmolStr::from("k")
-                                || key == SmolStr::from("h")
-                            {
-                                Some(Message::Present(
-                                    ui::presenter::Message::PrevSlide,
-                                ))
-                            } else if key == SmolStr::from("q") {
-                                Some(Message::Quit)
-                            } else {
-                                None
-                            }
+                        modifiers,
+                        ..
+                    } => Some(Message::Key(key, modifiers)),
+                    _ => None,
+                },
+                iced::Event::Mouse(event) => None,
+                iced::Event::Window(window_event) => {
+                    match window_event {
+                        window::Event::CloseRequested => {
+                            debug!("Closing window");
+                            Some(Message::CloseWindow(Some(id)))
+                        }
+                        window::Event::Opened {
+                            position, ..
+                        } => {
+                            debug!(?window_event, ?id);
+                            Some(Message::WindowOpened(id, position))
+                        }
+                        window::Event::Closed => {
+                            debug!("Closed window");
+                            Some(Message::WindowClosed(id))
                         }
                         _ => None,
-                    },
-                    _ => None,
+                    }
                 }
-            } else {
-                None
+                iced::Event::Touch(event) => None,
+                iced::Event::A11y(id, action_request) => None,
+                iced::Event::Dnd(dnd_event) => None,
+                iced::Event::PlatformSpecific(platform_specific) => {
+                    None
+                }
             }
         })
     }
@@ -391,8 +364,57 @@ impl cosmic::Application for App {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::Key(key, modifiers) => {
+                debug!(?key, ?modifiers);
+                match (key, modifiers) {
+                    (
+                        Key::Named(
+                            iced::keyboard::key::Named::ArrowRight,
+                        ),
+                        _,
+                    ) => self.update(Message::Present(
+                        presenter::Message::NextSlide,
+                    )),
+                    (
+                        Key::Named(
+                            iced::keyboard::key::Named::ArrowLeft,
+                        ),
+                        _,
+                    ) => self.update(Message::Present(
+                        presenter::Message::PrevSlide,
+                    )),
+                    (
+                        Key::Named(iced::keyboard::key::Named::Space),
+                        _,
+                    ) => self.update(Message::Present(
+                        presenter::Message::NextSlide,
+                    )),
+                    (Key::Character(k), _)
+                        if k == SmolStr::from("j")
+                            || k == SmolStr::from("l") =>
+                    {
+                        self.update(Message::Present(
+                            presenter::Message::NextSlide,
+                        ))
+                    }
+                    (Key::Character(k), _)
+                        if k == SmolStr::from("k")
+                            || k == SmolStr::from("h") =>
+                    {
+                        self.update(Message::Present(
+                            presenter::Message::PrevSlide,
+                        ))
+                    }
+                    (Key::Character(k), _)
+                        if k == SmolStr::from("q") =>
+                    {
+                        self.update(Message::Quit)
+                    }
+                    _ => Task::none(),
+                }
+            }
             Message::Present(message) => {
-                debug!(?message);
+                // debug!(?message);
                 if self.presentation_open {
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
@@ -549,6 +571,14 @@ impl cosmic::Application for App {
             Space::with_height(Length::Fill),
         ]
         .spacing(3);
+
+        // let library = Container::new("library")
+        //     .center(Length::Fill)
+        //     .width(self.library_width);
+        // let drag_handle = Container::new(Space::new(1, Length::Fill))
+        //     .style(|t| nav_bar_style(t));
+        // let dragger = MouseArea::new(drag_handle)
+        //     .on_drag(Message::LibraryWidth);
 
         let row = row![
             Container::new(

@@ -1,6 +1,4 @@
-use std::{
-    fs::File, io::BufReader, path::PathBuf, sync::Arc, thread,
-};
+use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
     dialog::ashpd::url::Url,
@@ -12,8 +10,7 @@ use cosmic::{
     },
     iced_widget::{
         scrollable::{
-            scroll_by, scroll_to, AbsoluteOffset, Direction,
-            Scrollbar,
+            scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
         stack,
     },
@@ -45,6 +42,7 @@ pub(crate) struct Presenter {
     sink: (OutputStream, Arc<Sink>),
     hovered_slide: i32,
     scroll_id: Id,
+    current_font: Font,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,6 +57,7 @@ pub(crate) enum Message {
     VideoPos(f32),
     VideoFrame,
     HoveredSlide(i32),
+    ChangeFont(String),
     None,
 }
 
@@ -109,6 +108,7 @@ impl Presenter {
                 )
             },
             scroll_id: Id::unique(),
+            current_font: cosmic::font::default(),
         }
     }
 
@@ -138,10 +138,11 @@ impl Presenter {
             }
             Message::SlideChange(id) => {
                 debug!(id, "slide changed");
-                let right = self.current_slide_index < id;
                 self.current_slide_index = id;
                 if let Some(slide) = self.slides.get(id as usize) {
                     self.current_slide = slide.clone();
+                    let _ = self
+                        .update(Message::ChangeFont(slide.font()));
                 }
                 if let Some(video) = &mut self.video {
                     let _ = video.restart_stream();
@@ -195,6 +196,21 @@ impl Presenter {
                     }
                 }
                 Task::batch(tasks)
+            }
+            Message::ChangeFont(s) => {
+                let font_name = s.into_boxed_str();
+                let family = Family::Name(Box::leak(font_name));
+                let weight = Weight::Normal;
+                let stretch = Stretch::Normal;
+                let style = Style::Normal;
+                let font = Font {
+                    family,
+                    weight,
+                    stretch,
+                    style,
+                };
+                self.current_font = font;
+                Task::none()
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -266,17 +282,7 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         responsive(|size| {
-            let font = self.current_slide.font().into_boxed_str();
-            let family = Family::Name(Box::leak(font));
-            let weight = Weight::Normal;
-            let stretch = Stretch::Normal;
-            let style = Style::Normal;
-            let font = Font {
-                family,
-                weight,
-                stretch,
-                style,
-            };
+            let font = self.current_font;
             let font_size = if self.current_slide.font_size() > 0 {
                 (size.width / self.current_slide.font_size() as f32)
                     * 3.0
@@ -341,6 +347,7 @@ impl Presenter {
                     if let Some(video) = &self.video {
                         Container::new(
                             VideoPlayer::new(video)
+                                .mouse_hidden(true)
                                 .width(size.width)
                                 .height(size.width * 9.0 / 16.0)
                                 .on_end_of_stream(Message::EndVideo)
@@ -366,17 +373,7 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         responsive(|size| {
-            let font = self.current_slide.font().into_boxed_str();
-            let family = Family::Name(Box::leak(font));
-            let weight = Weight::Normal;
-            let stretch = Stretch::Normal;
-            let style = Style::Normal;
-            let font = Font {
-                family,
-                weight,
-                stretch,
-                style,
-            };
+            let font = self.current_font;
             let font_size = if self.current_slide.font_size() > 0 {
                 (size.width / self.current_slide.font_size() as f32)
                     * 3.0
@@ -448,7 +445,8 @@ impl Presenter {
         &'a self,
         slide: &'a Slide,
     ) -> Element<'a, Message> {
-        let family = Family::Name("VictorMono Nerd Font");
+        let font_name = slide.font().into_boxed_str();
+        let family = Family::Name(Box::leak(font_name));
         let weight = Weight::Normal;
         let stretch = Stretch::Normal;
         let style = Style::Normal;
