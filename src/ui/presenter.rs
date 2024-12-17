@@ -31,6 +31,9 @@ use crate::{
     BackgroundKind,
 };
 
+const REFERENCE_WIDTH: f32 = 1920.0;
+const REFERENCE_HEIGHT: f32 = 1080.0;
+
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
     pub slides: Vec<Slide>,
@@ -363,159 +366,21 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        responsive(|size| {
-            let font = self.current_font;
-            let font_size = if self.current_slide.font_size() > 0 {
-                (size.width / self.current_slide.font_size() as f32)
-                    * 3.0
-            } else {
-                50.0
-            };
-            let slide_text = self.current_slide.text();
-            let lines = slide_text.lines();
-            let line_size = lines.clone().count();
-            // debug!(?lines);
-            let text: Vec<Element<Message>> = lines
-                .map(|t| {
-                    text(t.to_string())
-                        .size(font_size)
-                        .font(font)
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .into()
-                })
-                .collect();
-            let texts = Column::with_children(text);
-            // let text = text(self.current_slide.text())
-            //     .size(font_size)
-            //     .font(font)
-            //     .align_x(Horizontal::Center);
-            let text = Container::new(texts).center(Length::Fill);
-            let text_background = Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(
-                        Background::Color(Color::BLACK)
-                            .scale_alpha(0.3),
-                    )
-                })
-                .width(size.width)
-                .height(
-                    font_size * line_size as f32 * line_size as f32,
-                );
-            let text_stack = stack!(text_background, text);
-            let text_container =
-                Container::new(text_stack).center(Length::Fill);
-            let black = Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(Background::Color(
-                        Color::BLACK,
-                    ))
-                })
-                .width(size.width)
-                .height(size.height);
-            let container = match self.current_slide.background().kind
-            {
-                BackgroundKind::Image => {
-                    let path =
-                        self.current_slide.background().path.clone();
-                    Container::new(
-                        image(path)
-                            .content_fit(ContentFit::Cover)
-                            .width(size.width)
-                            .height(size.height),
-                    )
-                }
-                BackgroundKind::Video => {
-                    if let Some(video) = &self.video {
-                        Container::new(
-                            VideoPlayer::new(video)
-                                .mouse_hidden(true)
-                                .width(size.width)
-                                .height(size.width * 9.0 / 16.0)
-                                .on_end_of_stream(Message::EndVideo)
-                                .on_new_frame(Message::VideoFrame)
-                                .on_missing_plugin(
-                                    Message::MissingPlugin,
-                                )
-                                .on_warning(|w| {
-                                    Message::Error(w.to_string())
-                                })
-                                .on_error(|e| {
-                                    Message::Error(e.to_string())
-                                })
-                                .content_fit(ContentFit::Cover),
-                        )
-                    } else {
-                        Container::new(Space::new(0, 0))
-                    }
-                }
-            };
-            stack!(
-                black,
-                container.center(Length::Fill),
-                text_container
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-        })
-        .into()
+        self.slide_view(
+            &self.current_slide,
+            self.current_font,
+            false,
+            true,
+        )
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        responsive(|size| {
-            let font = self.current_font;
-            let font_size = if self.current_slide.font_size() > 0 {
-                (size.width / self.current_slide.font_size() as f32)
-                    * 3.0
-            } else {
-                50.0
-            };
-            let text = text(self.current_slide.text())
-                .size(font_size)
-                .font(font);
-            let text = Container::new(text).center(Length::Fill);
-            let black = Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(Background::Color(
-                        Color::BLACK,
-                    ))
-                })
-                .width(size.width)
-                .height(size.height);
-            let container = match self.current_slide.background().kind
-            {
-                BackgroundKind::Image => {
-                    let path =
-                        self.current_slide.background().path.clone();
-                    Container::new(
-                        image(path)
-                            .content_fit(ContentFit::Cover)
-                            .width(size.width)
-                            .height(size.height),
-                    )
-                }
-                BackgroundKind::Video => {
-                    if let Some(video) = &self.video {
-                        Container::new(
-                            VideoPlayer::new(video)
-                                .width(size.width)
-                                .height(size.width * 9.0 / 16.0)
-                                .on_end_of_stream(Message::EndVideo)
-                                .on_new_frame(Message::VideoFrame)
-                                .content_fit(ContentFit::Cover),
-                        )
-                    } else {
-                        Container::new(Space::new(0, 0))
-                    }
-                }
-            };
-            stack!(black, container.center(Length::Fill), text)
-                .width(size.width)
-                .height(size.width * 9.0 / 16.0)
-                .into()
-        })
-        .into()
+        self.slide_view(
+            &self.current_slide,
+            self.current_font,
+            false,
+            false,
+        )
     }
 
     pub fn preview_bar(&self) -> Element<Message> {
@@ -547,86 +412,59 @@ impl Presenter {
             stretch,
             style,
         };
+
         let slide_id =
             self.slides.iter().position(|s| s == slide).unwrap()
                 as i32;
-        let text = Responsive::new(move |size| {
-            let font_size = if slide.font_size() > 0 {
-                (size.width / slide.font_size() as f32) * 3.0
-            } else {
-                50.0
-            };
-            let text = text(slide.text()).size(font_size).font(font);
-            let text = Container::new(text).center(Length::Fill);
-            text.into()
-        });
-        let container = match slide.background().kind {
-            BackgroundKind::Image => {
-                let path = slide.background().path.clone();
 
-                Container::new(
-                    image(path)
-                        .content_fit(ContentFit::Contain)
-                        .border_radius([10.0; 4]),
-                )
-            }
-            BackgroundKind::Video => Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(Background::Color(
-                        Color::BLACK,
-                    ))
-                })
-                .width(Length::Fill)
-                .height(Length::Fill),
-        };
+        let container = self.slide_view(slide, font, true, false);
         let delegate = mouse_area(
-            Container::new(
-                stack!(container.center(Length::Fill), text)
-                    .width(Length::Fill)
-                    .height(Length::Fill),
-            )
-            .style(move |t| {
-                let mut style = container::Style::default();
-                let theme = t.cosmic();
-                let hovered = self.hovered_slide == slide_id;
-                style.background = Some(Background::Color(
-                    if self.current_slide_index as i32 == slide_id {
-                        theme.accent.base.into()
-                    } else if hovered {
-                        theme.accent.hover.into()
-                    } else {
-                        theme.palette.neutral_3.into()
-                    },
-                ));
-                style.border = Border::default().rounded(10.0);
-                style.shadow = Shadow {
-                    color: Color::BLACK,
-                    offset: {
+            Container::new(container)
+                .style(move |t| {
+                    let mut style = container::Style::default();
+                    let theme = t.cosmic();
+                    let hovered = self.hovered_slide == slide_id;
+                    style.background = Some(Background::Color(
                         if self.current_slide_index as i32 == slide_id
                         {
-                            Vector::new(5.0, 5.0)
+                            theme.accent.base.into()
                         } else if hovered {
-                            Vector::new(5.0, 5.0)
+                            theme.accent.hover.into()
                         } else {
-                            Vector::new(0.0, 0.0)
-                        }
-                    },
-                    blur_radius: {
-                        if self.current_slide_index as i32 == slide_id
-                        {
-                            10.0
-                        } else if hovered {
-                            10.0
-                        } else {
-                            0.0
-                        }
-                    },
-                };
-                style
-            })
-            .center_x(100.0 * 16.0 / 9.0)
-            .height(100)
-            .padding(10),
+                            theme.palette.neutral_3.into()
+                        },
+                    ));
+                    style.border = Border::default().rounded(10.0);
+                    style.shadow = Shadow {
+                        color: Color::BLACK,
+                        offset: {
+                            if self.current_slide_index as i32
+                                == slide_id
+                            {
+                                Vector::new(5.0, 5.0)
+                            } else if hovered {
+                                Vector::new(5.0, 5.0)
+                            } else {
+                                Vector::new(0.0, 0.0)
+                            }
+                        },
+                        blur_radius: {
+                            if self.current_slide_index as i32
+                                == slide_id
+                            {
+                                10.0
+                            } else if hovered {
+                                10.0
+                            } else {
+                                0.0
+                            }
+                        },
+                    };
+                    style
+                })
+                .center_x(100.0 * 16.0 / 9.0)
+                .height(100)
+                .padding(10),
         )
         .interaction(cosmic::iced::mouse::Interaction::Pointer)
         .on_enter(Message::HoveredSlide(slide_id))
@@ -637,6 +475,117 @@ impl Presenter {
             Message::SlideChange(id as u16)
         });
         delegate.into()
+    }
+
+    fn slide_view<'a>(
+        &'a self,
+        slide: &'a Slide,
+        font: Font,
+        delegate: bool,
+        hide_mouse: bool,
+    ) -> Element<'a, Message> {
+        responsive(move |size| {
+            let font_size = scale_font(
+                slide.font_size() as f32,
+                size.width,
+                size.height,
+            );
+            let slide_text = slide.text();
+            let lines = slide_text.lines();
+            let line_size = lines.clone().count();
+            // debug!(?lines);
+            let text: Vec<Element<Message>> = lines
+                .map(|t| {
+                    text(t.to_string())
+                        .size(font_size)
+                        .font(font)
+                        .width(Length::Fill)
+                        .align_x(Horizontal::Center)
+                        .into()
+                })
+                .collect();
+            let texts = Column::with_children(text);
+            // let text = text(slide.text())
+            //     .size(font_size)
+            //     .font(font)
+            //     .align_x(Horizontal::Center);
+            let text = Container::new(texts).center(Length::Fill);
+            let text_background = Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.3),
+                    )
+                })
+                .width(size.width)
+                .height(
+                    font_size * line_size as f32 * line_size as f32,
+                );
+            let text_stack = stack!(text_background, text);
+            let text_container =
+                Container::new(text_stack).center(Length::Fill);
+            let black = Container::new(Space::new(0, 0))
+                .style(|_| {
+                    container::background(Background::Color(
+                        Color::BLACK,
+                    ))
+                })
+                .width(size.width)
+                .height(size.height);
+            let container = match slide.background().kind {
+                BackgroundKind::Image => {
+                    let path = slide.background().path.clone();
+                    Container::new(
+                        image(path)
+                            .content_fit(ContentFit::Cover)
+                            .width(size.width)
+                            .height(size.height),
+                    )
+                }
+                BackgroundKind::Video => {
+                    if delegate {
+                        Container::new(Space::new(0, 0))
+                            .style(|_| {
+                                container::background(
+                                    Background::Color(Color::BLACK),
+                                )
+                            })
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                    } else if let Some(video) = &self.video {
+                        Container::new(
+                            VideoPlayer::new(video)
+                                .mouse_hidden(hide_mouse)
+                                .width(size.width)
+                                .height(size.width * 9.0 / 16.0)
+                                .on_end_of_stream(Message::EndVideo)
+                                .on_new_frame(Message::VideoFrame)
+                                .on_missing_plugin(
+                                    Message::MissingPlugin,
+                                )
+                                .on_warning(|w| {
+                                    Message::Error(w.to_string())
+                                })
+                                .on_error(|e| {
+                                    Message::Error(e.to_string())
+                                })
+                                .content_fit(ContentFit::Cover),
+                        )
+                    } else {
+                        Container::new(Space::new(0, 0))
+                    }
+                }
+            };
+            stack!(
+                black,
+                container.center(Length::Fill),
+                text_container
+            )
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+        })
+        .into()
     }
 
     fn reset_video(&mut self) {
@@ -680,4 +629,17 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     let empty = sink.empty();
     let paused = sink.is_paused();
     debug!(empty, paused, "Finished running");
+}
+
+fn scale_font(font_size: f32, width: f32, height: f32) -> f32 {
+    let aspect_ratio_true = REFERENCE_WIDTH / REFERENCE_HEIGHT;
+    let aspect_ratio = width / height;
+    let scale_factor = (REFERENCE_WIDTH / width).sqrt();
+    // debug!(scale_factor);
+    let font_size = if font_size > 0.0 {
+        font_size / scale_factor
+    } else {
+        50.0
+    };
+    font_size
 }
