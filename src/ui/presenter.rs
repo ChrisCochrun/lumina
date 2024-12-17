@@ -651,7 +651,12 @@ impl Presenter {
                         let url = Url::from_file_path(path).unwrap();
                         let result = Self::create_video(url);
                         match result {
-                            Ok(v) => self.video = Some(v),
+                            Ok(mut v) => {
+                                v.set_looping(
+                                    self.current_slide.video_loop(),
+                                );
+                                self.video = Some(v)
+                            }
                             Err(e) => {
                                 error!("Had an error creating the video object: {e}");
                                 self.video = None;
