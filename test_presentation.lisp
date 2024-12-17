@@ -1,9 +1,9 @@
 (slide :background (image :source "~/pics/frodo.jpg" :fit fill)
        (text "This is frodo" :font-size 70))
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
-(slide (video :source "~/vids/Tree-of-Life.mp4" :fit contain))
+(slide (video :source "~/vids/The magic of Rust's type system.mkv" :fit contain))
 (song :id 7 :author "North Point Worship"
-      :font "Allura" :font-size 60
+      :font "Treasuremap" :font-size 60
       :title "Death Was Arrested"
       :background (image :source "file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)
       :text-alignment center
