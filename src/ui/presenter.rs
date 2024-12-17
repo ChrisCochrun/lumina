@@ -1,3 +1,4 @@
+use miette::{miette, IntoDiagnostic, Result};
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
@@ -21,9 +22,9 @@ use cosmic::{
     },
     Task,
 };
-use iced_video_player::{Position, Video, VideoPlayer};
+use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
 use rodio::{Decoder, OutputStream, Sink};
-use tracing::{debug, error};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     core::{service_items::ServiceItemModel, slide::Slide},
@@ -45,7 +46,7 @@ pub(crate) struct Presenter {
     current_font: Font,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
@@ -56,42 +57,82 @@ pub(crate) enum Message {
     EndAudio,
     VideoPos(f32),
     VideoFrame,
+    MissingPlugin(gstreamer::Message),
     HoveredSlide(i32),
     ChangeFont(String),
+    Error(String),
     None,
 }
 
 impl Presenter {
+    fn create_video(url: Url) -> Result<Video> {
+        // Based on `iced_video_player::Video::new`,
+        // but without a text sink so that the built-in subtitle functionality triggers.
+        use gstreamer as gst;
+        use gstreamer_app as gst_app;
+        use gstreamer_app::prelude::*;
+
+        gst::init().into_diagnostic()?;
+
+        let pipeline = format!(
+            r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! appsink name=iced_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
+            url.as_str()
+        );
+
+        let pipeline = gst::parse::launch(pipeline.as_ref())
+            .into_diagnostic()?;
+        let pipeline = pipeline
+            .downcast::<gst::Pipeline>()
+            .map_err(|_| iced_video_player::Error::Cast)
+            .into_diagnostic()?;
+
+        let video_sink: gst::Element =
+            pipeline.property("video-sink");
+        let pad = video_sink.pads().first().cloned().unwrap();
+        let pad = pad.dynamic_cast::<gst::GhostPad>().unwrap();
+        let bin = pad
+            .parent_element()
+            .unwrap()
+            .downcast::<gst::Bin>()
+            .unwrap();
+        let video_sink = bin.by_name("iced_video").unwrap();
+        let video_sink =
+            video_sink.downcast::<gst_app::AppSink>().unwrap();
+        let result =
+            Video::from_gst_pipeline(pipeline, video_sink, None);
+        result.into_diagnostic()
+    }
     pub fn with_items(items: ServiceItemModel) -> Self {
         let slides = items.to_slides().unwrap_or_default();
+        let video = {
+            if let Some(slide) = slides.first() {
+                let path = slide.background().path.clone();
+                if path.exists() {
+                    let url = Url::from_file_path(path).unwrap();
+                    let result = Self::create_video(url);
+                    match result {
+                        Ok(mut v) => {
+                            v.set_paused(true);
+                            Some(v)
+                        }
+                        Err(e) => {
+                            error!("Had an error creating the video object: {e}, likely the first slide isn't a video");
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        };
         Self {
             slides: slides.clone(),
             items,
             current_slide: slides[0].clone(),
             current_slide_index: 0,
-            video: {
-                if let Some(slide) = slides.first() {
-                    let path = slide.background().path.clone();
-                    if path.exists() {
-                        let url = Url::from_file_path(path).unwrap();
-                        let result = Video::new(&url);
-                        match result {
-                            Ok(mut v) => {
-                                v.set_paused(true);
-                                Some(v)
-                            }
-                            Err(e) => {
-                                error!("Had an error creating the video object: {e}");
-                                None
-                            }
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            },
+            video,
             audio: slides[0].audio(),
             video_position: 0.0,
             hovered_slide: -1,
@@ -134,14 +175,20 @@ impl Presenter {
             }
             Message::SlideChange(id) => {
                 debug!(id, "slide changed");
+                let old_background =
+                    self.current_slide.background().clone();
                 self.current_slide_index = id;
                 if let Some(slide) = self.slides.get(id as usize) {
                     self.current_slide = slide.clone();
                     let _ = self
                         .update(Message::ChangeFont(slide.font()));
                 }
-                if let Some(video) = &mut self.video {
-                    let _ = video.restart_stream();
+                if self.current_slide.background() != &old_background
+                {
+                    if let Some(video) = &mut self.video {
+                        let _ = video.restart_stream();
+                    }
+                    self.reset_video();
                 }
 
                 let offset = AbsoluteOffset {
@@ -158,7 +205,6 @@ impl Presenter {
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
-                self.reset_video();
                 if let Some(audio) = &mut self.current_slide.audio() {
                     let audio = audio.to_str().unwrap().to_string();
                     let audio = if let Some(audio) =
@@ -253,6 +299,42 @@ impl Presenter {
                 }
                 Task::none()
             }
+            Message::MissingPlugin(element) => {
+                if let Some(video) = &mut self.video {
+                    video.set_paused(true);
+                }
+                Task::perform(
+                    async move {
+                        tokio::task::spawn_blocking(move || {
+                            match gst_pbutils::MissingPluginMessage::parse(&element) {
+                                Ok(missing_plugin) => {
+                                    let mut install_ctx = gst_pbutils::InstallPluginsContext::new();
+                                    install_ctx
+                                        .set_desktop_id(&format!("{}.desktop", "org.chriscochrun.lumina"));
+                                    let install_detail = missing_plugin.installer_detail();
+                                    println!("installing plugins: {}", install_detail);
+                                    let status = gst_pbutils::missing_plugins::install_plugins_sync(
+                                        &[&install_detail],
+                                        Some(&install_ctx),
+                                    );
+                                    info!("plugin install status: {}", status);
+                                    info!(
+                                        "gstreamer registry update: {:?}",
+                                        gstreamer::Registry::update()
+                                    );
+                                }
+                                Err(err) => {
+                                    warn!("failed to parse missing plugin message: {err}");
+                                }
+                            }
+                            Message::None
+                        })
+                        .await
+                        .unwrap()
+                    },
+                    |x| x,
+                )
+            }
             Message::HoveredSlide(slide) => {
                 self.hovered_slide = slide;
                 Task::none()
@@ -273,6 +355,10 @@ impl Presenter {
                 Task::none()
             }
             Message::None => Task::none(),
+            Message::Error(error) => {
+                error!(error);
+                Task::none()
+            }
         }
     }
 
@@ -348,6 +434,15 @@ impl Presenter {
                                 .height(size.width * 9.0 / 16.0)
                                 .on_end_of_stream(Message::EndVideo)
                                 .on_new_frame(Message::VideoFrame)
+                                .on_missing_plugin(
+                                    Message::MissingPlugin,
+                                )
+                                .on_warning(|w| {
+                                    Message::Error(w.to_string())
+                                })
+                                .on_error(|e| {
+                                    Message::Error(e.to_string())
+                                })
                                 .content_fit(ContentFit::Cover),
                         )
                     } else {
@@ -554,7 +649,7 @@ impl Presenter {
                     let path = slide.background().path.clone();
                     if path.exists() {
                         let url = Url::from_file_path(path).unwrap();
-                        let result = Video::new(&url);
+                        let result = Self::create_video(url);
                         match result {
                             Ok(v) => self.video = Some(v),
                             Err(e) => {
@@ -571,6 +666,7 @@ impl Presenter {
     }
 }
 
+#[allow(clippy::unused_async)]
 async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     let file = BufReader::new(File::open(audio).unwrap());
     debug!(?file);

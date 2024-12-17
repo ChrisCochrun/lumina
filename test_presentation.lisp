@@ -1,6 +1,7 @@
 (slide :background (image :source "~/pics/frodo.jpg" :fit fill)
        (text "This is frodo" :font-size 70))
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
+(slide (video :source "~/vids/Tree-of-Life.mp4" :fit contain))
 (song :id 7 :author "North Point Worship"
       :font "Allura" :font-size 60
       :title "Death Was Arrested"
@@ -98,7 +99,7 @@ And my life began"))
 (song :author "Jordan Feliz" :ccli 97987
       :font "Quicksand" :font-size 80
       :title "The River"
-      :background (video :source "~/vids/test/camprules2024theo.mp4" :fit cover)
+      :background (video :source "~/nc/tfc/openlp/Flood/motions/Brook_HD.mp4" :fit cover)
       :verse-order (v1 c1 v2 c1)
       (v1 "I'm going down to the river")
       (c1 "Down to the river")

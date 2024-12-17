@@ -82,9 +82,7 @@ impl From<&Value> for Video {
                     }) {
                     let pos = loop_pos + 1;
                     list.get(pos)
-                        .map(|l| {
-                            String::from(l) == *"true"
-                        })
+                        .map(|l| String::from(l) == *"true")
                         .unwrap_or_default()
                 } else {
                     false

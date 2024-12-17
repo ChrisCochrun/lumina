@@ -4,18 +4,14 @@ use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{
-    self, event, window, Length, Padding, Point,
-};
+use cosmic::iced::{self, event, window, Length, Padding, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{
-    button, nav_bar, text, tooltip, Space,
-};
+use cosmic::widget::{button, nav_bar, text, tooltip, Space};
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
@@ -281,9 +277,7 @@ impl cosmic::Application for App {
             .class(cosmic::theme::style::Button::HeaderBar)
             .on_press({
                 if self.presentation_open {
-                    Message::CloseWindow(
-                        presenter_window.copied(),
-                    )
+                    Message::CloseWindow(presenter_window.copied())
                 } else {
                     Message::OpenWindow
                 }
@@ -384,24 +378,20 @@ impl cosmic::Application for App {
                         presenter::Message::NextSlide,
                     )),
                     (Key::Character(k), _)
-                        if k == *"j"
-                            || k == *"l" =>
+                        if k == *"j" || k == *"l" =>
                     {
                         self.update(Message::Present(
                             presenter::Message::NextSlide,
                         ))
                     }
                     (Key::Character(k), _)
-                        if k == *"k"
-                            || k == *"h" =>
+                        if k == *"k" || k == *"h" =>
                     {
                         self.update(Message::Present(
                             presenter::Message::PrevSlide,
                         ))
                     }
-                    (Key::Character(k), _)
-                        if k == *"q" =>
-                    {
+                    (Key::Character(k), _) if k == *"q" => {
                         self.update(Message::Quit)
                     }
                     _ => Task::none(),
@@ -456,13 +446,12 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                    || id > self.core.main_window_id().unwrap()
+                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
                 {
                     self.presentation_open = true;
                     if let Some(video) = &mut self.presenter.video {
                         video.set_muted(false);
                     }
-                    warn!(self.presentation_open);
                     window::change_mode(id, Mode::Fullscreen)
                 } else {
                     Task::none()
@@ -500,29 +489,23 @@ impl cosmic::Application for App {
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
 
-        let video_range: f32 =
-            if let Some(video) = &self.presenter.video {
-                let duration = video.duration();
-                duration.as_secs_f32()
-            } else {
-                0.0
-            };
+        let video_range = self.presenter.video.as_ref().map_or_else(
+            || 0.0,
+            |video| video.duration().as_secs_f32(),
+        );
 
         let video_button_icon =
             if let Some(video) = &self.presenter.video {
-                if video.paused() {
-                    button::icon(icon::from_name("media-play"))
-                        .tooltip("Play")
-                        .on_press(Message::Present(
-                            presenter::Message::StartVideo,
-                        ))
+                let (icon_name, tooltip) = if video.paused() {
+                    ("media-play", "Play")
                 } else {
-                    button::icon(icon::from_name("media-pause"))
-                        .tooltip("Pause")
-                        .on_press(Message::Present(
-                            presenter::Message::StartVideo,
-                        ))
-                }
+                    ("media-pause", "Pause")
+                };
+                button::icon(icon::from_name(icon_name))
+                    .tooltip(tooltip)
+                    .on_press(Message::Present(
+                        presenter::Message::StartVideo,
+                    ))
             } else {
                 button::icon(icon::from_name("media-play"))
                     .tooltip("Play")
@@ -534,9 +517,7 @@ impl cosmic::Application for App {
         let slide_preview = column![
             Space::with_height(Length::Fill),
             Container::new(
-                self.presenter
-                    .view_preview()
-                    .map(Message::Present),
+                self.presenter.view_preview().map(Message::Present),
             )
             .align_bottom(Length::Fill),
             Container::new(if self.presenter.video.is_some() {
@@ -610,9 +591,7 @@ impl cosmic::Application for App {
         let column = column![
             Container::new(row).center_y(Length::Fill),
             Container::new(
-                self.presenter
-                    .preview_bar()
-                    .map(Message::Present)
+                self.presenter.preview_bar().map(Message::Present)
             )
             .clip(true)
             .width(Length::Fill)
@@ -625,7 +604,6 @@ impl cosmic::Application for App {
 
     // View for presentation
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        debug!("window");
         self.presenter.view().map(Message::Present)
     }
 }
@@ -634,22 +612,21 @@ impl App
 where
     Self: cosmic::Application,
 {
-    fn active_page_title(&mut self) -> &str {
-        // self.nav_model
-        //     .text(self.nav_model.active())
-        //     .unwrap_or("Unknown Page")
-        "Lumina"
+    fn active_page_title(&self) -> &str {
+        let Some(label) =
+            self.nav_model.text(self.nav_model.active())
+        else {
+            return "Lumina";
+        };
+        label
     }
 
     fn update_title(&mut self) -> Task<Message> {
         let header_title = self.active_page_title().to_owned();
         let window_title = format!("{header_title} — Lumina");
-        // self.set_header_title(header_title);
-        if let Some(id) = self.core.main_window_id() {
+        self.core.main_window_id().map_or_else(Task::none, |id| {
             self.set_window_title(window_title, id)
-        } else {
-            Task::none()
-        }
+        })
     }
 
     fn show_window(&mut self) -> Task<Message> {

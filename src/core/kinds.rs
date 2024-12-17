@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::Slide;
 
 use super::{
-    images::Image,
-    presentations::Presentation,
-    songs::Song,
+    images::Image, presentations::Presentation, songs::Song,
     videos::Video,
 };
 

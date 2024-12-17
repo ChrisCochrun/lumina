@@ -3580,6 +3580,8 @@ dependencies = [
  "clap",
  "crisp",
  "dirs",
+ "gstreamer",
+ "gstreamer-app",
  "iced_video_player",
  "lexpr",
  "libcosmic",

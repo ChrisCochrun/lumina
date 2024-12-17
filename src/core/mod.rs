@@ -6,4 +6,5 @@ pub mod presentations;
 pub mod service_items;
 pub mod slide;
 pub mod songs;
+pub mod thumbnail;
 pub mod videos;

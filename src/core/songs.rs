@@ -5,8 +5,7 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    query, sqlite::SqliteRow, FromRow, Row,
-    SqliteConnection,
+    query, sqlite::SqliteRow, FromRow, Row, SqliteConnection,
 };
 use tracing::{debug, error};
 
@@ -256,7 +255,9 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         None
     };
 
-    let first_text_postiion = list.iter().position(|v| match v {
+    let first_text_postiion = list
+        .iter()
+        .position(|v| match v {
             Value::List(inner) => {
                 (match &inner[0] {
                     Value::Symbol(Symbol(text)) => {
@@ -272,7 +273,8 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
                 })
             }
             _ => false,
-        }).unwrap_or(1);
+        })
+        .unwrap_or(1);
 
     let lyric_elements = &list[first_text_postiion..];
 
