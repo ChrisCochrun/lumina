@@ -212,7 +212,7 @@ impl ServiceItemModel {
     }
 
     pub fn to_slides(&self) -> Result<Vec<Slide>> {
-        Ok(self
+        let slides = self
             .items
             .iter()
             .filter_map(|item| {
@@ -221,7 +221,13 @@ impl ServiceItemModel {
                 slides
             })
             .flatten()
-            .collect::<Vec<Slide>>())
+            .collect::<Vec<Slide>>();
+        let mut final_slides = vec![];
+        for (index, mut slide) in slides.into_iter().enumerate() {
+            slide.set_index(index as i32);
+            final_slides.push(slide);
+        }
+        Ok(final_slides)
     }
 }
 

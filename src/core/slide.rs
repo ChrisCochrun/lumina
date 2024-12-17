@@ -245,6 +245,10 @@ impl Slide {
         Ok(slides)
     }
 
+    pub(crate) fn set_index(&mut self, index: i32) {
+        self.id = index;
+    }
+
     // pub fn slides_from_item(item: &ServiceItem) -> Result<Vec<Self>> {
     //     todo!()
     // }
