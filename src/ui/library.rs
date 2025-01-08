@@ -14,6 +14,8 @@ struct Library {
 
 enum Message {
     AddItem,
+    RemoveItem,
+    OpenItem,
     None,
 }
 
@@ -22,6 +24,8 @@ impl Library {
         match message {
             Message::AddItem => todo!(),
             Message::None => todo!(),
+            Message::RemoveItem => todo!(),
+            Message::OpenItem => todo!(),
         }
     }
 
