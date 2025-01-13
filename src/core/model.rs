@@ -4,10 +4,13 @@ use cosmic::iced::Executor;
 use miette::{miette, Result};
 use sqlx::{Connection, SqliteConnection};
 
+use super::kinds::ServiceItemKind;
+
 #[derive(Debug)]
 pub struct Model<T> {
     pub items: Vec<T>,
     pub db: SqliteConnection,
+    pub kind: ServiceItemKind,
 }
 impl<T> Model<T> {
     pub fn add_item(&mut self, item: T) -> Result<()> {
