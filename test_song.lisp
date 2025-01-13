@@ -1,7 +1,7 @@
 (song :id 7 :author "North Point Worship"
       :font "Quicksand Bold" :font-size 60
       :title "Death Was Arrested"
-      :background (video :source "~/nc/tfc/openlp/Flood/motions/Brook_HD.mp4" :fit cover)
+      :background (image :source "~/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)
       :text-alignment center
       :audio "file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3"
       :verse-order (i1 v1 v2 c1 v3 c1 v4 c1 b1 b1 e1 e2)

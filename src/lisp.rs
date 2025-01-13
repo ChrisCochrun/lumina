@@ -71,8 +71,7 @@ mod test {
 
     #[test]
     fn test_parsing_lisp_presentation() {
-        let lisp =
-            read_to_string("./test_presentation.lisp").expect("oops");
+        let lisp = read_to_string("./testypres.lisp").expect("oops");
         let lisp_value = crisp::reader::read(&lisp);
         let test_vec = vec![
             service_item_1(),

@@ -3,7 +3,7 @@
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
 (slide (video :source "~/vids/The magic of Rust's type system.mkv" :fit contain))
 (song :id 7 :author "North Point Worship"
-      :font "Treasuremap" :font-size 60
+      :font "Quicksand Bold" :font-size 60
       :title "Death Was Arrested"
       :background (image :source "file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)
       :text-alignment center
