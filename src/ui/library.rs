@@ -13,10 +13,8 @@ use cosmic::{
 
 use crate::core::{
     images::Image,
-    kinds::ServiceItemKind,
     model::{get_db, LibraryKind, Model},
     presentations::Presentation,
-    service_items::ServiceItemModel,
     songs::Song,
     videos::Video,
 };
