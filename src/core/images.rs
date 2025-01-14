@@ -1,6 +1,9 @@
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
-use super::{model::Model, service_items::ServiceTrait};
+use super::{
+    model::{get_db, LibraryKind, Model},
+    service_items::ServiceTrait,
+};
 use crisp::types::{Keyword, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
@@ -90,12 +93,22 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
-    pub async fn load_from_db(&mut self) {
+    pub async fn new_image_model(db: &mut SqliteConnection) -> Self {
+        let mut model = Self {
+            items: vec![],
+            kind: LibraryKind::Image,
+        };
+
+        model.load_from_db(db).await;
+        model
+    }
+
+    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
         let result = query_as!(
             Image,
             r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images"#
         )
-            .fetch_all(&mut self.db)
+            .fetch_all(db)
             .await;
         match result {
             Ok(v) => {

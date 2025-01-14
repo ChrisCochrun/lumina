@@ -1,25 +1,36 @@
 use cosmic::{
-    iced::Length,
+    iced::{
+        alignment::{Horizontal, Vertical},
+        Background, Border, Color, Length,
+    },
     iced_widget::{column, text},
-    widget::{button, horizontal_space, icon, row},
+    widget::{
+        button, container, horizontal_space, icon, mouse_area, row,
+        Container, Space,
+    },
     Element, Task,
 };
 
 use crate::core::{
-    images::Image, kinds::ServiceItemKind, model::Model,
-    presentations::Presentation, service_items::ServiceItemModel,
-    songs::Song, videos::Video,
+    images::Image,
+    kinds::ServiceItemKind,
+    model::{get_db, LibraryKind, Model},
+    presentations::Presentation,
+    service_items::ServiceItemModel,
+    songs::Song,
+    videos::Video,
 };
 
+#[derive(Debug, Clone)]
 pub(crate) struct Library {
     song_library: Model<Song>,
     image_library: Model<Image>,
     video_library: Model<Video>,
     presentation_library: Model<Presentation>,
-    library_open: Option<ServiceItemKind>,
+    library_open: Option<LibraryKind>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum Message {
     AddItem,
     RemoveItem,
@@ -28,15 +39,26 @@ pub(crate) enum Message {
 }
 
 impl Library {
-    pub fn new(service_items: &ServiceItemModel) -> Library {
-        todo!()
+    pub async fn new() -> Self {
+        let mut db = get_db().await;
+        Self {
+            song_library: Model::new_song_model(&mut db).await,
+            image_library: Model::new_image_model(&mut db).await,
+            video_library: Model::new_video_model(&mut db).await,
+            presentation_library: Model::new_presentation_model(
+                &mut db,
+            )
+            .await,
+            library_open: None,
+        }
     }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::AddItem => todo!(),
-            Message::None => todo!(),
-            Message::RemoveItem => todo!(),
-            Message::OpenItem => todo!(),
+            Message::AddItem => Task::none(),
+            Message::None => Task::none(),
+            Message::RemoveItem => Task::none(),
+            Message::OpenItem => Task::none(),
         }
     }
 
@@ -47,36 +69,56 @@ impl Library {
             self.library_item(&self.video_library),
             self.library_item(&self.presentation_library),
         ];
-        todo!()
+        column.height(Length::Fill).spacing(5).into()
     }
 
     pub fn library_item<T>(
         &self,
         model: &Model<T>,
     ) -> Element<Message> {
-        let mut row = row::<Message>();
-        let title = match &model.kind {
-            ServiceItemKind::Song(song) => {
-                row = row.push(text!("Songs"));
+        let mut row = row::<Message>().spacing(5);
+        match &model.kind {
+            LibraryKind::Song => {
+                row = row
+                    .push(text!("Songs").align_y(Vertical::Center));
             }
-            ServiceItemKind::Video(video) => {
-                row = row.push(text!("Videos"));
+            LibraryKind::Video => {
+                row = row
+                    .push(text!("Videos").align_y(Vertical::Center));
             }
-            ServiceItemKind::Image(image) => {
-                row = row.push(text!("Images"));
+            LibraryKind::Image => {
+                row = row
+                    .push(text!("Images").align_y(Vertical::Center));
             }
-            ServiceItemKind::Presentation(presentation) => {
-                row = row.push(text!("Presentations"));
+            LibraryKind::Presentation => {
+                row = row.push(
+                    text!("Presentations").align_y(Vertical::Center),
+                );
             }
-            ServiceItemKind::Content(slide) => todo!(),
         };
         let item_count = model.items.len();
-        row = row.push(text!("{}", item_count));
-        row = row.push(horizontal_space().width(Length::Fill));
+        row = row.push(horizontal_space());
         row = row.push(
-            button::icon(icon::from_name("arrow-down"))
-                .on_press(Message::None),
+            text!("{}", item_count)
+                .align_y(Vertical::Center)
+                .size(18),
         );
-        row.into()
+        row = row.push(icon::from_name("arrow-down").size(20));
+        let row_container =
+            Container::new(row)
+                .padding(5)
+                .style(|t| {
+                    container::Style::default()
+                        .background(Background::Color(
+                            t.cosmic().secondary.base.into(),
+                        ))
+                        .border(Border::default().rounded(
+                            t.cosmic().corner_radii.radius_s,
+                        ))
+                })
+                .center_x(Length::Fill)
+                .center_y(Length::Shrink);
+        let button = mouse_area(row_container);
+        button.into()
     }
 }

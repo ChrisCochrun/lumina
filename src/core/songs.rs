@@ -12,7 +12,7 @@ use tracing::{debug, error};
 use crate::{core::slide, Slide, SlideBuilder};
 
 use super::{
-    model::Model,
+    model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
     slide::{Background, TextAlignment},
 };
@@ -348,9 +348,19 @@ pub async fn get_song_from_db(
 }
 
 impl Model<Song> {
-    pub async fn load_from_db(&mut self) {
+    pub async fn new_song_model(db: &mut SqliteConnection) -> Self {
+        let mut model = Self {
+            items: vec![],
+            kind: LibraryKind::Song,
+        };
+
+        model.load_from_db(db).await;
+        model
+    }
+
+    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(&mut self.db).await;
+        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(db).await;
         match result {
             Ok(s) => {
                 for song in s.into_iter() {

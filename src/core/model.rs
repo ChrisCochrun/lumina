@@ -6,12 +6,20 @@ use sqlx::{Connection, SqliteConnection};
 
 use super::kinds::ServiceItemKind;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Model<T> {
     pub items: Vec<T>,
-    pub db: SqliteConnection,
-    pub kind: ServiceItemKind,
+    pub kind: LibraryKind,
 }
+
+#[derive(Debug, Clone)]
+pub enum LibraryKind {
+    Song,
+    Video,
+    Image,
+    Presentation,
+}
+
 impl<T> Model<T> {
     pub fn add_item(&mut self, item: T) -> Result<()> {
         self.items.push(item);

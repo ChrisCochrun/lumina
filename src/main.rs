@@ -23,7 +23,7 @@ use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
-use ui::library::Library;
+use ui::library::{self, Library};
 
 pub mod core;
 pub mod lisp;
@@ -88,7 +88,7 @@ struct App {
     current_slide: Slide,
     presentation_open: bool,
     cli_mode: bool,
-    // library: Library,
+    library: Option<Library>,
     library_open: bool,
     library_width: f32,
 }
@@ -96,6 +96,7 @@ struct App {
 #[derive(Debug, Clone)]
 enum Message {
     Present(presenter::Message),
+    Library(library::Message),
     File(PathBuf),
     DndEnter(ServiceItem),
     DndDrop(ServiceItem),
@@ -103,6 +104,7 @@ enum Message {
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
+    AddLibrary(Library),
     Quit,
     Key(Key, Modifiers),
     None,
@@ -174,21 +176,24 @@ impl cosmic::Application for App {
             current_slide,
             presentation_open: false,
             cli_mode: !input.ui,
-            // library: Library::new(&items),
+            library: None,
             library_open: true,
             library_width: 60.0,
         };
 
-        let command;
+        let mut batch = vec![];
+
         if input.ui {
             debug!("main view");
-            command = app.update_title()
+            batch.push(app.update_title())
         } else {
             debug!("window view");
-            command = app.show_window()
+            batch.push(app.show_window())
         };
 
-        (app, command)
+        batch.push(app.add_library());
+        let batch = Task::batch(batch);
+        (app, batch)
     }
 
     /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
@@ -412,6 +417,18 @@ impl cosmic::Application for App {
                     cosmic::app::Message::App(Message::None)
                 })
             }
+
+            Message::Library(message) => {
+                // debug!(?message);
+                if let Some(library) = &mut self.library {
+                    library.update(message).map(|x| {
+                        debug!(?x);
+                        cosmic::app::Message::App(Message::None)
+                    })
+                } else {
+                    Task::none()
+                }
+            }
             Message::File(file) => {
                 self.file = file;
                 Task::none()
@@ -483,6 +500,10 @@ impl cosmic::Application for App {
             Message::Quit => cosmic::iced::exit(),
             Message::DndEnter(service_item) => todo!(),
             Message::DndDrop(service_item) => todo!(),
+            Message::AddLibrary(library) => {
+                self.library = Some(library);
+                Task::none()
+            }
             Message::None => Task::none(),
         }
     }
@@ -550,9 +571,14 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
-        // let library = Container::new(self.library.view())
-        //     .center(Length::Fill)
-        //     .width(self.library_width);
+        let library =
+            Container::new(if let Some(library) = &self.library {
+                library.view().map(|m| Message::Library(m))
+            } else {
+                Space::new(0, 0).into()
+            })
+            .style(nav_bar_style)
+            .center(Length::Fill);
         // let drag_handle = Container::new(Space::new(1, Length::Fill))
         //     .style(|t| nav_bar_style(t));
         // let dragger = MouseArea::new(drag_handle)
@@ -586,6 +612,7 @@ impl cosmic::Application for App {
             .center_y(Length::Fill)
             .align_left(Length::Fill)
             .width(Length::FillPortion(2)),
+            library
         ]
         .width(Length::Fill)
         .height(Length::Fill)
@@ -643,6 +670,12 @@ where
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
         spawn_window.map(|id| {
             cosmic::app::Message::App(Message::WindowOpened(id, None))
+        })
+    }
+
+    fn add_library(&mut self) -> Task<Message> {
+        Task::perform(async { Library::new().await }, |x| {
+            cosmic::app::Message::App(Message::AddLibrary(x))
         })
     }
 }

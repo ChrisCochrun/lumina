@@ -1,7 +1,9 @@
 use crate::{Background, SlideBuilder, TextAlignment};
 
 use super::{
-    model::Model, service_items::ServiceTrait, slide::Slide,
+    model::{get_db, LibraryKind, Model},
+    service_items::ServiceTrait,
+    slide::Slide,
 };
 use cosmic::iced::Executor;
 use crisp::types::{Keyword, Value};
@@ -136,8 +138,18 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
-    pub async fn load_from_db(&mut self) {
-        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(&mut self.db).await;
+    pub async fn new_video_model(db: &mut SqliteConnection) -> Self {
+        let mut model = Self {
+            items: vec![],
+            kind: LibraryKind::Video,
+        };
+
+        model.load_from_db(db).await;
+        model
+    }
+
+    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
+        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(db).await;
         match result {
             Ok(v) => {
                 for video in v.into_iter() {
