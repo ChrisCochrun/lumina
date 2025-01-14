@@ -88,7 +88,7 @@ struct App {
     current_slide: Slide,
     presentation_open: bool,
     cli_mode: bool,
-    library: Library,
+    // library: Library,
     library_open: bool,
     library_width: f32,
 }
@@ -174,7 +174,7 @@ impl cosmic::Application for App {
             current_slide,
             presentation_open: false,
             cli_mode: !input.ui,
-            library: Library::new(&items),
+            // library: Library::new(&items),
             library_open: true,
             library_width: 60.0,
         };
@@ -550,9 +550,9 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
-        let library = Container::new(self.library.view())
-            .center(Length::Fill)
-            .width(self.library_width);
+        // let library = Container::new(self.library.view())
+        //     .center(Length::Fill)
+        //     .width(self.library_width);
         // let drag_handle = Container::new(Space::new(1, Length::Fill))
         //     .style(|t| nav_bar_style(t));
         // let dragger = MouseArea::new(drag_handle)

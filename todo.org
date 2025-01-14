@@ -7,6 +7,8 @@
 * TODO Develop library system for slides that are more than images or video i.e. content
 * TODO Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
+* TODO Use Rich Text instead of normal text for slides
+This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
 * TODO Find a way to load and discover every font on the system for slide building
 This may not be necessary since it is possible to create a font using =Box::leak()=.
 #+begin_src rust

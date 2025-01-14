@@ -9,16 +9,18 @@ use cosmic::{
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
+    iced_core::text::Span,
     iced_widget::{
+        rich_text,
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
-        stack,
+        span, stack,
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Responsive, Row, Space,
+        container, image, mouse_area, responsive, scrollable, Column,
+        Container, Id, Row, Space,
     },
     Task,
 };
@@ -492,38 +494,36 @@ impl Presenter {
             );
             let slide_text = slide.text();
             let lines = slide_text.lines();
-            let line_size = lines.clone().count();
+            // let line_size = lines.clone().count();
             // debug!(?lines);
-            let text: Vec<Element<Message>> = lines
+            let text: Vec<Span<Message>> = lines
                 .map(|t| {
-                    text(t.to_string())
-                        .size(font_size)
-                        .font(font)
-                        .width(Length::Fill)
-                        .align_x(Horizontal::Center)
-                        .into()
+                    span(format!("{}\n", t.to_string()))
+                        .background(
+                            Background::Color(Color::BLACK)
+                                .scale_alpha(0.3),
+                        )
+                        .padding(3)
                 })
                 .collect();
-            let texts = Column::with_children(text);
+            let text_container =
+                rich_text(text).size(font_size).font(font).center();
             // let text = text(slide.text())
             //     .size(font_size)
             //     .font(font)
             //     .align_x(Horizontal::Center);
-            let text = Container::new(texts).center(Length::Fill);
-            let text_background = Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(
-                        Background::Color(Color::BLACK)
-                            .scale_alpha(0.3),
-                    )
-                })
-                .width(size.width)
-                .height(
-                    font_size * line_size as f32 * line_size as f32,
-                );
-            let text_stack = stack!(text_background, text);
-            let text_container =
-                Container::new(text_stack).center(Length::Fill);
+            // let text_background = Container::new(Space::new(0, 0))
+            //     .style(|_| {
+            //         container::background(
+            //             Background::Color(Color::BLACK)
+            //                 .scale_alpha(0.3),
+            //         )
+            //     })
+            //     .width(size.width)
+            //     .height(
+            //         font_size * line_size as f32 * line_size as f32,
+            //     );
+            // let text_stack = stack!(text_background, text);
             let black = Container::new(Space::new(0, 0))
                 .style(|_| {
                     container::background(Background::Color(
