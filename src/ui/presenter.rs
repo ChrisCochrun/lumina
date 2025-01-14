@@ -496,34 +496,24 @@ impl Presenter {
             let lines = slide_text.lines();
             // let line_size = lines.clone().count();
             // debug!(?lines);
-            let text: Vec<Span<Message>> = lines
+            let text: Vec<Element<Message>> = lines
                 .map(|t| {
-                    span(format!("{}\n", t.to_string()))
+                    rich_text([span(format!("{}\n", t.to_string()))
                         .background(
                             Background::Color(Color::BLACK)
-                                .scale_alpha(0.3),
+                                .scale_alpha(0.4),
                         )
-                        .padding(3)
+                        .padding(3)])
+                    .size(font_size)
+                    .font(font)
+                    .center()
+                    .into()
                 })
                 .collect();
-            let text_container =
-                rich_text(text).size(font_size).font(font).center();
-            // let text = text(slide.text())
-            //     .size(font_size)
-            //     .font(font)
-            //     .align_x(Horizontal::Center);
-            // let text_background = Container::new(Space::new(0, 0))
-            //     .style(|_| {
-            //         container::background(
-            //             Background::Color(Color::BLACK)
-            //                 .scale_alpha(0.3),
-            //         )
-            //     })
-            //     .width(size.width)
-            //     .height(
-            //         font_size * line_size as f32 * line_size as f32,
-            //     );
-            // let text_stack = stack!(text_background, text);
+            let text = Column::with_children(text).spacing(6);
+            let text_container = Container::new(text)
+                .center(Length::Fill)
+                .align_x(Horizontal::Left);
             let black = Container::new(Space::new(0, 0))
                 .style(|_| {
                     container::background(Background::Color(
