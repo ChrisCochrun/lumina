@@ -1,14 +1,17 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO Develop ui for libraries
+* TODO Build library to see all available songs, images, videos, presentations, and slides
+** TODO Develop ui for libraries
+I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
+
 * TODO Develop ui for settings
+
+
 * TODO Find a way for text to pass through a service item to a slide i.e. content piece
 * TODO Develop library system for slides that are more than images or video i.e. content
 * TODO Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
-* TODO Use Rich Text instead of normal text for slides
-This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
 * TODO Find a way to load and discover every font on the system for slide building
 This may not be necessary since it is possible to create a font using =Box::leak()=.
 #+begin_src rust
@@ -29,5 +32,6 @@ This code creates a font by leaking the Box to a ='static &str=. I just am not s
 
 Krimzin on Discord told me that maybe the =update= method is a better place for this Box to be created or updated and then maybe I could generate the view from there.
 
-* TODO Build library to see all available songs, images, videos, presentations, and slides
 * TODO Build editors for each possible item
+* DONE Use Rich Text instead of normal text for slides
+This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
