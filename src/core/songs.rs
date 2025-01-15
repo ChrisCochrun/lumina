@@ -12,6 +12,8 @@ use tracing::{debug, error};
 use crate::{core::slide, Slide, SlideBuilder};
 
 use super::{
+    content::Content,
+    kinds::ServiceItemKind,
     model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
     slide::{Background, TextAlignment},
@@ -32,6 +34,16 @@ pub struct Song {
     pub text_alignment: Option<TextAlignment>,
     pub font: Option<String>,
     pub font_size: Option<i32>,
+}
+
+impl Content for Song {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn kind(&self) -> ServiceItemKind {
+        ServiceItemKind::Song(self.clone())
+    }
 }
 
 impl ServiceTrait for Song {

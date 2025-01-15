@@ -1,6 +1,8 @@
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::{
+    content::Content,
+    kinds::ServiceItemKind,
     model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
 };
@@ -18,6 +20,16 @@ pub struct Image {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
+}
+
+impl Content for Image {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn kind(&self) -> ServiceItemKind {
+        ServiceItemKind::Image(self.clone())
+    }
 }
 
 impl From<Value> for Image {

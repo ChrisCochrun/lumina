@@ -10,6 +10,8 @@ use tracing::error;
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::{
+    content::Content,
+    kinds::ServiceItemKind,
     model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
 };
@@ -32,6 +34,16 @@ pub struct Presentation {
     pub title: String,
     pub path: PathBuf,
     pub kind: PresKind,
+}
+
+impl Content for Presentation {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn kind(&self) -> ServiceItemKind {
+        ServiceItemKind::Presentation(self.clone())
+    }
 }
 
 impl From<Value> for Presentation {

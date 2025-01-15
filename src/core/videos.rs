@@ -1,6 +1,8 @@
 use crate::{Background, SlideBuilder, TextAlignment};
 
 use super::{
+    content::Content,
+    kinds::ServiceItemKind,
     model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
     slide::Slide,
@@ -23,6 +25,16 @@ pub struct Video {
     pub start_time: Option<f32>,
     pub end_time: Option<f32>,
     pub looping: bool,
+}
+
+impl Content for Video {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn kind(&self) -> ServiceItemKind {
+        ServiceItemKind::Video(self.clone())
+    }
 }
 
 impl From<Value> for Video {

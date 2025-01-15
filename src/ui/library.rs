@@ -1,18 +1,20 @@
 use cosmic::{
+    font::default,
     iced::{
         alignment::{Horizontal, Vertical},
         Background, Border, Color, Length,
     },
-    iced_widget::{column, text},
+    iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
         button, container, horizontal_space, icon, mouse_area, row,
-        Container, Space,
+        text, Column, Container, Space,
     },
     Element, Task,
 };
 
 use crate::core::{
+    content::Content,
     images::Image,
     model::{get_db, LibraryKind, Model},
     presentations::Presentation,
@@ -86,31 +88,34 @@ impl Library {
     pub fn library_item<'a, T>(
         &'a self,
         model: &'a Model<T>,
-    ) -> Element<'a, Message> {
+    ) -> Element<'a, Message>
+    where
+        T: Content,
+    {
         let mut row = row::<Message>().spacing(5);
         match &model.kind {
             LibraryKind::Song => {
                 row = row
-                    .push(text!("Songs").align_y(Vertical::Center));
+                    .push(textm!("Songs").align_y(Vertical::Center));
             }
             LibraryKind::Video => {
                 row = row
-                    .push(text!("Videos").align_y(Vertical::Center));
+                    .push(textm!("Videos").align_y(Vertical::Center));
             }
             LibraryKind::Image => {
                 row = row
-                    .push(text!("Images").align_y(Vertical::Center));
+                    .push(textm!("Images").align_y(Vertical::Center));
             }
             LibraryKind::Presentation => {
                 row = row.push(
-                    text!("Presentations").align_y(Vertical::Center),
+                    textm!("Presentations").align_y(Vertical::Center),
                 );
             }
         };
         let item_count = model.items.len();
         row = row.push(horizontal_space());
         row = row
-            .push(text!("{}", item_count).align_y(Vertical::Center));
+            .push(textm!("{}", item_count).align_y(Vertical::Center));
         row = row.push(
             icon::from_name({
                 if self.library_open == Some(model.kind) {
@@ -156,6 +161,68 @@ impl Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
-        button.into()
+        let lib_container = if self.library_open == Some(model.kind) {
+            let items: Column<Message> = column({
+                model.items.iter().map(|item| {
+                    let text =
+                        text::heading(elide_text(item.title(), 18))
+                            .center()
+                            .wrapping(textm::Wrapping::None);
+                    let icon = icon::from_name({
+                        match model.kind {
+                            LibraryKind::Song => {
+                                "folder-music-symbolic"
+                            }
+                            LibraryKind::Video => {
+                                "folder-videos-symbolic"
+                            }
+                            LibraryKind::Image => {
+                                "folder-pictures-symbolic"
+                            }
+                            LibraryKind::Presentation => {
+                                "x-office-presentation-symbolic"
+                            }
+                        }
+                    });
+                    Container::new(rowm![icon, text].spacing(10))
+                        .padding(5)
+                        .width(Length::Fill)
+                        .style(|t| {
+                            container::Style::default()
+                                .background(Background::Color(
+                                    t.cosmic().button.base.into(),
+                                ))
+                                .border(Border::default().rounded(
+                                    t.cosmic().corner_radii.radius_l,
+                                ))
+                        })
+                        .into()
+                })
+            })
+            .spacing(2)
+            .width(Length::Fill);
+            Container::new(items).padding(5).style(|t| {
+                container::Style::default()
+                    .background(Background::Color(
+                        t.cosmic().primary.base.into(),
+                    ))
+                    .border(
+                        Border::default().rounded(
+                            t.cosmic().corner_radii.radius_m,
+                        ),
+                    )
+            })
+        } else {
+            Container::new(Space::new(0, 0))
+        };
+        column![button, lib_container].into()
+    }
+}
+
+fn elide_text(text: String, amount: usize) -> String {
+    if text.len() > amount {
+        format!("{}...", text.split_at(amount).0)
+    } else {
+        text
     }
 }
