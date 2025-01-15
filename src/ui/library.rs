@@ -4,6 +4,7 @@ use cosmic::{
         Background, Border, Color, Length,
     },
     iced_widget::{column, text},
+    theme,
     widget::{
         button, container, horizontal_space, icon, mouse_area, row,
         Container, Space,
@@ -26,6 +27,7 @@ pub(crate) struct Library {
     video_library: Model<Video>,
     presentation_library: Model<Presentation>,
     library_open: Option<LibraryKind>,
+    library_hovered: Option<LibraryKind>,
 }
 
 #[derive(Clone, Debug)]
@@ -33,6 +35,8 @@ pub(crate) enum Message {
     AddItem,
     RemoveItem,
     OpenItem,
+    HoverLibrary(Option<LibraryKind>),
+    OpenLibrary(Option<LibraryKind>),
     None,
 }
 
@@ -48,6 +52,7 @@ impl Library {
             )
             .await,
             library_open: None,
+            library_hovered: None,
         }
     }
 
@@ -57,6 +62,14 @@ impl Library {
             Message::None => Task::none(),
             Message::RemoveItem => Task::none(),
             Message::OpenItem => Task::none(),
+            Message::HoverLibrary(library_kind) => {
+                self.library_hovered = library_kind;
+                Task::none()
+            }
+            Message::OpenLibrary(library_kind) => {
+                self.library_open = library_kind;
+                Task::none()
+            }
         }
     }
 
@@ -70,10 +83,10 @@ impl Library {
         column.height(Length::Fill).spacing(5).into()
     }
 
-    pub fn library_item<T>(
-        &self,
-        model: &Model<T>,
-    ) -> Element<Message> {
+    pub fn library_item<'a, T>(
+        &'a self,
+        model: &'a Model<T>,
+    ) -> Element<'a, Message> {
         let mut row = row::<Message>().spacing(5);
         match &model.kind {
             LibraryKind::Song => {
@@ -96,27 +109,53 @@ impl Library {
         };
         let item_count = model.items.len();
         row = row.push(horizontal_space());
+        row = row
+            .push(text!("{}", item_count).align_y(Vertical::Center));
         row = row.push(
-            text!("{}", item_count)
-                .align_y(Vertical::Center)
-                .size(18),
+            icon::from_name({
+                if self.library_open == Some(model.kind) {
+                    "arrow-up"
+                } else {
+                    "arrow-down"
+                }
+            })
+            .size(20),
         );
-        row = row.push(icon::from_name("arrow-down").size(20));
         let row_container =
             Container::new(row)
                 .padding(5)
                 .style(|t| {
                     container::Style::default()
-                        .background(Background::Color(
-                            t.cosmic().secondary.base.into(),
-                        ))
+                        .background({
+                            match self.library_hovered {
+                                Some(lib) => Background::Color(
+                                    if lib == model.kind {
+                                        t.cosmic().button.hover.into()
+                                    } else {
+                                        t.cosmic().button.base.into()
+                                    },
+                                ),
+                                None => Background::Color(
+                                    t.cosmic().button.base.into(),
+                                ),
+                            }
+                        })
                         .border(Border::default().rounded(
                             t.cosmic().corner_radii.radius_s,
                         ))
                 })
                 .center_x(Length::Fill)
                 .center_y(Length::Shrink);
-        let button = mouse_area(row_container);
+        let button = mouse_area(row_container)
+            .on_press({
+                if self.library_open == Some(model.kind) {
+                    Message::OpenLibrary(None)
+                } else {
+                    Message::OpenLibrary(Some(model.kind))
+                }
+            })
+            .on_enter(Message::HoverLibrary(Some(model.kind)))
+            .on_exit(Message::HoverLibrary(None));
         button.into()
     }
 }

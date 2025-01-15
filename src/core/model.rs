@@ -12,7 +12,7 @@ pub struct Model<T> {
     pub kind: LibraryKind,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum LibraryKind {
     Song,
     Video,
