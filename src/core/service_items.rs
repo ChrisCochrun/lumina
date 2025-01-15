@@ -76,47 +76,73 @@ impl From<&Value> for ServiceItem {
                             _ => false,
                         })
                         .map_or_else(|| 1, |pos| pos + 1);
-                    if let Some(background) = list.get(background_pos)
-                    {
-                        match background {
-                            Value::List(item) => match &item[0] {
-                                Value::Symbol(Symbol(s))
-                                    if s == "image" =>
-                                {
-                                    Self::from(&Image::from(
-                                        background,
-                                    ))
-                                }
-                                Value::Symbol(Symbol(s))
-                                    if s == "video" =>
-                                {
-                                    Self::from(&Video::from(
-                                        background,
-                                    ))
-                                }
-                                Value::Symbol(Symbol(s))
-                                    if s == "presentation" =>
-                                {
-                                    Self::from(&Presentation::from(
-                                        background,
-                                    ))
-                                }
-                                _ => todo!(),
-                            },
-                            _ => {
-                                error!(
-                                    "There is no background here: {:?}",
-                                    background
-                                );
-                                ServiceItem::default()
+                    if let Some(content) =
+                        list.iter().position(|v| match v {
+                            Value::List(list)
+                                if list.iter().next()
+                                    == Some(&Value::Symbol(
+                                        Symbol("text".into()),
+                                    )) =>
+                            {
+                                list.iter().next().is_some()
                             }
+                            _ => false,
+                        })
+                    {
+                        let slide = Slide::from(value);
+                        let title = slide.text();
+                        Self {
+                            id: 0,
+                            title,
+                            database_id: 0,
+                            kind: ServiceItemKind::Content(slide),
                         }
                     } else {
-                        error!(
-                            "There is no background here: {:?}",
-                            background_pos
-                        );
-                        ServiceItem::default()
+                        if let Some(background) =
+                            list.get(background_pos)
+                        {
+                            match background {
+                                Value::List(item) => match &item[0] {
+                                    Value::Symbol(Symbol(s))
+                                        if s == "image" =>
+                                    {
+                                        Self::from(&Image::from(
+                                            background,
+                                        ))
+                                    }
+                                    Value::Symbol(Symbol(s))
+                                        if s == "video" =>
+                                    {
+                                        Self::from(&Video::from(
+                                            background,
+                                        ))
+                                    }
+                                    Value::Symbol(Symbol(s))
+                                        if s == "presentation" =>
+                                    {
+                                        Self::from(
+                                            &Presentation::from(
+                                                background,
+                                            ),
+                                        )
+                                    }
+                                    _ => todo!(),
+                                },
+                                _ => {
+                                    error!(
+                                        "There is no background here: {:?}",
+                                        background
+                                    );
+                                    ServiceItem::default()
+                                }
+                            }
+                        } else {
+                            error!(
+                                "There is no background here: {:?}",
+                                background_pos
+                            );
+                            ServiceItem::default()
+                        }
                     }
                 }
                 Value::Symbol(Symbol(s)) if s == "song" => {

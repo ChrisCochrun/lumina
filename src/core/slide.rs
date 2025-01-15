@@ -5,7 +5,7 @@ use std::{
     fmt::Display,
     path::{Path, PathBuf},
 };
-use tracing::error;
+use tracing::{debug, error};
 
 use super::songs::Song;
 
