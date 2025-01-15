@@ -8,7 +8,7 @@ use cosmic::{
     theme,
     widget::{
         button, container, horizontal_space, icon, mouse_area, row,
-        text, Column, Container, Space,
+        scrollable, text, Column, Container, Space,
     },
     Element, Task,
 };
@@ -162,45 +162,53 @@ impl Library {
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
         let lib_container = if self.library_open == Some(model.kind) {
-            let items: Column<Message> = column({
-                model.items.iter().map(|item| {
-                    let text =
-                        text::heading(elide_text(item.title(), 18))
-                            .center()
-                            .wrapping(textm::Wrapping::None);
-                    let icon = icon::from_name({
-                        match model.kind {
-                            LibraryKind::Song => {
-                                "folder-music-symbolic"
+            let items = scrollable(
+                column({
+                    model.items.iter().map(|item| {
+                        let text = text::heading(elide_text(
+                            item.title(),
+                            18,
+                        ))
+                        .center()
+                        .wrapping(textm::Wrapping::None);
+                        let icon = icon::from_name({
+                            match model.kind {
+                                LibraryKind::Song => {
+                                    "folder-music-symbolic"
+                                }
+                                LibraryKind::Video => {
+                                    "folder-videos-symbolic"
+                                }
+                                LibraryKind::Image => {
+                                    "folder-pictures-symbolic"
+                                }
+                                LibraryKind::Presentation => {
+                                    "x-office-presentation-symbolic"
+                                }
                             }
-                            LibraryKind::Video => {
-                                "folder-videos-symbolic"
-                            }
-                            LibraryKind::Image => {
-                                "folder-pictures-symbolic"
-                            }
-                            LibraryKind::Presentation => {
-                                "x-office-presentation-symbolic"
-                            }
-                        }
-                    });
-                    Container::new(rowm![icon, text].spacing(10))
-                        .padding(5)
-                        .width(Length::Fill)
-                        .style(|t| {
-                            container::Style::default()
-                                .background(Background::Color(
-                                    t.cosmic().button.base.into(),
-                                ))
-                                .border(Border::default().rounded(
-                                    t.cosmic().corner_radii.radius_l,
-                                ))
-                        })
-                        .into()
+                        });
+                        Container::new(rowm![icon, text].spacing(10))
+                            .padding(5)
+                            .width(Length::Fill)
+                            .style(|t| {
+                                container::Style::default()
+                                    .background(Background::Color(
+                                        t.cosmic().button.base.into(),
+                                    ))
+                                    .border(
+                                        Border::default().rounded(
+                                            t.cosmic()
+                                                .corner_radii
+                                                .radius_l,
+                                        ),
+                                    )
+                            })
+                            .into()
+                    })
                 })
-            })
-            .spacing(2)
-            .width(Length::Fill);
+                .spacing(2)
+                .width(Length::Fill),
+            );
             Container::new(items).padding(5).style(|t| {
                 container::Style::default()
                     .background(Background::Color(
