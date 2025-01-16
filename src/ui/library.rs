@@ -1,14 +1,9 @@
 use cosmic::{
-    font::default,
-    iced::{
-        alignment::{Horizontal, Vertical},
-        Background, Border, Color, Length,
-    },
+    iced::{alignment::Vertical, Background, Border, Length},
     iced_widget::{column, row as rowm, text as textm},
-    theme,
     widget::{
-        button, container, horizontal_space, icon, mouse_area, row,
-        scrollable, text, Column, Container, Space,
+        container, horizontal_space, icon, mouse_area, responsive,
+        row, scrollable, text, Container, Space,
     },
     Element, Task,
 };
@@ -165,12 +160,18 @@ impl Library {
             let items = scrollable(
                 column({
                     model.items.iter().map(|item| {
-                        let text = text::heading(elide_text(
-                            item.title(),
-                            18,
-                        ))
-                        .center()
-                        .wrapping(textm::Wrapping::None);
+                        let text =
+                            Container::new(responsive(|size| {
+                                text::heading(elide_text(
+                                    item.title(),
+                                    size.width,
+                                ))
+                                .center()
+                                .wrapping(textm::Wrapping::None)
+                                .into()
+                            }))
+                            .center_y(25)
+                            .center_x(Length::Fill);
                         let icon = icon::from_name({
                             match model.kind {
                                 LibraryKind::Song => {
@@ -187,23 +188,27 @@ impl Library {
                                 }
                             }
                         });
-                        Container::new(rowm![icon, text].spacing(10))
-                            .padding(5)
-                            .width(Length::Fill)
-                            .style(|t| {
-                                container::Style::default()
-                                    .background(Background::Color(
-                                        t.cosmic().button.base.into(),
-                                    ))
-                                    .border(
-                                        Border::default().rounded(
-                                            t.cosmic()
-                                                .corner_radii
-                                                .radius_l,
-                                        ),
-                                    )
-                            })
-                            .into()
+                        Container::new(
+                            rowm![
+                                horizontal_space().width(0),
+                                icon,
+                                text
+                            ]
+                            .spacing(10)
+                            .align_y(Vertical::Center),
+                        )
+                        .padding(5)
+                        .width(Length::Fill)
+                        .style(|t| {
+                            container::Style::default()
+                                .background(Background::Color(
+                                    t.cosmic().button.base.into(),
+                                ))
+                                .border(Border::default().rounded(
+                                    t.cosmic().corner_radii.radius_l,
+                                ))
+                        })
+                        .into()
                     })
                 })
                 .spacing(2)
@@ -227,9 +232,17 @@ impl Library {
     }
 }
 
-fn elide_text(text: String, amount: usize) -> String {
-    if text.len() > amount {
-        format!("{}...", text.split_at(amount).0)
+fn elide_text(text: String, width: f32) -> String {
+    const CHAR_SIZE: f32 = 8.0;
+    let text_length = text.len() as f32 * CHAR_SIZE;
+    if text_length > width {
+        format!(
+            "{}...",
+            text.split_at(
+                ((width / CHAR_SIZE) - 3.0).floor() as usize
+            )
+            .0
+        )
     } else {
         text
     }

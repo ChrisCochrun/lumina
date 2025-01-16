@@ -612,7 +612,7 @@ impl cosmic::Application for App {
             .center_y(Length::Fill)
             .align_left(Length::Fill)
             .width(Length::FillPortion(2)),
-            library
+            library.width(Length::FillPortion(2))
         ]
         .width(Length::Fill)
         .height(Length::Fill)
