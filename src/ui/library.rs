@@ -25,6 +25,8 @@ pub(crate) struct Library {
     presentation_library: Model<Presentation>,
     library_open: Option<LibraryKind>,
     library_hovered: Option<LibraryKind>,
+    selected_item: Option<(LibraryKind, i32)>,
+    hovered_item: Option<(LibraryKind, i32)>,
 }
 
 #[derive(Clone, Debug)]
@@ -34,6 +36,8 @@ pub(crate) enum Message {
     OpenItem,
     HoverLibrary(Option<LibraryKind>),
     OpenLibrary(Option<LibraryKind>),
+    HoverItem(Option<(LibraryKind, i32)>),
+    SelectItem(Option<(LibraryKind, i32)>),
     None,
 }
 
@@ -50,6 +54,8 @@ impl Library {
             .await,
             library_open: None,
             library_hovered: None,
+            selected_item: None,
+            hovered_item: None,
         }
     }
 
@@ -65,6 +71,14 @@ impl Library {
             }
             Message::OpenLibrary(library_kind) => {
                 self.library_open = library_kind;
+                Task::none()
+            }
+            Message::HoverItem(item) => {
+                self.hovered_item = item;
+                Task::none()
+            }
+            Message::SelectItem(item) => {
+                self.hovered_item = item;
                 Task::none()
             }
         }
@@ -156,24 +170,29 @@ impl Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
-        let lib_container = if self.library_open == Some(model.kind) {
-            let items = scrollable(
-                column({
-                    model.items.iter().map(|item| {
-                        let text =
-                            Container::new(responsive(|size| {
-                                text::heading(elide_text(
-                                    item.title(),
-                                    size.width,
-                                ))
-                                .center()
-                                .wrapping(textm::Wrapping::None)
-                                .into()
-                            }))
-                            .center_y(25)
-                            .center_x(Length::Fill);
-                        let icon = icon::from_name({
-                            match model.kind {
+        let lib_container =
+            if self.library_open == Some(model.kind) {
+                let items = scrollable(
+                    column({
+                        model.items.iter().enumerate().map(
+                            |(index, item)| {
+                                let text = Container::new(
+                                    responsive(|size| {
+                                        text::heading(elide_text(
+                                            item.title(),
+                                            size.width,
+                                        ))
+                                        .center()
+                                        .wrapping(
+                                            textm::Wrapping::None,
+                                        )
+                                        .into()
+                                    }),
+                                )
+                                .center_y(25)
+                                .center_x(Length::Fill);
+                                let icon = icon::from_name({
+                                    match model.kind {
                                 LibraryKind::Song => {
                                     "folder-music-symbolic"
                                 }
@@ -187,47 +206,85 @@ impl Library {
                                     "x-office-presentation-symbolic"
                                 }
                             }
-                        });
-                        Container::new(
-                            rowm![
-                                horizontal_space().width(0),
-                                icon,
-                                text
-                            ]
-                            .spacing(10)
-                            .align_y(Vertical::Center),
+                                });
+                                mouse_area(
+                                    Container::new(
+                                        rowm![
+                                            horizontal_space()
+                                                .width(0),
+                                            icon,
+                                            text
+                                        ]
+                                        .spacing(10)
+                                        .align_y(Vertical::Center),
+                                    )
+                                    .padding(5)
+                                    .width(Length::Fill)
+                                    .style(move |t| {
+                                        container::Style::default()
+                                    .background(Background::Color(
+                                        if let Some((
+                                            library,
+                                            hovered,
+                                        )) = self.hovered_item
+                                        {
+                                            if model.kind == library
+                                                && hovered
+                                                    == index as i32
+                                            {
+                                                t.cosmic()
+                                                    .button
+                                                    .hover
+                                                    .into()
+                                            } else {
+                                                t.cosmic()
+                                                    .button
+                                                    .base
+                                                    .into()
+                                            }
+                                        } else {
+                                            t.cosmic()
+                                                .button
+                                                .base
+                                                .into()
+                                        },
+                                    ))
+                                    .border(
+                                        Border::default().rounded(
+                                            t.cosmic()
+                                                .corner_radii
+                                                .radius_l,
+                                        ),
+                                    )
+                                    }),
+                                )
+                                .on_enter(Message::HoverItem(Some((
+                                    model.kind,
+                                    index as i32,
+                                ))))
+                                .on_exit(Message::HoverItem(None))
+                                .on_press(Message::SelectItem(Some(
+                                    (model.kind, index as i32),
+                                )))
+                                .into()
+                            },
                         )
-                        .padding(5)
-                        .width(Length::Fill)
-                        .style(|t| {
-                            container::Style::default()
-                                .background(Background::Color(
-                                    t.cosmic().button.base.into(),
-                                ))
-                                .border(Border::default().rounded(
-                                    t.cosmic().corner_radii.radius_l,
-                                ))
-                        })
-                        .into()
                     })
-                })
-                .spacing(2)
-                .width(Length::Fill),
-            );
-            Container::new(items).padding(5).style(|t| {
-                container::Style::default()
-                    .background(Background::Color(
-                        t.cosmic().primary.base.into(),
-                    ))
-                    .border(
-                        Border::default().rounded(
+                    .spacing(2)
+                    .width(Length::Fill),
+                );
+                Container::new(items).padding(5).style(|t| {
+                    container::Style::default()
+                        .background(Background::Color(
+                            t.cosmic().primary.base.into(),
+                        ))
+                        .border(Border::default().rounded(
                             t.cosmic().corner_radii.radius_m,
-                        ),
-                    )
-            })
-        } else {
-            Container::new(Space::new(0, 0))
-        };
+                        ))
+                })
+            } else {
+                Container::new(Space::new(0, 0))
+            };
         column![button, lib_container].into()
     }
 }
