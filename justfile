@@ -1,9 +1,12 @@
+ui := "-i"
+file := "~/dev/lumina-iced/test_presentation.lisp"
+
 default:
     just --list
 build:
     RUST_LOG=debug cargo build
-run ui=' ' file='~/dev/lumina-iced/test_presentation.lisp': 
-    RUST_LOG=debug cargo run -- -i {{ui}} {{file}}
+run:
+    RUST_LOG=debug cargo run -- {{ui}} {{file}}
 clean:
     RUST_LOG=debug cargo clean
 test:
