@@ -7,6 +7,7 @@ use cosmic::{
     },
     Element, Task,
 };
+use tracing::debug;
 
 use crate::core::{
     content::Content,
@@ -79,6 +80,7 @@ impl Library {
             }
             Message::SelectItem(item) => {
                 self.hovered_item = item;
+                debug!(?self.hovered_item);
                 Task::none()
             }
         }
@@ -170,29 +172,25 @@ impl Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
-        let lib_container =
-            if self.library_open == Some(model.kind) {
-                let items = scrollable(
-                    column({
-                        model.items.iter().enumerate().map(
-                            |(index, item)| {
-                                let text = Container::new(
-                                    responsive(|size| {
-                                        text::heading(elide_text(
-                                            item.title(),
-                                            size.width,
-                                        ))
-                                        .center()
-                                        .wrapping(
-                                            textm::Wrapping::None,
-                                        )
-                                        .into()
-                                    }),
-                                )
+        let lib_container = if self.library_open == Some(model.kind) {
+            let items = scrollable(
+                column({
+                    model.items.iter().enumerate().map(
+                        |(index, item)| {
+                            let text =
+                                Container::new(responsive(|size| {
+                                    text::heading(elide_text(
+                                        item.title(),
+                                        size.width,
+                                    ))
+                                    .center()
+                                    .wrapping(textm::Wrapping::None)
+                                    .into()
+                                }))
                                 .center_y(25)
                                 .center_x(Length::Fill);
-                                let icon = icon::from_name({
-                                    match model.kind {
+                            let icon = icon::from_name({
+                                match model.kind {
                                 LibraryKind::Song => {
                                     "folder-music-symbolic"
                                 }
@@ -206,85 +204,117 @@ impl Library {
                                     "x-office-presentation-symbolic"
                                 }
                             }
-                                });
-                                mouse_area(
-                                    Container::new(
-                                        rowm![
-                                            horizontal_space()
-                                                .width(0),
-                                            icon,
-                                            text
-                                        ]
-                                        .spacing(10)
-                                        .align_y(Vertical::Center),
-                                    )
-                                    .padding(5)
-                                    .width(Length::Fill)
-                                    .style(move |t| {
-                                        container::Style::default()
-                                    .background(Background::Color(
-                                        if let Some((
-                                            library,
-                                            hovered,
-                                        )) = self.hovered_item
-                                        {
-                                            if model.kind == library
-                                                && hovered
-                                                    == index as i32
-                                            {
-                                                t.cosmic()
-                                                    .button
-                                                    .hover
-                                                    .into()
-                                            } else {
-                                                t.cosmic()
-                                                    .button
-                                                    .base
-                                                    .into()
-                                            }
-                                        } else {
-                                            t.cosmic()
-                                                .button
-                                                .base
-                                                .into()
-                                        },
-                                    ))
-                                    .border(
-                                        Border::default().rounded(
-                                            t.cosmic()
-                                                .corner_radii
-                                                .radius_l,
-                                        ),
-                                    )
-                                    }),
+                            });
+                            mouse_area(
+                                Container::new(
+                                    rowm![
+                                        horizontal_space().width(0),
+                                        icon,
+                                        text
+                                    ]
+                                    .spacing(10)
+                                    .align_y(Vertical::Center),
                                 )
-                                .on_enter(Message::HoverItem(Some((
-                                    model.kind,
-                                    index as i32,
-                                ))))
-                                .on_exit(Message::HoverItem(None))
-                                .on_press(Message::SelectItem(Some(
-                                    (model.kind, index as i32),
-                                )))
-                                .into()
-                            },
-                        )
-                    })
-                    .spacing(2)
-                    .width(Length::Fill),
-                );
-                Container::new(items).padding(5).style(|t| {
-                    container::Style::default()
-                        .background(Background::Color(
-                            t.cosmic().primary.base.into(),
-                        ))
-                        .border(Border::default().rounded(
-                            t.cosmic().corner_radii.radius_m,
-                        ))
+                                .padding(5)
+                                .width(Length::Fill)
+                                .style(move |t| {
+                                    container::Style::default()
+                                        .background(
+                                            Background::Color(
+                                                if let Some((
+                                                    library,
+                                                    selected,
+                                                )) =
+                                                    self.selected_item
+                                                {
+                                                    if model.kind
+                                                        == library
+                                                        && selected
+                                                            == index
+                                                                as i32
+                                                    {
+                                                        t.cosmic()
+                                                            .accent
+                                                            .selected
+                                                            .into()
+                                                    } else {
+                                                        t.cosmic()
+                                                            .button
+                                                            .base
+                                                            .into()
+                                                    }
+                                                } else if let Some(
+                                                    (
+                                                        library,
+                                                        hovered,
+                                                    ),
+                                                ) =
+                                                    self.hovered_item
+                                                {
+                                                    if model.kind
+                                                        == library
+                                                        && hovered
+                                                            == index
+                                                                as i32
+                                                    {
+                                                        t.cosmic()
+                                                            .button
+                                                            .hover
+                                                            .into()
+                                                    } else {
+                                                        t.cosmic()
+                                                            .button
+                                                            .base
+                                                            .into()
+                                                    }
+                                                } else {
+                                                    t.cosmic()
+                                                        .button
+                                                        .base
+                                                        .into()
+                                                },
+                                            ),
+                                        )
+                                        .border(
+                                            Border::default()
+                                                .rounded(
+                                                    t.cosmic()
+                                                        .corner_radii
+                                                        .radius_l,
+                                                ),
+                                        )
+                                }),
+                            )
+                            .on_enter(Message::HoverItem(Some((
+                                model.kind,
+                                index as i32,
+                            ))))
+                            .on_exit(Message::HoverItem(None))
+                            .on_press(Message::SelectItem(Some((
+                                model.kind,
+                                index as i32,
+                            ))))
+                            .into()
+                        },
+                    )
                 })
-            } else {
-                Container::new(Space::new(0, 0))
-            };
+                .spacing(2)
+                .width(Length::Fill),
+            );
+            Container::new(items).padding(5).style(|t| {
+                container::Style::default()
+                    .background(Background::Color(
+                        t.cosmic().primary.base.into(),
+                    ))
+                    .border(
+                        Border::default().rounded(
+                            t.cosmic().corner_radii.radius_m,
+                        ),
+                    )
+            })
+        } else {
+            Container::new(Space::new(0, 0))
+        };
         column![button, lib_container].into()
     }
 }
