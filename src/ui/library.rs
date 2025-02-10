@@ -79,8 +79,7 @@ impl Library {
                 Task::none()
             }
             Message::SelectItem(item) => {
-                self.hovered_item = item;
-                debug!(?self.hovered_item);
+                self.selected_item = item;
                 Task::none()
             }
         }
