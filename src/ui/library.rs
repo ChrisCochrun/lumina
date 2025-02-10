@@ -28,6 +28,7 @@ pub(crate) struct Library {
     library_hovered: Option<LibraryKind>,
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
+    dragged_item: Option<(LibraryKind, i32)>,
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +40,7 @@ pub(crate) enum Message {
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
+    DragItem(Option<(LibraryKind, i32)>),
     None,
 }
 
@@ -57,6 +59,7 @@ impl Library {
             library_hovered: None,
             selected_item: None,
             hovered_item: None,
+            dragged_item: None,
         }
     }
 
@@ -80,6 +83,11 @@ impl Library {
             }
             Message::SelectItem(item) => {
                 self.selected_item = item;
+                Task::none()
+            }
+            Message::DragItem(item) => {
+                self.dragged_item = item;
+                debug!(?self.dragged_item);
                 Task::none()
             }
         }
@@ -284,6 +292,10 @@ impl Library {
                                         )
                                 }),
                             )
+                            .on_drag(Message::DragItem(Some((
+                                model.kind,
+                                index as i32,
+                            ))))
                             .on_enter(Message::HoverItem(Some((
                                 model.kind,
                                 index as i32,
