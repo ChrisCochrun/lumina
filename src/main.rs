@@ -11,7 +11,9 @@ use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{button, nav_bar, text, tooltip, Space};
+use cosmic::widget::{
+    button, nav_bar, text, tooltip, DndSource, Id, Space,
+};
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
@@ -215,6 +217,9 @@ impl cosmic::Application for App {
                 cosmic::app::cosmic::Message::NavBar(id),
             )
         })
+        // .on_dnd_drop(|entity, data, idk| {
+        //     cosmic::app::Message::Cosmic(Message::DndDrop(entity))
+        // })
         .on_context(|id| {
             cosmic::app::Message::Cosmic(
                 cosmic::app::cosmic::Message::NavBarContext(id),
@@ -571,14 +576,22 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
+        let mut drag_item = None;
+
         let library =
             Container::new(if let Some(library) = &self.library {
-                library.view().map(|m| Message::Library(m))
+                let (view, item) = library.view();
+                drag_item = item;
+                view.map(|m| Message::Library(m))
             } else {
                 Space::new(0, 0).into()
             })
             .style(nav_bar_style)
             .center(Length::Fill);
+        // let dnd_source: DndSource<Message, _> = DndSource::with_id(
+        //     drag_item.expect("errors").map(|m| Message::Library(m)),
+        //     Id::new("item"),
+        // );
         // let drag_handle = Container::new(Space::new(1, Length::Fill))
         //     .style(|t| nav_bar_style(t));
         // let dragger = MouseArea::new(drag_handle)

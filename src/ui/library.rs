@@ -29,6 +29,7 @@ pub(crate) struct Library {
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
     dragged_item: Option<(LibraryKind, i32)>,
+    dragged_item_pos: Option<(usize, usize)>,
 }
 
 #[derive(Clone, Debug)]
@@ -60,6 +61,7 @@ impl Library {
             selected_item: None,
             hovered_item: None,
             dragged_item: None,
+            dragged_item_pos: None,
         }
     }
 
@@ -93,20 +95,42 @@ impl Library {
         }
     }
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(
+        &self,
+    ) -> (Element<Message>, Option<Element<Message>>) {
+        let (song_library, song_dragged) =
+            self.library_item(&self.song_library);
+        let (image_library, image_dragged) =
+            self.library_item(&self.image_library);
+        let (video_library, video_dragged) =
+            self.library_item(&self.video_library);
+        let (presentation_library, presentation_dragged) =
+            self.library_item(&self.presentation_library);
         let column = column![
-            self.library_item(&self.song_library),
-            self.library_item(&self.image_library),
-            self.library_item(&self.video_library),
-            self.library_item(&self.presentation_library),
+            song_library,
+            image_library,
+            video_library,
+            presentation_library,
         ];
-        column.height(Length::Fill).spacing(5).into()
+        let dragged_vector = vec![
+            song_dragged,
+            image_dragged,
+            video_dragged,
+            presentation_dragged,
+        ];
+        let dragged = dragged_vector
+            .into_iter()
+            .filter(|x| x.is_some())
+            .next()
+            .unwrap_or(None);
+
+        (column.height(Length::Fill).spacing(5).into(), dragged)
     }
 
     pub fn library_item<'a, T>(
         &'a self,
         model: &'a Model<T>,
-    ) -> Element<'a, Message>
+    ) -> (Element<'a, Message>, Option<Element<'a, Message>>)
     where
         T: Content,
     {
@@ -179,123 +203,25 @@ impl Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
+        let mut dragged_item = None;
         let lib_container = if self.library_open == Some(model.kind) {
             let items = scrollable(
                 column({
                     model.items.iter().enumerate().map(
                         |(index, item)| {
-                            let text =
-                                Container::new(responsive(|size| {
-                                    text::heading(elide_text(
-                                        item.title(),
-                                        size.width,
-                                    ))
-                                    .center()
-                                    .wrapping(textm::Wrapping::None)
-                                    .into()
-                                }))
-                                .center_y(25)
-                                .center_x(Length::Fill);
-                            let icon = icon::from_name({
-                                match model.kind {
-                                LibraryKind::Song => {
-                                    "folder-music-symbolic"
-                                }
-                                LibraryKind::Video => {
-                                    "folder-videos-symbolic"
-                                }
-                                LibraryKind::Image => {
-                                    "folder-pictures-symbolic"
-                                }
-                                LibraryKind::Presentation => {
-                                    "x-office-presentation-symbolic"
-                                }
-                            }
-                            });
                             mouse_area(
-                                Container::new(
-                                    rowm![
-                                        horizontal_space().width(0),
-                                        icon,
-                                        text
-                                    ]
-                                    .spacing(10)
-                                    .align_y(Vertical::Center),
-                                )
-                                .padding(5)
-                                .width(Length::Fill)
-                                .style(move |t| {
-                                    container::Style::default()
-                                        .background(
-                                            Background::Color(
-                                                if let Some((
-                                                    library,
-                                                    selected,
-                                                )) =
-                                                    self.selected_item
-                                                {
-                                                    if model.kind
-                                                        == library
-                                                        && selected
-                                                            == index
-                                                                as i32
-                                                    {
-                                                        t.cosmic()
-                                                            .accent
-                                                            .selected
-                                                            .into()
-                                                    } else {
-                                                        t.cosmic()
-                                                            .button
-                                                            .base
-                                                            .into()
-                                                    }
-                                                } else if let Some(
-                                                    (
-                                                        library,
-                                                        hovered,
-                                                    ),
-                                                ) =
-                                                    self.hovered_item
-                                                {
-                                                    if model.kind
-                                                        == library
-                                                        && hovered
-                                                            == index
-                                                                as i32
-                                                    {
-                                                        t.cosmic()
-                                                            .button
-                                                            .hover
-                                                            .into()
-                                                    } else {
-                                                        t.cosmic()
-                                                            .button
-                                                            .base
-                                                            .into()
-                                                    }
-                                                } else {
-                                                    t.cosmic()
-                                                        .button
-                                                        .base
-                                                        .into()
-                                                },
-                                            ),
-                                        )
-                                        .border(
-                                            Border::default()
-                                                .rounded(
-                                                    t.cosmic()
-                                                        .corner_radii
-                                                        .radius_l,
-                                                ),
-                                        )
-                                }),
+                                self.single_item(index, item, model),
                             )
-                            .on_drag(Message::DragItem(Some((
-                                model.kind,
-                                index as i32,
-                            ))))
+                            .on_drag({
+                                dragged_item =
+                                    Some(self.single_item(
+                                        index, item, model,
+                                    ));
+                                Message::DragItem(Some((
+                                    model.kind,
+                                    index as i32,
+                                )))
+                            })
                             .on_enter(Message::HoverItem(Some((
                                 model.kind,
                                 index as i32,
@@ -326,7 +252,76 @@ impl Library {
         } else {
             Container::new(Space::new(0, 0))
         };
-        column![button, lib_container].into()
+        (column![button, lib_container].into(), dragged_item)
+    }
+
+    fn single_item<'a, T>(
+        &'a self,
+        index: usize,
+        item: &'a T,
+        model: &'a Model<T>,
+    ) -> Element<'a, Message>
+    where
+        T: Content,
+    {
+        let text = Container::new(responsive(|size| {
+            text::heading(elide_text(item.title(), size.width))
+                .center()
+                .wrapping(textm::Wrapping::None)
+                .into()
+        }))
+        .center_y(25)
+        .center_x(Length::Fill);
+        let icon = icon::from_name({
+            match model.kind {
+                LibraryKind::Song => "folder-music-symbolic",
+                LibraryKind::Video => "folder-videos-symbolic",
+                LibraryKind::Image => "folder-pictures-symbolic",
+                LibraryKind::Presentation => {
+                    "x-office-presentation-symbolic"
+                }
+            }
+        });
+        Container::new(
+            rowm![horizontal_space().width(0), icon, text]
+                .spacing(10)
+                .align_y(Vertical::Center),
+        )
+        .padding(5)
+        .width(Length::Fill)
+        .style(move |t| {
+            container::Style::default()
+                .background(Background::Color(
+                    if let Some((library, selected)) =
+                        self.selected_item
+                    {
+                        if model.kind == library
+                            && selected == index as i32
+                        {
+                            t.cosmic().accent.selected.into()
+                        } else {
+                            t.cosmic().button.base.into()
+                        }
+                    } else if let Some((library, hovered)) =
+                        self.hovered_item
+                    {
+                        if model.kind == library
+                            && hovered == index as i32
+                        {
+                            t.cosmic().button.hover.into()
+                        } else {
+                            t.cosmic().button.base.into()
+                        }
+                    } else {
+                        t.cosmic().button.base.into()
+                    },
+                ))
+                .border(
+                    Border::default()
+                        .rounded(t.cosmic().corner_radii.radius_l),
+                )
+        })
+        .into()
     }
 }
 
