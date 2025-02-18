@@ -3,7 +3,7 @@ use cosmic::{
     iced_widget::{column, row as rowm, text as textm},
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
-        row, scrollable, text, Container, Space,
+        row, scrollable, text, Container, DndSource, Space,
     },
     Element, Task,
 };
@@ -14,6 +14,7 @@ use crate::core::{
     images::Image,
     model::{get_db, LibraryKind, Model},
     presentations::Presentation,
+    service_items::ServiceItem,
     songs::Song,
     videos::Video,
 };
@@ -204,54 +205,53 @@ impl Library {
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
         let mut dragged_item = None;
-        let lib_container = if self.library_open == Some(model.kind) {
-            let items = scrollable(
-                column({
-                    model.items.iter().enumerate().map(
+        let lib_container =
+            if self.library_open == Some(model.kind) {
+                let items = scrollable(
+                    column({
+                        model.items.iter().enumerate().map(
                         |(index, item)| {
-                            mouse_area(
-                                self.single_item(index, item, model),
-                            )
-                            .on_drag({
-                                dragged_item =
-                                    Some(self.single_item(
+                            let service_item = item.to_service_item();
+                            DndSource::<Message, ServiceItem>::new(
+                                mouse_area(
+                                    self.single_item(
                                         index, item, model,
-                                    ));
-                                Message::DragItem(Some((
+                                    ),
+                                )
+                                .on_enter(Message::HoverItem(Some((
                                     model.kind,
                                     index as i32,
-                                )))
+                                ))))
+                                .on_exit(Message::HoverItem(None))
+                                .on_press(Message::SelectItem(Some(
+                                    (model.kind, index as i32),
+                                ))),
+                            )
+                            .drag_content(move || {
+                                service_item.to_owned()
                             })
-                            .on_enter(Message::HoverItem(Some((
-                                model.kind,
-                                index as i32,
-                            ))))
-                            .on_exit(Message::HoverItem(None))
-                            .on_press(Message::SelectItem(Some((
-                                model.kind,
-                                index as i32,
+                            .on_start(Some(Message::DragItem(Some(
+                                (model.kind, index as i32),
                             ))))
                             .into()
                         },
                     )
-                })
-                .spacing(2)
-                .width(Length::Fill),
-            );
-            Container::new(items).padding(5).style(|t| {
-                container::Style::default()
-                    .background(Background::Color(
-                        t.cosmic().primary.base.into(),
-                    ))
-                    .border(
-                        Border::default().rounded(
+                    })
+                    .spacing(2)
+                    .width(Length::Fill),
+                );
+                Container::new(items).padding(5).style(|t| {
+                    container::Style::default()
+                        .background(Background::Color(
+                            t.cosmic().primary.base.into(),
+                        ))
+                        .border(Border::default().rounded(
                             t.cosmic().corner_radii.radius_m,
-                        ),
-                    )
-            })
-        } else {
-            Container::new(Space::new(0, 0))
-        };
+                        ))
+                })
+            } else {
+                Container::new(Space::new(0, 0))
+            };
         (column![button, lib_container].into(), dragged_item)
     }
 

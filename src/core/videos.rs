@@ -35,6 +35,10 @@ impl Content for Video {
     fn kind(&self) -> ServiceItemKind {
         ServiceItemKind::Video(self.clone())
     }
+
+    fn to_service_item(&self) -> super::service_items::ServiceItem {
+        self.into()
+    }
 }
 
 impl From<Value> for Video {

@@ -2,6 +2,7 @@ use clap::{command, Parser};
 use core::service_items::{ServiceItem, ServiceItemModel};
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::iced::clipboard::dnd::DndAction;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{self, event, window, Length, Padding, Point};
@@ -9,7 +10,9 @@ use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
 use cosmic::prelude::ElementExt;
 use cosmic::prelude::*;
+use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
+use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, nav_bar, text, tooltip, DndSource, Id, Space,
@@ -100,8 +103,8 @@ enum Message {
     Present(presenter::Message),
     Library(library::Message),
     File(PathBuf),
-    DndEnter(ServiceItem),
-    DndDrop(ServiceItem),
+    DndEnter(Entity, Vec<String>),
+    DndDrop(Entity, Option<ServiceItem>, DndAction),
     OpenWindow,
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
@@ -110,6 +113,7 @@ enum Message {
     Quit,
     Key(Key, Modifiers),
     None,
+    DndLeave(Entity),
 }
 
 impl cosmic::Application for App {
@@ -217,9 +221,21 @@ impl cosmic::Application for App {
                 cosmic::app::cosmic::Message::NavBar(id),
             )
         })
-        // .on_dnd_drop(|entity, data, idk| {
-        //     cosmic::app::Message::Cosmic(Message::DndDrop(entity))
-        // })
+        .on_dnd_drop(|entity, data, action| {
+            debug!(?entity);
+            debug!(?data);
+            debug!(?action);
+            cosmic::app::Message::App(Message::DndDrop(
+                entity, data, action,
+            ))
+        })
+        .on_dnd_enter(|entity, data| {
+            cosmic::app::Message::App(Message::DndEnter(entity, data))
+        })
+        .on_dnd_leave(|entity| {
+            cosmic::app::Message::App(Message::DndLeave(entity))
+        })
+        .drag_id(DragId::new())
         .on_context(|id| {
             cosmic::app::Message::Cosmic(
                 cosmic::app::cosmic::Message::NavBarContext(id),
@@ -253,7 +269,7 @@ impl cosmic::Application for App {
         id: nav_bar::Id,
     ) -> Task<Self::Message> {
         self.nav_model.activate(id);
-        debug!(?id);
+        // debug!(?id);
         self.update_title()
     }
 
@@ -503,13 +519,26 @@ impl cosmic::Application for App {
                 }
             }
             Message::Quit => cosmic::iced::exit(),
-            Message::DndEnter(service_item) => todo!(),
-            Message::DndDrop(service_item) => todo!(),
+            Message::DndEnter(entity, data) => {
+                debug!(?entity);
+                debug!(?data);
+                Task::none()
+            }
+            Message::DndDrop(entity, service_item, action) => {
+                debug!(?entity);
+                debug!(?service_item);
+                debug!(?action);
+                Task::none()
+            }
             Message::AddLibrary(library) => {
                 self.library = Some(library);
                 Task::none()
             }
             Message::None => Task::none(),
+            Message::DndLeave(entity) => {
+                // debug!(?entity);
+                Task::none()
+            }
         }
     }
 

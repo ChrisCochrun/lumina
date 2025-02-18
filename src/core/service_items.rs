@@ -1,7 +1,9 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 
+use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
-use miette::Result;
+use miette::{miette, Result};
 use tracing::{debug, error};
 
 use crate::Slide;
@@ -20,6 +22,48 @@ pub struct ServiceItem {
     pub database_id: i32,
     pub kind: ServiceItemKind,
     // pub item: Box<dyn ServiceTrait>,
+}
+
+impl TryFrom<(Vec<u8>, String)> for ServiceItem {
+    type Error = miette::Error;
+
+    fn try_from(
+        value: (Vec<u8>, String),
+    ) -> std::result::Result<Self, Self::Error> {
+        let sto = value.0.to_owned();
+        let song = Song {
+            title: "Death Was Arrested".to_string(),
+            ..Default::default()
+        };
+        debug!(?value);
+        Ok(Self::from(&song))
+    }
+}
+
+impl AllowedMimeTypes for ServiceItem {
+    fn allowed() -> Cow<'static, [String]> {
+        Cow::from(vec!["application/service-item".to_string()])
+    }
+}
+
+impl AsMimeTypes for ServiceItem {
+    fn available(&self) -> std::borrow::Cow<'static, [String]> {
+        debug!(?self);
+        Cow::from(vec!["application/service-item".to_string()])
+    }
+
+    fn as_bytes(
+        &self,
+        mime_type: &str,
+    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+        todo!();
+        debug!(?self);
+        debug!(mime_type);
+        Some(Cow::from(
+            r#"(slide :background (image :source "~/pics/frodo.jpg" :fit fill)
+       (text "This is frodo" :font-size 70))"#.to_string().into_bytes()
+        ))
+    }
 }
 
 impl ServiceItem {

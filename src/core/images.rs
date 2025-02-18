@@ -30,6 +30,10 @@ impl Content for Image {
     fn kind(&self) -> ServiceItemKind {
         ServiceItemKind::Image(self.clone())
     }
+
+    fn to_service_item(&self) -> super::service_items::ServiceItem {
+        self.into()
+    }
 }
 
 impl From<Value> for Image {
