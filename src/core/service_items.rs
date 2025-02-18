@@ -56,13 +56,23 @@ impl AsMimeTypes for ServiceItem {
         &self,
         mime_type: &str,
     ) -> Option<std::borrow::Cow<'static, [u8]>> {
-        todo!();
         debug!(?self);
         debug!(mime_type);
-        Some(Cow::from(
-            r#"(slide :background (image :source "~/pics/frodo.jpg" :fit fill)
-       (text "This is frodo" :font-size 70))"#.to_string().into_bytes()
-        ))
+        let val = Value::from(self);
+        let val = String::from(val);
+        Some(Cow::from(val.into_bytes()))
+    }
+}
+
+impl From<&ServiceItem> for Value {
+    fn from(value: &ServiceItem) -> Self {
+        match &value.kind {
+            ServiceItemKind::Song(song) => todo!(),
+            ServiceItemKind::Video(video) => todo!(),
+            ServiceItemKind::Image(image) => todo!(),
+            ServiceItemKind::Presentation(presentation) => todo!(),
+            ServiceItemKind::Content(slide) => todo!(),
+        }
     }
 }
 
