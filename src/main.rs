@@ -222,9 +222,6 @@ impl cosmic::Application for App {
             )
         })
         .on_dnd_drop(|entity, data, action| {
-            debug!(?entity);
-            debug!(?data);
-            debug!(?action);
             cosmic::app::Message::App(Message::DndDrop(
                 entity, data, action,
             ))
