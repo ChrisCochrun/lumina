@@ -1,5 +1,6 @@
 use clap::{command, Parser};
 use core::service_items::{ServiceItem, ServiceItemModel};
+use core::slide::*;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::clipboard::dnd::DndAction;
@@ -29,14 +30,13 @@ use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
-use ui::editor::SongEditor;
 use ui::library::{self, Library};
+use ui::presenter::{self, Presenter};
+use ui::song_editor::{self, SongEditor};
 
 pub mod core;
 pub mod lisp;
 pub mod ui;
-use core::slide::*;
-use ui::presenter::{self, Presenter};
 
 #[derive(Debug, Parser)]
 #[command(name = "lumina", version, about)]
@@ -105,7 +105,7 @@ struct App {
 enum Message {
     Present(presenter::Message),
     Library(library::Message),
-    SongEditor(editor::Message),
+    SongEditor(song_editor::Message),
     File(PathBuf),
     DndEnter(Entity, Vec<String>),
     DndDrop(Entity, Option<ServiceItem>, DndAction),
