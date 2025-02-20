@@ -15,7 +15,8 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, nav_bar, text, tooltip, DndSource, Id, Space,
+    button, nav_bar, text, tooltip, DndDestination, DndSource, Id,
+    Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
@@ -28,6 +29,7 @@ use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
+use ui::editor::SongEditor;
 use ui::library::{self, Library};
 
 pub mod core;
@@ -96,12 +98,14 @@ struct App {
     library: Option<Library>,
     library_open: bool,
     library_width: f32,
+    song_editor: SongEditor,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     Present(presenter::Message),
     Library(library::Message),
+    SongEditor(editor::Message),
     File(PathBuf),
     DndEnter(Entity, Vec<String>),
     DndDrop(Entity, Option<ServiceItem>, DndAction),
@@ -165,6 +169,7 @@ impl cosmic::Application for App {
         let presenter = Presenter::with_items(items.clone());
         let slides = items.to_slides().unwrap_or_default();
         let current_slide = slides[0].clone();
+        let song_editor = SongEditor::new();
 
         for item in items.iter() {
             nav_model.insert().text(item.title()).data(item.clone());
@@ -174,6 +179,7 @@ impl cosmic::Application for App {
 
         let mut app = App {
             presenter,
+            song_editor,
             core,
             nav_model,
             file: PathBuf::default(),
@@ -221,15 +227,12 @@ impl cosmic::Application for App {
                 cosmic::app::cosmic::Message::NavBar(id),
             )
         })
-        .on_dnd_drop(|entity, data, action| {
-            cosmic::app::Message::App(Message::DndDrop(
-                entity, data, action,
-            ))
-        })
         .on_dnd_enter(|entity, data| {
+            debug!("entered");
             cosmic::app::Message::App(Message::DndEnter(entity, data))
         })
         .on_dnd_leave(|entity| {
+            debug!("left");
             cosmic::app::Message::App(Message::DndLeave(entity))
         })
         .drag_id(DragId::new())
@@ -237,6 +240,12 @@ impl cosmic::Application for App {
             cosmic::app::Message::Cosmic(
                 cosmic::app::cosmic::Message::NavBarContext(id),
             )
+        })
+        .on_dnd_drop::<ServiceItem>(|entity, data, action| {
+            debug!("dropped");
+            cosmic::app::Message::App(Message::DndDrop(
+                entity, data, action,
+            ))
         })
         .context_menu(None)
         .into_container()
@@ -247,6 +256,14 @@ impl cosmic::Application for App {
         if !self.core().is_condensed() {
             nav = nav.max_width(280);
         }
+
+        // let dnd = DndDestination::new(
+        //     nav,
+        //     vec!["application/service-item".to_string().into()],
+        // )
+        // .data_received_for(|item| {
+        //     cosmic::app::Message::App(Message::DndDrop(item))
+        // });
 
         let column = column![
             text::heading("Service List").center().width(280),
@@ -423,6 +440,9 @@ impl cosmic::Application for App {
                     _ => Task::none(),
                 }
             }
+            Message::SongEditor(message) => {
+                todo!()
+            }
             Message::Present(message) => {
                 // debug!(?message);
                 if self.presentation_open {
@@ -523,8 +543,8 @@ impl cosmic::Application for App {
             }
             Message::DndDrop(entity, service_item, action) => {
                 debug!(?entity);
-                debug!(?service_item);
                 debug!(?action);
+                debug!(?service_item);
                 Task::none()
             }
             Message::AddLibrary(library) => {
@@ -614,6 +634,9 @@ impl cosmic::Application for App {
             })
             .style(nav_bar_style)
             .center(Length::Fill);
+
+        let song_editor =
+            self.song_editor.view().map(|m| Message::SongEditor(m));
         // let dnd_source: DndSource<Message, _> = DndSource::with_id(
         //     drag_item.expect("errors").map(|m| Message::Library(m)),
         //     Id::new("item"),

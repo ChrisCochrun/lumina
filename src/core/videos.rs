@@ -8,7 +8,7 @@ use super::{
     slide::Slide,
 };
 use cosmic::iced::Executor;
-use crisp::types::{Keyword, Value};
+use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
@@ -25,6 +25,12 @@ pub struct Video {
     pub start_time: Option<f32>,
     pub end_time: Option<f32>,
     pub looping: bool,
+}
+
+impl From<&Video> for Value {
+    fn from(value: &Video) -> Self {
+        Self::List(vec![Self::Symbol(Symbol("video".into()))])
+    }
 }
 
 impl Content for Video {

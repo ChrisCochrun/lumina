@@ -1,5 +1,6 @@
 use cosmic::{
     iced::{alignment::Vertical, Background, Border, Length},
+    iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
@@ -231,6 +232,12 @@ impl Library {
                                 service_item.to_owned()
                             })
                             .on_start(Some(Message::DragItem(Some(
+                                (model.kind, index as i32),
+                            ))))
+                            .on_finish(Some(Message::DragItem(Some(
+                                (model.kind, index as i32),
+                            ))))
+                            .on_cancel(Some(Message::DragItem(Some(
                                 (model.kind, index as i32),
                             ))))
                             .into()

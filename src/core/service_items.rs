@@ -47,7 +47,7 @@ impl AllowedMimeTypes for ServiceItem {
 }
 
 impl AsMimeTypes for ServiceItem {
-    fn available(&self) -> std::borrow::Cow<'static, [String]> {
+    fn available(&self) -> Cow<'static, [String]> {
         debug!(?self);
         Cow::from(vec!["application/service-item".to_string()])
     }
@@ -67,11 +67,13 @@ impl AsMimeTypes for ServiceItem {
 impl From<&ServiceItem> for Value {
     fn from(value: &ServiceItem) -> Self {
         match &value.kind {
-            ServiceItemKind::Song(song) => todo!(),
-            ServiceItemKind::Video(video) => todo!(),
-            ServiceItemKind::Image(image) => todo!(),
-            ServiceItemKind::Presentation(presentation) => todo!(),
-            ServiceItemKind::Content(slide) => todo!(),
+            ServiceItemKind::Song(song) => Value::from(song),
+            ServiceItemKind::Video(video) => Value::from(video),
+            ServiceItemKind::Image(image) => Value::from(image),
+            ServiceItemKind::Presentation(presentation) => {
+                Value::from(presentation)
+            }
+            ServiceItemKind::Content(slide) => Value::from(slide),
         }
     }
 }

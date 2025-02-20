@@ -1,4 +1,4 @@
-use crisp::types::{Keyword, Value};
+use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -34,6 +34,12 @@ pub struct Presentation {
     pub title: String,
     pub path: PathBuf,
     pub kind: PresKind,
+}
+
+impl From<&Presentation> for Value {
+    fn from(value: &Presentation) -> Self {
+        Self::List(vec![Self::Symbol(Symbol("presentation".into()))])
+    }
 }
 
 impl Content for Presentation {

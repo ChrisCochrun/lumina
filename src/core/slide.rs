@@ -194,6 +194,12 @@ pub struct Slide {
     video_end_time: f32,
 }
 
+impl From<&Slide> for Value {
+    fn from(value: &Slide) -> Self {
+        Self::List(vec![Self::Symbol(Symbol("slide".into()))])
+    }
+}
+
 impl Slide {
     pub fn background(&self) -> &Background {
         &self.background

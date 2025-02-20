@@ -36,6 +36,12 @@ pub struct Song {
     pub font_size: Option<i32>,
 }
 
+impl From<&Song> for Value {
+    fn from(value: &Song) -> Self {
+        Self::List(vec![Self::Symbol(Symbol("song".into()))])
+    }
+}
+
 impl Content for Song {
     fn title(&self) -> String {
         self.title.clone()

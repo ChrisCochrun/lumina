@@ -6,7 +6,7 @@ use super::{
     model::{get_db, LibraryKind, Model},
     service_items::ServiceTrait,
 };
-use crisp::types::{Keyword, Value};
+use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{query_as, SqliteConnection};
@@ -20,6 +20,12 @@ pub struct Image {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
+}
+
+impl From<&Image> for Value {
+    fn from(value: &Image) -> Self {
+        Self::List(vec![Self::Symbol(Symbol("image".into()))])
+    }
 }
 
 impl Content for Image {

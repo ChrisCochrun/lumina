@@ -5,6 +5,7 @@
 ** DONE Develop ui for libraries
 I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
 ** TODO Develop DnD for library items
+This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
 
 * TODO Build editors for each possible item
 ** TODO Develop ui for editors
