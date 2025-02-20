@@ -1,6 +1,8 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO Need to fix tests now that the basic app is working
+
 * TODO Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
 I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
