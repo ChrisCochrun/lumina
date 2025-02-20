@@ -16,8 +16,8 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, nav_bar, text, tooltip, DndDestination, DndSource, Id,
-    Space,
+    button, nav_bar, text, toggler, tooltip, DndDestination,
+    DndSource, Id, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
@@ -33,6 +33,7 @@ use tracing_subscriber::EnvFilter;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
+use ui::EditorMode;
 
 pub mod core;
 pub mod lisp;
@@ -98,6 +99,7 @@ struct App {
     library: Option<Library>,
     library_open: bool,
     library_width: f32,
+    editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
 }
 
@@ -118,6 +120,7 @@ enum Message {
     Key(Key, Modifiers),
     None,
     DndLeave(Entity),
+    EditorToggle(bool),
 }
 
 impl cosmic::Application for App {
@@ -179,7 +182,6 @@ impl cosmic::Application for App {
 
         let mut app = App {
             presenter,
-            song_editor,
             core,
             nav_model,
             file: PathBuf::default(),
@@ -191,6 +193,8 @@ impl cosmic::Application for App {
             library: None,
             library_open: true,
             library_width: 60.0,
+            editor_mode: None,
+            song_editor,
         };
 
         let mut batch = vec![];
@@ -294,41 +298,51 @@ impl cosmic::Application for App {
         vec![]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
+        let editor_toggle = toggler(self.editor_mode.is_some())
+            .label("Editor")
+            .on_toggle(|t| Message::EditorToggle(t));
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
             text::body("Close Presentation")
         } else {
             text::body("Open Presentation")
         };
-        vec![tooltip(
-            button::custom(
-                row!(
-                    Container::new(
-                        icon::from_name(if self.presentation_open {
-                            "dialog-close"
-                        } else {
-                            "view-presentation-symbolic"
-                        })
-                        .scale(3)
+        vec![
+            editor_toggle.into(),
+            tooltip(
+                button::custom(
+                    row!(
+                        Container::new(
+                            icon::from_name(
+                                if self.presentation_open {
+                                    "dialog-close"
+                                } else {
+                                    "view-presentation-symbolic"
+                                }
+                            )
+                            .scale(3)
+                        )
+                        .center_y(Length::Fill),
+                        text
                     )
-                    .center_y(Length::Fill),
-                    text
+                    .padding(5)
+                    .spacing(5),
                 )
-                .padding(5)
-                .spacing(5),
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press({
+                    if self.presentation_open {
+                        Message::CloseWindow(
+                            presenter_window.copied(),
+                        )
+                    } else {
+                        Message::OpenWindow
+                    }
+                }),
+                "Start Presentation",
+                TPosition::Bottom,
             )
-            .class(cosmic::theme::style::Button::HeaderBar)
-            .on_press({
-                if self.presentation_open {
-                    Message::CloseWindow(presenter_window.copied())
-                } else {
-                    Message::OpenWindow
-                }
-            }),
-            "Start Presentation",
-            TPosition::Bottom,
-        )
-        .into()]
+            .into(),
+        ]
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
@@ -556,6 +570,14 @@ impl cosmic::Application for App {
                 // debug!(?entity);
                 Task::none()
             }
+            Message::EditorToggle(edit) => {
+                if edit {
+                    self.editor_mode = Some(EditorMode::Song);
+                } else {
+                    self.editor_mode = None;
+                }
+                Task::none()
+            }
         }
     }
 
@@ -637,14 +659,6 @@ impl cosmic::Application for App {
 
         let song_editor =
             self.song_editor.view().map(|m| Message::SongEditor(m));
-        // let dnd_source: DndSource<Message, _> = DndSource::with_id(
-        //     drag_item.expect("errors").map(|m| Message::Library(m)),
-        //     Id::new("item"),
-        // );
-        // let drag_handle = Container::new(Space::new(1, Length::Fill))
-        //     .style(|t| nav_bar_style(t));
-        // let dragger = MouseArea::new(drag_handle)
-        //     .on_drag(Message::LibraryWidth);
 
         let row = row![
             Container::new(
@@ -690,8 +704,11 @@ impl cosmic::Application for App {
             .center_y(130)
         ];
 
-        let element: Element<Message> = column.into();
-        element
+        if let Some(editor) = &self.editor_mode {
+            Element::from(song_editor)
+        } else {
+            Element::from(column)
+        }
     }
 
     // View for presentation
