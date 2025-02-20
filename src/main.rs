@@ -6,18 +6,19 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::clipboard::dnd::DndAction;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Padding, Point};
+use cosmic::iced::{
+    self, event, window, Color, Length, Padding, Point,
+};
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row};
-use cosmic::prelude::ElementExt;
+use cosmic::iced_widget::{column, row, toggler, Toggler};
 use cosmic::prelude::*;
 use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, nav_bar, text, toggler, tooltip, DndDestination,
-    DndSource, Id, Space,
+    button, horizontal_space, nav_bar, tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
@@ -122,6 +123,8 @@ enum Message {
     DndLeave(Entity),
     EditorToggle(bool),
 }
+
+const HEADER_SPACE: u16 = 20;
 
 impl cosmic::Application for App {
     type Executor = executor::Default;
@@ -298,17 +301,20 @@ impl cosmic::Application for App {
         vec![]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
-        let editor_toggle = toggler(self.editor_mode.is_some())
+        let editor_toggle = Toggler::new(self.editor_mode.is_some())
             .label("Editor")
-            .on_toggle(|t| Message::EditorToggle(t));
+            .spacing(10)
+            .on_toggle(Message::EditorToggle);
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
             text::body("Close Presentation")
         } else {
             text::body("Open Presentation")
         };
+
         vec![
             editor_toggle.into(),
+            horizontal_space().width(HEADER_SPACE).into(),
             tooltip(
                 button::custom(
                     row!(
@@ -342,6 +348,7 @@ impl cosmic::Application for App {
                 TPosition::Bottom,
             )
             .into(),
+            horizontal_space().width(HEADER_SPACE).into(),
         ]
     }
 
@@ -455,7 +462,10 @@ impl cosmic::Application for App {
                 }
             }
             Message::SongEditor(message) => {
-                todo!()
+                self.song_editor.update(message).map(|m| {
+                    debug!(?m);
+                    cosmic::app::Message::App(Message::None)
+                })
             }
             Message::Present(message) => {
                 // debug!(?message);
