@@ -90,11 +90,11 @@ impl SongEditor {
             selected_font_size,
             Message::ChangeFontSize,
         );
-        let title = text(&self.title);
         let title_input = text_input("song", &self.title)
-            .on_input(Message::ChangeTitle);
+            .on_input(Message::ChangeTitle)
+            .label("Song Title");
         let toolbar = row![font_selector, font_size];
-        let column = column![toolbar, title, title_input];
+        let column = column![toolbar, title_input];
         column.into()
     }
 }
