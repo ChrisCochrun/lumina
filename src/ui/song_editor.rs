@@ -4,7 +4,7 @@ use crate::core::songs::Song;
 
 #[derive(Debug, Clone)]
 pub struct SongEditor {
-    song: Song,
+    song: Option<Song>,
 }
 
 #[derive(Debug, Clone)]
@@ -14,6 +14,9 @@ pub enum Message {
 }
 
 impl SongEditor {
+    pub fn new() -> Self {
+        Self { song: None }
+    }
     pub fn update(&self, message: Message) -> Task<Message> {
         match message {
             Message::ChangeSong(song) => todo!(),
