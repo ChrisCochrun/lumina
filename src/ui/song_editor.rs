@@ -1,29 +1,38 @@
 use cosmic::{
-    iced_widget::{column, row},
-    widget::{dropdown, text, text_input},
+    iced::Length,
+    iced_widget::row,
+    widget::{
+        column, combo_box, container, dropdown, text_editor,
+        text_input, vertical_space,
+    },
     Element, Task,
 };
 use tracing::debug;
 
 use crate::core::songs::Song;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SongEditor {
     song: Option<Song>,
     title: String,
-    fonts: Vec<String>,
+    fonts: combo_box::State<String>,
     font_sizes: Vec<String>,
     font: String,
     font_size: usize,
+    verse_order: String,
+    lyrics: text_editor::Content,
+    editing: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ChangeSong(Song),
     UpdateSong(Song),
-    ChangeFont(usize),
+    ChangeFont(String),
     ChangeFontSize(usize),
     ChangeTitle(String),
+    ChangeVerseOrder(String),
+    ChangeLyrics(text_editor::Action),
 }
 
 impl SongEditor {
@@ -41,22 +50,28 @@ impl SongEditor {
         ];
         Self {
             song: None,
-            fonts,
+            fonts: combo_box::State::new(fonts),
             title: String::from("Death was Arrested"),
             font: String::from("Quicksand"),
             font_size: 16,
             font_sizes,
+            verse_order: String::from("Death was Arrested"),
+            lyrics: text_editor::Content::new(),
+            editing: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::ChangeSong(song) => todo!(),
-            Message::UpdateSong(song) => todo!(),
+            Message::ChangeSong(song) => {
+                self.song = Some(song);
+                Task::none()
+            }
+            Message::UpdateSong(song) => {
+                self.song = Some(song);
+                Task::none()
+            }
             Message::ChangeFont(font) => {
-                if let Some(font) = self.fonts.get(font) {
-                    debug!(font);
-                    self.font = font.to_owned();
-                }
+                self.font = font;
                 Task::none()
             }
             Message::ChangeFontSize(size) => {
@@ -72,19 +87,30 @@ impl SongEditor {
                 self.title = title;
                 Task::none()
             }
+            Message::ChangeVerseOrder(verse_order) => {
+                self.verse_order = verse_order;
+                Task::none()
+            }
+            Message::ChangeLyrics(action) => {
+                self.lyrics.perform(action);
+                Task::none()
+            }
         }
     }
 
     pub fn view(&self) -> Element<Message> {
-        let selected_font =
-            self.fonts.iter().position(|f| *f == self.font);
+        let selected_font = &self.font;
         let selected_font_size = self
             .font_sizes
             .iter()
             .position(|s| *s == self.font_size.to_string());
-        let font_selector =
-            dropdown(&self.fonts, selected_font, Message::ChangeFont)
-                .width(200);
+        let font_selector = combo_box(
+            &self.fonts,
+            "Font",
+            Some(selected_font),
+            Message::ChangeFont,
+        )
+        .width(200);
         let font_size = dropdown(
             &self.font_sizes,
             selected_font_size,
@@ -93,8 +119,32 @@ impl SongEditor {
         let title_input = text_input("song", &self.title)
             .on_input(Message::ChangeTitle)
             .label("Song Title");
+        let verse_input = text_input(
+            "Verse
+order",
+            &self.verse_order,
+        )
+        .label("Verse Order")
+        .on_input(Message::ChangeVerseOrder);
+
+        let lyric_input = text_editor(&self.lyrics)
+            .on_action(Message::ChangeLyrics);
+
+        let slide_preview =
+            container(vertical_space()).width(Length::FillPortion(2));
+
         let toolbar = row![font_selector, font_size];
-        let column = column![toolbar, title_input];
+        let left_column = column::with_children(vec![
+            title_input.into(),
+            verse_input.into(),
+            lyric_input.into(),
+        ])
+        .spacing(25)
+        .width(Length::FillPortion(2));
+        let column = column::with_children(vec![
+            toolbar.into(),
+            row![left_column, slide_preview].into(),
+        ]);
         column.into()
     }
 }

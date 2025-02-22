@@ -1,10 +1,10 @@
 use cosmic::{
     iced::{alignment::Vertical, Background, Border, Length},
-    iced_core::widget::tree::State,
+    iced_core::widget::tree,
     iced_widget::{column, row as rowm, text as textm},
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
-        row, scrollable, text, Container, DndSource, Space,
+        row, scrollable, text, Container, DndSource, Space, Widget,
     },
     Element, Task,
 };
@@ -31,7 +31,6 @@ pub(crate) struct Library {
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
     dragged_item: Option<(LibraryKind, i32)>,
-    dragged_item_pos: Option<(usize, usize)>,
 }
 
 #[derive(Clone, Debug)]
@@ -43,7 +42,6 @@ pub(crate) enum Message {
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
-    DragItem(Option<(LibraryKind, i32)>),
     None,
 }
 
@@ -63,7 +61,6 @@ impl Library {
             selected_item: None,
             hovered_item: None,
             dragged_item: None,
-            dragged_item_pos: None,
         }
     }
 
@@ -89,24 +86,14 @@ impl Library {
                 self.selected_item = item;
                 Task::none()
             }
-            Message::DragItem(item) => {
-                self.dragged_item = item;
-                debug!(?self.dragged_item);
-                Task::none()
-            }
         }
     }
 
-    pub fn view(
-        &self,
-    ) -> (Element<Message>, Option<Element<Message>>) {
-        let (song_library, song_dragged) =
-            self.library_item(&self.song_library);
-        let (image_library, image_dragged) =
-            self.library_item(&self.image_library);
-        let (video_library, video_dragged) =
-            self.library_item(&self.video_library);
-        let (presentation_library, presentation_dragged) =
+    pub fn view(&self) -> Element<Message> {
+        let song_library = self.library_item(&self.song_library);
+        let image_library = self.library_item(&self.image_library);
+        let video_library = self.library_item(&self.video_library);
+        let presentation_library =
             self.library_item(&self.presentation_library);
         let column = column![
             song_library,
@@ -114,25 +101,13 @@ impl Library {
             video_library,
             presentation_library,
         ];
-        let dragged_vector = vec![
-            song_dragged,
-            image_dragged,
-            video_dragged,
-            presentation_dragged,
-        ];
-        let dragged = dragged_vector
-            .into_iter()
-            .filter(|x| x.is_some())
-            .next()
-            .unwrap_or(None);
-
-        (column.height(Length::Fill).spacing(5).into(), dragged)
+        column.height(Length::Fill).spacing(5).into()
     }
 
     pub fn library_item<'a, T>(
         &'a self,
         model: &'a Model<T>,
-    ) -> (Element<'a, Message>, Option<Element<'a, Message>>)
+    ) -> Element<'a, Message>
     where
         T: Content,
     {
@@ -205,7 +180,6 @@ impl Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
-        let mut dragged_item = None;
         let lib_container =
             if self.library_open == Some(model.kind) {
                 let items = scrollable(
@@ -213,33 +187,35 @@ impl Library {
                         model.items.iter().enumerate().map(
                         |(index, item)| {
                             let service_item = item.to_service_item();
+                            let visual_item = self
+                                .single_item(index, item, model)
+                                .map(|_| Message::None);
                             DndSource::<Message, ServiceItem>::new(
-                                mouse_area(
-                                    self.single_item(
-                                        index, item, model,
-                                    ),
-                                )
-                                .on_enter(Message::HoverItem(Some((
-                                    model.kind,
-                                    index as i32,
-                                ))))
-                                .on_exit(Message::HoverItem(None))
-                                .on_press(Message::SelectItem(Some(
-                                    (model.kind, index as i32),
-                                ))),
+                                mouse_area(visual_item)
+                                    .on_enter(Message::HoverItem(
+                                        Some((
+                                            model.kind,
+                                            index as i32,
+                                        )),
+                                    ))
+                                    .on_exit(Message::HoverItem(None))
+                                    .on_press(Message::SelectItem(
+                                        Some((
+                                            model.kind,
+                                            index as i32,
+                                        )),
+                                    )),
                             )
+                            // .drag_icon(move |i| {
+                            // let drag_item =
+                            //     self.single_item(index, item, model);
+                            //     let state =
+                            //         drag_item.as_widget().state();
+                            //     (drag_item, state, i)
+                            // })
                             .drag_content(move || {
                                 service_item.to_owned()
                             })
-                            .on_start(Some(Message::DragItem(Some(
-                                (model.kind, index as i32),
-                            ))))
-                            .on_finish(Some(Message::DragItem(Some(
-                                (model.kind, index as i32),
-                            ))))
-                            .on_cancel(Some(Message::DragItem(Some(
-                                (model.kind, index as i32),
-                            ))))
                             .into()
                         },
                     )
@@ -259,7 +235,7 @@ impl Library {
             } else {
                 Container::new(Space::new(0, 0))
             };
-        (column![button, lib_container].into(), dragged_item)
+        column![button, lib_container].into()
     }
 
     fn single_item<'a, T>(
@@ -267,7 +243,7 @@ impl Library {
         index: usize,
         item: &'a T,
         model: &'a Model<T>,
-    ) -> Element<'a, Message>
+    ) -> Element<'a, ()>
     where
         T: Content,
     {

@@ -417,49 +417,7 @@ impl cosmic::Application for App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Key(key, modifiers) => {
-                debug!(?key, ?modifiers);
-                match (key, modifiers) {
-                    (
-                        Key::Named(
-                            iced::keyboard::key::Named::ArrowRight,
-                        ),
-                        _,
-                    ) => self.update(Message::Present(
-                        presenter::Message::NextSlide,
-                    )),
-                    (
-                        Key::Named(
-                            iced::keyboard::key::Named::ArrowLeft,
-                        ),
-                        _,
-                    ) => self.update(Message::Present(
-                        presenter::Message::PrevSlide,
-                    )),
-                    (
-                        Key::Named(iced::keyboard::key::Named::Space),
-                        _,
-                    ) => self.update(Message::Present(
-                        presenter::Message::NextSlide,
-                    )),
-                    (Key::Character(k), _)
-                        if k == *"j" || k == *"l" =>
-                    {
-                        self.update(Message::Present(
-                            presenter::Message::NextSlide,
-                        ))
-                    }
-                    (Key::Character(k), _)
-                        if k == *"k" || k == *"h" =>
-                    {
-                        self.update(Message::Present(
-                            presenter::Message::PrevSlide,
-                        ))
-                    }
-                    (Key::Character(k), _) if k == *"q" => {
-                        self.update(Message::Quit)
-                    }
-                    _ => Task::none(),
-                }
+                self.process_key_press(key, modifiers)
             }
             Message::SongEditor(message) => {
                 self.song_editor.update(message).map(|m| {
@@ -654,13 +612,9 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
-        let mut drag_item = None;
-
         let library =
             Container::new(if let Some(library) = &self.library {
-                let (view, item) = library.view();
-                drag_item = item;
-                view.map(|m| Message::Library(m))
+                library.view().map(|m| Message::Library(m))
             } else {
                 Space::new(0, 0).into()
             })
@@ -714,7 +668,7 @@ impl cosmic::Application for App {
             .center_y(130)
         ];
 
-        if let Some(editor) = &self.editor_mode {
+        if let Some(_editor) = &self.editor_mode {
             Element::from(song_editor)
         } else {
             Element::from(column)
@@ -766,6 +720,45 @@ where
         Task::perform(async { Library::new().await }, |x| {
             cosmic::app::Message::App(Message::AddLibrary(x))
         })
+    }
+
+    fn process_key_press(
+        &mut self,
+        key: Key,
+        modifiers: Modifiers,
+    ) -> Task<Message> {
+        debug!(?key, ?modifiers);
+        match (key, modifiers) {
+            (
+                Key::Named(iced::keyboard::key::Named::ArrowRight),
+                _,
+            ) => self.update(Message::Present(
+                presenter::Message::NextSlide,
+            )),
+            (
+                Key::Named(iced::keyboard::key::Named::ArrowLeft),
+                _,
+            ) => self.update(Message::Present(
+                presenter::Message::PrevSlide,
+            )),
+            (Key::Named(iced::keyboard::key::Named::Space), _) => {
+                self.update(Message::Present(
+                    presenter::Message::NextSlide,
+                ))
+            }
+            (Key::Character(k), _) if k == *"j" || k == *"l" => self
+                .update(Message::Present(
+                    presenter::Message::NextSlide,
+                )),
+            (Key::Character(k), _) if k == *"k" || k == *"h" => self
+                .update(Message::Present(
+                    presenter::Message::PrevSlide,
+                )),
+            (Key::Character(k), _) if k == *"q" => {
+                self.update(Message::Quit)
+            }
+            _ => Task::none(),
+        }
     }
 }
 
