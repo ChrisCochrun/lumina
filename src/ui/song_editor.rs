@@ -33,6 +33,7 @@ pub enum Message {
     ChangeTitle(String),
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
+    Edit(bool),
 }
 
 impl SongEditor {
@@ -84,6 +85,7 @@ impl SongEditor {
                 Task::none()
             }
             Message::ChangeTitle(title) => {
+                debug!(title);
                 self.title = title;
                 Task::none()
             }
@@ -93,6 +95,11 @@ impl SongEditor {
             }
             Message::ChangeLyrics(action) => {
                 self.lyrics.perform(action);
+                Task::none()
+            }
+            Message::Edit(edit) => {
+                debug!(edit);
+                self.editing = edit;
                 Task::none()
             }
         }
@@ -119,6 +126,7 @@ impl SongEditor {
         let title_input = text_input("song", &self.title)
             .on_input(Message::ChangeTitle)
             .label("Song Title");
+
         let verse_input = text_input(
             "Verse
 order",
@@ -146,5 +154,9 @@ order",
             row![left_column, slide_preview].into(),
         ]);
         column.into()
+    }
+
+    pub fn editing(&self) -> bool {
+        self.editing
     }
 }

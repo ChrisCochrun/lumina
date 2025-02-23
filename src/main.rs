@@ -264,14 +264,6 @@ impl cosmic::Application for App {
             nav = nav.max_width(280);
         }
 
-        // let dnd = DndDestination::new(
-        //     nav,
-        //     vec!["application/service-item".to_string().into()],
-        // )
-        // .data_received_for(|item| {
-        //     cosmic::app::Message::App(Message::DndDrop(item))
-        // });
-
         let column = column![
             text::heading("Service List").center().width(280),
             nav
@@ -361,14 +353,14 @@ impl cosmic::Application for App {
             // debug!(?event);
             match event {
                 iced::Event::Keyboard(event) => match event {
-                    iced::keyboard::Event::KeyPressed {
+                    iced::keyboard::Event::KeyReleased {
                         key,
                         modifiers,
                         ..
                     } => Some(Message::Key(key, modifiers)),
                     _ => None,
                 },
-                iced::Event::Mouse(event) => None,
+                iced::Event::Mouse(_event) => None,
                 iced::Event::Window(window_event) => {
                     match window_event {
                         window::Event::CloseRequested => {
@@ -388,10 +380,10 @@ impl cosmic::Application for App {
                         _ => None,
                     }
                 }
-                iced::Event::Touch(event) => None,
-                iced::Event::A11y(id, action_request) => None,
-                iced::Event::Dnd(dnd_event) => None,
-                iced::Event::PlatformSpecific(platform_specific) => {
+                iced::Event::Touch(_touch) => None,
+                iced::Event::A11y(_id, _action_request) => None,
+                iced::Event::Dnd(_dnd_event) => None,
+                iced::Event::PlatformSpecific(_platform_specific) => {
                     None
                 }
             }
@@ -755,7 +747,11 @@ where
                     presenter::Message::PrevSlide,
                 )),
             (Key::Character(k), _) if k == *"q" => {
-                self.update(Message::Quit)
+                if !self.song_editor.editing() {
+                    self.update(Message::Quit)
+                } else {
+                    Task::none()
+                }
             }
             _ => Task::none(),
         }
