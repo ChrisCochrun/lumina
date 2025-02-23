@@ -2,7 +2,7 @@ use cosmic::{
     iced::Length,
     iced_widget::row,
     widget::{
-        column, combo_box, container, dropdown, text_editor,
+        column, combo_box, container, dropdown, text, text_editor,
         text_input, vertical_space,
     },
     Element, Task,
@@ -106,6 +106,50 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
+        let slide_preview =
+            container(vertical_space()).width(Length::FillPortion(2));
+
+        let column = column::with_children(vec![
+            self.toolbar(),
+            row![self.left_column(), slide_preview].into(),
+        ]);
+        column.into()
+    }
+
+    fn left_column(&self) -> Element<Message> {
+        let title_input = text_input("song", &self.title)
+            .on_input(Message::ChangeTitle)
+            .label("Song Title");
+
+        let verse_input = text_input(
+            "Verse
+order",
+            &self.verse_order,
+        )
+        .label("Verse Order")
+        .on_input(Message::ChangeVerseOrder);
+
+        let lyric_title = text("Lyrics");
+        let lyric_input = column::with_children(vec![
+            lyric_title.into(),
+            text_editor(&self.lyrics)
+                .on_action(Message::ChangeLyrics)
+                .height(Length::Fill)
+                .into(),
+        ])
+        .spacing(5);
+
+        column::with_children(vec![
+            title_input.into(),
+            verse_input.into(),
+            lyric_input.into(),
+        ])
+        .spacing(25)
+        .width(Length::FillPortion(2))
+        .into()
+    }
+
+    fn toolbar(&self) -> Element<Message> {
         let selected_font = &self.font;
         let selected_font_size = self
             .font_sizes
@@ -123,37 +167,8 @@ impl SongEditor {
             selected_font_size,
             Message::ChangeFontSize,
         );
-        let title_input = text_input("song", &self.title)
-            .on_input(Message::ChangeTitle)
-            .label("Song Title");
 
-        let verse_input = text_input(
-            "Verse
-order",
-            &self.verse_order,
-        )
-        .label("Verse Order")
-        .on_input(Message::ChangeVerseOrder);
-
-        let lyric_input = text_editor(&self.lyrics)
-            .on_action(Message::ChangeLyrics);
-
-        let slide_preview =
-            container(vertical_space()).width(Length::FillPortion(2));
-
-        let toolbar = row![font_selector, font_size];
-        let left_column = column::with_children(vec![
-            title_input.into(),
-            verse_input.into(),
-            lyric_input.into(),
-        ])
-        .spacing(25)
-        .width(Length::FillPortion(2));
-        let column = column::with_children(vec![
-            toolbar.into(),
-            row![left_column, slide_preview].into(),
-        ]);
-        column.into()
+        row![font_selector, font_size].into()
     }
 
     pub fn editing(&self) -> bool {
