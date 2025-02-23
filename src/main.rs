@@ -720,6 +720,12 @@ where
         modifiers: Modifiers,
     ) -> Task<Message> {
         debug!(?key, ?modifiers);
+        if self.editor_mode.is_some() {
+            return Task::none();
+        }
+        if self.song_editor.editing() {
+            return Task::none();
+        }
         match (key, modifiers) {
             (
                 Key::Named(iced::keyboard::key::Named::ArrowRight),
@@ -747,11 +753,7 @@ where
                     presenter::Message::PrevSlide,
                 )),
             (Key::Character(k), _) if k == *"q" => {
-                if !self.song_editor.editing() {
-                    self.update(Message::Quit)
-                } else {
-                    Task::none()
-                }
+                self.update(Message::Quit)
             }
             _ => Task::none(),
         }
