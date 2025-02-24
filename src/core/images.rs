@@ -40,6 +40,16 @@ impl Content for Image {
     fn to_service_item(&self) -> super::service_items::ServiceItem {
         self.into()
     }
+
+    fn background(&self) -> Option<Background> {
+        if let Ok(background) =
+            Background::try_from(self.path.clone())
+        {
+            Some(background)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<Value> for Image {

@@ -265,8 +265,24 @@ impl Library {
                 }
             }
         });
+        let subtext = container(responsive(|size| {
+            let background = if let Some(text) = item.background() {
+                text.path.to_string_lossy().to_string()
+            } else {
+                "Background does not exist...".to_string()
+            };
+            text::body(elide_text(background, size.width))
+                .center()
+                .wrapping(textm::Wrapping::None)
+                .into()
+        }))
+        .center_y(25)
+        .center_x(Length::Fill);
+
+        let texts = column([text.into(), subtext.into()]);
+
         Container::new(
-            rowm![horizontal_space().width(0), icon, text]
+            rowm![horizontal_space().width(0), icon, texts]
                 .spacing(10)
                 .align_y(Vertical::Center),
         )

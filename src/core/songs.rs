@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, option::Option, path::PathBuf};
 
 use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
@@ -53,6 +53,10 @@ impl Content for Song {
 
     fn to_service_item(&self) -> super::service_items::ServiceItem {
         self.into()
+    }
+
+    fn background(&self) -> Option<Background> {
+        self.background.clone()
     }
 }
 
