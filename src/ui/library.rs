@@ -2,6 +2,7 @@ use cosmic::{
     iced::{alignment::Vertical, Background, Border, Length},
     iced_core::widget::tree,
     iced_widget::{column, row as rowm, text as textm},
+    theme,
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
         row, scrollable, text, Container, DndSource, Space, Widget,
@@ -37,7 +38,7 @@ pub(crate) struct Library {
 pub(crate) enum Message {
     AddItem,
     RemoveItem,
-    OpenItem,
+    OpenItem(Option<(LibraryKind, i32)>),
     HoverLibrary(Option<LibraryKind>),
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
@@ -64,12 +65,19 @@ impl Library {
         }
     }
 
+    pub fn get_song(&self, index: i32) -> Option<&Song> {
+        self.song_library.get_item(index)
+    }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::AddItem => Task::none(),
             Message::None => Task::none(),
             Message::RemoveItem => Task::none(),
-            Message::OpenItem => Task::none(),
+            Message::OpenItem(item) => {
+                debug!(?item);
+                Task::none()
+            }
             Message::HoverLibrary(library_kind) => {
                 self.library_hovered = library_kind;
                 Task::none()
@@ -198,6 +206,12 @@ impl Library {
                                             index as i32,
                                         )),
                                     ))
+                                    .on_double_click(
+                                        Message::OpenItem(Some((
+                                            model.kind,
+                                            index as i32,
+                                        ))),
+                                    )
                                     .on_exit(Message::HoverItem(None))
                                     .on_press(Message::SelectItem(
                                         Some((
@@ -222,7 +236,8 @@ impl Library {
                     })
                     .spacing(2)
                     .width(Length::Fill),
-                );
+                )
+                .spacing(5);
                 Container::new(items).padding(5).style(|t| {
                     container::Style::default()
                         .background(Background::Color(
@@ -253,7 +268,7 @@ impl Library {
                 .wrapping(textm::Wrapping::None)
                 .into()
         }))
-        .center_y(25)
+        .center_y(20)
         .center_x(Length::Fill);
         let icon = icon::from_name({
             match model.kind {
@@ -276,7 +291,7 @@ impl Library {
                 .wrapping(textm::Wrapping::None)
                 .into()
         }))
-        .center_y(25)
+        .center_y(20)
         .center_x(Length::Fill);
 
         let texts = column([text.into(), subtext.into()]);

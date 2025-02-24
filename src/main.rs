@@ -1,4 +1,5 @@
 use clap::{command, Parser};
+use core::model::LibraryKind;
 use core::service_items::{ServiceItem, ServiceItemModel};
 use core::slide::*;
 use cosmic::app::context_drawer::ContextDrawer;
@@ -297,6 +298,7 @@ impl cosmic::Application for App {
             .label("Editor")
             .spacing(10)
             .on_toggle(Message::EditorToggle);
+
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
             text::body("Close Presentation")
@@ -431,8 +433,35 @@ impl cosmic::Application for App {
             }
 
             Message::Library(message) => {
-                // debug!(?message);
+                debug!(?message);
+                let (mut kind, mut index): (LibraryKind, i32) =
+                    (LibraryKind::Song, 0);
+                let mut opened_item = false;
+                match message {
+                    library::Message::OpenItem(item) => {
+                        let Some(item) = item else {
+                            return ().into();
+                        };
+                        debug!("opening: {:?}", item);
+                        kind = item.0;
+                        index = item.1;
+                        opened_item = true;
+                    }
+                    _ => {
+                        debug!("none");
+                    }
+                };
                 if let Some(library) = &mut self.library {
+                    if opened_item {
+                        if let Some(song) = library.get_song(index) {
+                            self.editor_mode = Some(EditorMode::Song);
+                            let _ = self.song_editor.update(
+                                song_editor::Message::ChangeSong(
+                                    song.clone(),
+                                ),
+                            );
+                        }
+                    }
                     library.update(message).map(|x| {
                         debug!(?x);
                         cosmic::app::Message::App(Message::None)
