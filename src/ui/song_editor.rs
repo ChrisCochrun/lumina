@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use cosmic::{
     iced::Length,
     iced_widget::row,
@@ -19,6 +21,8 @@ pub struct SongEditor {
     fonts: combo_box::State<String>,
     font_sizes: Vec<String>,
     font: String,
+    author: String,
+    audio: PathBuf,
     font_size: usize,
     verse_order: String,
     lyrics: text_editor::Content,
@@ -36,6 +40,7 @@ pub enum Message {
     ChangeLyrics(text_editor::Action),
     Edit(bool),
     None,
+    ChangeAuthor(String),
 }
 
 impl SongEditor {
@@ -54,13 +59,15 @@ impl SongEditor {
         Self {
             song: None,
             fonts: combo_box::State::new(fonts),
-            title: String::from("Death was Arrested"),
-            font: String::from("Quicksand"),
+            title: "Death was Arrested".to_owned(),
+            font: "Quicksand".to_owned(),
             font_size: 16,
             font_sizes,
-            verse_order: String::from("Death was Arrested"),
+            verse_order: "Death was Arrested".to_owned(),
             lyrics: text_editor::Content::new(),
             editing: false,
+            author: "North Point Worship".into(),
+            audio: PathBuf::new(),
         }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -105,6 +112,11 @@ impl SongEditor {
                 Task::none()
             }
             Message::None => Task::none(),
+            Message::ChangeAuthor(author) => {
+                debug!(author);
+                self.author = author;
+                Task::none()
+            }
         }
     }
 
@@ -123,6 +135,10 @@ impl SongEditor {
         let title_input = text_input("song", &self.title)
             .on_input(Message::ChangeTitle)
             .label("Song Title");
+
+        let author_input = text_input("author", &self.author)
+            .on_input(Message::ChangeAuthor)
+            .label("Song Author");
 
         let verse_input = text_input(
             "Verse
@@ -144,6 +160,7 @@ order",
 
         column::with_children(vec![
             title_input.into(),
+            author_input.into(),
             verse_input.into(),
             lyric_input.into(),
         ])
@@ -190,5 +207,11 @@ order",
 
     pub fn editing(&self) -> bool {
         self.editing
+    }
+}
+
+impl Default for SongEditor {
+    fn default() -> Self {
+        Self::new()
     }
 }
