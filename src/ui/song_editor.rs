@@ -2,8 +2,9 @@ use cosmic::{
     iced::Length,
     iced_widget::row,
     widget::{
-        column, combo_box, container, dropdown, text, text_editor,
-        text_input, vertical_space,
+        button, column, combo_box, container, dropdown,
+        horizontal_space, icon, text, text_editor, text_input,
+        vertical_space,
     },
     Element, Task,
 };
@@ -34,6 +35,7 @@ pub enum Message {
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
     Edit(bool),
+    None,
 }
 
 impl SongEditor {
@@ -102,6 +104,7 @@ impl SongEditor {
                 self.editing = edit;
                 Task::none()
             }
+            Message::None => Task::none(),
         }
     }
 
@@ -168,7 +171,21 @@ order",
             Message::ChangeFontSize,
         );
 
-        row![font_selector, font_size].into()
+        let background_selector = button::icon(
+            icon::from_name("folder-pictures-symbolic").scale(2),
+        )
+        .label("Background")
+        .tooltip("Select an image or video background")
+        .on_press(Message::None)
+        .padding(10);
+
+        row![
+            font_selector,
+            font_size,
+            horizontal_space(),
+            background_selector
+        ]
+        .into()
     }
 
     pub fn editing(&self) -> bool {
