@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
 use cosmic::{
-    iced::Length,
+    iced::{
+        font::{Family, Stretch, Style, Weight},
+        Font, Length,
+    },
     iced_widget::row,
     widget::{
         button, column, combo_box, container, dropdown,
@@ -10,9 +13,15 @@ use cosmic::{
     },
     Element, Task,
 };
+use iced_video_player::Video;
 use tracing::debug;
 
-use crate::core::songs::Song;
+use crate::{
+    core::{service_items::ServiceTrait, songs::Song},
+    Background,
+};
+
+use super::presenter::slide_view;
 
 #[derive(Debug)]
 pub struct SongEditor {
@@ -27,6 +36,9 @@ pub struct SongEditor {
     verse_order: String,
     lyrics: text_editor::Content,
     editing: bool,
+    background: Option<Background>,
+    video: Option<Video>,
+    current_font: Font,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +80,9 @@ impl SongEditor {
             editing: false,
             author: "North Point Worship".into(),
             audio: PathBuf::new(),
+            background: None,
+            video: None,
+            current_font: cosmic::font::default(),
         }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -81,7 +96,20 @@ impl SongEditor {
                 Task::none()
             }
             Message::ChangeFont(font) => {
-                self.font = font;
+                self.font = font.clone();
+
+                let font_name = font.into_boxed_str();
+                let family = Family::Name(Box::leak(font_name));
+                let weight = Weight::Normal;
+                let stretch = Stretch::Normal;
+                let style = Style::Normal;
+                let font = Font {
+                    family,
+                    weight,
+                    stretch,
+                    style,
+                };
+                self.current_font = font;
                 Task::none()
             }
             Message::ChangeFontSize(size) => {
@@ -121,14 +149,39 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let slide_preview =
-            container(vertical_space()).width(Length::FillPortion(2));
+        let slide_preview = container(self.slide_preview())
+            .width(Length::FillPortion(2));
 
         let column = column::with_children(vec![
             self.toolbar(),
             row![self.left_column(), slide_preview].into(),
         ]);
         column.into()
+    }
+
+    fn slide_preview(&self) -> Element<Message> {
+        if let Some(song) = &self.song {
+            if let Ok(slides) = song.to_slides() {
+                let slides = slides
+                    .into_iter()
+                    .map(|slide| {
+                        slide_view(
+                            slide,
+                            &self.video,
+                            self.current_font,
+                            false,
+                            false,
+                        )
+                        .map(|_| Message::None)
+                    })
+                    .collect();
+                column::with_children(slides).into()
+            } else {
+                horizontal_space().into()
+            }
+        } else {
+            horizontal_space().into()
+        }
     }
 
     fn left_column(&self) -> Element<Message> {

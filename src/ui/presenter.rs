@@ -368,8 +368,9 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        self.slide_view(
-            &self.current_slide,
+        slide_view(
+            self.current_slide.clone(),
+            &self.video,
             self.current_font,
             false,
             true,
@@ -377,8 +378,9 @@ impl Presenter {
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        self.slide_view(
-            &self.current_slide,
+        slide_view(
+            self.current_slide.clone(),
+            &self.video,
             self.current_font,
             false,
             false,
@@ -419,7 +421,8 @@ impl Presenter {
             self.slides.iter().position(|s| s == slide).unwrap()
                 as i32;
 
-        let container = self.slide_view(slide, font, true, false);
+        let container =
+            slide_view(slide.clone(), &self.video, font, true, false);
         let delegate = mouse_area(
             Container::new(container)
                 .style(move |t| {
@@ -479,105 +482,6 @@ impl Presenter {
         delegate.into()
     }
 
-    fn slide_view<'a>(
-        &'a self,
-        slide: &'a Slide,
-        font: Font,
-        delegate: bool,
-        hide_mouse: bool,
-    ) -> Element<'a, Message> {
-        responsive(move |size| {
-            let font_size = scale_font(
-                slide.font_size() as f32,
-                size.width,
-                size.height,
-            );
-            let slide_text = slide.text();
-            let lines = slide_text.lines();
-            // let line_size = lines.clone().count();
-            // debug!(?lines);
-            let text: Vec<Element<Message>> = lines
-                .map(|t| {
-                    rich_text([span(format!("{}\n", t.to_string()))
-                        .background(
-                            Background::Color(Color::BLACK)
-                                .scale_alpha(0.4),
-                        )
-                        .padding(3)])
-                    .size(font_size)
-                    .font(font)
-                    .center()
-                    .into()
-                })
-                .collect();
-            let text = Column::with_children(text).spacing(6);
-            let text_container = Container::new(text)
-                .center(Length::Fill)
-                .align_x(Horizontal::Left);
-            let black = Container::new(Space::new(0, 0))
-                .style(|_| {
-                    container::background(Background::Color(
-                        Color::BLACK,
-                    ))
-                })
-                .width(size.width)
-                .height(size.height);
-            let container = match slide.background().kind {
-                BackgroundKind::Image => {
-                    let path = slide.background().path.clone();
-                    Container::new(
-                        image(path)
-                            .content_fit(ContentFit::Cover)
-                            .width(size.width)
-                            .height(size.height),
-                    )
-                }
-                BackgroundKind::Video => {
-                    if delegate {
-                        Container::new(Space::new(0, 0))
-                            .style(|_| {
-                                container::background(
-                                    Background::Color(Color::BLACK),
-                                )
-                            })
-                            .width(Length::Fill)
-                            .height(Length::Fill)
-                    } else if let Some(video) = &self.video {
-                        Container::new(
-                            VideoPlayer::new(video)
-                                .mouse_hidden(hide_mouse)
-                                .width(size.width)
-                                .height(size.width * 9.0 / 16.0)
-                                .on_end_of_stream(Message::EndVideo)
-                                .on_new_frame(Message::VideoFrame)
-                                .on_missing_plugin(
-                                    Message::MissingPlugin,
-                                )
-                                .on_warning(|w| {
-                                    Message::Error(w.to_string())
-                                })
-                                .on_error(|e| {
-                                    Message::Error(e.to_string())
-                                })
-                                .content_fit(ContentFit::Cover),
-                        )
-                    } else {
-                        Container::new(Space::new(0, 0))
-                    }
-                }
-            };
-            stack!(
-                black,
-                container.center(Length::Fill),
-                text_container
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-        })
-        .into()
-    }
-
     fn reset_video(&mut self) {
         if let Some(slide) =
             self.slides.get(self.current_slide_index as usize)
@@ -632,4 +536,95 @@ fn scale_font(font_size: f32, width: f32, height: f32) -> f32 {
         50.0
     };
     font_size
+}
+
+pub(crate) fn slide_view<'a>(
+    slide: Slide,
+    video: &'a Option<Video>,
+    font: Font,
+    delegate: bool,
+    hide_mouse: bool,
+) -> Element<'a, Message> {
+    responsive(move |size| {
+        let font_size = scale_font(
+            slide.font_size() as f32,
+            size.width,
+            size.height,
+        );
+        let slide_text = slide.text();
+        let lines = slide_text.lines();
+        // let line_size = lines.clone().count();
+        // debug!(?lines);
+        let text: Vec<Element<Message>> = lines
+            .map(|t| {
+                rich_text([span(format!("{}\n", t.to_string()))
+                    .background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.4),
+                    )
+                    .padding(3)])
+                .size(font_size)
+                .font(font)
+                .center()
+                .into()
+            })
+            .collect();
+        let text = Column::with_children(text).spacing(6);
+        let text_container = Container::new(text)
+            .center(Length::Fill)
+            .align_x(Horizontal::Left);
+        let black = Container::new(Space::new(0, 0))
+            .style(|_| {
+                container::background(Background::Color(Color::BLACK))
+            })
+            .width(size.width)
+            .height(size.height);
+        let container = match slide.background().kind {
+            BackgroundKind::Image => {
+                let path = slide.background().path.clone();
+                Container::new(
+                    image(path)
+                        .content_fit(ContentFit::Cover)
+                        .width(size.width)
+                        .height(size.height),
+                )
+            }
+            BackgroundKind::Video => {
+                if delegate {
+                    Container::new(Space::new(0, 0))
+                        .style(|_| {
+                            container::background(Background::Color(
+                                Color::BLACK,
+                            ))
+                        })
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                } else if let Some(video) = &video {
+                    Container::new(
+                        VideoPlayer::new(video)
+                            .mouse_hidden(hide_mouse)
+                            .width(size.width)
+                            .height(size.width * 9.0 / 16.0)
+                            .on_end_of_stream(Message::EndVideo)
+                            .on_new_frame(Message::VideoFrame)
+                            .on_missing_plugin(Message::MissingPlugin)
+                            .on_warning(|w| {
+                                Message::Error(w.to_string())
+                            })
+                            .on_error(|e| {
+                                Message::Error(e.to_string())
+                            })
+                            .content_fit(ContentFit::Cover),
+                    )
+                } else {
+                    Container::new(Space::new(0, 0))
+                }
+            }
+        };
+        stack!(black, container.center(Length::Fill), text_container)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    })
+    .into()
 }
