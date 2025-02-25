@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use cosmic::{
     iced::{
         font::{Family, Stretch, Style, Weight},
-        Font, Length,
+        padding, Font, Length,
     },
     iced_widget::row,
     widget::{
         button, column, combo_box, container, dropdown,
-        horizontal_space, icon, text, text_editor, text_input,
-        vertical_space,
+        horizontal_space, icon, scrollable, text, text_editor,
+        text_input, vertical_space,
     },
     Element, Task,
 };
@@ -165,17 +165,30 @@ impl SongEditor {
                 let slides = slides
                     .into_iter()
                     .map(|slide| {
-                        slide_view(
-                            slide,
-                            &self.video,
-                            self.current_font,
-                            false,
-                            false,
+                        container(
+                            slide_view(
+                                slide,
+                                &self.video,
+                                self.current_font,
+                                false,
+                                false,
+                            )
+                            .map(|_| Message::None),
                         )
-                        .map(|_| Message::None)
+                        .height(250)
+                        .into()
                     })
                     .collect();
-                column::with_children(slides).into()
+                scrollable(
+                    container(
+                        column::with_children(slides).spacing(10),
+                    )
+                    .clip(true)
+                    .padding(padding::right(20).left(20)),
+                )
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .into()
             } else {
                 horizontal_space().into()
             }

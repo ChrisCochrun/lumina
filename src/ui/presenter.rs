@@ -546,11 +546,9 @@ pub(crate) fn slide_view<'a>(
     hide_mouse: bool,
 ) -> Element<'a, Message> {
     responsive(move |size| {
-        let font_size = scale_font(
-            slide.font_size() as f32,
-            size.width,
-            size.height,
-        );
+        let height = size.width * 9.0 / 16.0;
+        let font_size =
+            scale_font(slide.font_size() as f32, size.width, height);
         let slide_text = slide.text();
         let lines = slide_text.lines();
         // let line_size = lines.clone().count();
@@ -576,9 +574,9 @@ pub(crate) fn slide_view<'a>(
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
-            })
+            }).clip(true)
             .width(size.width)
-            .height(size.height);
+            .height(height);
         let container = match slide.background().kind {
             BackgroundKind::Image => {
                 let path = slide.background().path.clone();
@@ -586,8 +584,9 @@ pub(crate) fn slide_view<'a>(
                     image(path)
                         .content_fit(ContentFit::Cover)
                         .width(size.width)
-                        .height(size.height),
+                        .height(height),
                 )
+                .clip(true)
             }
             BackgroundKind::Video => {
                 if delegate {
@@ -597,6 +596,7 @@ pub(crate) fn slide_view<'a>(
                                 Color::BLACK,
                             ))
                         })
+                        .clip(true)
                         .width(Length::Fill)
                         .height(Length::Fill)
                 } else if let Some(video) = &video {
@@ -604,7 +604,7 @@ pub(crate) fn slide_view<'a>(
                         VideoPlayer::new(video)
                             .mouse_hidden(hide_mouse)
                             .width(size.width)
-                            .height(size.width * 9.0 / 16.0)
+                            .height(height)
                             .on_end_of_stream(Message::EndVideo)
                             .on_new_frame(Message::VideoFrame)
                             .on_missing_plugin(Message::MissingPlugin)
@@ -616,6 +616,7 @@ pub(crate) fn slide_view<'a>(
                             })
                             .content_fit(ContentFit::Cover),
                     )
+                    .clip(true)
                 } else {
                     Container::new(Space::new(0, 0))
                 }
@@ -623,7 +624,7 @@ pub(crate) fn slide_view<'a>(
         };
         stack!(black, container.center(Length::Fill), text_container)
             .width(Length::Fill)
-            .height(Length::Fill)
+            .height(height)
             .into()
     })
     .into()
