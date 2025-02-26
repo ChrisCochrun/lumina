@@ -626,10 +626,7 @@ pub(crate) fn slide_view<'a>(
             container.center(Length::Fill),
             text_container
         );
-        Container::new(stack)
-            .center_x(Length::Fill)
-            .center_y(size.height)
-            .into()
+        Container::new(stack).center(Length::Fill).into()
     })
     .into()
 }
