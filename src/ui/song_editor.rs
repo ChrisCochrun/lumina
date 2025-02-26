@@ -178,7 +178,7 @@ impl SongEditor {
                             .map(|_| Message::None),
                         )
                         .height(250)
-                        .center_x(Length::Shrink)
+                        .center_x(Length::Fill)
                         .padding([0, 20])
                         .clip(true)
                         .into()

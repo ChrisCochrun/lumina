@@ -9,7 +9,6 @@ use cosmic::{
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
-    iced_core::text::Span,
     iced_widget::{
         rich_text,
         scrollable::{
@@ -544,7 +543,6 @@ pub(crate) fn slide_view<'a>(
     hide_mouse: bool,
 ) -> Element<'a, Message> {
     responsive(move |size| {
-        let height = size.width * 9.0 / 16.0;
         let width = size.height * 16.0 / 9.0;
         let font_size = scale_font(slide.font_size() as f32, width);
         let slide_text = slide.text();
@@ -573,7 +571,7 @@ pub(crate) fn slide_view<'a>(
             })
             .clip(true)
             .width(width)
-            .height(height);
+            .height(size.height);
         let container = match slide.background().kind {
             BackgroundKind::Image => {
                 let path = slide.background().path.clone();
@@ -581,7 +579,7 @@ pub(crate) fn slide_view<'a>(
                     image(path)
                         .content_fit(ContentFit::Cover)
                         .width(width)
-                        .height(height),
+                        .height(size.height),
                 )
                 .center(Length::Shrink)
                 .clip(true)
@@ -595,7 +593,7 @@ pub(crate) fn slide_view<'a>(
                             ))
                         })
                         .center_x(width)
-                        .center_y(height)
+                        .center_y(size.height)
                         .clip(true)
                         .width(Length::Fill)
                         .height(Length::Fill)
@@ -604,7 +602,7 @@ pub(crate) fn slide_view<'a>(
                         VideoPlayer::new(video)
                             .mouse_hidden(hide_mouse)
                             .width(width)
-                            .height(height)
+                            .height(size.height)
                             .on_end_of_stream(Message::EndVideo)
                             .on_new_frame(Message::VideoFrame)
                             .on_missing_plugin(Message::MissingPlugin)
@@ -623,9 +621,14 @@ pub(crate) fn slide_view<'a>(
                 }
             }
         };
-        stack!(black, container.center(Length::Fill), text_container)
-            .width(width)
-            .height(height)
+        let stack = stack!(
+            black,
+            container.center(Length::Fill),
+            text_container
+        );
+        Container::new(stack)
+            .center_x(Length::Fill)
+            .center_y(size.height)
             .into()
     })
     .into()

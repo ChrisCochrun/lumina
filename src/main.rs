@@ -607,6 +607,7 @@ impl cosmic::Application for App {
             Container::new(
                 self.presenter.view_preview().map(Message::Present),
             )
+            .height(250)
             .align_bottom(Length::Fill),
             Container::new(if self.presenter.video.is_some() {
                 row![
