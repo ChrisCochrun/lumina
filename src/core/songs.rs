@@ -446,7 +446,6 @@ impl Song {
 
             for verse in verse_order.unwrap_or_default() {
                 let mut verse_name = "";
-                debug!(verse = verse);
                 for word in VERSE_KEYWORDS {
                     let end_verse =
                         verse.get(1..2).unwrap_or_default();
@@ -476,9 +475,9 @@ impl Song {
                     error!("NOT WORKING!");
                 };
             }
-            for lyric in lyric_list.iter() {
-                debug!(lyric = ?lyric)
-            }
+            // for lyric in lyric_list.iter() {
+            //     debug!(lyric = ?lyric)
+            // }
             Ok(lyric_list)
         } else {
             Err(miette!("There are no lyrics"))

@@ -40,6 +40,7 @@ pub struct SongEditor {
     background: Option<Background>,
     video: Option<Video>,
     current_font: Font,
+    ccli: String,
 }
 
 #[derive(Debug, Clone)]
@@ -84,12 +85,44 @@ impl SongEditor {
             background: None,
             video: None,
             current_font: cosmic::font::default(),
+            ccli: "8".to_owned(),
         }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ChangeSong(song) => {
-                self.song = Some(song);
+                self.song = Some(song.clone());
+                self.title = song.title;
+                if let Some(font) = song.font {
+                    self.font = font
+                };
+                if let Some(font_size) = song.font_size {
+                    self.font_size = font_size as usize
+                };
+                if let Some(verse_order) = song.verse_order {
+                    self.verse_order = verse_order
+                        .into_iter()
+                        .map(|mut s| {
+                            s.push_str(" ");
+                            s
+                        })
+                        .collect();
+                }
+                if let Some(author) = song.author {
+                    self.author = author
+                };
+                if let Some(audio) = song.audio {
+                    self.audio = audio
+                };
+                if let Some(ccli) = song.ccli {
+                    self.ccli = ccli
+                };
+                if let Some(lyrics) = song.lyrics {
+                    self.lyrics =
+                        text_editor::Content::with_text(&lyrics)
+                };
+                self.background = song.background;
+
                 Task::none()
             }
             Message::UpdateSong(song) => {
@@ -124,16 +157,39 @@ impl SongEditor {
             }
             Message::ChangeTitle(title) => {
                 debug!(title);
-                self.title = title;
-                Task::none()
+                self.title = title.clone();
+                if let Some(mut song) = self.song.clone() {
+                    song.title = title;
+                    self.update(Message::UpdateSong(song))
+                } else {
+                    Task::none()
+                }
             }
             Message::ChangeVerseOrder(verse_order) => {
-                self.verse_order = verse_order;
-                Task::none()
+                self.verse_order = verse_order.clone();
+                if let Some(mut song) = self.song.clone() {
+                    let verse_order = verse_order
+                        .split(" ")
+                        .into_iter()
+                        .map(|s| s.to_owned())
+                        .collect();
+                    song.verse_order = Some(verse_order);
+                    self.update(Message::UpdateSong(song))
+                } else {
+                    Task::none()
+                }
             }
             Message::ChangeLyrics(action) => {
                 self.lyrics.perform(action);
-                Task::none()
+
+                let lyrics = self.lyrics.text();
+
+                if let Some(mut song) = self.song.clone() {
+                    song.lyrics = Some(lyrics);
+                    self.update(Message::UpdateSong(song))
+                } else {
+                    Task::none()
+                }
             }
             Message::Edit(edit) => {
                 debug!(edit);
@@ -143,8 +199,13 @@ impl SongEditor {
             Message::None => Task::none(),
             Message::ChangeAuthor(author) => {
                 debug!(author);
-                self.author = author;
-                Task::none()
+                self.author = author.clone();
+                if let Some(mut song) = self.song.clone() {
+                    song.author = Some(author);
+                    self.update(Message::UpdateSong(song))
+                } else {
+                    Task::none()
+                }
             }
         }
     }
@@ -155,7 +216,13 @@ impl SongEditor {
 
         let column = column::with_children(vec![
             self.toolbar(),
-            row![self.left_column(), slide_preview].into(),
+            row![
+                container(self.left_column())
+                    .center_x(Length::FillPortion(2)),
+                container(slide_preview)
+                    .center_x(Length::FillPortion(3))
+            ]
+            .into(),
         ])
         .spacing(theme::active().cosmic().space_l());
         column.into()
