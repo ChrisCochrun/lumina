@@ -574,7 +574,8 @@ pub(crate) fn slide_view<'a>(
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
-            }).clip(true)
+            })
+            .clip(true)
             .width(size.width)
             .height(height);
         let container = match slide.background().kind {

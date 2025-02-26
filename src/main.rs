@@ -11,17 +11,17 @@ use cosmic::iced::{
     self, event, window, Color, Length, Padding, Point,
 };
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row, toggler, Toggler};
+use cosmic::iced_widget::{column, row};
 use cosmic::prelude::*;
 use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, horizontal_space, nav_bar, tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
+use cosmic::widget::{text, toggler};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
@@ -73,11 +73,13 @@ fn main() -> Result<()> {
     let settings;
     if args.ui {
         debug!("main view");
-        settings = Settings::default().debug(false);
+        settings = Settings::default().debug(false).is_daemon(true);
     } else {
         debug!("window view");
-        settings =
-            Settings::default().debug(false).no_main_window(true);
+        settings = Settings::default()
+            .debug(false)
+            .no_main_window(true)
+            .is_daemon(true);
     }
 
     cosmic::app::run::<App>(settings, args)
@@ -294,7 +296,7 @@ impl cosmic::Application for App {
         vec![]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
-        let editor_toggle = Toggler::new(self.editor_mode.is_some())
+        let editor_toggle = toggler(self.editor_mode.is_some())
             .label("Editor")
             .spacing(10)
             .on_toggle(Message::EditorToggle);
