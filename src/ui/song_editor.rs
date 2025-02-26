@@ -3,13 +3,14 @@ use std::path::PathBuf;
 use cosmic::{
     iced::{
         font::{Family, Stretch, Style, Weight},
-        padding, Font, Length,
+        Font, Length,
     },
     iced_widget::row,
+    theme,
     widget::{
         button, column, combo_box, container, dropdown,
         horizontal_space, icon, scrollable, text, text_editor,
-        text_input, vertical_space,
+        text_input,
     },
     Element, Task,
 };
@@ -155,7 +156,8 @@ impl SongEditor {
         let column = column::with_children(vec![
             self.toolbar(),
             row![self.left_column(), slide_preview].into(),
-        ]);
+        ])
+        .spacing(theme::active().cosmic().space_l());
         column.into()
     }
 
@@ -176,15 +178,15 @@ impl SongEditor {
                             .map(|_| Message::None),
                         )
                         .height(250)
+                        .center_x(Length::Shrink)
+                        .padding([0, 20])
+                        .clip(true)
                         .into()
                     })
                     .collect();
                 scrollable(
-                    container(
-                        column::with_children(slides).spacing(10),
-                    )
-                    .clip(true)
-                    .padding(padding::right(20).left(20)),
+                    column::with_children(slides)
+                        .spacing(theme::active().cosmic().space_l()),
                 )
                 .height(Length::Fill)
                 .width(Length::Fill)

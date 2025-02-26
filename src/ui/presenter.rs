@@ -525,9 +525,7 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     debug!(empty, paused, "Finished running");
 }
 
-fn scale_font(font_size: f32, width: f32, height: f32) -> f32 {
-    let aspect_ratio_true = REFERENCE_WIDTH / REFERENCE_HEIGHT;
-    let aspect_ratio = width / height;
+fn scale_font(font_size: f32, width: f32) -> f32 {
     let scale_factor = (REFERENCE_WIDTH / width).sqrt();
     // debug!(scale_factor);
     let font_size = if font_size > 0.0 {
@@ -547,12 +545,10 @@ pub(crate) fn slide_view<'a>(
 ) -> Element<'a, Message> {
     responsive(move |size| {
         let height = size.width * 9.0 / 16.0;
-        let font_size =
-            scale_font(slide.font_size() as f32, size.width, height);
+        let width = size.height * 16.0 / 9.0;
+        let font_size = scale_font(slide.font_size() as f32, width);
         let slide_text = slide.text();
         let lines = slide_text.lines();
-        // let line_size = lines.clone().count();
-        // debug!(?lines);
         let text: Vec<Element<Message>> = lines
             .map(|t| {
                 rich_text([span(format!("{}\n", t.to_string()))
@@ -576,7 +572,7 @@ pub(crate) fn slide_view<'a>(
                 container::background(Background::Color(Color::BLACK))
             })
             .clip(true)
-            .width(size.width)
+            .width(width)
             .height(height);
         let container = match slide.background().kind {
             BackgroundKind::Image => {
@@ -584,9 +580,10 @@ pub(crate) fn slide_view<'a>(
                 Container::new(
                     image(path)
                         .content_fit(ContentFit::Cover)
-                        .width(size.width)
+                        .width(width)
                         .height(height),
                 )
+                .center(Length::Shrink)
                 .clip(true)
             }
             BackgroundKind::Video => {
@@ -597,6 +594,8 @@ pub(crate) fn slide_view<'a>(
                                 Color::BLACK,
                             ))
                         })
+                        .center_x(width)
+                        .center_y(height)
                         .clip(true)
                         .width(Length::Fill)
                         .height(Length::Fill)
@@ -604,7 +603,7 @@ pub(crate) fn slide_view<'a>(
                     Container::new(
                         VideoPlayer::new(video)
                             .mouse_hidden(hide_mouse)
-                            .width(size.width)
+                            .width(width)
                             .height(height)
                             .on_end_of_stream(Message::EndVideo)
                             .on_new_frame(Message::VideoFrame)
@@ -617,6 +616,7 @@ pub(crate) fn slide_view<'a>(
                             })
                             .content_fit(ContentFit::Cover),
                     )
+                    .center(Length::Shrink)
                     .clip(true)
                 } else {
                     Container::new(Space::new(0, 0))
@@ -624,7 +624,7 @@ pub(crate) fn slide_view<'a>(
             }
         };
         stack!(black, container.center(Length::Fill), text_container)
-            .width(Length::Fill)
+            .width(width)
             .height(height)
             .into()
     })
