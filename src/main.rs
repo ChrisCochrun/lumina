@@ -418,17 +418,114 @@ impl cosmic::Application for App {
             Message::SongEditor(message) => {
                 debug!(?message);
                 match message {
-                    song_editor::Message::UpdateSong(ref song) => {
-                        debug!(?song);
-                        if let Some(library) = self.library.as_mut() {
-                            match library.update_song(song.clone()) {
-                                Ok(_) => {
-                                    debug!("upated song")
+                    song_editor::Message::ChangeFont(ref font) => {
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            song.font = Some(font.to_string());
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
                                 }
-                                Err(e) => error!(?e),
-                            }
+                            };
                         };
                     }
+                    song_editor::Message::ChangeFontSize(
+                        font_size,
+                    ) => {
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            song.font_size = Some(font_size as i32);
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
+                                }
+                            };
+                        };
+                    }
+                    song_editor::Message::ChangeTitle(ref title) => {
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            song.title = title.to_string();
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
+                                }
+                            };
+                        };
+                    }
+                    song_editor::Message::ChangeVerseOrder(
+                        ref vo,
+                    ) => {
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            let verse_order = vo
+                                .split(" ")
+                                .into_iter()
+                                .map(|s| s.to_owned())
+                                .collect();
+                            song.verse_order = Some(verse_order);
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
+                                }
+                            };
+                        };
+                    }
+                    song_editor::Message::ChangeLyrics(
+                        ref action,
+                    ) => {
+                        self.song_editor
+                            .lyrics
+                            .perform(action.clone());
+                        let lyrics = self.song_editor.lyrics.text();
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            song.lyrics = Some(lyrics.to_string());
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
+                                }
+                            };
+                        };
+                    }
+                    song_editor::Message::ChangeAuthor(
+                        ref author,
+                    ) => {
+                        if let Some(mut song) =
+                            self.song_editor.song.clone()
+                        {
+                            song.author = Some(author.to_string());
+                            self.song_editor.song =
+                                Some(song.clone());
+                            if let Some(library) = &mut self.library {
+                                match library.update_song(song) {
+                                    Ok(_) => (),
+                                    Err(e) => error!(?e),
+                                }
+                            };
+                        };
+                    }
+                    song_editor::Message::Edit(_) => todo!(),
                     _ => (),
                 };
                 self.song_editor.update(message).map(|m| {

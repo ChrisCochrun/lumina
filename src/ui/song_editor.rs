@@ -26,7 +26,7 @@ use super::presenter::slide_view;
 
 #[derive(Debug)]
 pub struct SongEditor {
-    song: Option<Song>,
+    pub song: Option<Song>,
     title: String,
     fonts: combo_box::State<String>,
     font_sizes: Vec<String>,
@@ -35,7 +35,7 @@ pub struct SongEditor {
     audio: PathBuf,
     font_size: usize,
     verse_order: String,
-    lyrics: text_editor::Content,
+    pub lyrics: text_editor::Content,
     editing: bool,
     background: Option<Background>,
     video: Option<Video>,
@@ -157,13 +157,7 @@ impl SongEditor {
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
-                if let Some(mut song) = self.song.clone() {
-                    debug!(title);
-                    song.title = title;
-                    self.update(Message::UpdateSong(song))
-                } else {
-                    Task::none()
-                }
+                Task::none()
             }
             Message::ChangeVerseOrder(verse_order) => {
                 self.verse_order = verse_order.clone();

@@ -79,6 +79,7 @@ impl Library {
             Message::RemoveItem => Task::none(),
             Message::OpenItem(item) => {
                 debug!(?item);
+                self.editing_item = item;
                 Task::none()
             }
             Message::HoverLibrary(library_kind) => {

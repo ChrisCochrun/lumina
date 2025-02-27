@@ -374,6 +374,24 @@ pub async fn get_song_from_db(
 }
 
 impl Model<Song> {
+    pub async fn update_song(
+        &mut self,
+        item: Song,
+        index: i32,
+        db: &mut SqliteConnection,
+    ) -> Result<()> {
+        self.update_item(item, index)?;
+
+        query!(
+            r#"UPDATE songs SET title = {} WHERE id = {}"#,
+            item.title,
+            item.id
+        )
+        .fetch_one(db)
+        .await?;
+
+        Ok(())
+    }
     pub async fn new_song_model(db: &mut SqliteConnection) -> Self {
         let mut model = Self {
             items: vec![],

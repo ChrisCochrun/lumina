@@ -83,6 +83,7 @@
                 pkgs.libxkbcommon
               ]
             }";
+            DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
           };
           defaultPackage = naersk'.buildPackage {
             src = ./.;
