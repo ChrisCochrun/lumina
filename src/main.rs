@@ -416,6 +416,21 @@ impl cosmic::Application for App {
                 self.process_key_press(key, modifiers)
             }
             Message::SongEditor(message) => {
+                debug!(?message);
+                match message {
+                    song_editor::Message::UpdateSong(ref song) => {
+                        debug!(?song);
+                        if let Some(library) = self.library.as_mut() {
+                            match library.update_song(song.clone()) {
+                                Ok(_) => {
+                                    debug!("upated song")
+                                }
+                                Err(e) => error!(?e),
+                            }
+                        };
+                    }
+                    _ => (),
+                };
                 self.song_editor.update(message).map(|m| {
                     debug!(?m);
                     cosmic::app::Message::App(Message::None)
@@ -435,7 +450,7 @@ impl cosmic::Application for App {
             }
 
             Message::Library(message) => {
-                debug!(?message);
+                // debug!(?message);
                 let (mut kind, mut index): (LibraryKind, i32) =
                     (LibraryKind::Song, 0);
                 let mut opened_item = false;

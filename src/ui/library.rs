@@ -9,6 +9,7 @@ use cosmic::{
     },
     Element, Task,
 };
+use miette::{miette, Result};
 use tracing::debug;
 
 use crate::core::{
@@ -32,6 +33,7 @@ pub(crate) struct Library {
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
     dragged_item: Option<(LibraryKind, i32)>,
+    editing_item: Option<(LibraryKind, i32)>,
 }
 
 #[derive(Clone, Debug)]
@@ -62,6 +64,7 @@ impl Library {
             selected_item: None,
             hovered_item: None,
             dragged_item: None,
+            editing_item: None,
         }
     }
 
@@ -336,6 +339,23 @@ impl Library {
                 )
         })
         .into()
+    }
+
+    pub(crate) fn update_song(&mut self, song: Song) -> Result<()> {
+        let Some((kind, index)) = self.editing_item else {
+            return Err(miette!("Not editing an item"));
+        };
+
+        if kind != LibraryKind::Song {
+            return Err(miette!("Not editing a song item"));
+        }
+
+        if let Some(_) = self.song_library.items.get(index as usize) {
+            self.song_library.update_item(song, index);
+            Ok(())
+        } else {
+            Err(miette!("Song not found"))
+        }
     }
 }
 

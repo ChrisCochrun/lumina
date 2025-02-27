@@ -156,9 +156,9 @@ impl SongEditor {
                 Task::none()
             }
             Message::ChangeTitle(title) => {
-                debug!(title);
                 self.title = title.clone();
                 if let Some(mut song) = self.song.clone() {
+                    debug!(title);
                     song.title = title;
                     self.update(Message::UpdateSong(song))
                 } else {
