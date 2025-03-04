@@ -9,7 +9,7 @@ use super::{
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, SqliteConnection};
+use sqlx::{query_as, SqliteConnection, SqlitePool};
 use std::path::PathBuf;
 use tracing::error;
 
@@ -125,13 +125,15 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
-    pub async fn new_image_model(db: &mut SqliteConnection) -> Self {
+    pub async fn new_image_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Image,
         };
 
-        model.load_from_db(db).await;
+        let mut db = db.acquire().await.expect("probs");
+
+        model.load_from_db(&mut db).await;
         model
     }
 

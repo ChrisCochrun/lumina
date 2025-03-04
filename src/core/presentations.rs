@@ -2,7 +2,8 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    prelude::FromRow, query, sqlite::SqliteRow, Row, SqliteConnection,
+    prelude::FromRow, query, sqlite::SqliteRow, Row,
+    SqliteConnection, SqlitePool,
 };
 use std::path::PathBuf;
 use tracing::error;
@@ -166,15 +167,14 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    pub async fn new_presentation_model(
-        db: &mut SqliteConnection,
-    ) -> Self {
+    pub async fn new_presentation_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Presentation,
         };
+        let mut db = db.acquire().await.expect("probs");
 
-        model.load_from_db(db).await;
+        model.load_from_db(&mut db).await;
         model
     }
 

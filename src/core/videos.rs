@@ -11,7 +11,7 @@ use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, SqliteConnection};
+use sqlx::{query_as, SqliteConnection, SqlitePool};
 use std::path::PathBuf;
 use tracing::error;
 
@@ -170,13 +170,14 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
-    pub async fn new_video_model(db: &mut SqliteConnection) -> Self {
+    pub async fn new_video_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Video,
         };
+        let mut db = db.acquire().await.expect("probs");
 
-        model.load_from_db(db).await;
+        model.load_from_db(&mut db).await;
         model
     }
 

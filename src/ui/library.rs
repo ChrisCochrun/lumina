@@ -1,21 +1,20 @@
 use cosmic::{
     iced::{alignment::Vertical, Background, Border, Length},
-    iced_core::widget::tree,
     iced_widget::{column, row as rowm, text as textm},
-    theme,
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
         row, scrollable, text, Container, DndSource, Space, Widget,
     },
     Element, Task,
 };
-use miette::{miette, Result};
-use tracing::debug;
+use miette::{miette, IntoDiagnostic, Result};
+use sqlx::{SqliteConnection, SqlitePool};
+use tracing::{debug, error};
 
 use crate::core::{
     content::Content,
     images::Image,
-    model::{get_db, LibraryKind, Model},
+    model::{LibraryKind, Model},
     presentations::Presentation,
     service_items::ServiceItem,
     songs::Song,
@@ -34,6 +33,7 @@ pub(crate) struct Library {
     hovered_item: Option<(LibraryKind, i32)>,
     dragged_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
+    db: SqlitePool,
 }
 
 #[derive(Clone, Debug)]
@@ -45,12 +45,13 @@ pub(crate) enum Message {
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
+    UpdateSong(Song),
     None,
 }
 
-impl Library {
+impl<'a> Library {
     pub async fn new() -> Self {
-        let mut db = get_db().await;
+        let mut db = add_db().await.expect("probs");
         Self {
             song_library: Model::new_song_model(&mut db).await,
             image_library: Model::new_image_model(&mut db).await,
@@ -65,6 +66,7 @@ impl Library {
             hovered_item: None,
             dragged_item: None,
             editing_item: None,
+            db,
         }
     }
 
@@ -72,7 +74,7 @@ impl Library {
         self.song_library.get_item(index)
     }
 
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&'a mut self, message: Message) -> Task<Message> {
         match message {
             Message::AddItem => Task::none(),
             Message::None => Task::none(),
@@ -98,6 +100,33 @@ impl Library {
                 self.selected_item = item;
                 Task::none()
             }
+            Message::UpdateSong(song) => {
+                let Some((kind, index)) = self.editing_item else {
+                    error!("Not editing an item");
+                    return Task::none();
+                };
+
+                if kind != LibraryKind::Song {
+                    error!("Not editing a song item");
+                    return Task::none();
+                }
+                let mut db = self.db.clone();
+                let mut song_library = self.song_library.clone();
+
+                let future = update_song(
+                    song,
+                    index as usize,
+                    &mut db,
+                    &mut song_library,
+                );
+                Task::perform(future, |r| {
+                    match r {
+                        Ok(_) => (),
+                        Err(e) => error!(?e),
+                    };
+                    Message::None
+                })
+            }
         }
     }
 
@@ -116,7 +145,7 @@ impl Library {
         column.height(Length::Fill).spacing(5).into()
     }
 
-    pub fn library_item<'a, T>(
+    pub fn library_item<T>(
         &'a self,
         model: &'a Model<T>,
     ) -> Element<'a, Message>
@@ -257,7 +286,7 @@ impl Library {
         column![button, lib_container].into()
     }
 
-    fn single_item<'a, T>(
+    fn single_item<T>(
         &'a self,
         index: usize,
         item: &'a T,
@@ -342,7 +371,10 @@ impl Library {
         .into()
     }
 
-    pub(crate) fn update_song(&mut self, song: Song) -> Result<()> {
+    pub(crate) async fn update_song(
+        &'a mut self,
+        song: Song,
+    ) -> Result<()> {
         let Some((kind, index)) = self.editing_item else {
             return Err(miette!("Not editing an item"));
         };
@@ -352,11 +384,41 @@ impl Library {
         }
 
         if let Some(_) = self.song_library.items.get(index as usize) {
-            self.song_library.update_item(song, index);
+            let mut db = self.db.acquire().await.expect("probs");
+
+            self.song_library
+                .update_song(song, index, &mut db)
+                .await?;
             Ok(())
         } else {
             Err(miette!("Song not found"))
         }
+    }
+}
+
+async fn add_db() -> Result<SqlitePool> {
+    let mut data = dirs::data_local_dir().unwrap();
+    data.push("lumina");
+    data.push("library-db.sqlite3");
+    let mut db_url = String::from("sqlite://");
+    db_url.push_str(data.to_str().unwrap());
+    SqlitePool::connect(&db_url).await.into_diagnostic()
+}
+
+pub(crate) async fn update_song(
+    song: Song,
+    index: usize,
+    db: &mut SqlitePool,
+    song_library: &mut Model<Song>,
+) -> Result<()> {
+    if let Some(_) = song_library.items.get(index) {
+        let mut db = db.acquire().await.expect("foo");
+        song_library
+            .update_song(song, index as i32, &mut db)
+            .await?;
+        Ok(())
+    } else {
+        Err(miette!("Song not found"))
     }
 }
 

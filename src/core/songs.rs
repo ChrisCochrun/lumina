@@ -6,6 +6,7 @@ use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     query, sqlite::SqliteRow, FromRow, Row, SqliteConnection,
+    SqlitePool,
 };
 use tracing::{debug, error};
 
@@ -380,25 +381,68 @@ impl Model<Song> {
         index: i32,
         db: &mut SqliteConnection,
     ) -> Result<()> {
-        self.update_item(item, index)?;
+        self.update_item(item.clone(), index)?;
+
+        let verse_order = {
+            if let Some(vo) = item.verse_order {
+                vo.into_iter()
+                    .map(|mut s| {
+                        s.push_str(" ");
+                        s
+                    })
+                    .collect::<String>()
+            } else {
+                String::from("")
+            }
+        };
+
+        let audio = item
+            .audio
+            .map(|a| a.to_str().unwrap_or_default().to_string());
+
+        let background = item
+            .background
+            .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+        // let text_alignment = item.text_alignment.map(|ta| match ta {
+        //     TextAlignment::TopLeft => todo!(),
+        //     TextAlignment::TopCenter => todo!(),
+        //     TextAlignment::TopRight => todo!(),
+        //     TextAlignment::MiddleLeft => todo!(),
+        //     TextAlignment::MiddleCenter => todo!(),
+        //     TextAlignment::MiddleRight => todo!(),
+        //     TextAlignment::BottomLeft => todo!(),
+        //     TextAlignment::BottomCenter => todo!(),
+        //     TextAlignment::BottomRight => todo!(),
+        // })
 
         query!(
-            r#"UPDATE songs SET title = {} WHERE id = {}"#,
+            r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10 WHERE id = $1"#,
+            item.id,
             item.title,
-            item.id
+            item.lyrics,
+            item.author,
+            item.ccli,
+            verse_order,
+            audio,
+            item.font,
+            item.font_size,
+            background
         )
-        .fetch_one(db)
-        .await?;
+        .execute(db)
+        .await
+        .into_diagnostic()?;
 
         Ok(())
     }
-    pub async fn new_song_model(db: &mut SqliteConnection) -> Self {
+    pub async fn new_song_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Song,
         };
+        let mut db = db.acquire().await.expect("probs");
 
-        model.load_from_db(db).await;
+        model.load_from_db(&mut db).await;
         model
     }
 
