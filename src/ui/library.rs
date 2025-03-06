@@ -110,14 +110,14 @@ impl<'a> Library {
                     error!("Not editing a song item");
                     return Task::none();
                 }
-                let mut db = self.db.clone();
-                let mut song_library = self.song_library.clone();
+                let db = self.db.clone();
+                let song_library = self.song_library.clone();
 
                 let future = update_song(
                     song,
                     index as usize,
-                    &mut db,
-                    &mut song_library,
+                    db,
+                    song_library,
                 );
                 Task::perform(future, |r| {
                     match r {
@@ -374,6 +374,8 @@ impl<'a> Library {
     pub(crate) async fn update_song(
         &'a mut self,
         song: Song,
+        mut db: SqliteConnection,
+        mut song_library: Model<Song>,
     ) -> Result<()> {
         let Some((kind, index)) = self.editing_item else {
             return Err(miette!("Not editing an item"));
@@ -384,11 +386,7 @@ impl<'a> Library {
         }
 
         if let Some(_) = self.song_library.items.get(index as usize) {
-            let mut db = self.db.acquire().await.expect("probs");
-
-            self.song_library
-                .update_song(song, index, &mut db)
-                .await?;
+            song_library.update_song(song, index, &mut db).await?;
             Ok(())
         } else {
             Err(miette!("Song not found"))
