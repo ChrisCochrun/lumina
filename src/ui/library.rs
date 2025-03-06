@@ -101,24 +101,7 @@ impl<'a> Library {
                 Task::none()
             }
             Message::UpdateSong(song) => {
-                let Some((kind, index)) = self.editing_item else {
-                    error!("Not editing an item");
-                    return Task::none();
-                };
-
-                if kind != LibraryKind::Song {
-                    error!("Not editing a song item");
-                    return Task::none();
-                }
-                let db = self.db.clone();
-                let song_library = self.song_library.clone();
-
-                let future = update_song(
-                    song,
-                    index as usize,
-                    db,
-                    song_library,
-                );
+                let future = self.update_song(song);
                 Task::perform(future, |r| {
                     match r {
                         Ok(_) => (),
@@ -371,11 +354,9 @@ impl<'a> Library {
         .into()
     }
 
-    pub(crate) async fn update_song(
-        &'a mut self,
+    pub async fn update_song<'b>(
+        &'b mut self,
         song: Song,
-        mut db: SqliteConnection,
-        mut song_library: Model<Song>,
     ) -> Result<()> {
         let Some((kind, index)) = self.editing_item else {
             return Err(miette!("Not editing an item"));
@@ -384,9 +365,12 @@ impl<'a> Library {
         if kind != LibraryKind::Song {
             return Err(miette!("Not editing a song item"));
         }
+        let mut db = self.db.acquire().await.expect("foo");
 
         if let Some(_) = self.song_library.items.get(index as usize) {
-            song_library.update_song(song, index, &mut db).await?;
+            self.song_library
+                .update_song(song, index, &mut db)
+                .await?;
             Ok(())
         } else {
             Err(miette!("Song not found"))

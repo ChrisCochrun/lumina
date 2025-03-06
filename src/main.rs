@@ -482,7 +482,7 @@ impl cosmic::Application for App {
                         let task = library.update(
                             library::Message::UpdateSong(song),
                         );
-                        task.map(|m| {
+                        task.map(|_m| {
                             cosmic::app::Message::App(Message::None)
                         })
                     } else {
