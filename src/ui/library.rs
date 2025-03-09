@@ -1,5 +1,8 @@
 use cosmic::{
-    iced::{alignment::Vertical, Background, Border, Length},
+    iced::{
+        alignment::Vertical, futures::FutureExt, Background, Border,
+        Length,
+    },
     iced_widget::{column, row as rowm, text as textm},
     widget::{
         container, horizontal_space, icon, mouse_area, responsive,
@@ -17,7 +20,7 @@ use crate::core::{
     model::{LibraryKind, Model},
     presentations::Presentation,
     service_items::ServiceItem,
-    songs::Song,
+    songs::{update_song_in_db, Song},
     videos::Video,
 };
 
@@ -46,6 +49,8 @@ pub(crate) enum Message {
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
     UpdateSong(Song),
+    SongChanged,
+    Error(String),
     None,
 }
 
@@ -101,15 +106,42 @@ impl<'a> Library {
                 Task::none()
             }
             Message::UpdateSong(song) => {
-                let future = self.update_song(song);
-                Task::perform(future, |r| {
-                    match r {
-                        Ok(_) => (),
-                        Err(e) => error!(?e),
-                    };
-                    Message::None
-                })
+                let Some((kind, index)) = self.editing_item else {
+                    error!("Not editing an item");
+                    return Task::none();
+                };
+
+                if kind != LibraryKind::Song {
+                    error!("Not editing a song item");
+                    return Task::none();
+                };
+
+                match self
+                    .song_library
+                    .update_item(song.clone(), index)
+                {
+                    Ok(_) => Task::future(self.db.acquire())
+                        .and_then(move |conn| {
+                            Task::perform(
+                                update_song_in_db(song.clone(), conn)
+                                    .map(|r| match r {
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            error!(?e);
+                                        }
+                                    }),
+                                |_| Message::SongChanged,
+                            )
+                        }),
+                    Err(_) => todo!(),
+                }
             }
+            Message::SongChanged => {
+                // self.song_library.update_item(song, index);
+                debug!("song changed");
+                Task::none()
+            }
+            Message::Error(_) => todo!(),
         }
     }
 
@@ -353,29 +385,6 @@ impl<'a> Library {
         })
         .into()
     }
-
-    pub async fn update_song<'b>(
-        &'b mut self,
-        song: Song,
-    ) -> Result<()> {
-        let Some((kind, index)) = self.editing_item else {
-            return Err(miette!("Not editing an item"));
-        };
-
-        if kind != LibraryKind::Song {
-            return Err(miette!("Not editing a song item"));
-        }
-        let mut db = self.db.acquire().await.expect("foo");
-
-        if let Some(_) = self.song_library.items.get(index as usize) {
-            self.song_library
-                .update_song(song, index, &mut db)
-                .await?;
-            Ok(())
-        } else {
-            Err(miette!("Song not found"))
-        }
-    }
 }
 
 async fn add_db() -> Result<SqlitePool> {
@@ -385,23 +394,6 @@ async fn add_db() -> Result<SqlitePool> {
     let mut db_url = String::from("sqlite://");
     db_url.push_str(data.to_str().unwrap());
     SqlitePool::connect(&db_url).await.into_diagnostic()
-}
-
-pub(crate) async fn update_song(
-    song: Song,
-    index: usize,
-    db: &mut SqlitePool,
-    song_library: &mut Model<Song>,
-) -> Result<()> {
-    if let Some(_) = song_library.items.get(index) {
-        let mut db = db.acquire().await.expect("foo");
-        song_library
-            .update_song(song, index as i32, &mut db)
-            .await?;
-        Ok(())
-    } else {
-        Err(miette!("Song not found"))
-    }
 }
 
 fn elide_text(text: String, width: f32) -> String {
