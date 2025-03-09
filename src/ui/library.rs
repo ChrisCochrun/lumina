@@ -16,12 +16,12 @@ use tracing::{debug, error};
 
 use crate::core::{
     content::Content,
-    images::Image,
+    images::{update_image_in_db, Image},
     model::{LibraryKind, Model},
-    presentations::Presentation,
+    presentations::{update_presentation_in_db, Presentation},
     service_items::ServiceItem,
     songs::{update_song_in_db, Song},
-    videos::Video,
+    videos::{update_video_in_db, Video},
 };
 
 #[derive(Debug, Clone)]
@@ -50,6 +50,12 @@ pub(crate) enum Message {
     SelectItem(Option<(LibraryKind, i32)>),
     UpdateSong(Song),
     SongChanged,
+    UpdateImage(Image),
+    ImageChanged,
+    UpdateVideo(Video),
+    VideoChanged,
+    UpdatePresentation(Presentation),
+    PresentationChanged,
     Error(String),
     None,
 }
@@ -141,6 +147,93 @@ impl<'a> Library {
                 debug!("song changed");
                 Task::none()
             }
+            Message::UpdateImage(image) => {
+                let Some((kind, index)) = self.editing_item else {
+                    error!("Not editing an item");
+                    return Task::none();
+                };
+
+                if kind != LibraryKind::Image {
+                    error!("Not editing a image item");
+                    return Task::none();
+                };
+
+                match self
+                    .image_library
+                    .update_item(image.clone(), index)
+                {
+                    Ok(_) => Task::future(self.db.acquire())
+                        .and_then(move |conn| {
+                            Task::perform(
+                                update_image_in_db(
+                                    image.clone(),
+                                    conn,
+                                ),
+                                |_| Message::ImageChanged,
+                            )
+                        }),
+                    Err(_) => todo!(),
+                }
+            }
+            Message::ImageChanged => todo!(),
+            Message::UpdateVideo(video) => {
+                let Some((kind, index)) = self.editing_item else {
+                    error!("Not editing an item");
+                    return Task::none();
+                };
+
+                if kind != LibraryKind::Video {
+                    error!("Not editing a video item");
+                    return Task::none();
+                };
+
+                match self
+                    .video_library
+                    .update_item(video.clone(), index)
+                {
+                    Ok(_) => Task::future(self.db.acquire())
+                        .and_then(move |conn| {
+                            Task::perform(
+                                update_video_in_db(
+                                    video.clone(),
+                                    conn,
+                                ),
+                                |_| Message::VideoChanged,
+                            )
+                        }),
+                    Err(_) => todo!(),
+                }
+            }
+            Message::VideoChanged => todo!(),
+            Message::UpdatePresentation(presentation) => {
+                let Some((kind, index)) = self.editing_item else {
+                    error!("Not editing an item");
+                    return Task::none();
+                };
+
+                if kind != LibraryKind::Presentation {
+                    error!("Not editing a presentation item");
+                    return Task::none();
+                };
+
+                match self
+                    .presentation_library
+                    .update_item(presentation.clone(), index)
+                {
+                    Ok(_) => Task::future(self.db.acquire())
+                        .and_then(move |conn| {
+                            Task::perform(
+                                update_presentation_in_db(
+                                    presentation.clone(),
+                                    conn,
+                                ),
+                                |_| Message::PresentationChanged,
+                            )
+                        }),
+                    Err(_) => todo!(),
+                }
+            }
+            Message::PresentationChanged => todo!(),
             Message::Error(_) => todo!(),
         }
     }
@@ -385,6 +478,34 @@ impl<'a> Library {
         })
         .into()
     }
+
+    // fn update_item<C: Content>(self, item: C) -> Task<Message> {
+    //     let Some((kind, index)) = self.editing_item else {
+    //         error!("Not editing an item");
+    //         return Task::none();
+    //     };
+
+    //     match kind {
+    //         LibraryKind::Song => todo!(),
+    //         LibraryKind::Video => todo!(),
+    //         LibraryKind::Image => {
+    //             match self
+    //                 .image_library
+    //                 .update_item(item as Image, index)
+    //             {
+    //                 Ok(_) => Task::future(self.db.acquire())
+    //                     .and_then(|conn| {
+    //                         Task::perform(
+    //                             update_image_in_db(item, conn),
+    //                             |_| Message::ImageChanged,
+    //                         )
+    //                     }),
+    //                 Err(_) => todo!(),
+    //             }
+    //         }
+    //         LibraryKind::Presentation => todo!(),
+    //     }
+    // }
 }
 
 async fn add_db() -> Result<SqlitePool> {

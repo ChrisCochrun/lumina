@@ -11,7 +11,10 @@ use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, SqliteConnection, SqlitePool};
+use sqlx::{
+    pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
+    SqlitePool,
+};
 use std::path::PathBuf;
 use tracing::error;
 
@@ -194,6 +197,31 @@ impl Model<Video> {
             }
         };
     }
+}
+
+pub async fn update_video_in_db(
+    video: Video,
+    db: PoolConnection<Sqlite>,
+) -> Result<()> {
+    let path = video
+        .path
+        .to_str()
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    query!(
+        r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,
+        video.id,
+        video.title,
+        path,
+        video.start_time,
+        video.end_time,
+        video.looping,
+    )
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()?;
+
+    Ok(())
 }
 
 pub async fn get_video_from_db(

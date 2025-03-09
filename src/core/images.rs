@@ -9,7 +9,10 @@ use super::{
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use sqlx::{query_as, SqliteConnection, SqlitePool};
+use sqlx::{
+    pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
+    SqlitePool,
+};
 use std::path::PathBuf;
 use tracing::error;
 
@@ -155,6 +158,28 @@ impl Model<Image> {
             }
         };
     }
+}
+
+pub async fn update_image_in_db(
+    image: Image,
+    db: PoolConnection<Sqlite>,
+) -> Result<()> {
+    let path = image
+        .path
+        .to_str()
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    query!(
+        r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
+        image.id,
+        image.title,
+        path,
+    )
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()?;
+
+    Ok(())
 }
 
 pub async fn get_image_from_db(

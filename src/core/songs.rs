@@ -375,65 +375,6 @@ pub async fn get_song_from_db(
 }
 
 impl Model<Song> {
-    pub async fn update_song_in_db(
-        &mut self,
-        item: Song,
-        db: &mut SqliteConnection,
-    ) -> Result<()> {
-        // self.update_item(item.clone(), index)?;
-
-        let verse_order = {
-            if let Some(vo) = item.verse_order {
-                vo.into_iter()
-                    .map(|mut s| {
-                        s.push_str(" ");
-                        s
-                    })
-                    .collect::<String>()
-            } else {
-                String::from("")
-            }
-        };
-
-        let audio = item
-            .audio
-            .map(|a| a.to_str().unwrap_or_default().to_string());
-
-        let background = item
-            .background
-            .map(|b| b.path.to_str().unwrap_or_default().to_string());
-
-        // let text_alignment = item.text_alignment.map(|ta| match ta {
-        //     TextAlignment::TopLeft => todo!(),
-        //     TextAlignment::TopCenter => todo!(),
-        //     TextAlignment::TopRight => todo!(),
-        //     TextAlignment::MiddleLeft => todo!(),
-        //     TextAlignment::MiddleCenter => todo!(),
-        //     TextAlignment::MiddleRight => todo!(),
-        //     TextAlignment::BottomLeft => todo!(),
-        //     TextAlignment::BottomCenter => todo!(),
-        //     TextAlignment::BottomRight => todo!(),
-        // })
-
-        query!(
-            r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10 WHERE id = $1"#,
-            item.id,
-            item.title,
-            item.lyrics,
-            item.author,
-            item.ccli,
-            verse_order,
-            audio,
-            item.font,
-            item.font_size,
-            background
-        )
-        .execute(db)
-        .await
-        .into_diagnostic()?;
-
-        Ok(())
-    }
     pub async fn new_song_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
@@ -468,7 +409,7 @@ impl Model<Song> {
     }
 }
 
-pub async fn update_song_in_db<'a>(
+pub async fn update_song_in_db(
     item: Song,
     db: PoolConnection<Sqlite>,
 ) -> Result<()> {

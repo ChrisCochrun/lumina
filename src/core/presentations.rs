@@ -2,8 +2,8 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    prelude::FromRow, query, sqlite::SqliteRow, Row,
-    SqliteConnection, SqlitePool,
+    pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
+    Row, Sqlite, SqliteConnection, SqlitePool,
 };
 use std::path::PathBuf;
 use tracing::error;
@@ -204,6 +204,30 @@ impl Model<Presentation> {
             ),
         }
     }
+}
+
+pub async fn update_presentation_in_db(
+    presentation: Presentation,
+    db: PoolConnection<Sqlite>,
+) -> Result<()> {
+    let path = presentation
+        .path
+        .to_str()
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    let html = presentation.kind == PresKind::Html;
+    query!(
+        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4 WHERE id = $1"#,
+        presentation.id,
+        presentation.title,
+        path,
+        html
+    )
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()?;
+
+    Ok(())
 }
 
 pub async fn get_presentation_from_db(
