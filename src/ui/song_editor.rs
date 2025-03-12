@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
 use cosmic::{
+    font,
     iced::{
         font::{Family, Stretch, Style, Weight},
         Font, Length,
     },
+    iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::row,
     theme,
     widget::{
@@ -14,6 +16,7 @@ use cosmic::{
     },
     Element, Task,
 };
+use dirs::font_dir;
 use iced_video_player::Video;
 use tracing::debug;
 
@@ -60,10 +63,48 @@ pub enum Message {
 
 impl SongEditor {
     pub fn new() -> Self {
-        let fonts = vec![
-            String::from("Quicksand"),
-            String::from("Noto Sans"),
-        ];
+        let fonts = font_dir();
+        debug!(?fonts);
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+        let fonts: Vec<String> = fontdb
+            .faces()
+            .map(|f| {
+                let mut font = f.to_owned().post_script_name;
+                if let Some(at) = font.find("-") {
+                    let _ = font.split_off(at);
+                }
+                let indices: Vec<usize> = font
+                    .chars()
+                    .enumerate()
+                    .filter(|(index, c)| {
+                        c.is_uppercase() && *index != 0
+                    })
+                    .map(|(index, c)| index)
+                    .collect();
+
+                let mut font_parts = vec![];
+                for index in indices.iter().rev() {
+                    let (first, last) = font.split_at(*index);
+                    font_parts.push(first);
+                    if !last.is_empty() {
+                        font_parts.push(last);
+                    }
+                }
+                font_parts
+                    .iter()
+                    .map(|s| {
+                        let mut s = s.to_string();
+                        s.push(' ');
+                        s
+                    })
+                    .collect()
+            })
+            .collect();
+        // let fonts = vec![
+        //     String::from("Quicksand"),
+        //     String::from("Noto Sans"),
+        // ];
         let font_sizes = vec![
             "10".to_string(),
             "12".to_string(),
