@@ -52,6 +52,7 @@ pub enum Message {
     ChangeTitle(String),
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
+    ChangeBackground,
     Edit(bool),
     None,
     ChangeAuthor(String),
@@ -201,6 +202,38 @@ impl SongEditor {
                     Task::none()
                 }
             }
+            Message::ChangeBackground => {
+                let background = rfd::FileDialog::new()
+                    .pick_file()
+                    .and_then(|f| {
+                        Background::try_from(f)
+                            .map_or(None, |f| Some(f))
+                    });
+
+                if let Some(mut song) = self.song.clone() {
+                    song.background = self.background.clone();
+                    self.update(Message::UpdateSong(song))
+                } else {
+                    Task::none()
+                }
+
+                // todo!()
+
+                // if let Some(mut song) = self.song.clone() {
+                //     Task::future(
+                //         rfd::AsyncFileDialog::new().pick_file(),
+                //     )
+                //     .and_then(move |f| {
+                //         song.background = f
+                //             .path()
+                //             .try_into()
+                //             .map_or(None, |b| Some(b));
+                //         Task::none()
+                //     })
+                // } else {
+                //     Task::none()
+                // }
+            }
         }
     }
 
@@ -322,7 +355,7 @@ order",
         )
         .label("Background")
         .tooltip("Select an image or video background")
-        .on_press(Message::None)
+        .on_press(Message::ChangeBackground)
         .padding(10);
 
         row![
