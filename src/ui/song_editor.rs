@@ -211,7 +211,7 @@ impl SongEditor {
                     });
 
                 if let Some(mut song) = self.song.clone() {
-                    song.background = self.background.clone();
+                    song.background = background.clone();
                     self.update(Message::UpdateSong(song))
                 } else {
                     Task::none()
