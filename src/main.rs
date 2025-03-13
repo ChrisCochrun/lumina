@@ -527,7 +527,8 @@ impl cosmic::Application for App {
                         opened_item = true;
                     }
                     _ => {
-                        debug!("none");
+                        // debug!("none");
+                        ()
                     }
                 };
                 if let Some(library) = &mut self.library {
@@ -627,6 +628,13 @@ impl cosmic::Application for App {
                 debug!(?entity);
                 debug!(?action);
                 debug!(?service_item);
+
+                if let Some(item) = service_item {
+                    self.nav_model
+                        .insert()
+                        .text(item.title.clone())
+                        .data(item);
+                }
                 Task::none()
             }
             Message::AddLibrary(library) => {
