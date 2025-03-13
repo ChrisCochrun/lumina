@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use cosmic::{
-    font,
     iced::{
         font::{Family, Stretch, Style, Weight},
         Font, Length,
@@ -106,11 +105,26 @@ impl SongEditor {
         //     String::from("Noto Sans"),
         // ];
         let font_sizes = vec![
+            "5".to_string(),
+            "6".to_string(),
+            "8".to_string(),
             "10".to_string(),
             "12".to_string(),
             "16".to_string(),
             "18".to_string(),
             "20".to_string(),
+            "24".to_string(),
+            "28".to_string(),
+            "32".to_string(),
+            "36".to_string(),
+            "40".to_string(),
+            "48".to_string(),
+            "50".to_string(),
+            "55".to_string(),
+            "60".to_string(),
+            "65".to_string(),
+            "70".to_string(),
+            "80".to_string(),
         ];
         Self {
             song: None,
@@ -251,6 +265,7 @@ impl SongEditor {
                             .map_or(None, |f| Some(f))
                     });
 
+                debug!(?background);
                 if let Some(mut song) = self.song.clone() {
                     song.background = background.clone();
                     self.update(Message::UpdateSong(song))
