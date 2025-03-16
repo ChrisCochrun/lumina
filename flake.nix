@@ -71,7 +71,9 @@
           ];
         in rec
         {
-          devShell = pkgs.mkShell {
+          devShell = pkgs.mkShell.override {
+            stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
+          } {
             nativeBuildInputs = nbi;
             buildInputs = bi;
             LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${

@@ -1,11 +1,13 @@
+use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
+use iced_video_player::Video;
 use miette::{miette, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     path::{Path, PathBuf},
 };
-use tracing::{debug, error};
+use tracing::error;
 
 use super::songs::Song;
 
@@ -47,6 +49,20 @@ impl From<&Value> for TextAlignment {
 pub struct Background {
     pub path: PathBuf,
     pub kind: BackgroundKind,
+}
+
+impl TryFrom<Background> for Video {
+    type Error = ParseError;
+
+    fn try_from(
+        value: Background,
+    ) -> std::result::Result<Self, Self::Error> {
+        Video::new(
+            &Url::from_file_path(value.path)
+                .map_err(|_| ParseError::BackgroundNotVideo)?,
+        )
+        .map_err(|_| ParseError::BackgroundNotVideo)
+    }
 }
 
 impl TryFrom<String> for Background {
@@ -137,6 +153,7 @@ pub enum ParseError {
     NonBackgroundFile,
     DoesNotExist,
     CannotCanonicalize,
+    BackgroundNotVideo,
 }
 
 impl std::error::Error for ParseError {}
@@ -153,6 +170,9 @@ impl Display for ParseError {
             Self::DoesNotExist => "This file doesn't exist",
             Self::CannotCanonicalize => {
                 "Could not canonicalize this file"
+            }
+            Self::BackgroundNotVideo => {
+                "This background isn't a video"
             }
         };
         write!(f, "Error: {message}")

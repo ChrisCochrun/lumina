@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
 use cosmic::{
     iced::{
@@ -17,11 +17,11 @@ use cosmic::{
 };
 use dirs::font_dir;
 use iced_video_player::Video;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::{
     core::{service_items::ServiceTrait, songs::Song},
-    Background,
+    Background, BackgroundKind,
 };
 
 use super::presenter::slide_view;
@@ -45,6 +45,12 @@ pub struct SongEditor {
     ccli: String,
 }
 
+pub enum Action {
+    Task(Task<Message>),
+    UpdateSong(Song),
+    None,
+}
+
 #[derive(Debug, Clone)]
 pub enum Message {
     ChangeSong(Song),
@@ -54,7 +60,8 @@ pub enum Message {
     ChangeTitle(String),
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
-    ChangeBackground,
+    ChangeBackground(Result<PathBuf, SongError>),
+    PickBackground,
     Edit(bool),
     None,
     ChangeAuthor(String),
@@ -144,7 +151,7 @@ impl SongEditor {
             ccli: "8".to_owned(),
         }
     }
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
                 self.song = Some(song.clone());
@@ -178,12 +185,6 @@ impl SongEditor {
                         text_editor::Content::with_text(&lyrics)
                 };
                 self.background = song.background;
-
-                Task::none()
-            }
-            Message::UpdateSong(song) => {
-                self.song = Some(song);
-                Task::none()
             }
             Message::ChangeFont(font) => {
                 self.font = font.clone();
@@ -200,20 +201,24 @@ impl SongEditor {
                     style,
                 };
                 self.current_font = font;
-                Task::none()
+                // return self.update_song(song);
             }
             Message::ChangeFontSize(size) => {
                 if let Some(size) = self.font_sizes.get(size) {
                     if let Ok(size) = size.parse() {
                         debug!(font_size = size);
                         self.font_size = size;
+                        // return self.update_song(song);
                     }
                 }
-                Task::none()
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
-                Task::none()
+                if let Some(song) = &mut self.song {
+                    song.title = title;
+                    let song = song.to_owned();
+                    return self.update_song(song);
+                }
             }
             Message::ChangeVerseOrder(verse_order) => {
                 self.verse_order = verse_order.clone();
@@ -224,9 +229,7 @@ impl SongEditor {
                         .map(|s| s.to_owned())
                         .collect();
                     song.verse_order = Some(verse_order);
-                    self.update(Message::UpdateSong(song))
-                } else {
-                    Task::none()
+                    return self.update_song(song);
                 }
             }
             Message::ChangeLyrics(action) => {
@@ -236,61 +239,50 @@ impl SongEditor {
 
                 if let Some(mut song) = self.song.clone() {
                     song.lyrics = Some(lyrics);
-                    self.update(Message::UpdateSong(song))
-                } else {
-                    Task::none()
+                    return self.update_song(song);
                 }
             }
             Message::Edit(edit) => {
                 debug!(edit);
                 self.editing = edit;
-                Task::none()
             }
-            Message::None => Task::none(),
             Message::ChangeAuthor(author) => {
                 debug!(author);
                 self.author = author.clone();
                 if let Some(mut song) = self.song.clone() {
                     song.author = Some(author);
-                    self.update(Message::UpdateSong(song))
-                } else {
-                    Task::none()
+                    return self.update_song(song);
                 }
             }
-            Message::ChangeBackground => {
-                let background = rfd::FileDialog::new()
-                    .pick_file()
-                    .and_then(|f| {
-                        Background::try_from(f)
-                            .map_or(None, |f| Some(f))
-                    });
-
-                debug!(?background);
+            Message::ChangeBackground(Ok(path)) => {
+                debug!(?path);
                 if let Some(mut song) = self.song.clone() {
-                    song.background = background.clone();
-                    self.update(Message::UpdateSong(song))
-                } else {
-                    Task::none()
+                    let background =
+                        Background::try_from(path.clone()).ok();
+                    if let Some(background) = background {
+                        if background.kind == BackgroundKind::Video {
+                            let video =
+                                Video::try_from(background).ok();
+                            debug!(?video);
+                            self.video = video;
+                        }
+                    }
+                    song.background = path.try_into().ok();
+                    return self.update_song(song);
                 }
-
-                // todo!()
-
-                // if let Some(mut song) = self.song.clone() {
-                //     Task::future(
-                //         rfd::AsyncFileDialog::new().pick_file(),
-                //     )
-                //     .and_then(move |f| {
-                //         song.background = f
-                //             .path()
-                //             .try_into()
-                //             .map_or(None, |b| Some(b));
-                //         Task::none()
-                //     })
-                // } else {
-                //     Task::none()
-                // }
             }
+            Message::ChangeBackground(Err(error)) => {
+                error!(?error);
+            }
+            Message::PickBackground => {
+                return Action::Task(Task::perform(
+                    pick_background(),
+                    Message::ChangeBackground,
+                ))
+            }
+            _ => (),
         }
+        Action::None
     }
 
     pub fn view(&self) -> Element<Message> {
@@ -411,7 +403,7 @@ order",
         )
         .label("Background")
         .tooltip("Select an image or video background")
-        .on_press(Message::ChangeBackground)
+        .on_press(Message::PickBackground)
         .padding(10);
 
         row![
@@ -426,10 +418,30 @@ order",
     pub fn editing(&self) -> bool {
         self.editing
     }
+
+    fn update_song(&mut self, song: Song) -> Action {
+        self.song = Some(song.clone());
+        Action::UpdateSong(song)
+    }
 }
 
 impl Default for SongEditor {
     fn default() -> Self {
         Self::new()
     }
+}
+
+async fn pick_background() -> Result<PathBuf, SongError> {
+    rfd::AsyncFileDialog::new()
+        .set_title("Choose a background...")
+        .pick_file()
+        .await
+        .ok_or(SongError::DialogClosed)
+        .map(|file| file.path().to_owned())
+}
+
+#[derive(Debug, Clone)]
+pub enum SongError {
+    DialogClosed,
+    IOError(io::ErrorKind),
 }

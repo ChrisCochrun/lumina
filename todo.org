@@ -1,6 +1,8 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO Change return type of all components to an Action enum instead of the Task<Message> type
+
 * TODO Need to fix tests now that the basic app is working
 
 * TODO Build library to see all available songs, images, videos, presentations, and slides

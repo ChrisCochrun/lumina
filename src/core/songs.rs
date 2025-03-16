@@ -533,7 +533,8 @@ impl Song {
                     }
                     lyric_list.push(lyric.to_string());
                 } else {
-                    error!("NOT WORKING!");
+                    // error!("NOT WORKING!");
+                    ()
                 };
             }
             // for lyric in lyric_list.iter() {

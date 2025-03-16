@@ -2,6 +2,7 @@ use clap::{command, Parser};
 use core::model::{get_db, LibraryKind};
 use core::service_items::{ServiceItem, ServiceItemModel};
 use core::slide::*;
+use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::clipboard::dnd::DndAction;
@@ -28,6 +29,7 @@ use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use sqlx::{SqliteConnection, SqlitePool};
+use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
@@ -97,6 +99,7 @@ struct App {
     file: PathBuf,
     presenter: Presenter,
     windows: Vec<window::Id>,
+    service: BTreeMap<ServiceItem, Vec<Slide>>,
     slides: Vec<Slide>,
     current_slide: Slide,
     presentation_open: bool,
@@ -191,6 +194,7 @@ impl cosmic::Application for App {
             presenter,
             core,
             nav_model,
+            service: BTreeMap::new(),
             file: PathBuf::default(),
             windows,
             slides,
@@ -417,86 +421,26 @@ impl cosmic::Application for App {
                 self.process_key_press(key, modifiers)
             }
             Message::SongEditor(message) => {
-                debug!(?message);
-                let library_task = if let Some(mut song) =
-                    self.song_editor.song.clone()
-                {
-                    match message {
-                        song_editor::Message::ChangeFont(
-                            ref font,
-                        ) => {
-                            song.font = Some(font.to_string());
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::ChangeFontSize(
-                            font_size,
-                        ) => {
-                            song.font_size = Some(font_size as i32);
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::ChangeTitle(
-                            ref title,
-                        ) => {
-                            song.title = title.to_string();
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::ChangeVerseOrder(
-                            ref vo,
-                        ) => {
-                            let verse_order = vo
-                                .split(" ")
-                                .into_iter()
-                                .map(|s| s.to_owned())
-                                .collect();
-                            song.verse_order = Some(verse_order);
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::ChangeLyrics(
-                            ref action,
-                        ) => {
-                            self.song_editor
-                                .lyrics
-                                .perform(action.clone());
-                            let lyrics =
-                                self.song_editor.lyrics.text();
-                            song.lyrics = Some(lyrics.to_string());
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::ChangeAuthor(
-                            ref author,
-                        ) => {
-                            song.author = Some(author.to_string());
-                            self.song_editor.song =
-                                Some(song.clone());
-                        }
-                        song_editor::Message::Edit(_) => todo!(),
-                        _ => (),
-                    };
-
-                    if let Some(library) = &mut self.library {
-                        let task = library.update(
-                            library::Message::UpdateSong(song),
-                        );
-                        task.map(|_m| {
-                            cosmic::app::Message::App(Message::None)
+                // debug!(?message);
+                match self.song_editor.update(message) {
+                    song_editor::Action::Task(task) => {
+                        task.map(|m| {
+                            cosmic::app::Message::App(
+                                Message::SongEditor(m),
+                            )
                         })
-                    } else {
-                        Task::none()
                     }
-                } else {
-                    Task::none()
-                };
-                let song_editor_task =
-                    self.song_editor.update(message).map(|m| {
-                        debug!(?m);
-                        cosmic::app::Message::App(Message::None)
-                    });
-                Task::batch(vec![song_editor_task, library_task])
+                    song_editor::Action::UpdateSong(song) => {
+                        if let Some(library) = &mut self.library {
+                            self.update(Message::Library(
+                                library::Message::UpdateSong(song),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    song_editor::Action::None => Task::none(),
+                }
             }
             Message::Present(message) => {
                 // debug!(?message);
@@ -506,12 +450,12 @@ impl cosmic::Application for App {
                     }
                 }
                 self.presenter.update(message).map(|x| {
-                    debug!(?x);
+                    // debug!(?x);
                     cosmic::app::Message::App(Message::None)
                 })
             }
-
             Message::Library(message) => {
+<<<<<<< HEAD
                 // debug!(?message);
                 let (mut kind, mut index): (LibraryKind, i32) =
                     (LibraryKind::Song, 0);
@@ -531,24 +475,47 @@ impl cosmic::Application for App {
                         ()
                     }
                 };
+=======
+                let mut song = Song::default();
+>>>>>>> 93b021e (fixed lots of bugs by return Action enums in song_editor and library)
                 if let Some(library) = &mut self.library {
-                    if opened_item {
-                        if let Some(song) = library.get_song(index) {
-                            self.editor_mode = Some(EditorMode::Song);
-                            let _ = self.song_editor.update(
-                                song_editor::Message::ChangeSong(
-                                    song.clone(),
-                                ),
+                    match library.update(message) {
+                        library::Action::OpenItem(None) => {
+                            return Task::none();
+                        }
+                        library::Action::Task(task) => {
+                            return task.map(|message| {
+                                cosmic::app::Message::App(
+                                    Message::Library(message),
+                                )
+                            });
+                        }
+                        library::Action::None => return Task::none(),
+                        library::Action::OpenItem(Some((
+                            kind,
+                            index,
+                        ))) => {
+                            debug!(
+                                "Should get song at index: {:?}",
+                                index
+                            );
+                            let Some(lib_song) =
+                                library.get_song(index)
+                            else {
+                                return Task::none();
+                            };
+                            self.editor_mode = Some(kind.into());
+                            song = lib_song.to_owned();
+                            debug!(
+                                "Should change songs to: {:?}",
+                                song
                             );
                         }
                     }
-                    library.update(message).map(|x| {
-                        debug!(?x);
-                        cosmic::app::Message::App(Message::None)
-                    })
-                } else {
-                    Task::none()
                 }
+                self.update(Message::SongEditor(
+                    song_editor::Message::ChangeSong(song),
+                ))
             }
             Message::File(file) => {
                 self.file = file;

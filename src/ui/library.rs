@@ -11,8 +11,10 @@ use cosmic::{
     Element, Task,
 };
 use miette::{miette, IntoDiagnostic, Result};
-use sqlx::{SqliteConnection, SqlitePool};
-use tracing::{debug, error};
+use sqlx::{
+    pool::PoolConnection, Sqlite, SqliteConnection, SqlitePool,
+};
+use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
@@ -37,6 +39,12 @@ pub(crate) struct Library {
     dragged_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: SqlitePool,
+}
+
+pub(crate) enum Action {
+    OpenItem(Option<(LibraryKind, i32)>),
+    Task(Task<Message>),
+    None,
 }
 
 #[derive(Clone, Debug)]
@@ -85,157 +93,160 @@ impl<'a> Library {
         self.song_library.get_item(index)
     }
 
-    pub fn update(&'a mut self, message: Message) -> Task<Message> {
+    pub fn update(&'a mut self, message: Message) -> Action {
         match message {
-            Message::AddItem => Task::none(),
-            Message::None => Task::none(),
-            Message::RemoveItem => Task::none(),
+            Message::AddItem => (),
+            Message::None => (),
+            Message::RemoveItem => (),
             Message::OpenItem(item) => {
                 debug!(?item);
                 self.editing_item = item;
-                Task::none()
+                return Action::OpenItem(item);
             }
             Message::HoverLibrary(library_kind) => {
                 self.library_hovered = library_kind;
-                Task::none()
             }
             Message::OpenLibrary(library_kind) => {
                 self.library_open = library_kind;
-                Task::none()
             }
             Message::HoverItem(item) => {
                 self.hovered_item = item;
-                Task::none()
             }
             Message::SelectItem(item) => {
                 self.selected_item = item;
-                Task::none()
             }
             Message::UpdateSong(song) => {
                 let Some((kind, index)) = self.editing_item else {
                     error!("Not editing an item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 if kind != LibraryKind::Song {
                     error!("Not editing a song item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 match self
                     .song_library
                     .update_item(song.clone(), index)
                 {
-                    Ok(_) => Task::future(self.db.acquire())
-                        .and_then(move |conn| {
-                            Task::perform(
-                                update_song_in_db(song.clone(), conn)
-                                    .map(|r| match r {
-                                        Ok(_) => {}
-                                        Err(e) => {
-                                            error!(?e);
-                                        }
-                                    }),
-                                |_| Message::SongChanged,
-                            )
-                        }),
+                    Ok(_) => {
+                        return Action::Task(
+                            Task::future(self.db.acquire()).and_then(
+                                move |conn| update_in_db(&song, conn),
+                            ),
+                        )
+                    }
                     Err(_) => todo!(),
                 }
             }
             Message::SongChanged => {
                 // self.song_library.update_item(song, index);
                 debug!("song changed");
-                Task::none()
             }
             Message::UpdateImage(image) => {
                 let Some((kind, index)) = self.editing_item else {
                     error!("Not editing an item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 if kind != LibraryKind::Image {
                     error!("Not editing a image item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 match self
                     .image_library
                     .update_item(image.clone(), index)
                 {
-                    Ok(_) => Task::future(self.db.acquire())
-                        .and_then(move |conn| {
-                            Task::perform(
-                                update_image_in_db(
-                                    image.clone(),
-                                    conn,
-                                ),
-                                |_| Message::ImageChanged,
-                            )
-                        }),
+                    Ok(_) => {
+                        return Action::Task(
+                            Task::future(self.db.acquire()).and_then(
+                                move |conn| {
+                                    Task::perform(
+                                        update_image_in_db(
+                                            image.clone(),
+                                            conn,
+                                        ),
+                                        |_| Message::ImageChanged,
+                                    )
+                                },
+                            ),
+                        )
+                    }
                     Err(_) => todo!(),
                 }
             }
-            Message::ImageChanged => todo!(),
+            Message::ImageChanged => (),
             Message::UpdateVideo(video) => {
                 let Some((kind, index)) = self.editing_item else {
                     error!("Not editing an item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 if kind != LibraryKind::Video {
                     error!("Not editing a video item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 match self
                     .video_library
                     .update_item(video.clone(), index)
                 {
-                    Ok(_) => Task::future(self.db.acquire())
-                        .and_then(move |conn| {
-                            Task::perform(
-                                update_video_in_db(
-                                    video.clone(),
-                                    conn,
-                                ),
-                                |_| Message::VideoChanged,
-                            )
-                        }),
+                    Ok(_) => {
+                        return Action::Task(
+                            Task::future(self.db.acquire()).and_then(
+                                move |conn| {
+                                    Task::perform(
+                                        update_video_in_db(
+                                            video.clone(),
+                                            conn,
+                                        ),
+                                        |_| Message::VideoChanged,
+                                    )
+                                },
+                            ),
+                        )
+                    }
                     Err(_) => todo!(),
                 }
             }
-            Message::VideoChanged => todo!(),
+            Message::VideoChanged => (),
             Message::UpdatePresentation(presentation) => {
                 let Some((kind, index)) = self.editing_item else {
                     error!("Not editing an item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 if kind != LibraryKind::Presentation {
                     error!("Not editing a presentation item");
-                    return Task::none();
+                    return Action::None;
                 };
 
                 match self
                     .presentation_library
                     .update_item(presentation.clone(), index)
                 {
-                    Ok(_) => Task::future(self.db.acquire())
-                        .and_then(move |conn| {
-                            Task::perform(
-                                update_presentation_in_db(
-                                    presentation.clone(),
-                                    conn,
-                                ),
-                                |_| Message::PresentationChanged,
-                            )
-                        }),
+                    Ok(_) => return Action::Task(
+                        Task::future(self.db.acquire()).and_then(
+                            move |conn| {
+                                Task::perform(
+                                    update_presentation_in_db(
+                                        presentation.clone(),
+                                        conn,
+                                    ),
+                                    |_| Message::PresentationChanged,
+                                )
+                            },
+                        ),
+                    ),
                     Err(_) => todo!(),
                 }
             }
-            Message::PresentationChanged => todo!(),
-            Message::Error(_) => todo!(),
-        }
+            Message::PresentationChanged => (),
+            Message::Error(_) => (),
+        };
+        Action::None
     }
 
     pub fn view(&self) -> Element<Message> {
@@ -506,6 +517,30 @@ impl<'a> Library {
     //         LibraryKind::Presentation => todo!(),
     //     }
     // }
+}
+
+fn update_in_db(
+    song: &Song,
+    conn: PoolConnection<Sqlite>,
+) -> Task<Message> {
+    let song_title = song.title.clone();
+    warn!("Should have updated song: {:?}", song_title);
+    Task::perform(
+        update_song_in_db(song.to_owned(), conn).map(
+            move |r| match r {
+                Ok(_) => {
+                    warn!(
+                        "Should have updated song: {:?}",
+                        song_title
+                    );
+                }
+                Err(e) => {
+                    error!(?e);
+                }
+            },
+        ),
+        |_| Message::SongChanged,
+    )
 }
 
 async fn add_db() -> Result<SqlitePool> {
