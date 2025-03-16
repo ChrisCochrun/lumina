@@ -8,7 +8,7 @@ description = "A cli presentation system"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["debug", "derive"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", features = ["debug", "winit", "tokio", "xdg-portal", "dbus-config", "a11y", "wgpu", "multi-window", "single-instance"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic", features = ["debug", "winit", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window", "single-instance"] }
 lexpr = "0.2.7"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
@@ -28,5 +28,6 @@ rodio = { version = "0.20.1", features = ["symphonia-all", "tracing"] }
 gstreamer = "0.23.3"
 gstreamer-app = "0.23.3"
 cosmic-time = "0.2.0"
-rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
+url = "2"
+# rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
 

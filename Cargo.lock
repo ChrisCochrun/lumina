@@ -326,25 +326,6 @@ dependencies = [
 
 [[package]]
 name = "ashpd"
-version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ac22eda5891cc086690cb6fa10121c0390de0e3b04eb269f2d766b00d3f2d81"
-dependencies = [
- "async-fs 2.1.2",
- "async-net",
- "enumflags2",
- "futures-channel",
- "futures-util",
- "once_cell",
- "rand",
- "serde",
- "serde_repr",
- "url",
- "zbus 3.15.2",
-]
-
-[[package]]
-name = "ashpd"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd884d7c72877a94102c3715f3b1cd09ff4fac28221add3e57cfbe25c236d093"
@@ -426,18 +407,6 @@ dependencies = [
 
 [[package]]
 name = "async-fs"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "279cf904654eeebfa37ac9bb1598880884924aab82e290aa65c9e77a0e142e06"
-dependencies = [
- "async-lock 2.8.0",
- "autocfg",
- "blocking",
- "futures-lite 1.13.0",
-]
-
-[[package]]
-name = "async-fs"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebcd09b382f40fcd159c2d695175b2ae620ffa5f3bd6f664131efff4e8b9e04a"
@@ -504,17 +473,6 @@ dependencies = [
  "event-listener 5.4.0",
  "event-listener-strategy",
  "pin-project-lite",
-]
-
-[[package]]
-name = "async-net"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b948000fad4873c1c9339d60f2623323a0cfd3816e5181033c6a5cb68b2accf7"
-dependencies = [
- "async-io 2.4.0",
- "blocking",
- "futures-lite 2.6.0",
 ]
 
 [[package]]
@@ -4077,7 +4035,7 @@ dependencies = [
  "image",
  "lazy_static",
  "palette 0.7.6",
- "rfd 0.14.1",
+ "rfd",
  "ron 0.8.1",
  "serde",
  "slotmap",
@@ -4217,7 +4175,6 @@ dependencies = [
  "libcosmic",
  "miette",
  "pretty_assertions",
- "rfd 0.12.1",
  "rodio",
  "ron 0.8.1",
  "serde",
@@ -4228,6 +4185,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
@@ -5875,31 +5833,6 @@ dependencies = [
  "svgtypes",
  "tiny-skia 0.11.4",
  "usvg",
-]
-
-[[package]]
-name = "rfd"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c9e7b57df6e8472152674607f6cc68aa14a748a3157a857a94f516e11aeacc2"
-dependencies = [
- "ashpd 0.6.8",
- "async-io 1.13.0",
- "block",
- "dispatch",
- "futures-util",
- "js-sys",
- "log",
- "objc",
- "objc-foundation",
- "objc_id",
- "pollster",
- "raw-window-handle 0.5.2",
- "urlencoding",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -8948,15 +8881,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "675d170b632a6ad49804c8cf2105d7c31eddd3312555cffd4b740e08e97c25e6"
 dependencies = [
  "async-broadcast 0.5.1",
- "async-executor",
- "async-fs 1.6.0",
- "async-io 1.13.0",
- "async-lock 2.8.0",
  "async-process 1.8.1",
  "async-recursion",
- "async-task",
  "async-trait",
- "blocking",
  "byteorder",
  "derivative",
  "enumflags2",
@@ -8991,7 +8918,7 @@ checksum = "bb97012beadd29e654708a0fdb4c84bc046f537aecfde2c3ee0a9e4b4d48c725"
 dependencies = [
  "async-broadcast 0.7.2",
  "async-executor",
- "async-fs 2.1.2",
+ "async-fs",
  "async-io 2.4.0",
  "async-lock 3.4.0",
  "async-process 2.3.0",
@@ -9192,7 +9119,6 @@ dependencies = [
  "libc",
  "serde",
  "static_assertions",
- "url",
  "zvariant_derive 3.15.2",
 ]
 

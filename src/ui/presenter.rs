@@ -2,7 +2,6 @@ use miette::{miette, IntoDiagnostic, Result};
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    dialog::ashpd::url::Url,
     iced::{
         alignment::Horizontal,
         font::{Family, Stretch, Style, Weight},
@@ -26,6 +25,7 @@ use cosmic::{
 use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
 use rodio::{Decoder, OutputStream, Sink};
 use tracing::{debug, error, info, warn};
+use url::Url;
 
 use crate::{
     core::{service_items::ServiceItemModel, slide::Slide},

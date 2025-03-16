@@ -455,29 +455,7 @@ impl cosmic::Application for App {
                 })
             }
             Message::Library(message) => {
-<<<<<<< HEAD
-                // debug!(?message);
-                let (mut kind, mut index): (LibraryKind, i32) =
-                    (LibraryKind::Song, 0);
-                let mut opened_item = false;
-                match message {
-                    library::Message::OpenItem(item) => {
-                        let Some(item) = item else {
-                            return ().into();
-                        };
-                        debug!("opening: {:?}", item);
-                        kind = item.0;
-                        index = item.1;
-                        opened_item = true;
-                    }
-                    _ => {
-                        // debug!("none");
-                        ()
-                    }
-                };
-=======
                 let mut song = Song::default();
->>>>>>> 93b021e (fixed lots of bugs by return Action enums in song_editor and library)
                 if let Some(library) = &mut self.library {
                     match library.update(message) {
                         library::Action::OpenItem(None) => {

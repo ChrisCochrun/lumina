@@ -1,6 +1,7 @@
 use std::{io, path::PathBuf};
 
 use cosmic::{
+    dialog::file_chooser::open::Dialog,
     iced::{
         font::{Family, Stretch, Style, Weight},
         Font, Length,
@@ -432,12 +433,18 @@ impl Default for SongEditor {
 }
 
 async fn pick_background() -> Result<PathBuf, SongError> {
-    rfd::AsyncFileDialog::new()
-        .set_title("Choose a background...")
-        .pick_file()
+    let dialog = Dialog::new().title("Choose a background...");
+    dialog
+        .open_file()
         .await
-        .ok_or(SongError::DialogClosed)
-        .map(|file| file.path().to_owned())
+        .map_err(|_| SongError::DialogClosed)
+        .map(|file| file.url().to_file_path().unwrap())
+    // rfd::AsyncFileDialog::new()
+    //     .set_title("Choose a background...")
+    //     .pick_file()
+    //     .await
+    //     .ok_or(SongError::DialogClosed)
+    //     .map(|file| file.path().to_owned())
 }
 
 #[derive(Debug, Clone)]

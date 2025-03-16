@@ -1,5 +1,6 @@
-use cosmic::dialog::ashpd::url::Url;
+// use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
+use gstreamer::query::Uri;
 use iced_video_player::Video;
 use miette::{miette, Result};
 use serde::{Deserialize, Serialize};
@@ -58,7 +59,7 @@ impl TryFrom<Background> for Video {
         value: Background,
     ) -> std::result::Result<Self, Self::Error> {
         Video::new(
-            &Url::from_file_path(value.path)
+            &url::Url::from_file_path(value.path)
                 .map_err(|_| ParseError::BackgroundNotVideo)?,
         )
         .map_err(|_| ParseError::BackgroundNotVideo)
