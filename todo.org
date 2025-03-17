@@ -1,29 +1,32 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO Change return type of all components to an Action enum instead of the Task<Message> type [66%] [2/3]
+* TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
+
+* TODO [#A] Change return type of all components to an Action enum instead of the Task<Message> type [66%] [2/3]
 ** DONE Library
 ** DONE SongEditor
 ** TODO Presenter
 
-* TODO Need to fix tests now that the basic app is working
+* TODO [#A] Need to fix tests now that the basic app is working
 
 * TODO Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
 I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
-** TODO Develop DnD for library items
+** TODO [#A] Develop DnD for library items
 This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
 
-* TODO Build editors for each possible item
+* TODO [#B] Build editors for each possible item
 ** TODO Develop ui for editors
 
-* TODO Develop ui for settings
+* TODO [#B] Develop ui for settings
 
-* TODO Develop library system for slides that are more than images or video i.e. content
-* TODO Functions for text alignments
+* TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO [#B] Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
-* TODO Figure out why the Video element seems to have problems when moving the mouse around
-* TODO Find a way to load and discover every font on the system for slide building
+* TODO [#C] Figure out why the Video element seems to have problems when moving the mouse around
+* TODO [#B] Find a way to load and discover every font on the system for slide building
 This may not be necessary since it is possible to create a font using =Box::leak()=.
 #+begin_src rust
 let font = self.current_slide.font().into_boxed_str();

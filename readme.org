@@ -1,9 +1,55 @@
 #+title: Lumina
 #+author: Chris Cochrun
 
-Lumina is a presentation app that works from a cli or a UI. The goal is that through a simple text file, you can describe an entire presentation and then load and control it either from the command line, or a UI. The UI also provides user friendly ways of creating the presentation to allow for flexibility for users to make something that works for developers and nerds as well as regular folk. 
+Lumina is a presentation app that works from a cli or a UI. The goal is that through a simple text file, you can describe an entire presentation and then load and control it either from the command line, or a UI. The UI also provides user friendly ways of creating the presentation to allow for flexibility for users to make something that works for regular folk as well as developers and nerds. 
 
 * Why build this?
 Well for one, I want more experience developing things and I don't have a good tool for this kind of thing on Linux.
 
 Primarily, I don't think there is a good tool for this kind of thing on Linux. On Windows and Mac there is ProPresenter or Proclaim. Both amazing presentation software built for churches or worship centers and can be used by others for other things too, but incredible tools. I want to have a similar tool on Linux. The available tools out there now are often old, broken, or very difficult to use. I want something incredibly easy, with very sane or at least very customizable keyboard controls that allow me to quickly build a presentation and make it VERY easy to run it too.
+
+** Features (planned are in parentheses)
+- Presents songs lyrics with image and video backgrounds
+- Simple song creation with a powerful text parser
+- Present Slides (PDF, PowerPoint, and Impress are in not implemented yet)
+- (Present Reveal.js slides)
+- (Custom slide builder)
+- (an intuitive UI) - Still needs A LOT of polish
+
+* Build and Run
+First get the source code
+
+Then into the project directory.
+#+BEGIN_SRC
+cd lumina
+#+END_SRC
+
+Then build.
+#+BEGIN_SRC
+just build
+#+END_SRC
+
+Then run.
+#+BEGIN_SRC
+./target/debug/lumina
+#+END_SRC
+
+** Nix
+If you are using nix to develop with, which I would suggest since that will make sure all the appropriate dependencies are installed, you'll need to do the following:
+#+begin_src 
+cd lumina
+nix develop
+#+end_src
+
+This drops you into a shell with all the right dependencies.
+
+*If you have direnv*
+#+begin_src sh
+cd lumina
+direnv allow
+#+end_src
+
+Then just as before build and run it the way you would.
+
+* Contact Me
+If, for whatever reason, you need to contact me and get something ironed out, please do so at [[mailto:chris@cochrun.xyz][chris@cochrun.xyz]]
