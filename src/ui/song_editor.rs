@@ -185,6 +185,7 @@ impl SongEditor {
                     self.lyrics =
                         text_editor::Content::with_text(&lyrics)
                 };
+                self.background_video(&song.background);
                 self.background = song.background;
             }
             Message::ChangeFont(font) => {
@@ -260,15 +261,8 @@ impl SongEditor {
                 if let Some(mut song) = self.song.clone() {
                     let background =
                         Background::try_from(path.clone()).ok();
-                    if let Some(background) = background {
-                        if background.kind == BackgroundKind::Video {
-                            let video =
-                                Video::try_from(background).ok();
-                            debug!(?video);
-                            self.video = video;
-                        }
-                    }
-                    song.background = path.try_into().ok();
+                    self.background_video(&background);
+                    song.background = background;
                     return self.update_song(song);
                 }
             }
@@ -309,11 +303,16 @@ impl SongEditor {
             if let Ok(slides) = song.to_slides() {
                 let slides = slides
                     .into_iter()
-                    .map(|slide| {
+                    .enumerate()
+                    .map(|(index, slide)| {
                         container(
                             slide_view(
                                 slide,
-                                &self.video,
+                                if index == 0 {
+                                    &self.video
+                                } else {
+                                    &None
+                                },
                                 self.current_font,
                                 false,
                                 false,
@@ -423,6 +422,20 @@ order",
     fn update_song(&mut self, song: Song) -> Action {
         self.song = Some(song.clone());
         Action::UpdateSong(song)
+    }
+
+    fn background_video(&mut self, background: &Option<Background>) {
+        if let Some(background) = background {
+            if background.kind == BackgroundKind::Video {
+                let video =
+                    Video::try_from(background).ok().map(|mut v| {
+                        v.set_looping(true);
+                        v
+                    });
+                debug!(?video);
+                self.video = video;
+            }
+        }
     }
 }
 

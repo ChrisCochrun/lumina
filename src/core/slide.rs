@@ -52,6 +52,20 @@ pub struct Background {
     pub kind: BackgroundKind,
 }
 
+impl TryFrom<&Background> for Video {
+    type Error = ParseError;
+
+    fn try_from(
+        value: &Background,
+    ) -> std::result::Result<Self, Self::Error> {
+        Video::new(
+            &url::Url::from_file_path(value.path.clone())
+                .map_err(|_| ParseError::BackgroundNotVideo)?,
+        )
+        .map_err(|_| ParseError::BackgroundNotVideo)
+    }
+}
+
 impl TryFrom<Background> for Video {
     type Error = ParseError;
 

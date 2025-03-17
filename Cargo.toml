@@ -16,7 +16,6 @@ serde = { version = "1.0.213", features = ["derive"] }
 serde-lexpr = "0.1.3"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "std", "chrono", "time", "local-time", "env-filter"] }
-iced_video_player = { git = "https://github.com/jackpot51/iced_video_player", branch = "cosmic", features = ["wgpu"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 ron = "0.8.1"
@@ -31,3 +30,13 @@ cosmic-time = "0.2.0"
 url = "2"
 # rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
 
+[dependencies.iced_video_player]
+git = "https://github.com/jackpot51/iced_video_player.git"
+branch = "cosmic"
+features = ["wgpu"]
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
