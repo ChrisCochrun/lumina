@@ -5,8 +5,9 @@ use cosmic::{
     },
     iced_widget::{column, row as rowm, text as textm},
     widget::{
-        container, horizontal_space, icon, mouse_area, responsive,
-        row, scrollable, text, Container, DndSource, Space, Widget,
+        button, container, horizontal_space, icon, mouse_area,
+        responsive, row, scrollable, text, text_input, Container,
+        DndSource, Icon, Space, Widget,
     },
     Element, Task,
 };
@@ -330,7 +331,7 @@ impl<'a> Library {
                 })
                 .center_x(Length::Fill)
                 .center_y(Length::Shrink);
-        let button = mouse_area(row_container)
+        let library_button = mouse_area(row_container)
             .on_press({
                 if self.library_open == Some(model.kind) {
                     Message::OpenLibrary(None)
@@ -390,7 +391,15 @@ impl<'a> Library {
                     .width(Length::Fill),
                 )
                 .spacing(5);
-                Container::new(items).padding(5).style(|t| {
+
+                let library_toolbar = rowm!(
+                    text_input("Search...", ""),
+                    button::icon(icon::from_name("add"))
+                );
+                let library_column =
+                    column![library_toolbar, items].spacing(3);
+
+                Container::new(library_column).padding(5).style(|t| {
                     container::Style::default()
                         .background(Background::Color(
                             t.cosmic().primary.base.into(),
@@ -402,7 +411,7 @@ impl<'a> Library {
             } else {
                 Container::new(Space::new(0, 0))
             };
-        column![button, lib_container].into()
+        column![library_button, lib_container].into()
     }
 
     fn single_item<T>(
@@ -453,7 +462,7 @@ impl<'a> Library {
                 .spacing(10)
                 .align_y(Vertical::Center),
         )
-        .padding(5)
+        // .padding(5)
         .width(Length::Fill)
         .style(move |t| {
             container::Style::default()
