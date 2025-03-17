@@ -1,7 +1,10 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO Change return type of all components to an Action enum instead of the Task<Message> type
+* TODO Change return type of all components to an Action enum instead of the Task<Message> type [66%] [2/3]
+** DONE Library
+** DONE SongEditor
+** TODO Presenter
 
 * TODO Need to fix tests now that the basic app is working
 
@@ -19,6 +22,7 @@ This is limited by the fact that I need to develop this in cosmic. I am honestly
 * TODO Develop library system for slides that are more than images or video i.e. content
 * TODO Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
+* TODO Figure out why the Video element seems to have problems when moving the mouse around
 * TODO Find a way to load and discover every font on the system for slide building
 This may not be necessary since it is possible to create a font using =Box::leak()=.
 #+begin_src rust
