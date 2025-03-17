@@ -7,12 +7,13 @@ use cosmic::{
         Font, Length,
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::row,
+    iced_widget::{row, stack},
     theme,
     widget::{
         button, column, combo_box, container, dropdown,
-        horizontal_space, icon, scrollable, text, text_editor,
-        text_input,
+        horizontal_space, icon, scrollable,
+        svg::{self, Handle},
+        text, text_editor, text_input, Svg,
     },
     Element, Task,
 };
@@ -305,25 +306,36 @@ impl SongEditor {
                     .into_iter()
                     .enumerate()
                     .map(|(index, slide)| {
-                        container(
-                            slide_view(
-                                slide,
-                                if index == 0 {
-                                    &self.video
-                                } else {
-                                    &None
-                                },
-                                self.current_font,
-                                false,
-                                false,
+                        let svg = Handle::from_memory(r#"<svg viewBox="0 0 240 100" xmlns="http://www.w3.org/2000/svg">
+<defs>
+     <filter id="shadow2">
+      <feDropShadow dx="0" dy="0" stdDeviation="5.5" flood-color="cyan" />
+    </filter>
+</defs>
+<text x="0" y="50" font-weight="bold" font-family="Quicksand" font-size="40" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow2);">
+    Hello World
+</text></svg>"#.as_bytes());
+                        stack!(
+                            container(
+                                slide_view(
+                                    slide,
+                                    if index == 0 {
+                                        &self.video
+                                    } else {
+                                        &None
+                                    },
+                                    self.current_font,
+                                    false,
+                                    false,
+                                )
+                                    .map(|_| Message::None),
                             )
-                            .map(|_| Message::None),
-                        )
-                        .height(250)
-                        .center_x(Length::Fill)
-                        .padding([0, 20])
-                        .clip(true)
-                        .into()
+                                .height(250)
+                                .center_x(Length::Fill)
+                                .padding([0, 20])
+                                .clip(true),
+                            Svg::new(svg),
+                        ).into()
                     })
                     .collect();
                 scrollable(
