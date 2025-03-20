@@ -13,7 +13,6 @@ use cosmic::iced::{
 };
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
-use cosmic::prelude::*;
 use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
@@ -24,6 +23,7 @@ use cosmic::widget::{
 use cosmic::widget::{icon, slider};
 use cosmic::widget::{text, toggler};
 use cosmic::{executor, Application, ApplicationExt, Element};
+use cosmic::{prelude::*, theme};
 use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
@@ -687,6 +687,7 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(
                         presenter::Message::PrevSlide
                     ))
+                    .class(theme::style::Button::Transparent)
             )
             .center_y(Length::Fill)
             .align_right(Length::Fill)
@@ -702,6 +703,7 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(
                         presenter::Message::NextSlide
                     ))
+                    .class(theme::style::Button::Transparent)
             )
             .center_y(Length::Fill)
             .align_left(Length::Fill)
