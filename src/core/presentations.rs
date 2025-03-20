@@ -65,6 +65,17 @@ impl Content for Presentation {
             None
         }
     }
+
+    fn subtext(&self) -> String {
+        if self.path.exists() {
+            self.path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or("Missing presentation".into())
+        } else {
+            "Missing presentation".into()
+        }
+    }
 }
 
 impl From<Value> for Presentation {

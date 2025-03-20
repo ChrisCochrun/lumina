@@ -53,6 +53,17 @@ impl Content for Image {
             None
         }
     }
+
+    fn subtext(&self) -> String {
+        if self.path.exists() {
+            self.path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or("Missing image".into())
+        } else {
+            "Missing image".into()
+        }
+    }
 }
 
 impl From<Value> for Image {

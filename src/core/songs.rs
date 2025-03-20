@@ -59,6 +59,10 @@ impl Content for Song {
     fn background(&self) -> Option<Background> {
         self.background.clone()
     }
+
+    fn subtext(&self) -> String {
+        self.author.clone().unwrap_or("Author missing".into())
+    }
 }
 
 impl ServiceTrait for Song {

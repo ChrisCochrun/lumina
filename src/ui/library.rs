@@ -1,9 +1,10 @@
 use cosmic::{
     iced::{
         alignment::Vertical, futures::FutureExt, Background, Border,
-        Length,
+        Color, Length,
     },
     iced_widget::{column, row as rowm, text as textm},
+    theme,
     widget::{
         button, container, horizontal_space, icon, mouse_area,
         responsive, row, scrollable, text, text_input, Container,
@@ -276,17 +277,27 @@ impl<'a> Library {
         match &model.kind {
             LibraryKind::Song => {
                 row = row
+                    .push(icon::from_name("folder-music-symbolic"));
+                row = row
                     .push(textm!("Songs").align_y(Vertical::Center));
             }
             LibraryKind::Video => {
                 row = row
+                    .push(icon::from_name("folder-videos-symbolic"));
+                row = row
                     .push(textm!("Videos").align_y(Vertical::Center));
             }
             LibraryKind::Image => {
+                row = row.push(icon::from_name(
+                    "folder-pictures-symbolic",
+                ));
                 row = row
                     .push(textm!("Images").align_y(Vertical::Center));
             }
             LibraryKind::Presentation => {
+                row = row.push(icon::from_name(
+                    "x-office-presentation-symbolic",
+                ));
                 row = row.push(
                     textm!("Presentations").align_y(Vertical::Center),
                 );
@@ -431,25 +442,19 @@ impl<'a> Library {
         }))
         .center_y(20)
         .center_x(Length::Fill);
-        let icon = icon::from_name({
-            match model.kind {
-                LibraryKind::Song => "folder-music-symbolic",
-                LibraryKind::Video => "folder-videos-symbolic",
-                LibraryKind::Image => "folder-pictures-symbolic",
-                LibraryKind::Presentation => {
-                    "x-office-presentation-symbolic"
-                }
-            }
-        });
         let subtext = container(responsive(|size| {
-            let background = if let Some(text) = item.background() {
-                text.path.to_string_lossy().to_string()
+            let color: Color = if item.background().is_some() {
+                theme::active().cosmic().accent_text_color().into()
             } else {
-                "Background does not exist...".to_string()
+                theme::active()
+                    .cosmic()
+                    .destructive_text_color()
+                    .into()
             };
-            text::body(elide_text(background, size.width))
+            text::body(elide_text(item.subtext(), size.width))
                 .center()
                 .wrapping(textm::Wrapping::None)
+                .class(color)
                 .into()
         }))
         .center_y(20)
@@ -458,7 +463,7 @@ impl<'a> Library {
         let texts = column([text.into(), subtext.into()]);
 
         Container::new(
-            rowm![horizontal_space().width(0), icon, texts]
+            rowm![horizontal_space().width(0), texts]
                 .spacing(10)
                 .align_y(Vertical::Center),
         )
@@ -561,8 +566,9 @@ async fn add_db() -> Result<SqlitePool> {
     SqlitePool::connect(&db_url).await.into_diagnostic()
 }
 
-fn elide_text(text: String, width: f32) -> String {
+fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     const CHAR_SIZE: f32 = 8.0;
+    let text: String = text.as_ref().to_owned();
     let text_length = text.len() as f32 * CHAR_SIZE;
     if text_length > width {
         format!(

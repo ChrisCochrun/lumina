@@ -690,7 +690,7 @@ impl cosmic::Application for App {
             )
             .center_y(Length::Fill)
             .align_right(Length::Fill)
-            .width(Length::FillPortion(2)),
+            .width(Length::FillPortion(1)),
             Container::new(slide_preview)
                 .center_y(Length::Fill)
                 .width(Length::FillPortion(3)),
@@ -705,7 +705,7 @@ impl cosmic::Application for App {
             )
             .center_y(Length::Fill)
             .align_left(Length::Fill)
-            .width(Length::FillPortion(2)),
+            .width(Length::FillPortion(1)),
             library.width(Length::FillPortion(2))
         ]
         .width(Length::Fill)

@@ -11,9 +11,8 @@ use cosmic::{
     theme,
     widget::{
         button, column, combo_box, container, dropdown,
-        horizontal_space, icon, scrollable,
-        svg::{self, Handle},
-        text, text_editor, text_input, Svg,
+        horizontal_space, icon, scrollable, svg::Handle, text,
+        text_editor, text_input, Svg,
     },
     Element, Task,
 };

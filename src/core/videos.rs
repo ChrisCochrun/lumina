@@ -58,6 +58,17 @@ impl Content for Video {
             None
         }
     }
+
+    fn subtext(&self) -> String {
+        if self.path.exists() {
+            self.path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or("Missing video".into())
+        } else {
+            "Missing video".into()
+        }
+    }
 }
 
 impl From<Value> for Video {

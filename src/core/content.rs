@@ -7,4 +7,5 @@ pub trait Content {
     fn kind(&self) -> ServiceItemKind;
     fn to_service_item(&self) -> ServiceItem;
     fn background(&self) -> Option<Background>;
+    fn subtext(&self) -> String;
 }
