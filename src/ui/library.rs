@@ -318,7 +318,7 @@ impl<'a> Library {
             .size(20),
         );
         let row_container =
-            Container::new(row)
+            Container::new(row.align_y(Vertical::Center))
                 .padding(5)
                 .style(|t| {
                     container::Style::default()
@@ -352,11 +352,10 @@ impl<'a> Library {
             })
             .on_enter(Message::HoverLibrary(Some(model.kind)))
             .on_exit(Message::HoverLibrary(None));
-        let lib_container =
-            if self.library_open == Some(model.kind) {
-                let items = scrollable(
-                    column({
-                        model.items.iter().enumerate().map(
+        let lib_container = if self.library_open == Some(model.kind) {
+            let items = scrollable(
+                column({
+                    model.items.iter().enumerate().map(
                         |(index, item)| {
                             let service_item = item.to_service_item();
                             let visual_item = self
@@ -397,31 +396,23 @@ impl<'a> Library {
                             .into()
                         },
                     )
-                    })
-                    .spacing(2)
-                    .width(Length::Fill),
-                )
-                .spacing(5);
-
-                let library_toolbar = rowm!(
-                    text_input("Search...", ""),
-                    button::icon(icon::from_name("add"))
-                );
-                let library_column =
-                    column![library_toolbar, items].spacing(3);
-
-                Container::new(library_column).padding(5).style(|t| {
-                    container::Style::default()
-                        .background(Background::Color(
-                            t.cosmic().primary.base.into(),
-                        ))
-                        .border(Border::default().rounded(
-                            t.cosmic().corner_radii.radius_m,
-                        ))
                 })
-            } else {
-                Container::new(Space::new(0, 0))
-            };
+                .spacing(2)
+                .width(Length::Fill),
+            )
+            .spacing(5);
+
+            let library_toolbar = rowm!(
+                text_input("Search...", ""),
+                button::icon(icon::from_name("add"))
+            );
+            let library_column =
+                column![library_toolbar, items].spacing(3);
+
+            Container::new(library_column).padding(5)
+        } else {
+            Container::new(Space::new(0, 0))
+        };
         column![library_button, lib_container].into()
     }
 
@@ -498,7 +489,7 @@ impl<'a> Library {
                 ))
                 .border(
                     Border::default()
-                        .rounded(t.cosmic().corner_radii.radius_l),
+                        .rounded(t.cosmic().corner_radii.radius_m),
                 )
         })
         .into()

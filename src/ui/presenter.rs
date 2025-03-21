@@ -471,13 +471,9 @@ impl Presenter {
                 .padding(10),
         )
         .interaction(cosmic::iced::mouse::Interaction::Pointer)
-        .on_enter(Message::HoveredSlide(slide_id))
+        .on_move(move |_| Message::HoveredSlide(slide_id))
         .on_exit(Message::HoveredSlide(-1))
-        .on_press({
-            let id =
-                self.slides.iter().position(|s| s == slide).unwrap();
-            Message::SlideChange(id as u16)
-        });
+        .on_press(Message::SlideChange(slide_id as u16));
         delegate.into()
     }
 
