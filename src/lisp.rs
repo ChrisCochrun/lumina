@@ -37,7 +37,10 @@ pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::read_to_string, path::PathBuf};
+    use std::{
+        fs::read_to_string,
+        path::{Path, PathBuf},
+    };
 
     use crate::{
         core::{
@@ -101,13 +104,19 @@ mod test {
 
     fn service_item_1() -> ServiceItem {
         let image = Image {
-            title: "frodo.jpg".to_string(),
+            title: "This is frodo".to_string(),
             path: PathBuf::from("~/pics/frodo.jpg"),
             ..Default::default()
         };
         let slide = &image.to_slides().unwrap()[0];
+        let slide = slide
+            .clone()
+            .set_text("This is frodo")
+            .set_font("Quicksand")
+            .set_font_size(70)
+            .set_audio(None);
         ServiceItem {
-            title: "frodo.jpg".to_string(),
+            title: "This is frodo".to_string(),
             kind: ServiceItemKind::Content(slide.clone()),
             ..Default::default()
         }

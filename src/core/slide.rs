@@ -236,6 +236,26 @@ impl From<&Slide> for Value {
 }
 
 impl Slide {
+    pub fn set_text(mut self, text: impl AsRef<str>) -> Self {
+        self.text = text.as_ref().into();
+        self
+    }
+
+    pub fn set_font(mut self, font: impl AsRef<str>) -> Self {
+        self.font = font.as_ref().into();
+        self
+    }
+
+    pub fn set_font_size(mut self, font_size: i32) -> Self {
+        self.font_size = font_size;
+        self
+    }
+
+    pub fn set_audio(mut self, audio: Option<PathBuf>) -> Self {
+        self.audio = audio;
+        self
+    }
+
     pub fn background(&self) -> &Background {
         &self.background
     }
