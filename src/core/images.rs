@@ -217,9 +217,10 @@ mod test {
     pub async fn test_db_and_model() {
         let mut image_model: Model<Image> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Image,
         };
-        image_model.load_from_db().await;
+        let mut db = crate::core::model::get_db().await;
+        image_model.load_from_db(&mut db).await;
         if let Some(image) = image_model.find(|i| i.id == 3) {
             let test_image = test_image("nccq5".into());
             assert_eq!(test_image.title, image.title);
@@ -233,7 +234,7 @@ mod test {
         let image = test_image("A new image".into());
         let mut image_model: Model<Image> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Image,
         };
         let result = image_model.add_item(image.clone());
         let new_image = test_image("A newer image".into());

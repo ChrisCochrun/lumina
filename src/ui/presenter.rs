@@ -50,7 +50,7 @@ pub(crate) struct Presenter {
     current_font: Font,
 }
 
-pub enum Action {
+pub(crate) enum Action {
     Task(Task<Message>),
     None,
 }

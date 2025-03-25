@@ -275,9 +275,10 @@ mod test {
     async fn test_db_and_model() {
         let mut presentation_model: Model<Presentation> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Presentation,
         };
-        presentation_model.load_from_db().await;
+        let mut db = crate::core::model::get_db().await;
+        presentation_model.load_from_db(&mut db).await;
         if let Some(presentation) =
             presentation_model.find(|p| p.id == 54)
         {

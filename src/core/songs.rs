@@ -641,15 +641,17 @@ You saved my soul"
     async fn model() -> Model<Song> {
         let song_model: Model<Song> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Song,
+            // db: crate::core::model::get_db().await,
         };
         song_model
     }
 
     #[tokio::test]
     async fn test_db_and_model() {
+        let mut db = crate::core::model::get_db().await;
         let mut song_model = model().await;
-        song_model.load_from_db().await;
+        song_model.load_from_db(&mut db).await;
         if let Some(song) = song_model.find(|s| s.id == 7) {
             let test_song = test_song();
             assert_eq!(&test_song, song);
@@ -662,7 +664,7 @@ You saved my soul"
     #[tokio::test]
     async fn test_song_from_db() {
         let song = test_song();
-        let mut db = model().await.db;
+        let mut db = crate::core::model::get_db().await;
         let result = get_song_from_db(7, &mut db).await;
         match result {
             Ok(db_song) => assert_eq!(song, db_song),
@@ -672,10 +674,11 @@ You saved my soul"
 
     #[tokio::test]
     async fn test_update() {
+        let mut db = crate::core::model::get_db().await;
         let song = test_song();
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
-        song_model.load_from_db().await;
+        song_model.load_from_db(&mut db).await;
 
         match song_model.update_item(song, 2) {
             Ok(()) => assert_eq!(

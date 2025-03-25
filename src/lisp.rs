@@ -41,10 +41,10 @@ mod test {
 
     use crate::{
         core::{
-            images::Image, kinds::ServiceItemKind, songs::Song,
-            videos::Video,
+            images::Image, kinds::ServiceItemKind,
+            service_items::ServiceTrait, songs::Song, videos::Video,
         },
-        Background, SlideBuilder, TextAlignment,
+        Background, Slide, SlideBuilder, TextAlignment,
     };
 
     use super::*;
@@ -55,15 +55,16 @@ mod test {
         let lisp =
             read_to_string("./test_slides.lisp").expect("oops");
         let lisp_value = crisp::reader::read(&lisp);
-        let test_vec = vec![service_item_1(), service_item_2()];
+        let hard_coded_items =
+            vec![service_item_1(), service_item_2()];
         match lisp_value {
             Value::List(value) => {
-                let mut item_vec = vec![];
+                let mut lisp_items = vec![];
                 for value in value {
                     let mut vec = parse_lisp(value);
-                    item_vec.append(&mut vec);
+                    lisp_items.append(&mut vec);
                 }
-                assert_eq!(item_vec, test_vec)
+                assert_eq!(lisp_items, hard_coded_items)
             }
             _ => panic!("this should be a lisp"),
         }
@@ -73,39 +74,41 @@ mod test {
     fn test_parsing_lisp_presentation() {
         let lisp = read_to_string("./testypres.lisp").expect("oops");
         let lisp_value = crisp::reader::read(&lisp);
-        let test_vec = vec![
+        let hard_coded_items = vec![
             service_item_1(),
             service_item_2(),
             service_item_3(),
         ];
         match lisp_value {
             Value::List(value) => {
-                let mut item_vec = vec![];
+                let mut lisp_items = vec![];
                 for value in value {
                     let mut vec = parse_lisp(value);
-                    item_vec.append(&mut vec);
+                    lisp_items.append(&mut vec);
                 }
-                let item_1 = &item_vec[0];
-                let item_2 = &item_vec[1];
-                let item_3 = &item_vec[2];
-                assert_eq!(item_1, &test_vec[0]);
-                assert_eq!(item_2, &test_vec[1]);
-                assert_eq!(item_3, &test_vec[2]);
+                let item_1 = &lisp_items[0];
+                let item_2 = &lisp_items[1];
+                let item_3 = &lisp_items[2];
+                assert_eq!(item_1, &hard_coded_items[0]);
+                assert_eq!(item_2, &hard_coded_items[1]);
+                assert_eq!(item_3, &hard_coded_items[2]);
 
-                assert_eq!(item_vec, test_vec);
+                assert_eq!(lisp_items, hard_coded_items);
             }
             _ => panic!("this should be a lisp"),
         }
     }
 
     fn service_item_1() -> ServiceItem {
+        let image = Image {
+            title: "frodo.jpg".to_string(),
+            path: PathBuf::from("~/pics/frodo.jpg"),
+            ..Default::default()
+        };
+        let slide = &image.to_slides().unwrap()[0];
         ServiceItem {
             title: "frodo.jpg".to_string(),
-            kind: ServiceItemKind::Image(Image {
-                title: "frodo.jpg".to_string(),
-                path: PathBuf::from("~/pics/frodo.jpg"),
-                ..Default::default()
-            }),
+            kind: ServiceItemKind::Content(slide.clone()),
             ..Default::default()
         }
     }

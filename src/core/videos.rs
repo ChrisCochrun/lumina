@@ -259,9 +259,10 @@ mod test {
     async fn test_db_and_model() {
         let mut video_model: Model<Video> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Video,
         };
-        video_model.load_from_db().await;
+        let mut db = crate::core::model::get_db().await;
+        video_model.load_from_db(&mut db).await;
         if let Some(video) = video_model.find(|v| v.id == 73) {
             let test_video = test_video(
                 "Getting started with Tokio. The ultimate starter guide to writing async Rust."
@@ -278,7 +279,7 @@ mod test {
         let video = test_video("A new video".into());
         let mut video_model: Model<Video> = Model {
             items: vec![],
-            db: crate::core::model::get_db().await,
+            kind: LibraryKind::Video,
         };
         let result = video_model.add_item(video.clone());
         let new_video = test_video("A newer video".into());
