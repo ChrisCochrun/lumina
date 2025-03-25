@@ -8,9 +8,7 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::clipboard::dnd::DndAction;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{
-    self, event, window, Color, Length, Padding, Point,
-};
+use cosmic::iced::{self, event, window, Length, Padding, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
 use cosmic::widget::dnd_destination::DragId;
@@ -28,7 +26,6 @@ use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
-use sqlx::{SqliteConnection, SqlitePool};
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -304,13 +301,14 @@ impl cosmic::Application for App {
         let editor_toggle = toggler(self.editor_mode.is_some())
             .label("Editor")
             .spacing(10)
+            .width(Length::Shrink)
             .on_toggle(Message::EditorToggle);
 
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
-            text::body("Close Presentation")
+            text::body("End Presentation")
         } else {
-            text::body("Open Presentation")
+            text::body("Present")
         };
 
         vec![
@@ -449,10 +447,14 @@ impl cosmic::Application for App {
                         video.set_muted(false);
                     }
                 }
-                self.presenter.update(message).map(|x| {
+                match self.presenter.update(message) {
                     // debug!(?x);
-                    cosmic::app::Message::App(Message::None)
-                })
+                    // cosmic::app::Message::App(Message::None)
+                    presenter::Action::Task(task) => task.map(|m| {
+                        cosmic::app::Message::App(Message::Present(m))
+                    }),
+                    presenter::Action::None => Task::none(),
+                }
             }
             Message::Library(message) => {
                 let mut song = Song::default();

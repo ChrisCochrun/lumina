@@ -358,6 +358,8 @@ impl<'a> Library {
                     model.items.iter().enumerate().map(
                         |(index, item)| {
                             let service_item = item.to_service_item();
+                            let drag_item =
+                                self.single_item(index, item, model);
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|_| Message::None);
@@ -384,8 +386,6 @@ impl<'a> Library {
                                     )),
                             )
                             // .drag_icon(move |i| {
-                            // let drag_item =
-                            //     self.single_item(index, item, model);
                             //     let state =
                             //         drag_item.as_widget().state();
                             //     (drag_item, state, i)

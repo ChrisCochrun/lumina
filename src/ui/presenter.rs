@@ -50,6 +50,11 @@ pub(crate) struct Presenter {
     current_font: Font,
 }
 
+pub enum Action {
+    Task(Task<Message>),
+    None,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) enum Message {
     NextSlide,
@@ -153,7 +158,7 @@ impl Presenter {
         }
     }
 
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::NextSlide => {
                 debug!("next slide");
@@ -161,21 +166,21 @@ impl Presenter {
                     == self.current_slide_index
                 {
                     debug!("no more slides");
-                    return Task::none();
+                    return Action::None;
                 }
-                self.update(Message::SlideChange(
+                return self.update(Message::SlideChange(
                     self.current_slide_index + 1,
-                ))
+                ));
             }
             Message::PrevSlide => {
                 debug!("prev slide");
                 if 0 == self.current_slide_index {
                     debug!("beginning slides");
-                    return Task::none();
+                    return Action::None;
                 }
-                self.update(Message::SlideChange(
+                return self.update(Message::SlideChange(
                     self.current_slide_index - 1,
-                ))
+                ));
             }
             Message::SlideChange(id) => {
                 debug!(id, "slide changed");
@@ -224,24 +229,23 @@ impl Presenter {
                         match &self.audio {
                             Some(aud) if aud != &audio => {
                                 self.audio = Some(audio.clone());
-                                tasks.push(
-                                    self.update(Message::StartAudio),
-                                );
+                                tasks.push(self.start_audio());
                             }
                             Some(_) => (),
                             None => {
                                 self.audio = Some(audio.clone());
-                                tasks.push(
-                                    self.update(Message::StartAudio),
-                                );
+                                tasks.push(self.start_audio());
                             }
                         };
                     } else {
                         self.audio = None;
-                        tasks.push(self.update(Message::EndAudio));
+                        self.update(Message::EndAudio);
                     }
+                } else {
+                    self.audio = None;
+                    self.update(Message::EndAudio);
                 }
-                Task::batch(tasks)
+                return Action::Task(Task::batch(tasks));
             }
             Message::ChangeFont(s) => {
                 let font_name = s.into_boxed_str();
@@ -256,7 +260,6 @@ impl Presenter {
                     style,
                 };
                 self.current_font = font;
-                Task::none()
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -269,7 +272,6 @@ impl Presenter {
                 //         }
                 //     }
                 // }
-                Task::none()
             }
             Message::StartVideo => {
                 if let Some(video) = &mut self.video {
@@ -277,7 +279,6 @@ impl Presenter {
                     video
                         .set_looping(self.current_slide.video_loop());
                 }
-                Task::none()
             }
             Message::VideoPos(position) => {
                 if let Some(video) = &mut self.video {
@@ -294,20 +295,18 @@ impl Presenter {
                         ),
                     }
                 }
-                Task::none()
             }
             Message::VideoFrame => {
                 if let Some(video) = &self.video {
                     self.video_position =
                         video.position().as_secs_f32();
                 }
-                Task::none()
             }
             Message::MissingPlugin(element) => {
                 if let Some(video) = &mut self.video {
                     video.set_paused(true);
                 }
-                Task::perform(
+                return Action::Task(Task::perform(
                     async move {
                         tokio::task::spawn_blocking(move || {
                             match gst_pbutils::MissingPluginMessage::parse(&element) {
@@ -337,32 +336,34 @@ impl Presenter {
                         .unwrap()
                     },
                     |x| x,
-                )
+                ));
             }
             Message::HoveredSlide(slide) => {
                 self.hovered_slide = slide;
-                Task::none()
             }
             Message::StartAudio => {
-                if let Some(audio) = &mut self.audio {
-                    let audio = audio.clone();
-                    Task::perform(
-                        start_audio(Arc::clone(&self.sink.1), audio),
-                        |_| Message::None,
-                    )
-                } else {
-                    Task::none()
-                }
+                return Action::Task(self.start_audio())
             }
             Message::EndAudio => {
                 self.sink.1.stop();
-                Task::none()
             }
-            Message::None => Task::none(),
+            Message::None => debug!("Presenter Message::None"),
             Message::Error(error) => {
                 error!(error);
-                Task::none()
             }
+        };
+        Action::None
+    }
+
+    fn start_audio(&mut self) -> Task<Message> {
+        if let Some(audio) = &mut self.audio {
+            let audio = audio.clone();
+            Task::perform(
+                start_audio(Arc::clone(&self.sink.1), audio),
+                |_| Message::None,
+            )
+        } else {
+            Task::none()
         }
     }
 
