@@ -3,11 +3,6 @@
 
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 
-* TODO [#A] Change return type of all components to an Action enum instead of the Task<Message> type [66%] [2/3]
-** DONE Library
-** DONE SongEditor
-** TODO Presenter
-
 * TODO [#A] Need to fix tests now that the basic app is working
 
 * TODO Build library to see all available songs, images, videos, presentations, and slides
@@ -50,3 +45,8 @@ Krimzin on Discord told me that maybe the =update= method is a better place for 
 This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
 * DONE Find a way for text to pass through a service item to a slide i.e. content piece
 This proved easier by just creating the =Slide= first and inserting it into the =ServiceItem=.
+* DONE [#A] Change return type of all components to an Action enum instead of the Task<Message> type [0%] [0/0]
+** DONE Library
+** DONE SongEditor
+** DONE Presenter
+
