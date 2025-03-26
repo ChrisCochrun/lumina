@@ -11,6 +11,8 @@ clean:
     RUST_LOG=debug cargo clean
 test:
     RUST_LOG=debug cargo test --benches --tests --all-features -- --nocapture
+profile:
+    cargo flamegraph --image-width 4000 -- {{ui}} {{file}}
 
 alias r := run
 alias c := clean

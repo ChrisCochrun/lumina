@@ -1,7 +1,8 @@
 (slide :background (image :source "~/pics/frodo.jpg" :fit fill)
        (text "This is frodo" :font-size 70))
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
-(slide (video :source "~/vids/The magic of Rust's type system.mkv" :fit contain))
+(slide (video :source "~/vids/The Basics of Hanging Drywall.mkv" :fit contain))
+(slide (video :source "~/vids/Ladybird Is The Future Of Web Browsers.webm" :fit contain))
 (song :id 7 :author "North Point Worship"
       :font "Quicksand Bold" :font-size 60
       :title "Death Was Arrested"

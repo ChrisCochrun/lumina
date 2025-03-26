@@ -29,15 +29,29 @@
               "rustfmt"
             ])
             rust-analyzer
-            gtk-layer-shell
-            gtk3
             vulkan-loader
             wayland
             wayland-protocols
             libxkbcommon
             pkg-config
+          ];
+
+          bi = with pkgs; [
+            gcc
+            stdenv
+            gnumake
+            gdb
+            cmake
+            makeWrapper
+            vulkan-headers
+            vulkan-loader
+            vulkan-tools
+            libGL
+            cargo-flamegraph
+
+            fontconfig
+            glib
             alsa-lib
-            gst_all_1.gst-devtools
             gst_all_1.gst-libav
             gst_all_1.gst-plugins-bad
             gst_all_1.gst-plugins-good
@@ -46,22 +60,8 @@
             gst_all_1.gst-plugins-rs
             gst_all_1.gst-vaapi
             gst_all_1.gstreamer
-            gst_all_1.gstreamermm
-          ];
-
-          bi = with pkgs; [
-            gcc
-            stdenv
-            gnumake
-            gdb
-            makeWrapper
-            vulkan-headers
-            vulkan-loader
-            vulkan-tools
-            libGL
-
             # podofo
-            mpv
+            # mpv
             ffmpeg-full
             # yt-dlp
 
