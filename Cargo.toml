@@ -28,6 +28,7 @@ gstreamer = "0.23.3"
 gstreamer-app = "0.23.3"
 cosmic-time = "0.2.0"
 url = "2"
+colors-transform = "0.2.11"
 # rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
 
 [dependencies.iced_video_player]

@@ -305,15 +305,19 @@ impl SongEditor {
                     .into_iter()
                     .enumerate()
                     .map(|(index, slide)| {
-                        let svg = Handle::from_memory(r#"<svg viewBox="0 0 240 100" xmlns="http://www.w3.org/2000/svg">
+                        let svg = Handle::from_memory(r#"<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
 <defs>
-     <filter id="shadow2">
-      <feDropShadow dx="0" dy="0" stdDeviation="0" flood-color="cyan" />
+     <filter id="shadow">
+      <feDropShadow dx="10" dy="10" stdDeviation="5" flood-color='#000' />
     </filter>
 </defs>
-<text x="0" y="50" font-weight="bold" font-family="Quicksand" font-size="40" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow2);">
+<text x="0" y="300" font-weight="bold" font-family="Quicksand" font-size="80" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
     Hello World
-</text></svg>"#.as_bytes());
+</text>
+<text x="0" y="350" font-weight="bold" font-family="Quicksand" font-size="40" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
+    Hello World
+</text>
+</svg>"#.as_bytes());
                         stack!(
                             container(
                                 slide_view(
