@@ -4,6 +4,7 @@ pub mod double_ended_slider;
 pub mod library;
 pub mod presenter;
 pub mod song_editor;
+pub mod text_svg;
 pub mod video;
 
 pub enum EditorMode {

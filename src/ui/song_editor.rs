@@ -308,7 +308,7 @@ impl SongEditor {
                         let svg = Handle::from_memory(r#"<svg viewBox="0 0 240 100" xmlns="http://www.w3.org/2000/svg">
 <defs>
      <filter id="shadow2">
-      <feDropShadow dx="0" dy="0" stdDeviation="5.5" flood-color="cyan" />
+      <feDropShadow dx="0" dy="0" stdDeviation="0" flood-color="cyan" />
     </filter>
 </defs>
 <text x="0" y="50" font-weight="bold" font-family="Quicksand" font-size="40" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow2);">
