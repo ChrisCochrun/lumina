@@ -4,7 +4,7 @@ use colors_transform::Rgb;
 use cosmic::{
     iced::font::{Style, Weight},
     prelude::*,
-    widget::{svg::Handle, Svg},
+    widget::{responsive, svg::Handle, Svg},
 };
 use tracing::error;
 
@@ -166,14 +166,24 @@ impl TextSvg {
             "".into()
         };
         // text y coords are based on bottom left corner so we need to take height into consideration
-        let base = format!("<svg viewBox=\"0 0 240 100\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs>
+        responsive(move |s| {
+            let text_pieces: Vec<String> = self.text.lines().map(|t| format!("<tspan>{}</tspan>", t)).collect();
+        let base = format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs>
 <text x=\"0\" y=\"50\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">
     {}
-</text></svg>", shadow, self.font.name, self.font.size, self.fill, stroke, self.text);
+</text></svg>", s.width, s.height, shadow, self.font.name, self.font.size, self.fill, stroke, self.text);
         Svg::new(Handle::from_memory(
             Box::leak(base.into_boxed_str()).as_bytes(),
-        ))
+        )).into()
+        })
         .into()
+    }
+
+    fn text_spans(&self) -> Vec<String> {
+        self.text
+            .lines()
+            .map(|t| format!("<tspan>{}</tspan>", t))
+            .collect()
     }
 }
 
@@ -200,4 +210,28 @@ pub fn stroke(size: u16, color: impl Into<Color>) -> Stroke {
 
 pub fn color(color: impl AsRef<str>) -> Color {
     Color::from_hex_str(color)
+}
+
+#[cfg(test)]
+mod test {
+    use pretty_assertions::assert_eq;
+
+    use super::TextSvg;
+
+    #[test]
+    fn test_text_spans() {
+        let mut text = TextSvg::new();
+        text.text = "This is
+multiline
+text."
+            .into();
+        assert_eq!(
+            vec![
+                String::from("<tspan>This is</tspan>"),
+                String::from("<tspan>multiline</tspan>"),
+                String::from("<tspan>text.</tspan>"),
+            ],
+            text.text_spans()
+        )
+    }
 }
