@@ -311,11 +311,11 @@ impl SongEditor {
       <feDropShadow dx="10" dy="10" stdDeviation="5" flood-color='#000' />
     </filter>
 </defs>
-<text x="0" y="300" font-weight="bold" font-family="Quicksand" font-size="80" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
-    Hello World
-</text>
-<text x="0" y="350" font-weight="bold" font-family="Quicksand" font-size="40" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
-    Hello World
+<text dominant-baseline="middle" text-anchor="middle" font-weight="bold" font-family="Quicksand" font-size="80" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
+    <tspan x="50%" y="50" >Hello World this is</tspan>
+    <tspan x="50%" y="140">longer chunks of text</tspan>
+    <tspan x="50%" y="230">where we need to test whether the text</tspan>
+    <tspan x="50%" y="320">will look ok!</tspan>
 </text>
 </svg>"#.as_bytes());
                         stack!(

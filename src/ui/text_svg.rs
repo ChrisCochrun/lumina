@@ -165,11 +165,15 @@ impl TextSvg {
         } else {
             "".into()
         };
-        // text y coords are based on bottom left corner so we need to take height into consideration
         responsive(move |s| {
+            let total_lines = self.text.lines().count();
+            let half_lines = (total_lines / 2) as f32;
+            let middle_position = s.height / 2.0;
+            let line_spacing = 10.0;
+            let starting_y_position = middle_position - (half_lines * (self.font.size as f32 + line_spacing));
             let text_pieces: Vec<String> = self.text.lines().map(|t| format!("<tspan>{}</tspan>", t)).collect();
         let base = format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs>
-<text x=\"0\" y=\"50\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">
+<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">
     {}
 </text></svg>", s.width, s.height, shadow, self.font.name, self.font.size, self.fill, stroke, self.text);
         Svg::new(Handle::from_memory(
@@ -180,9 +184,11 @@ impl TextSvg {
     }
 
     fn text_spans(&self) -> Vec<String> {
+        let total_lines = self.text.lines().count();
         self.text
             .lines()
-            .map(|t| format!("<tspan>{}</tspan>", t))
+            .enumerate()
+            .map(|(i, t)| format!("<tspan x=\"50%\">{}</tspan>", t))
             .collect()
     }
 }
