@@ -32,6 +32,8 @@ use crate::{
     BackgroundKind,
 };
 
+use super::text_svg::{self, shadow, Font as SvgFont, TextSvg};
+
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
 
@@ -542,23 +544,15 @@ pub(crate) fn slide_view<'a>(
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let font_size = scale_font(slide.font_size() as f32, width);
+        let font = SvgFont::from(font).size(font_size.floor() as u8);
         let slide_text = slide.text();
-        let lines = slide_text.lines();
-        let text: Vec<Element<Message>> = lines
-            .map(|t| {
-                rich_text([span(format!("{}\n", t.to_string()))
-                    .background(
-                        Background::Color(Color::BLACK)
-                            .scale_alpha(0.4),
-                    )
-                    .padding(3)])
-                .size(font_size)
-                .font(font)
-                .center()
-                .into()
-            })
-            .collect();
-        let text = Column::with_children(text).spacing(6);
+        let text = text_svg::TextSvg::new()
+            .fill("#fff")
+            .shadow(shadow(10, 10, 5, "#000000"))
+            .font(font)
+            .text(slide_text)
+            .view()
+            .map(|m| Message::None);
         let text_container = Container::new(text)
             .center(Length::Fill)
             .align_x(Horizontal::Left);
