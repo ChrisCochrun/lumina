@@ -4,6 +4,8 @@
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
+* TODO [#C] Make the presenter more modular so things are easier to change.
+
 * TODO [#A] Need to fix tests now that the basic app is working
 
 * TODO Build library to see all available songs, images, videos, presentations, and slides
