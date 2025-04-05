@@ -32,7 +32,9 @@ use crate::{
     BackgroundKind,
 };
 
-use super::text_svg::{self, shadow, Font as SvgFont, TextSvg};
+use super::text_svg::{
+    self, shadow, stroke, Font as SvgFont, TextSvg,
+};
 
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
@@ -547,10 +549,11 @@ pub(crate) fn slide_view<'a>(
         let font = SvgFont::from(font).size(font_size.floor() as u8);
         let slide_text = slide.text();
         let text = text_svg::TextSvg::new()
-            .fill("#fff")
-            .shadow(shadow(10, 10, 5, "#000000"))
-            .font(font)
             .text(slide_text)
+            .fill("#fff")
+            .shadow(shadow(5, 5, 5, "#000000"))
+            .stroke(stroke(4, "#f00"))
+            .font(font)
             .view()
             .map(|m| Message::None);
         let text_container = Container::new(text)

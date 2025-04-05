@@ -6,7 +6,7 @@ default:
 build:
     RUST_LOG=debug cargo build
 run:
-    RUST_LOG=debug cargo run -- {{ui}} {{file}}
+    RUST_LOG=debug cargo run --release -- {{ui}} {{file}}
 clean:
     RUST_LOG=debug cargo clean
 test:

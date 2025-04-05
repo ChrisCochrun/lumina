@@ -11,6 +11,8 @@ use cosmic::{
 };
 use tracing::{debug, error};
 
+use crate::TextAlignment;
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TextSvg {
     text: String,
@@ -18,6 +20,7 @@ pub struct TextSvg {
     shadow: Option<Shadow>,
     stroke: Option<Stroke>,
     fill: Color,
+    alignment: TextAlignment,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -172,6 +175,11 @@ impl TextSvg {
 
     pub fn text(mut self, text: impl AsRef<str>) -> Self {
         self.text = text.as_ref().to_string();
+        self
+    }
+
+    pub fn alignment(mut self, alignment: TextAlignment) -> Self {
+        self.alignment = alignment;
         self
     }
 
