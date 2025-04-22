@@ -1,7 +1,7 @@
 use cosmic::{
     iced::{
-        alignment::Vertical, futures::FutureExt, Background, Border,
-        Color, Length,
+        alignment::Vertical, clipboard::dnd::DndAction,
+        futures::FutureExt, Background, Border, Color, Length,
     },
     iced_widget::{column, row as rowm, text as textm},
     theme,
@@ -385,6 +385,7 @@ impl<'a> Library {
                                         )),
                                     )),
                             )
+                            .action(DndAction::Copy)
                             // .drag_icon(move |i| {
                             //     let state =
                             //         drag_item.as_widget().state();

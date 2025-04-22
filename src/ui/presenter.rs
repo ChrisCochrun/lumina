@@ -552,7 +552,7 @@ pub(crate) fn slide_view<'a>(
             .text(slide_text)
             .fill("#fff")
             .shadow(shadow(2, 2, 5, "#000000"))
-            .stroke(stroke(2, "#000"))
+            .stroke(stroke(1, "#000"))
             .font(font)
             .view()
             .map(|m| Message::None);
