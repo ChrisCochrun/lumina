@@ -551,8 +551,8 @@ pub(crate) fn slide_view<'a>(
         let text = text_svg::TextSvg::new()
             .text(slide_text)
             .fill("#fff")
-            .shadow(shadow(5, 5, 5, "#000000"))
-            // .stroke(stroke(4, "#000"))
+            .shadow(shadow(2, 2, 5, "#000000"))
+            .stroke(stroke(2, "#000"))
             .font(font)
             .view()
             .map(|m| Message::None);
