@@ -13,7 +13,7 @@ use cosmic::{
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
-        span, stack,
+        span, stack, text,
     },
     prelude::*,
     widget::{
@@ -546,16 +546,33 @@ pub(crate) fn slide_view<'a>(
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let font_size = scale_font(slide.font_size() as f32, width);
-        let font = SvgFont::from(font).size(font_size.floor() as u8);
+        // let font = SvgFont::from(font).size(font_size.floor() as u8);
         let slide_text = slide.text();
-        let text = text_svg::TextSvg::new()
-            .text(slide_text)
-            .fill("#fff")
-            .shadow(shadow(2, 2, 5, "#000000"))
-            .stroke(stroke(1, "#000"))
-            .font(font)
-            .view()
-            .map(|m| Message::None);
+        // let text = text_svg::TextSvg::new()
+        //     .text(&slide_text)
+        //     .fill("#fff")
+        //     .shadow(shadow(2, 2, 5, "#000000"))
+        //     .stroke(stroke(1, "#000"))
+        //     .font(font)
+        //     .view()
+        //     .map(|m| Message::None);
+        // let text = text!("{}", &slide_text);
+        let lines = slide_text.lines();
+        let text: Vec<Element<Message>> = lines
+            .map(|t| {
+                rich_text([span(format!("{}\n", t.to_string()))
+                    .background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.4),
+                    )
+                    .padding(3)])
+                .size(font_size)
+                .font(font)
+                .center()
+                .into()
+            })
+            .collect();
+        let text = Column::with_children(text).spacing(6);
         let text_container = Container::new(text)
             .center(Length::Fill)
             .align_x(Horizontal::Left);
