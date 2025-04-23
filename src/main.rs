@@ -225,9 +225,7 @@ impl cosmic::Application for App {
         Some(&self.nav_model)
     }
 
-    fn nav_bar(
-        &self,
-    ) -> Option<Element<cosmic::app::Message<Message>>> {
+    fn nav_bar(&self) -> Option<Element<cosmic::Action<Message>>> {
         if !self.core().nav_bar_active() {
             return None;
         }
@@ -235,27 +233,25 @@ impl cosmic::Application for App {
         let nav_model = self.nav_model()?;
 
         let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-            cosmic::app::Message::Cosmic(
-                cosmic::app::cosmic::Message::NavBar(id),
-            )
+            cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
         })
         .on_dnd_enter(|entity, data| {
             debug!("entered");
-            cosmic::app::Message::App(Message::DndEnter(entity, data))
+            cosmic::Action::App(Message::DndEnter(entity, data))
         })
         .on_dnd_leave(|entity| {
             debug!("left");
-            cosmic::app::Message::App(Message::DndLeave(entity))
+            cosmic::Action::App(Message::DndLeave(entity))
         })
         .drag_id(DragId::new())
         .on_context(|id| {
-            cosmic::app::Message::Cosmic(
-                cosmic::app::cosmic::Message::NavBarContext(id),
+            cosmic::Action::Cosmic(
+                cosmic::app::Action::NavBarContext(id),
             )
         })
         .on_dnd_drop::<ServiceItem>(|entity, data, action| {
             debug!("dropped");
-            cosmic::app::Message::App(Message::DndDrop(
+            cosmic::Action::App(Message::DndDrop(
                 entity, data, action,
             ))
         })
@@ -423,9 +419,9 @@ impl cosmic::Application for App {
                 match self.song_editor.update(message) {
                     song_editor::Action::Task(task) => {
                         task.map(|m| {
-                            cosmic::app::Message::App(
-                                Message::SongEditor(m),
-                            )
+                            cosmic::Action::App(Message::SongEditor(
+                                m,
+                            ))
                         })
                     }
                     song_editor::Action::UpdateSong(song) => {
@@ -451,7 +447,7 @@ impl cosmic::Application for App {
                     // debug!(?x);
                     // cosmic::app::Message::App(Message::None)
                     presenter::Action::Task(task) => task.map(|m| {
-                        cosmic::app::Message::App(Message::Present(m))
+                        cosmic::Action::App(Message::Present(m))
                     }),
                     presenter::Action::None => Task::none(),
                 }
@@ -465,9 +461,9 @@ impl cosmic::Application for App {
                         }
                         library::Action::Task(task) => {
                             return task.map(|message| {
-                                cosmic::app::Message::App(
-                                    Message::Library(message),
-                                )
+                                cosmic::Action::App(Message::Library(
+                                    message,
+                                ))
                             });
                         }
                         library::Action::None => return Task::none(),
@@ -519,7 +515,7 @@ impl cosmic::Application for App {
                 );
 
                 spawn_window.map(|id| {
-                    cosmic::app::Message::App(Message::WindowOpened(
+                    cosmic::Action::App(Message::WindowOpened(
                         id, None,
                     ))
                 })
@@ -770,13 +766,13 @@ where
         self.windows.push(id);
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
         spawn_window.map(|id| {
-            cosmic::app::Message::App(Message::WindowOpened(id, None))
+            cosmic::Action::App(Message::WindowOpened(id, None))
         })
     }
 
     fn add_library(&mut self) -> Task<Message> {
         Task::perform(async move { Library::new().await }, |x| {
-            cosmic::app::Message::App(Message::AddLibrary(x))
+            cosmic::Action::App(Message::AddLibrary(x))
         })
     }
 
