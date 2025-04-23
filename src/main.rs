@@ -302,9 +302,9 @@ impl cosmic::Application for App {
 
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
-            text::body("End Presentation")
+            text::text("End Presentation")
         } else {
-            text::body("Present")
+            text::text("Present")
         };
 
         vec![

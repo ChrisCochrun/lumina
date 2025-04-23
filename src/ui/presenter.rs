@@ -565,7 +565,7 @@ pub(crate) fn slide_view<'a>(
                         Background::Color(Color::BLACK)
                             .scale_alpha(0.4),
                     )
-                    .padding(3)])
+                    .padding(1)])
                 .size(font_size)
                 .font(font)
                 .center()
