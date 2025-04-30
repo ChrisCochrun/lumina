@@ -16,7 +16,8 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, nav_bar, tooltip, Space,
+    button, horizontal_space, nav_bar, search_input, text_input,
+    tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::widget::{text, toggler};
@@ -121,6 +122,7 @@ enum Message {
     WindowOpened(window::Id, Option<Point>),
     WindowClosed(window::Id),
     AddLibrary(Library),
+    LibraryToggle,
     Quit,
     Key(Key, Modifiers),
     None,
@@ -291,7 +293,11 @@ impl cosmic::Application for App {
         vec![]
     }
     fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![]
+        vec![search_input("Search...", "")
+            .on_input(|_| Message::None)
+            .on_submit(|_| Message::None)
+            .width(Length::Fill)
+            .into()]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
         let editor_toggle = toggler(self.editor_mode.is_some())
@@ -302,9 +308,9 @@ impl cosmic::Application for App {
 
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
-            text::text("End Presentation")
+            text::body("End Presentation")
         } else {
-            text::text("Present")
+            text::body("Present")
         };
 
         vec![
@@ -316,7 +322,7 @@ impl cosmic::Application for App {
                         Container::new(
                             icon::from_name(
                                 if self.presentation_open {
-                                    "dialog-close"
+                                    "window-close-symbolic"
                                 } else {
                                     "view-presentation-symbolic"
                                 }
@@ -326,7 +332,6 @@ impl cosmic::Application for App {
                         .center_y(Length::Fill),
                         text
                     )
-                    .padding(5)
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -340,6 +345,33 @@ impl cosmic::Application for App {
                     }
                 }),
                 "Start Presentation",
+                TPosition::Bottom,
+            )
+            .into(),
+            horizontal_space().width(HEADER_SPACE).into(),
+            tooltip(
+                button::custom(
+                    row!(
+                        Container::new(
+                            icon::from_name(if self.library_open {
+                                "arrow-right"
+                            } else {
+                                "view-list-symbolic"
+                            })
+                            .scale(3)
+                        )
+                        .center_y(Length::Fill),
+                        text::body(if self.library_open {
+                            "Close Library"
+                        } else {
+                            "Open Library"
+                        })
+                    )
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press(Message::LibraryToggle),
+                "Open Library",
                 TPosition::Bottom,
             )
             .into(),
@@ -561,6 +593,10 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
+            Message::LibraryToggle => {
+                self.library_open = !self.library_open;
+                Task::none()
+            }
             Message::Quit => cosmic::iced::exit(),
             Message::DndEnter(entity, data) => {
                 debug!(?entity);
@@ -664,14 +700,17 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
-        let library =
+        let library = if self.library_open {
             Container::new(if let Some(library) = &self.library {
                 library.view().map(|m| Message::Library(m))
             } else {
                 Space::new(0, 0).into()
             })
             .style(nav_bar_style)
-            .center(Length::Fill);
+            .center(Length::FillPortion(2))
+        } else {
+            Container::new(horizontal_space().width(0))
+        };
 
         let song_editor =
             self.song_editor.view().map(|m| Message::SongEditor(m));
@@ -706,7 +745,7 @@ impl cosmic::Application for App {
             .center_y(Length::Fill)
             .align_left(Length::Fill)
             .width(Length::FillPortion(1)),
-            library.width(Length::FillPortion(2))
+            library
         ]
         .width(Length::Fill)
         .height(Length::Fill)
