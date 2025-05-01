@@ -13,9 +13,7 @@ use cosmic::{
     Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
-use sqlx::{
-    pool::PoolConnection, Sqlite, SqlitePool,
-};
+use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{

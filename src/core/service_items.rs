@@ -175,11 +175,9 @@ impl From<&Value> for ServiceItem {
                                 Value::Symbol(Symbol(s))
                                     if s == "presentation" =>
                                 {
-                                    Self::from(
-                                        &Presentation::from(
-                                            background,
-                                        ),
-                                    )
+                                    Self::from(&Presentation::from(
+                                        background,
+                                    ))
                                 }
                                 _ => todo!(),
                             },

@@ -133,12 +133,6 @@ pub(crate) fn get_lists(exp: &Value) -> Vec<Value> {
 
 #[cfg(test)]
 mod test {
-    
-
-    
-    
-
-    
 
     // #[test]
     // fn test_list() {

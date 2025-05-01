@@ -32,7 +32,6 @@ use crate::{
     BackgroundKind,
 };
 
-
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
 
@@ -525,7 +524,7 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
 fn scale_font(font_size: f32, width: f32) -> f32 {
     let scale_factor = (REFERENCE_WIDTH / width).sqrt();
     // debug!(scale_factor);
-    
+
     if font_size > 0.0 {
         font_size / scale_factor
     } else {

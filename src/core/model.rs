@@ -4,7 +4,6 @@ use cosmic::iced::Executor;
 use miette::{miette, Result};
 use sqlx::{Connection, SqliteConnection};
 
-
 #[derive(Debug, Clone)]
 pub struct Model<T> {
     pub items: Vec<T>,

@@ -37,10 +37,7 @@ pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        fs::read_to_string,
-        path::PathBuf,
-    };
+    use std::{fs::read_to_string, path::PathBuf};
 
     use crate::{
         core::{

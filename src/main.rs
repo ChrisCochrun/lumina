@@ -13,13 +13,12 @@ use cosmic::iced_widget::{column, row};
 use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, nav_bar, search_input,
-    tooltip, Space,
+    button, horizontal_space, nav_bar, search_input, tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
-use cosmic::widget::text;
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{prelude::*, theme};
 use cosmic::{widget::Container, Theme};
@@ -879,8 +878,6 @@ where
 
 #[cfg(test)]
 mod test {
-    
-    
 
     fn test_slide() -> String {
         let slide = r#"(slide (image :source "./somehting.jpg" :fill cover
