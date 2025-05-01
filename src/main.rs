@@ -130,7 +130,7 @@ enum Message {
     EditorToggle(bool),
 }
 
-const HEADER_SPACE: u16 = 20;
+const HEADER_SPACE: u16 = 6;
 
 impl cosmic::Application for App {
     type Executor = executor::Default;
@@ -300,11 +300,11 @@ impl cosmic::Application for App {
             .into()]
     }
     fn header_end(&self) -> Vec<Element<Self::Message>> {
-        let editor_toggle = toggler(self.editor_mode.is_some())
-            .label("Editor")
-            .spacing(10)
-            .width(Length::Shrink)
-            .on_toggle(Message::EditorToggle);
+        // let editor_toggle = toggler(self.editor_mode.is_some())
+        //     .label("Editor")
+        //     .spacing(10)
+        //     .width(Length::Shrink)
+        //     .on_toggle(Message::EditorToggle);
 
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
@@ -314,7 +314,30 @@ impl cosmic::Application for App {
         };
 
         vec![
-            editor_toggle.into(),
+            tooltip(
+                button::custom(
+                    row!(
+                        Container::new(
+                            icon::from_name("document-edit-symbolic")
+                                .scale(3)
+                        )
+                        .center_y(Length::Fill),
+                        text::body(if self.editor_mode.is_some() {
+                            "Present Mode"
+                        } else {
+                            "Edit Mode"
+                        })
+                    )
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press(Message::EditorToggle(
+                    !self.editor_mode.is_some(),
+                )),
+                "Enter Edit Mode",
+                TPosition::Bottom,
+            )
+            .into(),
             horizontal_space().width(HEADER_SPACE).into(),
             tooltip(
                 button::custom(
@@ -353,12 +376,8 @@ impl cosmic::Application for App {
                 button::custom(
                     row!(
                         Container::new(
-                            icon::from_name(if self.library_open {
-                                "arrow-right"
-                            } else {
-                                "view-list-symbolic"
-                            })
-                            .scale(3)
+                            icon::from_name("view-list-symbolic")
+                                .scale(3)
                         )
                         .center_y(Length::Fill),
                         text::body(if self.library_open {
