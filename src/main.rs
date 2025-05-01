@@ -746,8 +746,7 @@ impl cosmic::Application for App {
                     .class(theme::style::Button::Transparent)
             )
             .center_y(Length::Fill)
-            .align_right(Length::Fill)
-            .width(Length::FillPortion(1)),
+            .align_right(Length::FillPortion(1)),
             Container::new(slide_preview)
                 .center_y(Length::Fill)
                 .width(Length::FillPortion(3)),
@@ -762,8 +761,7 @@ impl cosmic::Application for App {
                     .class(theme::style::Button::Transparent)
             )
             .center_y(Length::Fill)
-            .align_left(Length::Fill)
-            .width(Length::FillPortion(1)),
+            .align_left(Length::FillPortion(1)),
             library
         ]
         .width(Length::Fill)
