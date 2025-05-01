@@ -39,7 +39,7 @@ pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
 mod test {
     use std::{
         fs::read_to_string,
-        path::{Path, PathBuf},
+        path::PathBuf,
     };
 
     use crate::{
@@ -47,7 +47,7 @@ mod test {
             images::Image, kinds::ServiceItemKind,
             service_items::ServiceTrait, songs::Song, videos::Video,
         },
-        Background, Slide, SlideBuilder, TextAlignment,
+        Background, TextAlignment,
     };
 
     use super::*;

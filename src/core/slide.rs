@@ -1,6 +1,5 @@
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
-use gstreamer::query::Uri;
 use iced_video_player::Video;
 use miette::{miette, Result};
 use serde::{Deserialize, Serialize};

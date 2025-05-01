@@ -3,7 +3,7 @@ use std::ops::Deref;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{miette, Result};
+use miette::Result;
 use tracing::{debug, error};
 
 use crate::Slide;
@@ -153,52 +153,50 @@ impl From<&Value> for ServiceItem {
                             database_id: 0,
                             kind: ServiceItemKind::Content(slide),
                         }
-                    } else {
-                        if let Some(background) =
-                            list.get(background_pos)
-                        {
-                            match background {
-                                Value::List(item) => match &item[0] {
-                                    Value::Symbol(Symbol(s))
-                                        if s == "image" =>
-                                    {
-                                        Self::from(&Image::from(
-                                            background,
-                                        ))
-                                    }
-                                    Value::Symbol(Symbol(s))
-                                        if s == "video" =>
-                                    {
-                                        Self::from(&Video::from(
-                                            background,
-                                        ))
-                                    }
-                                    Value::Symbol(Symbol(s))
-                                        if s == "presentation" =>
-                                    {
-                                        Self::from(
-                                            &Presentation::from(
-                                                background,
-                                            ),
-                                        )
-                                    }
-                                    _ => todo!(),
-                                },
-                                _ => {
-                                    error!(
-                                        "There is no background here: {:?}",
-                                        background
-                                    );
-                                    ServiceItem::default()
+                    } else if let Some(background) =
+                        list.get(background_pos)
+                    {
+                        match background {
+                            Value::List(item) => match &item[0] {
+                                Value::Symbol(Symbol(s))
+                                    if s == "image" =>
+                                {
+                                    Self::from(&Image::from(
+                                        background,
+                                    ))
                                 }
+                                Value::Symbol(Symbol(s))
+                                    if s == "video" =>
+                                {
+                                    Self::from(&Video::from(
+                                        background,
+                                    ))
+                                }
+                                Value::Symbol(Symbol(s))
+                                    if s == "presentation" =>
+                                {
+                                    Self::from(
+                                        &Presentation::from(
+                                            background,
+                                        ),
+                                    )
+                                }
+                                _ => todo!(),
+                            },
+                            _ => {
+                                error!(
+                                    "There is no background here: {:?}",
+                                    background
+                                );
+                                ServiceItem::default()
                             }
-                        } else {
-                            error!(
-                                "There is no background here: {:?}",
-                                background_pos
-                            );
-                            ServiceItem::default()
                         }
+                    } else {
+                        error!(
+                            "There is no background here: {:?}",
+                            background_pos
+                        );
+                        ServiceItem::default()
                     }
                 }
                 Value::Symbol(Symbol(s)) if s == "song" => {
@@ -342,7 +340,7 @@ mod test {
     use crate::core::presentations::PresKind;
 
     use super::*;
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
 
     fn test_song() -> Song {
         Song {

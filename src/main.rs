@@ -1,5 +1,4 @@
 use clap::{command, Parser};
-use core::model::{get_db, LibraryKind};
 use core::service_items::{ServiceItem, ServiceItemModel};
 use core::slide::*;
 use core::songs::Song;
@@ -16,11 +15,11 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, nav_bar, search_input, text_input,
+    button, horizontal_space, nav_bar, search_input,
     tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
-use cosmic::widget::{text, toggler};
+use cosmic::widget::text;
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{prelude::*, theme};
 use cosmic::{widget::Container, Theme};
@@ -332,7 +331,7 @@ impl cosmic::Application for App {
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
                 .on_press(Message::EditorToggle(
-                    !self.editor_mode.is_some(),
+                    self.editor_mode.is_none(),
                 )),
                 "Enter Edit Mode",
                 TPosition::Bottom,
@@ -721,7 +720,7 @@ impl cosmic::Application for App {
 
         let library = if self.library_open {
             Container::new(if let Some(library) = &self.library {
-                library.view().map(|m| Message::Library(m))
+                library.view().map(Message::Library)
             } else {
                 Space::new(0, 0).into()
             })
@@ -732,7 +731,7 @@ impl cosmic::Application for App {
         };
 
         let song_editor =
-            self.song_editor.view().map(|m| Message::SongEditor(m));
+            self.song_editor.view().map(Message::SongEditor);
 
         let row = row![
             Container::new(
@@ -880,8 +879,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use pretty_assertions::assert_eq;
+    
+    
 
     fn test_slide() -> String {
         let slide = r#"(slide (image :source "./somehting.jpg" :fill cover

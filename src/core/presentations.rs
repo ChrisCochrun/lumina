@@ -13,7 +13,7 @@ use crate::{Background, Slide, SlideBuilder, TextAlignment};
 use super::{
     content::Content,
     kinds::ServiceItemKind,
-    model::{get_db, LibraryKind, Model},
+    model::{LibraryKind, Model},
     service_items::ServiceTrait,
 };
 
@@ -57,13 +57,7 @@ impl Content for Presentation {
     }
 
     fn background(&self) -> Option<Background> {
-        if let Ok(background) =
-            Background::try_from(self.path.clone())
-        {
-            Some(background)
-        } else {
-            None
-        }
+        Background::try_from(self.path.clone()).ok()
     }
 
     fn subtext(&self) -> String {

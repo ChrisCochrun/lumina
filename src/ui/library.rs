@@ -8,13 +8,13 @@ use cosmic::{
     widget::{
         button, container, horizontal_space, icon, mouse_area,
         responsive, row, scrollable, text, text_input, Container,
-        DndSource, Icon, Space, Widget,
+        DndSource, Space, Widget,
     },
     Element, Task,
 };
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use sqlx::{
-    pool::PoolConnection, Sqlite, SqliteConnection, SqlitePool,
+    pool::PoolConnection, Sqlite, SqlitePool,
 };
 use tracing::{debug, error, warn};
 

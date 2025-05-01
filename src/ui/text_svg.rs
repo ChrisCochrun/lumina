@@ -9,7 +9,7 @@ use cosmic::{
     prelude::*,
     widget::{container, responsive, svg::Handle, Svg},
 };
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::TextAlignment;
 
@@ -61,11 +61,11 @@ impl Font {
     }
 
     pub fn get_weight(&self) -> Weight {
-        self.weight.clone()
+        self.weight
     }
 
     pub fn get_style(&self) -> Style {
-        self.style.clone()
+        self.style
     }
 
     pub fn weight(mut self, weight: impl Into<Weight>) -> Self {

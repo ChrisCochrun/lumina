@@ -1,4 +1,4 @@
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
@@ -13,7 +13,7 @@ use cosmic::{
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
-        span, stack, text,
+        span, stack,
     },
     prelude::*,
     widget::{
@@ -32,9 +32,6 @@ use crate::{
     BackgroundKind,
 };
 
-use super::text_svg::{
-    self, shadow, stroke, Font as SvgFont, TextSvg,
-};
 
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
@@ -528,21 +525,21 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
 fn scale_font(font_size: f32, width: f32) -> f32 {
     let scale_factor = (REFERENCE_WIDTH / width).sqrt();
     // debug!(scale_factor);
-    let font_size = if font_size > 0.0 {
+    
+    if font_size > 0.0 {
         font_size / scale_factor
     } else {
         50.0
-    };
-    font_size
+    }
 }
 
-pub(crate) fn slide_view<'a>(
+pub(crate) fn slide_view(
     slide: Slide,
-    video: &'a Option<Video>,
+    video: &Option<Video>,
     font: Font,
     delegate: bool,
     hide_mouse: bool,
-) -> Element<'a, Message> {
+) -> Element<'_, Message> {
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let font_size = scale_font(slide.font_size() as f32, width);
@@ -560,7 +557,7 @@ pub(crate) fn slide_view<'a>(
         let lines = slide_text.lines();
         let text: Vec<Element<Message>> = lines
             .map(|t| {
-                rich_text([span(format!("{}\n", t.to_string()))
+                rich_text([span(format!("{}\n", t))
                     .background(
                         Background::Color(Color::BLACK)
                             .scale_alpha(0.4),

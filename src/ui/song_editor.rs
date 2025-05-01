@@ -167,7 +167,7 @@ impl SongEditor {
                     self.verse_order = verse_order
                         .into_iter()
                         .map(|mut s| {
-                            s.push_str(" ");
+                            s.push(' ');
                             s
                         })
                         .collect();
@@ -227,7 +227,6 @@ impl SongEditor {
                 if let Some(mut song) = self.song.clone() {
                     let verse_order = verse_order
                         .split(" ")
-                        .into_iter()
                         .map(|s| s.to_owned())
                         .collect();
                     song.verse_order = Some(verse_order);

@@ -8,14 +8,14 @@ use sqlx::{
     pool::PoolConnection, query, sqlite::SqliteRow, FromRow, Row,
     Sqlite, SqliteConnection, SqlitePool,
 };
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::{core::slide, Slide, SlideBuilder};
 
 use super::{
     content::Content,
     kinds::ServiceItemKind,
-    model::{get_db, LibraryKind, Model},
+    model::{LibraryKind, Model},
     service_items::ServiceTrait,
     slide::{Background, TextAlignment},
 };
@@ -132,10 +132,7 @@ impl FromRow<'_, SqliteRow> for Song {
             }),
             background: {
                 let string: String = row.try_get(7)?;
-                match Background::try_from(string) {
-                    Ok(background) => Some(background),
-                    Err(_) => None,
-                }
+                Background::try_from(string).ok()
             },
             text_alignment: Some({
                 let horizontal_alignment: String = row.try_get(3)?;
@@ -423,7 +420,7 @@ pub async fn update_song_in_db(
         if let Some(vo) = item.verse_order {
             vo.into_iter()
                 .map(|mut s| {
-                    s.push_str(" ");
+                    s.push(' ');
                     s
                 })
                 .collect::<String>()
@@ -538,7 +535,7 @@ impl Song {
                     lyric_list.push(lyric.to_string());
                 } else {
                     // error!("NOT WORKING!");
-                    ()
+                    
                 };
             }
             // for lyric in lyric_list.iter() {
@@ -556,7 +553,7 @@ mod test {
     use std::fs::read_to_string;
 
     use super::*;
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
 
     #[test]
     pub fn test_song_lyrics() {
@@ -724,7 +721,7 @@ You saved my soul"
         let lisp = read_to_string("./test_song.lisp").expect("oops");
         let lisp_value = crisp::reader::read(&lisp);
         match lisp_value {
-            Value::List(v) => v.get(0).unwrap().clone(),
+            Value::List(v) => v.first().unwrap().clone(),
             _ => Value::Nil,
         }
     }
