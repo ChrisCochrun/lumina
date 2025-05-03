@@ -1,8 +1,11 @@
+use std::rc::Rc;
+
 use cosmic::{
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
         futures::FutureExt, Background, Border, Color, Length,
     },
+    iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
@@ -357,7 +360,7 @@ impl<'a> Library {
                         |(index, item)| {
                             let service_item = item.to_service_item();
                             let drag_item =
-                                self.single_item(index, item, model);
+                                Box::new(self.single_item(index, item, &model));
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|_| Message::None);
@@ -384,11 +387,25 @@ impl<'a> Library {
                                     )),
                             )
                             .action(DndAction::Copy)
-                            // .drag_icon(move |i| {
-                            //     let state =
-                            //         drag_item.as_widget().state();
-                            //     (drag_item, state, i)
-                            // })
+                                .drag_icon({
+                                    let model = model.kind.clone();
+                                    move |i| {
+                                        let state = State::None;
+                                        let icon = match model {
+                                                    LibraryKind::Song => icon::from_name(
+                                                        "folder-music-symbolic",
+                                                    )
+                                                        ,
+                                                    LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
+                                                    LibraryKind::Image => icon::from_name("folder-pictures-symbolic"),
+                                                    LibraryKind::Presentation => icon::from_name("x-office-presentation-symbolic"),
+                                                };
+                                            (
+                                                icon.into(),
+                                                state,
+                                                i,
+                                            )
+                            }})
                             .drag_content(move || {
                                 service_item.to_owned()
                             })
@@ -396,10 +413,11 @@ impl<'a> Library {
                         },
                     )
                 })
-                .spacing(2)
-                .width(Length::Fill),
+                    .spacing(2)
+                    .width(Length::Fill),
             )
-            .spacing(5);
+                .spacing(5)
+                .height(Length::Fill);
 
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
