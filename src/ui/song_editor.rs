@@ -32,7 +32,7 @@ pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
     fonts: combo_box::State<String>,
-    font_sizes: Vec<String>,
+    font_sizes: combo_box::State<String>,
     font: String,
     author: String,
     audio: PathBuf,
@@ -140,7 +140,7 @@ impl SongEditor {
             title: "Death was Arrested".to_owned(),
             font: "Quicksand".to_owned(),
             font_size: 16,
-            font_sizes,
+            font_sizes: combo_box::State::new(font_sizes),
             verse_order: "Death was Arrested".to_owned(),
             lyrics: text_editor::Content::new(),
             editing: false,
@@ -205,15 +205,7 @@ impl SongEditor {
                 self.current_font = font;
                 // return self.update_song(song);
             }
-            Message::ChangeFontSize(size) => {
-                if let Some(size) = self.font_sizes.get(size) {
-                    if let Ok(size) = size.parse() {
-                        debug!(font_size = size);
-                        self.font_size = size;
-                        // return self.update_song(song);
-                    }
-                }
-            }
+            Message::ChangeFontSize(size) => self.font_size = size,
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
                 if let Some(song) = &mut self.song {
@@ -304,40 +296,25 @@ impl SongEditor {
                     .into_iter()
                     .enumerate()
                     .map(|(index, slide)| {
-                        let svg = Handle::from_memory(r#"<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
-<defs>
-     <filter id="shadow">
-      <feDropShadow dx="10" dy="10" stdDeviation="5" flood-color='#000' />
-    </filter>
-</defs>
-<text dominant-baseline="middle" text-anchor="middle" font-weight="bold" font-family="Quicksand" font-size="80" fill="white" stroke="black" stroke-width="2" style="filter:url(#shadow);">
-    <tspan x="50%" y="50" >Hello World this is</tspan>
-    <tspan x="50%" y="140">longer chunks of text</tspan>
-    <tspan x="50%" y="230">where we need to test whether the text</tspan>
-    <tspan x="50%" y="320">will look ok!</tspan>
-</text>
-</svg>"#.as_bytes());
-                        stack!(
-                            container(
-                                slide_view(
-                                    slide,
-                                    if index == 0 {
-                                        &self.video
-                                    } else {
-                                        &None
-                                    },
-                                    self.current_font,
-                                    false,
-                                    false,
-                                )
-                                    .map(|_| Message::None),
+                        container(
+                            slide_view(
+                                slide,
+                                if index == 0 {
+                                    &self.video
+                                } else {
+                                    &None
+                                },
+                                self.current_font,
+                                false,
+                                false,
                             )
-                                .height(250)
-                                .center_x(Length::Fill)
-                                .padding([0, 20])
-                                .clip(true),
-                            Svg::new(svg),
-                        ).into()
+                            .map(|_| Message::None),
+                        )
+                        .height(250)
+                        .center_x(Length::Fill)
+                        .padding([0, 20])
+                        .clip(true)
+                        .into()
                     })
                     .collect();
                 scrollable(
@@ -395,10 +372,16 @@ order",
 
     fn toolbar(&self) -> Element<Message> {
         let selected_font = &self.font;
-        let selected_font_size = self
-            .font_sizes
-            .iter()
-            .position(|s| *s == self.font_size.to_string());
+        let selected_font_size = {
+            let font_size_position = self
+                .font_sizes
+                .options()
+                .iter()
+                .position(|s| *s == self.font_size.to_string());
+            self.font_sizes
+                .options()
+                .get(font_size_position.unwrap_or_default())
+        };
         let font_selector = combo_box(
             &self.fonts,
             "Font",
@@ -406,11 +389,17 @@ order",
             Message::ChangeFont,
         )
         .width(200);
-        let font_size = dropdown(
+        let font_size = combo_box(
             &self.font_sizes,
+            "Font Size",
             selected_font_size,
-            Message::ChangeFontSize,
-        );
+            |size| {
+                Message::ChangeFontSize(
+                    size.parse().expect("Should be a number"),
+                )
+            },
+        )
+        .width(theme::active().cosmic().space_xxl());
 
         let background_selector = button::icon(
             icon::from_name("folder-pictures-symbolic").scale(2),
@@ -426,6 +415,7 @@ order",
             horizontal_space(),
             background_selector
         ]
+        .spacing(10)
         .into()
     }
 
