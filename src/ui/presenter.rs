@@ -543,37 +543,37 @@ pub(crate) fn slide_view(
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let font_size = scale_font(slide.font_size() as f32, width);
-        let font = SvgFont::from(font).size(font_size.floor() as u8);
         let slide_text = slide.text();
 
         // SVG based
-        let text = text_svg::TextSvg::new()
-            .text(&slide_text)
-            .fill("#fff")
-            .shadow(text_svg::shadow(2, 2, 5, "#000000"))
-            .stroke(text_svg::stroke(1, "#000"))
-            .font(font)
-            .view()
-            .map(|m| Message::None);
+        // let font = SvgFont::from(font).size(font_size.floor() as u8);
+        // let text = text_svg::TextSvg::new()
+        //     .text(&slide_text)
+        //     .fill("#fff")
+        //     .shadow(text_svg::shadow(2, 2, 5, "#000000"))
+        //     .stroke(text_svg::stroke(1, "#000"))
+        //     .font(font)
+        //     .view()
+        //     .map(|m| Message::None);
 
         // let text = text!("{}", &slide_text);
         // text widget based
-        // let lines = slide_text.lines();
-        // let text: Vec<Element<Message>> = lines
-        //     .map(|t| {
-        //         rich_text([span(format!("{}\n", t))
-        //             .background(
-        //                 Background::Color(Color::BLACK)
-        //                     .scale_alpha(0.4),
-        //             )
-        //             .padding(1)])
-        //         .size(font_size)
-        //         .font(font)
-        //         .center()
-        //         .into()
-        //     })
-        //     .collect();
-        // let text = Column::with_children(text).spacing(6);
+        let lines = slide_text.lines();
+        let text: Vec<Element<Message>> = lines
+            .map(|t| {
+                rich_text([span(format!("{}\n", t))
+                    .background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.4),
+                    )
+                    .padding(1)])
+                .size(font_size)
+                .font(font)
+                .center()
+                .into()
+            })
+            .collect();
+        let text = Column::with_children(text).spacing(6);
 
         //Next
         let text_container = Container::new(text)

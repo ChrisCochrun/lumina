@@ -1,6 +1,7 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO Check into =mupdf-rs= for loading PDF's.
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 

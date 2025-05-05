@@ -24,6 +24,7 @@ pub struct TextSvg {
     stroke: Option<Stroke>,
     fill: Color,
     alignment: TextAlignment,
+    handle: Option<Handle>,
 }
 
 impl Hash for TextSvg {
@@ -172,6 +173,8 @@ impl TextSvg {
             ..Default::default()
         }
     }
+
+    pub fn build(self) 
 
     pub fn fill(mut self, color: impl Into<Color>) -> Self {
         self.fill = color.into();
