@@ -12,7 +12,15 @@ use tracing::error;
 use super::songs::Song;
 
 #[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    Hash,
 )]
 pub enum TextAlignment {
     TopLeft,

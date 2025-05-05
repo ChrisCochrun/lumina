@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
 use colors_transform::Rgb;
 use cosmic::{
@@ -7,7 +10,7 @@ use cosmic::{
         Length,
     },
     prelude::*,
-    widget::{container, responsive, svg::Handle, Svg},
+    widget::{container, lazy, responsive, svg::Handle, Svg},
 };
 use tracing::error;
 
@@ -23,7 +26,18 @@ pub struct TextSvg {
     alignment: TextAlignment,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+impl Hash for TextSvg {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.text.hash(state);
+        self.font.hash(state);
+        self.shadow.hash(state);
+        self.stroke.hash(state);
+        self.fill.hash(state);
+        self.alignment.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Font {
     name: String,
     weight: Weight,
@@ -92,6 +106,12 @@ impl Font {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Color(Rgb);
 
+impl Hash for Color {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_css_hex_string().hash(state);
+    }
+}
+
 impl Color {
     pub fn from_hex_str(color: impl AsRef<str>) -> Color {
         match Rgb::from_hex_str(color.as_ref()) {
@@ -128,7 +148,7 @@ impl Display for Color {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Hash)]
 pub struct Shadow {
     pub offset_x: i16,
     pub offset_y: i16,
@@ -136,7 +156,7 @@ pub struct Shadow {
     pub color: Color,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Hash)]
 pub struct Stroke {
     size: u16,
     color: Color,
@@ -226,12 +246,11 @@ impl TextSvg {
                                         self.fill, stroke, text);
 
                 // debug!(final_svg);
-
-                Svg::new(Handle::from_memory(
-                    Box::leak(final_svg.into_boxed_str()).as_bytes(),
+                lazy(self.clone(), move |_s| Svg::new(Handle::from_memory(
+                    Box::leak(<std::string::String as Clone>::clone(&final_svg).into_boxed_str()).as_bytes(),
                 ))
                     .width(Length::Fill)
-                    .height(Length::Fill)
+                    .height(Length::Fill))
                     .into()
             })).width(Length::Fill).height(Length::Fill).into()
     }
