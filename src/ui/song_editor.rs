@@ -31,7 +31,9 @@ use super::presenter::slide_view;
 pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
-    fonts: combo_box::State<String>,
+    font_db: fontdb::Database,
+    fonts: Vec<(fontdb::ID, String)>,
+    fonts_combo: combo_box::State<String>,
     font_sizes: combo_box::State<String>,
     font: String,
     author: String,
@@ -72,42 +74,21 @@ impl SongEditor {
     pub fn new() -> Self {
         let fonts = font_dir();
         debug!(?fonts);
-        let mut fontdb = fontdb::Database::new();
-        fontdb.load_system_fonts();
-        let fonts: Vec<String> = fontdb
+        let mut font_db = fontdb::Database::new();
+        font_db.load_system_fonts();
+        let mut fonts: Vec<(fontdb::ID, String)> = font_db
             .faces()
             .map(|f| {
-                let mut font = f.to_owned().post_script_name;
-                if let Some(at) = font.find("-") {
-                    let _ = font.split_off(at);
-                }
-                let indices: Vec<usize> = font
-                    .chars()
-                    .enumerate()
-                    .filter(|(index, c)| {
-                        c.is_uppercase() && *index != 0
-                    })
-                    .map(|(index, c)| index)
-                    .collect();
-
-                let mut font_parts = vec![];
-                for index in indices.iter().rev() {
-                    let (first, last) = font.split_at(*index);
-                    font_parts.push(first);
-                    if !last.is_empty() {
-                        font_parts.push(last);
-                    }
-                }
-                font_parts
-                    .iter()
-                    .map(|s| {
-                        let mut s = s.to_string();
-                        s.push(' ');
-                        s
-                    })
-                    .collect()
+                let id = f.id;
+                let font_base_name: String =
+                    f.families.iter().map(|f| f.0.clone()).collect();
+                let font_weight = f.weight;
+                let font_style = f.style;
+                let font_stretch = f.stretch;
+                (id, font_base_name)
             })
             .collect();
+        fonts.dedup();
         // let fonts = vec![
         //     String::from("Quicksand"),
         //     String::from("Noto Sans"),
@@ -134,9 +115,12 @@ impl SongEditor {
             "70".to_string(),
             "80".to_string(),
         ];
+        let font_texts = fonts.iter().map(|f| f.1.clone()).collect();
         Self {
             song: None,
-            fonts: combo_box::State::new(fonts),
+            font_db,
+            fonts,
+            fonts_combo: combo_box::State::new(font_texts),
             title: "Death was Arrested".to_owned(),
             font: "Quicksand".to_owned(),
             font_size: 16,
@@ -189,11 +173,23 @@ impl SongEditor {
                 self.background = song.background;
             }
             Message::ChangeFont(font) => {
+                let font_id = self
+                    .fonts
+                    .iter()
+                    .filter(|f| f.1 == font)
+                    .map(|f| f.0)
+                    .next();
+                if let Some(id) = font_id {
+                    if let Some(face) = self.font_db.face(id) {
+                        self.font = face.post_script_name.clone();
+                        // self.current_font = Font::from(face);
+                    }
+                }
                 self.font = font.clone();
 
                 let font_name = font.into_boxed_str();
                 let family = Family::Name(Box::leak(font_name));
-                let weight = Weight::Normal;
+                let weight = Weight::Bold;
                 let stretch = Stretch::Normal;
                 let style = Style::Normal;
                 let font = Font {
@@ -383,7 +379,7 @@ order",
                 .get(font_size_position.unwrap_or_default())
         };
         let font_selector = combo_box(
-            &self.fonts,
+            &self.fonts_combo,
             "Font",
             Some(selected_font),
             Message::ChangeFont,
