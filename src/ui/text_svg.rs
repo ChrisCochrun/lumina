@@ -174,7 +174,7 @@ impl TextSvg {
         }
     }
 
-    pub fn build(self) 
+    // pub fn build(self)
 
     pub fn fill(mut self, color: impl Into<Color>) -> Self {
         self.fill = color.into();
