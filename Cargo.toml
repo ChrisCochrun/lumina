@@ -26,9 +26,10 @@ crisp = { git = "https://git.tfcconnection.org/chris/crisp", version = "0.1.3" }
 rodio = { version = "0.20.1", features = ["symphonia-all", "tracing"] }
 gstreamer = "0.23.3"
 gstreamer-app = "0.23.3"
-cosmic-time = "0.2.0"
+# cosmic-time = "0.2.0"
 url = "2"
 colors-transform = "0.2.11"
+# mupdf = "0.5.0"
 # rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
 
 [dependencies.iced_video_player]
