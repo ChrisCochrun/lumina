@@ -4,7 +4,7 @@
 (slide (video :source "~/vids/The Basics of Hanging Drywall.mkv" :fit contain))
 (slide (video :source "~/vids/Ladybird Is The Future Of Web Browsers.webm" :fit contain))
 (song :id 7 :author "North Point Worship"
-      :font "Quicksand Bold" :font-size 30
+      :font "Quicksand Bold" :font-size 60
       :shadow "" :stroke ""
       :title "Death Was Arrested"
       :background (image :source "file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)

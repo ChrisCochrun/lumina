@@ -218,7 +218,7 @@ impl TextSvg {
         };
         let stroke = if let Some(stroke) = &self.stroke {
             format!(
-                "stroke=\"{}\" stroke-width=\"{}\"",
+                "stroke=\"{}\" stroke-width=\"{}px\" paint-order=\"stroke\"",
                 stroke.color, stroke.size
             )
         } else {

@@ -288,22 +288,6 @@ impl cosmic::Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![]
-    }
-    fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![search_input("Search...", "")
-            .on_input(|_| Message::None)
-            .on_submit(|_| Message::None)
-            .width(Length::Fill)
-            .into()]
-    }
-    fn header_end(&self) -> Vec<Element<Self::Message>> {
-        // let editor_toggle = toggler(self.editor_mode.is_some())
-        //     .label("Editor")
-        //     .spacing(10)
-        //     .width(Length::Shrink)
-        //     .on_toggle(Message::EditorToggle);
-
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
             text::body("End Presentation")
@@ -370,6 +354,30 @@ impl cosmic::Application for App {
             )
             .into(),
             horizontal_space().width(HEADER_SPACE).into(),
+        ]
+    }
+    fn header_center(&self) -> Vec<Element<Self::Message>> {
+        vec![search_input("Search...", "")
+            .on_input(|_| Message::None)
+            .on_submit(|_| Message::None)
+            .width(300)
+            .into()]
+    }
+    fn header_end(&self) -> Vec<Element<Self::Message>> {
+        // let editor_toggle = toggler(self.editor_mode.is_some())
+        //     .label("Editor")
+        //     .spacing(10)
+        //     .width(Length::Shrink)
+        //     .on_toggle(Message::EditorToggle);
+
+        let presenter_window = self.windows.get(1);
+        let text = if self.presentation_open {
+            text::body("End Presentation")
+        } else {
+            text::body("Present")
+        };
+
+        vec![
             tooltip(
                 button::custom(
                     row!(
