@@ -218,7 +218,7 @@ impl TextSvg {
         };
         let stroke = if let Some(stroke) = &self.stroke {
             format!(
-                "stroke=\"{}\" stroke-width=\"{}px\" paint-order=\"stroke\"",
+                "stroke=\"{}\" stroke-width=\"{}px\" stroke-linejoin=\"arcs\" paint-order=\"stroke\"",
                 stroke.color, stroke.size
             )
         } else {
@@ -259,7 +259,6 @@ Svg::new(Handle::from_memory(
     }
 
     fn text_spans(&self) -> Vec<String> {
-        let total_lines = self.text.lines().count();
         self.text
             .lines()
             .enumerate()
