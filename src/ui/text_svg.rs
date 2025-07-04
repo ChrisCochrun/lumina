@@ -249,11 +249,11 @@ impl TextSvg {
                                         self.fill, stroke, text);
 
                 // debug!(final_svg);
-                lazy(self.clone(), move |_s| Svg::new(Handle::from_memory(
+Svg::new(Handle::from_memory(
                     Box::leak(<std::string::String as Clone>::clone(&final_svg).into_boxed_str()).as_bytes(),
                 ))
                     .width(Length::Fill)
-                    .height(Length::Fill))
+                    .height(Length::Fill)
                     .into()
             })).width(Length::Fill).height(Length::Fill).into()
     }
