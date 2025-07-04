@@ -7,10 +7,8 @@ This does almost work. There is a clear amount of lag or rather hang up since sw
 
 Actually, what if we just made the svg at load/creation time and stored it in the file system for later, then load the entire songs svg's into memory during the presentation to speed things up? Would that be faster than creating them at on the fly? Is it the creation of them that is slow or the rendering?
 
-** ~SVG performs badly~ JK lolZ!!
+** SVG performs badly
 Since SVG's apparently run poorly in iced, instead I'll need to see about either creating a new text element, or teaching Iced to render strokes and shadows on text.
-
-Apparently svg was slow due to the lazy widget, which idk why I used in the first place.
 
 * TODO [#C] Make the presenter more modular so things are easier to change.
 
