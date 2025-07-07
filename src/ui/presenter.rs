@@ -4,6 +4,7 @@ use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 use cosmic::{
     iced::{
         alignment::Horizontal,
+        border,
         font::{Family, Stretch, Style, Weight},
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
@@ -546,34 +547,34 @@ pub(crate) fn slide_view(
         let slide_text = slide.text();
 
         // SVG based
-        let font = SvgFont::from(font).size(font_size.floor() as u8);
-        let text = text_svg::TextSvg::new()
-            .text(&slide_text)
-            .fill("#fff")
-            .shadow(text_svg::shadow(2, 2, 5, "#000000"))
-            .stroke(text_svg::stroke(3, "#000"))
-            .font(font)
-            .view()
-            .map(|m| Message::None);
+        // let font = SvgFont::from(font).size(font_size.floor() as u8);
+        // let text = text_svg::TextSvg::new()
+        //     .text(&slide_text)
+        //     .fill("#fff")
+        //     .shadow(text_svg::shadow(2, 2, 5, "#000000"))
+        //     .stroke(text_svg::stroke(3, "#000"))
+        //     .font(font)
+        //     .view()
+        //     .map(|m| Message::None);
 
-        // let text = text!("{}", &slide_text);
         // text widget based
-        // let lines = slide_text.lines();
-        // let text: Vec<Element<Message>> = lines
-        //     .map(|t| {
-        //         rich_text([span(format!("{}\n", t))
-        //             .background(
-        //                 Background::Color(Color::BLACK)
-        //                     .scale_alpha(0.4),
-        //             )
-        //             .padding(1)])
-        //         .size(font_size)
-        //         .font(font)
-        //         .center()
-        //         .into()
-        //     })
-        //     .collect();
-        // let text = Column::with_children(text).spacing(6);
+        let lines = slide_text.lines();
+        let text: Vec<Element<Message>> = lines
+            .map(|t| {
+                rich_text([span(format!("{}\n", t))
+                    .background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.4),
+                    )
+                    .border(border::rounded(10))
+                    .padding(10)])
+                .size(font_size)
+                .font(font)
+                .center()
+                .into()
+            })
+            .collect();
+        let text = Column::with_children(text).spacing(26);
 
         //Next
         let text_container = Container::new(text)
