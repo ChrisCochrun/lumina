@@ -561,25 +561,61 @@ pub(crate) fn slide_view(
         let lines = slide_text.lines();
         let text: Vec<Element<Message>> = lines
             .map(|t| {
-                rich_text([span(format!("{}\n", t))
-                    .background(
-                        Background::Color(Color::BLACK)
-                            .scale_alpha(0.4),
+                let chars = t
+                    .chars()
+                    .map(
+                        |c| -> cosmic::iced_core::text::Span<
+                            '_,
+                            (),
+                            Font,
+                        > {
+                            span(format!("{}\n", c))
+                                .size(font_size)
+                                .font(font)
+                                .background(
+                                    Background::Color(Color::BLACK)
+                                        .scale_alpha(0.4),
+                                )
+                                .border(border::rounded(10))
+                                .padding(10)
+                        },
                     )
+                    .collect();
+                rich_text(chars).center().into()
+            })
+            .collect();
+        let text = Column::with_children(text).spacing(26);
+
+        let lines = slide_text.lines();
+        let stroke_text: Vec<Element<Message>> = lines
+            .map(|t| {
+                let mut stroke_font = font.clone();
+                stroke_font.stretch = Stretch::Condensed;
+                stroke_font.weight = Weight::Bold;
+                rich_text([span(format!("{}\n", t))
+                    .size(font_size + 0.3)
+                    .font(stroke_font)
+                    .color(Color::BLACK)
                     .border(border::rounded(10))
                     .padding(10)])
-                .size(font_size)
-                .font(font)
                 .center()
                 .into()
             })
             .collect();
-        let text = Column::with_children(text).spacing(26);
+        let stroke_text =
+            Column::with_children(stroke_text).spacing(26);
 
         //Next
         let text_container = Container::new(text)
             .center(Length::Fill)
             .align_x(Horizontal::Left);
+
+        let stroke_text_container = Container::new(stroke_text)
+            .center(Length::Fill)
+            .align_x(Horizontal::Left);
+
+        let text_stack =
+            stack!(stroke_text_container, text_container);
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
@@ -636,11 +672,8 @@ pub(crate) fn slide_view(
                 }
             }
         };
-        let stack = stack!(
-            black,
-            container.center(Length::Fill),
-            text_container
-        );
+        let stack =
+            stack!(black, container.center(Length::Fill), text_stack);
         Container::new(stack).center(Length::Fill).into()
     })
     .into()
