@@ -9,12 +9,14 @@ use cosmic::{
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
+    iced_core::text::Span,
     iced_widget::{
         rich_text,
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
         span, stack,
+        text::Rich,
     },
     prelude::*,
     widget::{
@@ -565,9 +567,7 @@ pub(crate) fn slide_view(
                     .chars()
                     .map(
                         |c| -> cosmic::iced_core::text::Span<
-                            '_,
-                            (),
-                            Font,
+                            Message,
                         > {
                             span(format!("{}\n", c))
                                 .size(font_size)
@@ -580,7 +580,7 @@ pub(crate) fn slide_view(
                                 .padding(10)
                         },
                     )
-                    .collect();
+                    .collect::<Vec<Span<Message>>>();
                 rich_text(chars).center().into()
             })
             .collect();
