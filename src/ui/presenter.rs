@@ -561,26 +561,39 @@ pub(crate) fn slide_view(
 
         // text widget based
         let lines = slide_text.lines();
+        let chars = lines
+            .map(|t| t.chars().map(|c| format!("{}\n", c)))
+            .collect();
+        let mut spans = vec![];
+        for c in chars {
+            spans.push(
+                span(format!("{}\n", c))
+                    .size(font_size)
+                    .font(font)
+                    .background(
+                        Background::Color(Color::BLACK)
+                            .scale_alpha(0.4),
+                    )
+                    .border(border::rounded(10))
+                    .padding(10),
+            )
+        }
         let text: Vec<Element<Message>> = lines
             .map(|t| {
                 let chars = t
                     .chars()
-                    .map(
-                        |c| -> cosmic::iced_core::text::Span<
-                            Message,
-                        > {
-                            span(format!("{}\n", c))
-                                .size(font_size)
-                                .font(font)
-                                .background(
-                                    Background::Color(Color::BLACK)
-                                        .scale_alpha(0.4),
-                                )
-                                .border(border::rounded(10))
-                                .padding(10)
-                        },
-                    )
-                    .collect::<Vec<Span<Message>>>();
+                    .map(|c| {
+                        span(format!("{}\n", c))
+                            .size(font_size)
+                            .font(font)
+                            .background(
+                                Background::Color(Color::BLACK)
+                                    .scale_alpha(0.4),
+                            )
+                            .border(border::rounded(10))
+                            .padding(10)
+                    })
+                    .collect();
                 rich_text(chars).center().into()
             })
             .collect();
