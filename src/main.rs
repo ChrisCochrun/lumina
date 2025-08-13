@@ -72,7 +72,10 @@ fn main() -> Result<()> {
     let settings;
     if args.ui {
         debug!("main view");
-        settings = Settings::default().debug(false).is_daemon(true);
+        settings = Settings::default()
+            .debug(false)
+            .is_daemon(true)
+            .transparent(true);
     } else {
         debug!("window view");
         settings = Settings::default()
@@ -105,6 +108,7 @@ struct App {
     library_width: f32,
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
+    searching: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -126,6 +130,7 @@ enum Message {
     None,
     DndLeave(Entity),
     EditorToggle(bool),
+    SearchFocus,
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -203,6 +208,7 @@ impl cosmic::Application for App {
             library_width: 60.0,
             editor_mode: None,
             song_editor,
+            searching: false,
         };
 
         let mut batch = vec![];
@@ -243,17 +249,17 @@ impl cosmic::Application for App {
             debug!("left");
             cosmic::Action::App(Message::DndLeave(entity))
         })
-        .drag_id(DragId::new())
-        .on_context(|id| {
-            cosmic::Action::Cosmic(
-                cosmic::app::Action::NavBarContext(id),
-            )
-        })
         .on_dnd_drop::<ServiceItem>(|entity, data, action| {
             debug!("dropped");
             cosmic::Action::App(Message::DndDrop(
                 entity, data, action,
             ))
+        })
+        .drag_id(DragId::new())
+        .on_context(|id| {
+            cosmic::Action::Cosmic(
+                cosmic::app::Action::NavBarContext(id),
+            )
         })
         .context_menu(None)
         .into_container()
@@ -288,6 +294,25 @@ impl cosmic::Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
+        vec![]
+    }
+
+    fn header_center(&self) -> Vec<Element<Self::Message>> {
+        vec![search_input("Search...", "")
+            .on_input(|_| Message::None)
+            .on_submit(|_| Message::None)
+            .on_focus(Message::SearchFocus)
+            .width(1200)
+            .into()]
+    }
+
+    fn header_end(&self) -> Vec<Element<Self::Message>> {
+        // let editor_toggle = toggler(self.editor_mode.is_some())
+        //     .label("Editor")
+        //     .spacing(10)
+        //     .width(Length::Shrink)
+        //     .on_toggle(Message::EditorToggle);
+
         let presenter_window = self.windows.get(1);
         let text = if self.presentation_open {
             text::body("End Presentation")
@@ -295,7 +320,7 @@ impl cosmic::Application for App {
             text::body("Present")
         };
 
-        vec![
+        let row = row![
             tooltip(
                 button::custom(
                     row!(
@@ -318,9 +343,7 @@ impl cosmic::Application for App {
                 )),
                 "Enter Edit Mode",
                 TPosition::Bottom,
-            )
-            .into(),
-            horizontal_space().width(HEADER_SPACE).into(),
+            ),
             tooltip(
                 button::custom(
                     row!(
@@ -351,33 +374,7 @@ impl cosmic::Application for App {
                 }),
                 "Start Presentation",
                 TPosition::Bottom,
-            )
-            .into(),
-            horizontal_space().width(HEADER_SPACE).into(),
-        ]
-    }
-    fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![search_input("Search...", "")
-            .on_input(|_| Message::None)
-            .on_submit(|_| Message::None)
-            .width(300)
-            .into()]
-    }
-    fn header_end(&self) -> Vec<Element<Self::Message>> {
-        // let editor_toggle = toggler(self.editor_mode.is_some())
-        //     .label("Editor")
-        //     .spacing(10)
-        //     .width(Length::Shrink)
-        //     .on_toggle(Message::EditorToggle);
-
-        let presenter_window = self.windows.get(1);
-        let text = if self.presentation_open {
-            text::body("End Presentation")
-        } else {
-            text::body("Present")
-        };
-
-        vec![
+            ),
             tooltip(
                 button::custom(
                     row!(
@@ -399,9 +396,10 @@ impl cosmic::Application for App {
                 "Open Library",
                 TPosition::Bottom,
             )
-            .into(),
-            horizontal_space().width(HEADER_SPACE).into(),
         ]
+        .spacing(HEADER_SPACE)
+        .into();
+        vec![row]
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
@@ -464,6 +462,14 @@ impl cosmic::Application for App {
             on_close: Message::None,
         };
         None
+    }
+
+    fn dialog(&self) -> Option<Element<'_, Self::Message>> {
+        if self.searching {
+            Some(text("hello").into())
+        } else {
+            None
+        }
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -587,16 +593,16 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                {
-                    self.presentation_open = true;
-                    if let Some(video) = &mut self.presenter.video {
-                        video.set_muted(false);
-                    }
-                    window::change_mode(id, Mode::Fullscreen)
-                } else {
-                    Task::none()
-                }
+                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                        {
+                            self.presentation_open = true;
+                            if let Some(video) = &mut self.presenter.video {
+                                video.set_muted(false);
+                            }
+                            window::change_mode(id, Mode::Fullscreen)
+                        } else {
+                            Task::none()
+                        }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -656,6 +662,10 @@ impl cosmic::Application for App {
                 } else {
                     self.editor_mode = None;
                 }
+                Task::none()
+            }
+            Message::SearchFocus => {
+                self.searching = true;
                 Task::none()
             }
         }

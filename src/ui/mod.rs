@@ -6,6 +6,7 @@ pub mod presenter;
 pub mod song_editor;
 pub mod text_svg;
 pub mod video;
+pub mod widgets;
 
 pub enum EditorMode {
     Song,

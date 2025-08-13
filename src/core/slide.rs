@@ -9,6 +9,8 @@ use std::{
 };
 use tracing::error;
 
+use crate::ui::text_svg::{self, TextSvg};
+
 use super::songs::Song;
 
 #[derive(
@@ -234,6 +236,8 @@ pub struct Slide {
     video_loop: bool,
     video_start_time: f32,
     video_end_time: f32,
+    #[serde(skip)]
+    pub text_svg: TextSvg,
 }
 
 impl From<&Slide> for Value {
@@ -498,6 +502,8 @@ pub struct SlideBuilder {
     video_loop: Option<bool>,
     video_start_time: Option<f32>,
     video_end_time: Option<f32>,
+    #[serde(skip)]
+    text_svg: Option<TextSvg>,
 }
 
 impl SlideBuilder {
@@ -571,6 +577,14 @@ impl SlideBuilder {
         self
     }
 
+    pub(crate) fn text_svg(
+        mut self,
+        text_svg: impl Into<TextSvg>,
+    ) -> Self {
+        let _ = self.text_svg.insert(text_svg.into());
+        self
+    }
+
     pub(crate) fn build(self) -> Result<Slide> {
         let Some(background) = self.background else {
             return Err(miette!("No background"));
@@ -596,18 +610,45 @@ impl SlideBuilder {
         let Some(video_end_time) = self.video_end_time else {
             return Err(miette!("No video_end_time"));
         };
-        Ok(Slide {
-            background,
-            text,
-            font,
-            font_size,
-            text_alignment,
-            audio: self.audio,
-            video_loop,
-            video_start_time,
-            video_end_time,
-            ..Default::default()
-        })
+        if let Some(text_svg) = self.text_svg {
+            Ok(Slide {
+                background,
+                text,
+                font,
+                font_size,
+                text_alignment,
+                audio: self.audio,
+                video_loop,
+                video_start_time,
+                video_end_time,
+                text_svg,
+                ..Default::default()
+            })
+        } else {
+            let text_svg = TextSvg::new(text.clone())
+                .alignment(text_alignment)
+                .fill("#fff")
+                .shadow(text_svg::shadow(2, 2, 5, "#000000"))
+                .stroke(text_svg::stroke(3, "#000"))
+                .font(
+                    text_svg::Font::from(font.clone())
+                        .size(font_size.try_into().unwrap()),
+                )
+                .build();
+            Ok(Slide {
+                background,
+                text,
+                font,
+                font_size,
+                text_alignment,
+                audio: self.audio,
+                video_loop,
+                video_start_time,
+                video_end_time,
+                text_svg,
+                ..Default::default()
+            })
+        }
     }
 }
 

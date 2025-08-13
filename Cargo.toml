@@ -8,7 +8,7 @@ description = "A cli presentation system"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["debug", "derive"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["debug", "winit", "winit_wgpu", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["debug", "winit", "desktop", "winit_wgpu", "winit_tokio", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window"] }
 lexpr = "0.2.7"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
@@ -29,7 +29,8 @@ gstreamer-app = "0.23.3"
 # cosmic-time = "0.2.0"
 url = "2"
 colors-transform = "0.2.11"
-femtovg = { version = "0.16.0", features = ["wgpu"] }
+# femtovg = { version = "0.16.0", features = ["wgpu"] }
+# wgpu = "26.0.1"
 # mupdf = "0.5.0"
 # rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
 
@@ -39,7 +40,8 @@ branch = "cosmic"
 features = ["wgpu"]
 
 [profile.dev]
-opt-level = 0
+opt-level = 3
 
 [profile.release]
 opt-level = 3
+debug = true

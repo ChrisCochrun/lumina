@@ -7,7 +7,7 @@ use colors_transform::Rgb;
 use cosmic::{
     iced::{
         font::{Style, Weight},
-        Length,
+        Length, Size,
     },
     prelude::*,
     widget::{container, lazy, responsive, svg::Handle, Svg},
@@ -56,6 +56,15 @@ impl From<cosmic::font::Font> for Font {
                 _ => "Quicksand Bold".into(),
             },
             size: 20,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<String> for Font {
+    fn from(value: String) -> Self {
+        Self {
+            name: value,
             ..Default::default()
         }
     }
@@ -168,8 +177,9 @@ pub enum Message {
 }
 
 impl TextSvg {
-    pub fn new() -> Self {
+    pub fn new(text: impl Into<String>) -> Self {
         Self {
+            text: text.into(),
             ..Default::default()
         }
     }
@@ -206,7 +216,7 @@ impl TextSvg {
         self
     }
 
-    pub fn view<'a>(self) -> Element<'a, Message> {
+    pub fn build(mut self) -> Self {
         let shadow = if let Some(shadow) = &self.shadow {
             format!("<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
                 shadow.offset_x,
@@ -224,38 +234,58 @@ impl TextSvg {
         } else {
             "".into()
         };
-        container(
-            responsive(move |s| {
-                let total_lines = self.text.lines().count();
-                let half_lines = (total_lines / 2) as f32;
-                let middle_position = s.height / 2.0;
-                let line_spacing = 10.0;
-                let text_and_line_spacing = self.font.size as f32 + line_spacing;
-                let starting_y_position = middle_position - (half_lines * text_and_line_spacing);
+        let size = Size::new(640.0, 360.0);
+        let total_lines = self.text.lines().count();
+        let half_lines = (total_lines / 2) as f32;
+        let middle_position = size.height / 2.0;
+        let line_spacing = 10.0;
+        let text_and_line_spacing =
+            self.font.size as f32 + line_spacing;
+        let starting_y_position =
+            middle_position - (half_lines * text_and_line_spacing);
 
-                let text_pieces: Vec<String> = self.text.lines()
-                    .enumerate()
-                    .map(|(index, text)| {
-                        format!("<tspan x=\"50%\" y=\"{}\">{}</tspan>", starting_y_position + (index as f32 * text_and_line_spacing), text)
-                    }).collect();
-                let text: String = text_pieces.join("\n");
+        let text_pieces: Vec<String> = self
+            .text
+            .lines()
+            .enumerate()
+            .map(|(index, text)| {
+                format!(
+                    "<tspan x=\"50%\" y=\"{}\">{}</tspan>",
+                    starting_y_position
+                        + (index as f32 * text_and_line_spacing),
+                    text
+                )
+            })
+            .collect();
+        let text: String = text_pieces.join("\n");
 
-                let final_svg = format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
-                                        s.width,
-                                        s.height,
+        let final_svg = format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
+                                        size.width,
+                                        size.height,
                                         shadow,
                                         self.font.name,
                                         self.font.size,
                                         self.fill, stroke, text);
+        let handle = Handle::from_memory(
+            Box::leak(
+                <std::string::String as Clone>::clone(&final_svg)
+                    .into_boxed_str(),
+            )
+            .as_bytes(),
+        );
+        self.handle = Some(handle);
+        self
+    }
 
-                // debug!(final_svg);
-Svg::new(Handle::from_memory(
-                    Box::leak(<std::string::String as Clone>::clone(&final_svg).into_boxed_str()).as_bytes(),
-                ))
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into()
-            })).width(Length::Fill).height(Length::Fill).into()
+    pub fn view<'a>(&self) -> Element<'a, Message> {
+        container(
+            Svg::new(self.handle.clone().unwrap())
+                .width(Length::Fill)
+                .height(Length::Fill),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
     }
 
     fn text_spans(&self) -> Vec<String> {

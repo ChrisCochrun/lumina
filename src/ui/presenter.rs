@@ -33,6 +33,7 @@ use url::Url;
 use crate::{
     core::{service_items::ServiceItemModel, slide::Slide},
     ui::text_svg::{self, Font as SvgFont},
+    // ui::widgets::slide_text,
     BackgroundKind,
 };
 
@@ -88,7 +89,7 @@ impl Presenter {
         gst::init().into_diagnostic()?;
 
         let pipeline = format!(
-            r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! appsink name=iced_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
+            r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
             url.as_str()
         );
 
@@ -108,13 +109,14 @@ impl Presenter {
             .unwrap()
             .downcast::<gst::Bin>()
             .unwrap();
-        let video_sink = bin.by_name("iced_video").unwrap();
+        let video_sink = bin.by_name("lumina_video").unwrap();
         let video_sink =
             video_sink.downcast::<gst_app::AppSink>().unwrap();
         let result =
             Video::from_gst_pipeline(pipeline, video_sink, None);
         result.into_diagnostic()
     }
+
     pub fn with_items(items: ServiceItemModel) -> Self {
         let slides = items.to_slides().unwrap_or_default();
         let video = {
@@ -545,75 +547,89 @@ pub(crate) fn slide_view(
 ) -> Element<'_, Message> {
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
-        let font_size = scale_font(slide.font_size() as f32, width);
         let slide_text = slide.text();
 
-        // SVG based
         // let font = SvgFont::from(font).size(font_size.floor() as u8);
-        // let text = text_svg::TextSvg::new()
-        //     .text(&slide_text)
-        //     .fill("#fff")
-        //     .shadow(text_svg::shadow(2, 2, 5, "#000000"))
-        //     .stroke(text_svg::stroke(3, "#000"))
-        //     .font(font)
-        //     .view()
-        //     .map(|m| Message::None);
-
-        // text widget based
-        let lines = slide_text.lines();
-        let text: Vec<Element<Message>> = lines
-            .map(|t| {
-                rich_text([span(format!("{}\n", t))
-                    .background(
-                        Background::Color(Color::BLACK)
-                            .scale_alpha(0.4),
-                    )
-                    .border(border::rounded(10))
-                    .padding(10)])
-                .size(font_size)
-                .font(font)
-                .center()
-                .into()
-                // let chars: Vec<Span> = t
-                //     .chars()
-                //     .map(|c| -> Span {
-                //         let character: String = format!("{}/n", c);
-                //         span(character)
-                //             .size(font_size)
-                //             .font(font)
-                //             .background(
-                //                 Background::Color(Color::BLACK)
-                //                     .scale_alpha(0.4),
-                //             )
-                //             .border(border::rounded(10))
-                //             .padding(10)
-            })
-            .collect();
-        let text = Column::with_children(text).spacing(26);
-
-        // let lines = slide_text.lines();
-        // let stroke_text: Vec<Element<Message>> = lines
-        //     .map(|t| {
-        //         let mut stroke_font = font.clone();
-        //         stroke_font.stretch = Stretch::Condensed;
-        //         stroke_font.weight = Weight::Bold;
-        //         rich_text([span(format!("{}\n", t))
-        //             .size(font_size + 0.3)
-        //             .font(stroke_font)
-        //             .color(Color::BLACK)
-        //             .border(border::rounded(10))
-        //             .padding(10)])
-        //         .center()
-        //         .into()
-        //     })
-        //     .collect();
-        // let stroke_text =
-        //     Column::with_children(stroke_text).spacing(26);
-
-        //Next
-        let text_container = Container::new(text)
-            .center(Length::Fill)
-            .align_x(Horizontal::Left);
+        let text_container = if delegate {
+            // text widget based
+            let font_size =
+                scale_font(slide.font_size() as f32, width);
+            let lines = slide_text.lines();
+            let text: Vec<Element<Message>> = lines
+                .map(|t| {
+                    rich_text([span(format!("{}\n", t))
+                        .background(
+                            Background::Color(Color::BLACK)
+                                .scale_alpha(0.4),
+                        )
+                        .border(border::rounded(10))
+                        .padding(10)])
+                    .size(font_size)
+                    .font(font)
+                    .center()
+                    .into()
+                    // let chars: Vec<Span> = t
+                    //     .chars()
+                    //     .map(|c| -> Span {
+                    //         let character: String = format!("{}/n", c);
+                    //         span(character)
+                    //             .size(font_size)
+                    //             .font(font)
+                    //             .background(
+                    //                 Background::Color(Color::BLACK)
+                    //                     .scale_alpha(0.4),
+                    //             )
+                    //             .border(border::rounded(10))
+                    //             .padding(10)
+                })
+                .collect();
+            let text = Column::with_children(text).spacing(26);
+            Container::new(text)
+                .center(Length::Fill)
+                .align_x(Horizontal::Left)
+        } else {
+            // SVG based
+            let text = slide.text_svg.view().map(|m| Message::None);
+            Container::new(text)
+                .center(Length::Fill)
+                .align_x(Horizontal::Left)
+            // text widget based
+            // let font_size =
+            //     scale_font(slide.font_size() as f32, width);
+            // let lines = slide_text.lines();
+            // let text: Vec<Element<Message>> = lines
+            //     .map(|t| {
+            //         rich_text([span(format!("{}\n", t))
+            //             .background(
+            //                 Background::Color(Color::BLACK)
+            //                     .scale_alpha(0.4),
+            //             )
+            //             .border(border::rounded(10))
+            //             .padding(10)])
+            //         .size(font_size)
+            //         .font(font)
+            //         .center()
+            //         .into()
+            //         // let chars: Vec<Span> = t
+            //         //     .chars()
+            //         //     .map(|c| -> Span {
+            //         //         let character: String = format!("{}/n", c);
+            //         //         span(character)
+            //         //             .size(font_size)
+            //         //             .font(font)
+            //         //             .background(
+            //         //                 Background::Color(Color::BLACK)
+            //         //                     .scale_alpha(0.4),
+            //         //             )
+            //         //             .border(border::rounded(10))
+            //         //             .padding(10)
+            //     })
+            //     .collect();
+            // let text = Column::with_children(text).spacing(26);
+            // Container::new(text)
+            //     .center(Length::Fill)
+            //     .align_x(Horizontal::Left)
+        };
 
         // let stroke_text_container = Container::new(stroke_text)
         //     .center(Length::Fill)
@@ -648,11 +664,10 @@ pub(crate) fn slide_view(
                                 Color::BLACK,
                             ))
                         })
-                        .center_x(width)
-                        .center_y(size.height)
+                        .center(Length::Fill)
                         .clip(true)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
+                        .width(width)
+                        .height(size.height)
                 } else if let Some(video) = &video {
                     Container::new(
                         VideoPlayer::new(video)
