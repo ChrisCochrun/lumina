@@ -29,7 +29,7 @@ gstreamer = "0.23"
 gstreamer-app = "0.23"
 # gstreamer-video = "0.23"
 # gstreamer-allocators = "0.23"
-# cosmic-time = "0.2.0"
+# cosmic-time = { git = "https://githubg.com/pop-os/cosmic-time" }
 url = "2"
 colors-transform = "0.2.11"
 # femtovg = { version = "0.16.0", features = ["wgpu"] }

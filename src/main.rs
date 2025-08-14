@@ -118,7 +118,7 @@ enum Message {
     SongEditor(song_editor::Message),
     File(PathBuf),
     DndEnter(Entity, Vec<String>),
-    DndDrop(Entity, Option<ServiceItem>, DndAction),
+    DndDrop,
     OpenWindow,
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
@@ -634,16 +634,26 @@ impl cosmic::Application for App {
                 debug!(?data);
                 Task::none()
             }
-            Message::DndDrop(entity, service_item, action) => {
-                debug!(?entity);
-                debug!(?action);
-                debug!(?service_item);
+            Message::DndDrop => {
+                // debug!(?entity);
+                // debug!(?action);
+                // debug!(?service_item);
 
-                if let Some(item) = service_item {
-                    self.nav_model
-                        .insert()
-                        .text(item.title.clone())
-                        .data(item);
+                if let Some(library) = self.library {
+                    if let Some((lib, item)) = library.dragged_item {
+                        // match lib {
+                        //     core::model::LibraryKind::Song => ,
+                        //     core::model::LibraryKind::Video => todo!(),
+                        //     core::model::LibraryKind::Image => todo!(),
+                        //     core::model::LibraryKind::Presentation => todo!(),
+                        // }
+                        let item = library.get_song(item).unwrap();
+                        let item = ServiceItem::from(item);
+                        self.nav_model
+                            .insert()
+                            .text(item.title.clone())
+                            .data(item);
+                    }
                 }
                 Task::none()
             }
