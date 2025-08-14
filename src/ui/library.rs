@@ -46,7 +46,7 @@ pub(crate) struct Library {
 
 pub(crate) enum Action {
     OpenItem(Option<(LibraryKind, i32)>),
-    DraggedItem(Option<(LibraryKind, i32)>),
+    DraggedItem(ServiceItem),
     Task(Task<Message>),
     None,
 }
@@ -60,7 +60,7 @@ pub(crate) enum Message {
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
-    DragItem(Option<(LibraryKind, i32)>),
+    DragItem(ServiceItem),
     UpdateSong(Song),
     SongChanged,
     UpdateImage(Image),
@@ -121,8 +121,9 @@ impl<'a> Library {
                 self.selected_item = item;
             }
             Message::DragItem(item) => {
-                self.dragged_item = item;
-                // return Action::DraggedItem(item);
+                debug!(?item);
+                // self.dragged_item = item;
+                return Action::DraggedItem(item);
             }
             Message::UpdateSong(song) => {
                 let Some((kind, index)) = self.editing_item else {
@@ -372,7 +373,7 @@ impl<'a> Library {
                                 .map(|_| Message::None);
                             DndSource::<Message, ServiceItem>::new(
                                 mouse_area(visual_item)
-                                    .on_drag(Message::DragItem(Some((model.kind, index as i32))))
+                                    .on_drag(Message::DragItem(service_item.clone()))
                                     .on_enter(Message::HoverItem(
                                         Some((
                                             model.kind,

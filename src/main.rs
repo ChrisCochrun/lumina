@@ -13,12 +13,12 @@ use cosmic::iced_widget::{column, row};
 use cosmic::widget::dnd_destination::DragId;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, horizontal_space, nav_bar, search_input, tooltip, Space,
 };
 use cosmic::widget::{icon, slider};
+use cosmic::widget::{mouse_area, text};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{prelude::*, theme};
 use cosmic::{widget::Container, Theme};
@@ -249,11 +249,9 @@ impl cosmic::Application for App {
             debug!("left");
             cosmic::Action::App(Message::DndLeave(entity))
         })
-        .on_dnd_drop::<ServiceItem>(|entity, data, action| {
+        .on_dnd_drop::<ServiceItem>(|_, _, _| {
             debug!("dropped");
-            cosmic::Action::App(Message::DndDrop(
-                entity, data, action,
-            ))
+            cosmic::Action::App(Message::DndDrop)
         })
         .drag_id(DragId::new())
         .on_context(|id| {
@@ -639,7 +637,7 @@ impl cosmic::Application for App {
                 // debug!(?action);
                 // debug!(?service_item);
 
-                if let Some(library) = self.library {
+                if let Some(library) = &self.library {
                     if let Some((lib, item)) = library.dragged_item {
                         // match lib {
                         //     core::model::LibraryKind::Song => ,
