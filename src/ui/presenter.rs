@@ -124,7 +124,7 @@ impl Presenter {
                 let path = slide.background().path.clone();
                 if path.exists() {
                     let url = Url::from_file_path(path).unwrap();
-                    let result = Self::create_video(url);
+                    let result = Video::new(&url);
                     match result {
                         Ok(mut v) => {
                             v.set_paused(true);
@@ -303,10 +303,10 @@ impl Presenter {
                 }
             }
             Message::VideoFrame => {
-                if let Some(video) = &self.video {
-                    self.video_position =
-                        video.position().as_secs_f32();
-                }
+                // if let Some(video) = &self.video {
+                //     self.video_position =
+                //         video.position().as_secs_f32();
+                // }
             }
             Message::MissingPlugin(element) => {
                 if let Some(video) = &mut self.video {
@@ -545,7 +545,7 @@ pub(crate) fn slide_view(
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'_, Message> {
-    responsive(move |size| {
+    let res = responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let slide_text = slide.text();
 
@@ -687,6 +687,7 @@ pub(crate) fn slide_view(
                     )
                     .center(Length::Shrink)
                     .clip(true)
+                    // Container::new(Space::new(0, 0))
                 } else {
                     Container::new(Space::new(0, 0))
                 }
@@ -698,6 +699,25 @@ pub(crate) fn slide_view(
             text_container
         );
         Container::new(stack).center(Length::Fill).into()
-    })
-    .into()
+    });
+    // let vid = if let Some(video) = &video {
+    //     Container::new(
+    //         VideoPlayer::new(video)
+    //             .mouse_hidden(hide_mouse)
+    //             .width(Length::Fill)
+    //             .height(Length::Fill)
+    //             .on_end_of_stream(Message::EndVideo)
+    //             .on_new_frame(Message::VideoFrame)
+    //             .on_missing_plugin(Message::MissingPlugin)
+    //             .on_warning(|w| Message::Error(w.to_string()))
+    //             .on_error(|e| Message::Error(e.to_string()))
+    //             .content_fit(ContentFit::Cover),
+    //     )
+    //     .center(Length::Shrink)
+    //     .clip(true)
+    // } else {
+    //     Container::new(Space::new(0, 0))
+    // };
+    // stack!(vid, res).into()
+    res.into()
 }

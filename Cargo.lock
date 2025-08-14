@@ -3632,6 +3632,7 @@ dependencies = [
  "strum_macros",
  "tokio",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "url",
 ]

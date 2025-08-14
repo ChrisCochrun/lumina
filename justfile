@@ -5,8 +5,12 @@ default:
     just --list
 build:
     RUST_LOG=debug cargo build
+sbuild:
+    RUST_LOG=debug sccache cargo build
 run:
     RUST_LOG=debug cargo run -- {{ui}} {{file}}
+srun:
+    RUST_LOG=debug sccache cargo run -- {{ui}} {{file}}
 clean:
     RUST_LOG=debug cargo clean
 test:
@@ -15,4 +19,5 @@ profile:
     cargo flamegraph --image-width 8000 -- {{ui}} {{file}}
 
 alias r := run
+alias sr := srun
 alias c := clean
