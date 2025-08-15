@@ -28,6 +28,7 @@ use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
+use rayon::prelude::*;
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -170,6 +171,11 @@ impl cosmic::Application for App {
                 let lisp = crisp::reader::read(&lisp);
                 match lisp {
                     Value::List(vec) => {
+                        // let items = vec
+                        //     .into_par_iter()
+                        //     .map(|value| parse_lisp(value))
+                        //     .collect();
+                        // slide_vector.append(items);
                         for value in vec {
                             let mut inner_vector = parse_lisp(value);
                             slide_vector.append(&mut inner_vector);
