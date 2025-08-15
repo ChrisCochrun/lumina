@@ -32,6 +32,7 @@ gstreamer-app = "0.23"
 # cosmic-time = { git = "https://githubg.com/pop-os/cosmic-time" }
 url = "2"
 colors-transform = "0.2.11"
+rayon = "1.11.0"
 # femtovg = { version = "0.16.0", features = ["wgpu"] }
 # wgpu = "26.0.1"
 # mupdf = "0.5.0"
