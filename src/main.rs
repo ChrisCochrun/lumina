@@ -10,12 +10,15 @@ use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{self, event, window, Length, Padding, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
-use cosmic::widget::dnd_destination::DragId;
+use cosmic::widget::dnd_destination::{
+    self, dnd_destination, dnd_destination_for_data, DragId,
+};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, nav_bar, search_input, tooltip, Space,
+    button, horizontal_space, nav_bar, search_input, tooltip,
+    vertical_space, Space,
 };
 use cosmic::widget::{icon, slider};
 use cosmic::widget::{mouse_area, text};
@@ -131,6 +134,8 @@ enum Message {
     DndLeave(Entity),
     EditorToggle(bool),
     SearchFocus,
+    ChangeServiceItem(usize),
+    AddServiceItem(Option<ServiceItem>),
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -236,48 +241,92 @@ impl cosmic::Application for App {
             return None;
         }
 
-        let nav_model = self.nav_model()?;
+        // let nav_model = self.nav_model()?;
 
-        let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-            cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
-        })
-        .on_dnd_enter(|entity, data| {
-            debug!("entered");
-            cosmic::Action::App(Message::DndEnter(entity, data))
-        })
-        .on_dnd_leave(|entity| {
-            debug!("left");
-            cosmic::Action::App(Message::DndLeave(entity))
-        })
-        .on_dnd_drop::<ServiceItem>(|_, _, _| {
-            debug!("dropped");
-            cosmic::Action::App(Message::DndDrop)
-        })
-        .drag_id(DragId::new())
-        .on_context(|id| {
-            cosmic::Action::Cosmic(
-                cosmic::app::Action::NavBarContext(id),
-            )
-        })
-        .context_menu(None)
-        .into_container()
-        // XXX both must be shrink to avoid flex layout from ignoring it
-        .width(Length::Shrink)
-        .height(Length::Shrink);
+        // let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
+        //     cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
+        // })
+        // .on_dnd_drop::<ServiceItem>(|entity, data, action| {
+        //     debug!(?entity);
+        //     debug!(?data);
+        //     debug!(?action);
+        //     cosmic::Action::App(Message::DndDrop)
+        // })
+        // .on_dnd_enter(|entity, data| {
+        //     debug!("entered");
+        //     cosmic::Action::App(Message::DndEnter(entity, data))
+        // })
+        // .on_dnd_leave(|entity| {
+        //     debug!("left");
+        //     cosmic::Action::App(Message::DndLeave(entity))
+        // })
+        // .drag_id(DragId::new())
+        // .on_context(|id| {
+        //     cosmic::Action::Cosmic(
+        //         cosmic::app::Action::NavBarContext(id),
+        //     )
+        // })
+        // .context_menu(None)
+        // .into_container()
+        // // XXX both must be shrink to avoid flex layout from ignoring it
+        // .width(Length::Shrink)
+        // .height(Length::Shrink);
 
-        if !self.core().is_condensed() {
-            nav = nav.max_width(280);
-        }
+        let list = self
+            .service
+            .iter()
+            .enumerate()
+            .map(|(index, (item, slides))| {
+                dnd_destination(tooltip( button::standard(item.title.clone())
+                    .leading_icon({
+                        match item.kind {
+                            core::kinds::ServiceItemKind::Song(_) => {
+                                icon::from_name("folder-music-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Video(_) => {
+                                icon::from_name("folder-videos-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Image(_) => {
+                                icon::from_name("folder-pictures-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Presentation(_) => {
+                                icon::from_name("x-office-presentation-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Content(_) => todo!(),
+                        }
+                    })
+                    .class(cosmic::theme::style::Button::HeaderBar)
+                                         .on_press(cosmic::Action::App(Message::ChangeServiceItem(index))), text::body(item.kind.to_string()), TPosition::Right), vec!["application/service-item".into()]).data_received_for::<ServiceItem>(|item| {
+                    cosmic::Action::App(Message::AddServiceItem(item))
+                })
+                .into()
+            });
 
         let column = column![
             text::heading("Service List").center().width(280),
-            nav
+            column(list).spacing(10),
+            text::heading("Service List").center().width(280),
+            dnd_destination_for_data::<
+                ServiceItem,
+                cosmic::Action<Message>,
+            >(
+                Container::new(vertical_space()),
+                |item, _| {
+                    debug!("helloooooo");
+                    cosmic::Action::App(Message::AddServiceItem(item))
+                }
+            )
         ]
         .spacing(10);
         let padding = Padding::new(0.0).top(20);
-        let container = Container::new(column)
+        let mut container = Container::new(column)
+            // .height(Length::Fill)
             .style(nav_bar_style)
             .padding(padding);
+
+        if !self.core().is_condensed() {
+            container = container.max_width(280);
+        }
         Some(container.into())
     }
 
@@ -548,6 +597,15 @@ impl cosmic::Application for App {
                                 song
                             );
                         }
+                        library::Action::DraggedItem(
+                            service_item,
+                        ) => {
+                            debug!("hi");
+                            self.nav_model
+                                .insert()
+                                .text(service_item.title.clone())
+                                .data(service_item);
+                        }
                     }
                 }
                 self.update(Message::SongEditor(
@@ -591,16 +649,16 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                        {
-                            self.presentation_open = true;
-                            if let Some(video) = &mut self.presenter.video {
-                                video.set_muted(false);
-                            }
-                            window::change_mode(id, Mode::Fullscreen)
-                        } else {
-                            Task::none()
-                        }
+                                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                {
+                                    self.presentation_open = true;
+                                    if let Some(video) = &mut self.presenter.video {
+                                        video.set_muted(false);
+                                    }
+                                    window::change_mode(id, Mode::Fullscreen)
+                                } else {
+                                    Task::none()
+                                }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -674,6 +732,25 @@ impl cosmic::Application for App {
             }
             Message::SearchFocus => {
                 self.searching = true;
+                Task::none()
+            }
+            Message::ChangeServiceItem(index) => {
+                self.presenter.update(
+                    presenter::Message::SlideChange(index as u16),
+                );
+                Task::none()
+            }
+            Message::AddServiceItem(item) => {
+                if let Some(item) = item {
+                    let slides = match item.to_slides() {
+                        Ok(s) => s,
+                        Err(e) => {
+                            error!("{e}");
+                            return Task::none();
+                        }
+                    };
+                    self.service.insert(item, slides);
+                };
                 Task::none()
             }
         }

@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::ops::Deref;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
@@ -22,6 +23,20 @@ pub struct ServiceItem {
     pub database_id: i32,
     pub kind: ServiceItemKind,
     // pub item: Box<dyn ServiceTrait>,
+}
+
+impl Eq for ServiceItem {}
+
+impl PartialOrd for ServiceItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.id.partial_cmp(&other.id)
+    }
+}
+
+impl Ord for ServiceItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
 }
 
 impl TryFrom<(Vec<u8>, String)> for ServiceItem {

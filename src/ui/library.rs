@@ -394,7 +394,7 @@ impl<'a> Library {
                                         )),
                                     )),
                             )
-                            .action(DndAction::Copy)
+                                .action(DndAction::Copy)
                                 .drag_icon({
                                     let model = model.kind.clone();
                                     move |i| {
