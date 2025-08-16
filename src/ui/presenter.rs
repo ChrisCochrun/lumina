@@ -383,7 +383,7 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         slide_view(
-            self.current_slide.clone(),
+            &self.current_slide,
             &self.video,
             self.current_font,
             false,
@@ -393,7 +393,7 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         slide_view(
-            self.current_slide.clone(),
+            &self.current_slide,
             &self.video,
             self.current_font,
             false,
@@ -436,7 +436,7 @@ impl Presenter {
                 as i32;
 
         let container =
-            slide_view(slide.clone(), &self.video, font, true, false);
+            slide_view(&slide, &self.video, font, true, false);
         let delegate = mouse_area(
             Container::new(container)
                 .style(move |t| {
@@ -542,13 +542,13 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
     }
 }
 
-pub(crate) fn slide_view(
-    slide: Slide,
-    video: &Option<Video>,
+pub(crate) fn slide_view<'a>(
+    slide: &'a Slide,
+    video: &'a Option<Video>,
     font: Font,
     delegate: bool,
     hide_mouse: bool,
-) -> Element<'_, Message> {
+) -> Element<'a, Message> {
     let res = responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let slide_text = slide.text();

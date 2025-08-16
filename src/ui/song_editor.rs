@@ -294,7 +294,7 @@ impl SongEditor {
                     .map(|(index, slide)| {
                         container(
                             slide_view(
-                                slide,
+                                &slide,
                                 if index == 0 {
                                     &self.video
                                 } else {
