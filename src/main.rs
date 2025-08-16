@@ -1,5 +1,5 @@
 use clap::{command, Parser};
-use core::service_items::{ServiceItem, ServiceItemModel};
+use core::service_items::{Service, ServiceItem};
 use core::slide::*;
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
@@ -102,9 +102,7 @@ struct App {
     file: PathBuf,
     presenter: Presenter,
     windows: Vec<window::Id>,
-    service: BTreeMap<ServiceItem, Vec<Slide>>,
-    slides: Vec<Slide>,
-    current_slide: Slide,
+    service: Vec<ServiceItem>,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -136,7 +134,8 @@ enum Message {
     EditorToggle(bool),
     SearchFocus,
     ChangeServiceItem(usize),
-    AddServiceItem(Option<ServiceItem>),
+    AddServiceItem(usize, ServiceItem),
+    AppendServiceItem(ServiceItem),
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -191,27 +190,22 @@ impl cosmic::Application for App {
             }
         };
 
-        let items = ServiceItemModel::from(items);
         let presenter = Presenter::with_items(items.clone());
-        let slides = items.to_slides().unwrap_or_default();
-        let current_slide = slides[0].clone();
         let song_editor = SongEditor::new();
 
-        for item in items.iter() {
-            nav_model.insert().text(item.title()).data(item.clone());
-        }
+        // for item in items.iter() {
+        //     nav_model.insert().text(item.title()).data(item.clone());
+        // }
 
-        nav_model.activate_position(0);
+        // nav_model.activate_position(0);
 
         let mut app = App {
             presenter,
             core,
             nav_model,
-            service: BTreeMap::new(),
+            service: items,
             file: PathBuf::default(),
             windows,
-            slides,
-            current_slide,
             presentation_open: false,
             cli_mode: !input.ui,
             library: None,
@@ -233,6 +227,7 @@ impl cosmic::Application for App {
         };
 
         batch.push(app.add_library());
+        // batch.push(app.add_service(items));
         let batch = Task::batch(batch);
         (app, batch)
     }
@@ -282,28 +277,37 @@ impl cosmic::Application for App {
             .service
             .iter()
             .enumerate()
-            .map(|(index, (item, slides))| {
+            .map(|(index, item)| {
                 dnd_destination(tooltip( button::standard(item.title.clone())
-                    .leading_icon({
-                        match item.kind {
-                            core::kinds::ServiceItemKind::Song(_) => {
-                                icon::from_name("folder-music-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Video(_) => {
-                                icon::from_name("folder-videos-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Image(_) => {
-                                icon::from_name("folder-pictures-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Presentation(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Content(_) => todo!(),
-                        }
-                    })
-                    .class(cosmic::theme::style::Button::HeaderBar)
-                                         .on_press(cosmic::Action::App(Message::ChangeServiceItem(index))), text::body(item.kind.to_string()), TPosition::Right), vec!["application/service-item".into()]).data_received_for::<ServiceItem>(|item| {
-                    cosmic::Action::App(Message::AddServiceItem(item))
+                                         .leading_icon({
+                                             match item.kind {
+                                                 core::kinds::ServiceItemKind::Song(_) => {
+                                                     icon::from_name("folder-music-symbolic")
+                                                 },
+                                                 core::kinds::ServiceItemKind::Video(_) => {
+                                                     icon::from_name("folder-videos-symbolic")
+                                                 },
+                                                 core::kinds::ServiceItemKind::Image(_) => {
+                                                     icon::from_name("folder-pictures-symbolic")
+                                                 },
+                                                 core::kinds::ServiceItemKind::Presentation(_) => {
+                                                     icon::from_name("x-office-presentation-symbolic")
+                                                 },
+                                                 core::kinds::ServiceItemKind::Content(_) => {
+                                                     icon::from_name("x-office-presentation-symbolic")
+                                                 },
+                                             }
+                                         })
+                                         .class(cosmic::theme::style::Button::HeaderBar)
+                                         .padding(5)
+                                         .width(Length::Fill)
+                                         .on_press(cosmic::Action::App(Message::ChangeServiceItem(index))),
+                                         text::body(item.kind.to_string()), TPosition::Right), vec!["application/service-item".into()]).data_received_for::<ServiceItem>( move |item| {
+                    if let Some(item) = item {
+                        cosmic::Action::App(Message::AddServiceItem(index, item))
+                    } else {
+                        cosmic::Action::None
+                    }
                 })
                 .into()
             });
@@ -311,18 +315,23 @@ impl cosmic::Application for App {
         let column = column![
             text::heading("Service List").center().width(280),
             column(list).spacing(10),
-            text::heading("Service List").center().width(280),
             dnd_destination_for_data::<
                 ServiceItem,
                 cosmic::Action<Message>,
             >(
                 Container::new(vertical_space()),
                 |item, _| {
-                    debug!("helloooooo");
-                    cosmic::Action::App(Message::AddServiceItem(item))
+                    if let Some(item) = item {
+                        cosmic::Action::App(
+                            Message::AppendServiceItem(item),
+                        )
+                    } else {
+                        cosmic::Action::None
+                    }
                 }
             )
         ]
+        .padding(10)
         .spacing(10);
         let padding = Padding::new(0.0).top(20);
         let mut container = Container::new(column)
@@ -655,16 +664,16 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                                {
-                                    self.presentation_open = true;
-                                    if let Some(video) = &mut self.presenter.video {
-                                        video.set_muted(false);
-                                    }
-                                    window::change_mode(id, Mode::Fullscreen)
-                                } else {
-                                    Task::none()
-                                }
+                                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                        {
+                                            self.presentation_open = true;
+                                            if let Some(video) = &mut self.presenter.video {
+                                                video.set_muted(false);
+                                            }
+                                            window::change_mode(id, Mode::Fullscreen)
+                                        } else {
+                                            Task::none()
+                                        }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -741,22 +750,23 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::ChangeServiceItem(index) => {
-                self.presenter.update(
-                    presenter::Message::SlideChange(index as u16),
-                );
+                if let Some(item) = self.service.get(index) {
+                    if let Some(slide) = item.slides.first() {
+                        self.presenter.update(
+                            presenter::Message::SlideChange(
+                                slide.clone(),
+                            ),
+                        );
+                    }
+                }
                 Task::none()
             }
-            Message::AddServiceItem(item) => {
-                if let Some(item) = item {
-                    let slides = match item.to_slides() {
-                        Ok(s) => s,
-                        Err(e) => {
-                            error!("{e}");
-                            return Task::none();
-                        }
-                    };
-                    self.service.insert(item, slides);
-                };
+            Message::AddServiceItem(index, item) => {
+                self.service.insert(index, item);
+                Task::none()
+            }
+            Message::AppendServiceItem(item) => {
+                self.service.push(item);
                 Task::none()
             }
         }
@@ -938,6 +948,29 @@ where
             cosmic::Action::App(Message::AddLibrary(x))
         })
     }
+
+    // fn add_service(
+    //     &mut self,
+    //     items: Vec<ServiceItem>,
+    // ) -> Task<Message> {
+    //     Task::perform(
+    //         async move {
+    //             for item in items {
+    //                 debug!(?item, "Item to be appended");
+    //                 let slides = item.to_slides().unwrap_or(vec![]);
+    //                 map.insert(item, slides);
+    //             }
+    //             let len = map.len();
+    //             debug!(len, "to be append: ");
+    //             map
+    //         },
+    //         |x| {
+    //             let len = x.len();
+    //             debug!(len, "to append: ");
+    //             cosmic::Action::App(Message::AppendService(x))
+    //         },
+    //     )
+    // }
 
     fn process_key_press(
         &mut self,

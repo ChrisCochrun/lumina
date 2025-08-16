@@ -22,6 +22,7 @@ pub struct ServiceItem {
     pub title: String,
     pub database_id: i32,
     pub kind: ServiceItemKind,
+    pub slides: Vec<Slide>,
     // pub item: Box<dyn ServiceTrait>,
 }
 
@@ -120,6 +121,7 @@ impl Default for ServiceItem {
             title: String::default(),
             database_id: 0,
             kind: ServiceItemKind::Content(Slide::default()),
+            slides: vec![],
             // item: Box::new(Image::default()),
         }
     }
@@ -166,7 +168,10 @@ impl From<&Value> for ServiceItem {
                             id: 0,
                             title,
                             database_id: 0,
-                            kind: ServiceItemKind::Content(slide),
+                            kind: ServiceItemKind::Content(
+                                slide.clone(),
+                            ),
+                            slides: vec![slide],
                         }
                     } else if let Some(background) =
                         list.get(background_pos)
@@ -224,11 +229,11 @@ impl From<&Value> for ServiceItem {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct ServiceItemModel {
+pub struct Service {
     items: Vec<ServiceItem>,
 }
 
-impl Deref for ServiceItemModel {
+impl Deref for Service {
     type Target = Vec<ServiceItem>;
 
     fn deref(&self) -> &Self::Target {
@@ -244,7 +249,7 @@ impl Deref for ServiceItemModel {
 //     }
 // }
 
-impl From<Vec<ServiceItem>> for ServiceItemModel {
+impl From<Vec<ServiceItem>> for Service {
     fn from(items: Vec<ServiceItem>) -> Self {
         Self { items }
     }
@@ -252,49 +257,93 @@ impl From<Vec<ServiceItem>> for ServiceItemModel {
 
 impl From<&Song> for ServiceItem {
     fn from(song: &Song) -> Self {
-        Self {
-            kind: ServiceItemKind::Song(song.clone()),
-            database_id: song.id,
-            title: song.title.clone(),
-            ..Default::default()
+        if let Ok(slides) = song.to_slides() {
+            Self {
+                kind: ServiceItemKind::Song(song.clone()),
+                database_id: song.id,
+                title: song.title.clone(),
+                slides,
+                ..Default::default()
+            }
+        } else {
+            Self {
+                kind: ServiceItemKind::Song(song.clone()),
+                database_id: song.id,
+                title: song.title.clone(),
+                ..Default::default()
+            }
         }
     }
 }
 
 impl From<&Video> for ServiceItem {
     fn from(video: &Video) -> Self {
-        Self {
-            kind: ServiceItemKind::Video(video.clone()),
-            database_id: video.id,
-            title: video.title.clone(),
-            ..Default::default()
+        if let Ok(slides) = video.to_slides() {
+            Self {
+                kind: ServiceItemKind::Video(video.clone()),
+                database_id: video.id,
+                title: video.title.clone(),
+                slides,
+                ..Default::default()
+            }
+        } else {
+            Self {
+                kind: ServiceItemKind::Video(video.clone()),
+                database_id: video.id,
+                title: video.title.clone(),
+                ..Default::default()
+            }
         }
     }
 }
 
 impl From<&Image> for ServiceItem {
     fn from(image: &Image) -> Self {
-        Self {
-            kind: ServiceItemKind::Image(image.clone()),
-            database_id: image.id,
-            title: image.title.clone(),
-            ..Default::default()
+        if let Ok(slides) = image.to_slides() {
+            Self {
+                kind: ServiceItemKind::Image(image.clone()),
+                database_id: image.id,
+                title: image.title.clone(),
+                slides,
+                ..Default::default()
+            }
+        } else {
+            Self {
+                kind: ServiceItemKind::Image(image.clone()),
+                database_id: image.id,
+                title: image.title.clone(),
+                ..Default::default()
+            }
         }
     }
 }
 
 impl From<&Presentation> for ServiceItem {
     fn from(presentation: &Presentation) -> Self {
-        Self {
-            kind: ServiceItemKind::Presentation(presentation.clone()),
-            database_id: presentation.id,
-            title: presentation.title.clone(),
-            ..Default::default()
+        if let Ok(slides) = presentation.to_slides() {
+            Self {
+                kind: ServiceItemKind::Presentation(
+                    presentation.clone(),
+                ),
+                database_id: presentation.id,
+                title: presentation.title.clone(),
+                slides,
+                ..Default::default()
+            }
+        } else {
+            Self {
+                kind: ServiceItemKind::Presentation(
+                    presentation.clone(),
+                ),
+                database_id: presentation.id,
+                title: presentation.title.clone(),
+                ..Default::default()
+            }
         }
     }
 }
 
-impl ServiceItemModel {
+impl Service {
     fn add_item(
         &mut self,
         item: impl Into<ServiceItem>,
@@ -379,7 +428,7 @@ mod test {
         let service_item = ServiceItem::from(&song);
         let pres = test_presentation();
         let pres_item = ServiceItem::from(&pres);
-        let mut service_model = ServiceItemModel::default();
+        let mut service_model = Service::default();
         match service_model.add_item(&song) {
             Ok(_) => {
                 assert_eq!(

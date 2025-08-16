@@ -31,7 +31,10 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    core::{service_items::ServiceItemModel, slide::Slide},
+    core::{
+        service_items::{Service, ServiceItem},
+        slide::Slide,
+    },
     ui::text_svg::{self, Font as SvgFont},
     // ui::widgets::slide_text,
     BackgroundKind,
@@ -43,8 +46,9 @@ const REFERENCE_HEIGHT: f32 = 1080.0;
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
     pub slides: Vec<Slide>,
-    pub items: ServiceItemModel,
+    pub service: Vec<ServiceItem>,
     pub current_slide: Slide,
+    pub current_item: usize,
     pub current_slide_index: u16,
     pub video: Option<Video>,
     pub video_position: f32,
@@ -64,7 +68,7 @@ pub(crate) enum Action {
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
-    SlideChange(u16),
+    SlideChange(Slide),
     EndVideo,
     StartVideo,
     StartAudio,
@@ -117,8 +121,13 @@ impl Presenter {
         result.into_diagnostic()
     }
 
-    pub fn with_items(items: ServiceItemModel) -> Self {
-        let slides = items.to_slides().unwrap_or_default();
+    pub fn with_items(items: Vec<ServiceItem>) -> Self {
+        let mut slides = vec![];
+        for item in &items {
+            for slide in item.to_slides().unwrap_or_default() {
+                slides.push(slide);
+            }
+        }
         let video = {
             if let Some(slide) = slides.first() {
                 let path = slide.background().path.clone();
@@ -144,8 +153,9 @@ impl Presenter {
         };
         Self {
             slides: slides.clone(),
-            items,
+            service: items,
             current_slide: slides[0].clone(),
+            current_item: 0,
             current_slide_index: 0,
             video,
             audio: slides[0].audio(),
@@ -174,9 +184,9 @@ impl Presenter {
                     debug!("no more slides");
                     return Action::None;
                 }
-                return self.update(Message::SlideChange(
-                    self.current_slide_index + 1,
-                ));
+                // return self.update(Message::SlideChange(
+                //     self.current_slide_index + 1,
+                // ));
             }
             Message::PrevSlide => {
                 debug!("prev slide");
@@ -184,20 +194,18 @@ impl Presenter {
                     debug!("beginning slides");
                     return Action::None;
                 }
-                return self.update(Message::SlideChange(
-                    self.current_slide_index - 1,
-                ));
+                // return self.update(Message::SlideChange(
+                //     self.current_slide_index - 1,
+                // ));
             }
-            Message::SlideChange(id) => {
-                debug!(id, "slide changed");
+            Message::SlideChange(slide) => {
+                debug!(?slide, "slide changed");
                 let old_background =
                     self.current_slide.background().clone();
-                self.current_slide_index = id;
-                if let Some(slide) = self.slides.get(id as usize) {
-                    self.current_slide = slide.clone();
-                    let _ = self
-                        .update(Message::ChangeFont(slide.font()));
-                }
+                // self.current_slide_index = slide;
+                self.current_slide = slide.clone();
+                let _ =
+                    self.update(Message::ChangeFont(slide.font()));
                 if self.current_slide.background() != &old_background
                 {
                     if let Some(video) = &mut self.video {
@@ -480,36 +488,32 @@ impl Presenter {
         .interaction(cosmic::iced::mouse::Interaction::Pointer)
         .on_move(move |_| Message::HoveredSlide(slide_id))
         .on_exit(Message::HoveredSlide(-1))
-        .on_press(Message::SlideChange(slide_id as u16));
+        .on_press(Message::SlideChange(slide.clone()));
         delegate.into()
     }
 
     fn reset_video(&mut self) {
-        if let Some(slide) =
-            self.slides.get(self.current_slide_index as usize)
-        {
-            match slide.background().kind {
-                BackgroundKind::Image => self.video = None,
-                BackgroundKind::Video => {
-                    let path = slide.background().path.clone();
-                    if path.exists() {
-                        let url = Url::from_file_path(path).unwrap();
-                        let result = Self::create_video(url);
-                        match result {
-                            Ok(mut v) => {
-                                v.set_looping(
-                                    self.current_slide.video_loop(),
-                                );
-                                self.video = Some(v)
-                            }
-                            Err(e) => {
-                                error!("Had an error creating the video object: {e}");
-                                self.video = None;
-                            }
+        match self.current_slide.background().kind {
+            BackgroundKind::Image => self.video = None,
+            BackgroundKind::Video => {
+                let path = &self.current_slide.background().path;
+                if path.exists() {
+                    let url = Url::from_file_path(path).unwrap();
+                    let result = Self::create_video(url);
+                    match result {
+                        Ok(mut v) => {
+                            v.set_looping(
+                                self.current_slide.video_loop(),
+                            );
+                            self.video = Some(v)
                         }
-                    } else {
-                        self.video = None;
+                        Err(e) => {
+                            error!("Had an error creating the video object: {e}");
+                            self.video = None;
+                        }
                     }
+                } else {
+                    self.video = None;
                 }
             }
         }
