@@ -244,13 +244,31 @@ impl Presenter {
                     let audio = PathBuf::from(audio);
                     debug!("{:?}", audio);
                     if audio.exists() {
-                        match &self.audio {
-                            Some(aud) if aud != &audio => {
+                        let old_audio = self.audio.clone();
+                        match old_audio {
+                            Some(current_audio)
+                                if current_audio != audio =>
+                            {
                                 self.audio = Some(audio.clone());
+                                debug!(
+                                    ?audio,
+                                    ?current_audio,
+                                    "starting audio"
+                                );
                                 tasks.push(self.start_audio());
                             }
-                            Some(_) => (),
+                            Some(current_audio) => {
+                                debug!(
+                                    ?audio,
+                                    ?current_audio,
+                                    "could not find audio"
+                                );
+                            }
                             None => {
+                                debug!(
+                                    ?audio,
+                                    "could not find audio"
+                                );
                                 self.audio = Some(audio.clone());
                                 tasks.push(self.start_audio());
                             }

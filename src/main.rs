@@ -597,6 +597,8 @@ impl cosmic::Application for App {
                                         slide,
                                     ),
                                 );
+                                self.current_item =
+                                    (item_index, slide_index + 1);
                                 Task::none()
                             } else {
                                 debug!("Slides are not longer");
@@ -613,7 +615,54 @@ impl cosmic::Application for App {
                             Task::none()
                         }
                     }
-                    presenter::Action::PrevSlide => todo!(),
+                    presenter::Action::PrevSlide => {
+                        let slide_index = self.current_item.1;
+                        let item_index = self.current_item.0;
+                        if let Some(item) =
+                            self.service.get(item_index)
+                        {
+                            if slide_index != 0 {
+                                let slide = item.slides
+                                    [slide_index - 1]
+                                    .clone();
+                                self.presenter.update(
+                                    presenter::Message::SlideChange(
+                                        slide,
+                                    ),
+                                );
+                                self.current_item =
+                                    (item_index, slide_index - 1);
+                                Task::none()
+                            } else if slide_index == 0
+                                && item_index == 0
+                            {
+                                Task::none()
+                            } else {
+                                debug!("Change slide to previous items slides");
+                                let previous_item_slides_length =
+                                    if let Some(item) = self
+                                        .service
+                                        .get(item_index - 1)
+                                    {
+                                        item.slides.len()
+                                    } else {
+                                        0
+                                    };
+                                self.current_item = (
+                                    item_index - 1,
+                                    previous_item_slides_length - 1,
+                                );
+                                if let Some(item) =
+                                    self.service.get(item_index - 1)
+                                {
+                                    self.presenter.update(presenter::Message::SlideChange(item.slides[previous_item_slides_length - 1].clone()));
+                                }
+                                Task::none()
+                            }
+                        } else {
+                            Task::none()
+                        }
+                    }
                 }
             }
             Message::Library(message) => {
