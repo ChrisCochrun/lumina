@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ops::Deref;
+use std::sync::Arc;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
@@ -22,7 +23,7 @@ pub struct ServiceItem {
     pub title: String,
     pub database_id: i32,
     pub kind: ServiceItemKind,
-    pub slides: Vec<Slide>,
+    pub slides: Arc<[Slide]>,
     // pub item: Box<dyn ServiceTrait>,
 }
 
@@ -121,7 +122,7 @@ impl Default for ServiceItem {
             title: String::default(),
             database_id: 0,
             kind: ServiceItemKind::Content(Slide::default()),
-            slides: vec![],
+            slides: Arc::new([]),
             // item: Box::new(Image::default()),
         }
     }
@@ -171,7 +172,7 @@ impl From<&Value> for ServiceItem {
                             kind: ServiceItemKind::Content(
                                 slide.clone(),
                             ),
-                            slides: vec![slide],
+                            slides: Arc::new([slide]),
                         }
                     } else if let Some(background) =
                         list.get(background_pos)
@@ -262,7 +263,7 @@ impl From<&Song> for ServiceItem {
                 kind: ServiceItemKind::Song(song.clone()),
                 database_id: song.id,
                 title: song.title.clone(),
-                slides,
+                slides: slides.into(),
                 ..Default::default()
             }
         } else {
@@ -283,7 +284,7 @@ impl From<&Video> for ServiceItem {
                 kind: ServiceItemKind::Video(video.clone()),
                 database_id: video.id,
                 title: video.title.clone(),
-                slides,
+                slides: slides.into(),
                 ..Default::default()
             }
         } else {
@@ -304,7 +305,7 @@ impl From<&Image> for ServiceItem {
                 kind: ServiceItemKind::Image(image.clone()),
                 database_id: image.id,
                 title: image.title.clone(),
-                slides,
+                slides: slides.into(),
                 ..Default::default()
             }
         } else {
@@ -327,7 +328,7 @@ impl From<&Presentation> for ServiceItem {
                 ),
                 database_id: presentation.id,
                 title: presentation.title.clone(),
-                slides,
+                slides: slides.into(),
                 ..Default::default()
             }
         } else {

@@ -61,6 +61,8 @@ pub(crate) struct Presenter {
 
 pub(crate) enum Action {
     Task(Task<Message>),
+    NextSlide,
+    PrevSlide,
     None,
 }
 
@@ -177,23 +179,25 @@ impl Presenter {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::NextSlide => {
-                debug!("next slide");
-                if self.slides.len() as u16 - 1
-                    == self.current_slide_index
-                {
-                    debug!("no more slides");
-                    return Action::None;
-                }
+                return Action::NextSlide;
+                // debug!("next slide");
+                // if self.slides.len() as u16 - 1
+                //     == self.current_slide_index
+                // {
+                //     debug!("no more slides");
+                //     return Action::None;
+                // }
                 // return self.update(Message::SlideChange(
                 //     self.current_slide_index + 1,
                 // ));
             }
             Message::PrevSlide => {
-                debug!("prev slide");
-                if 0 == self.current_slide_index {
-                    debug!("beginning slides");
-                    return Action::None;
-                }
+                return Action::PrevSlide;
+                // debug!("prev slide");
+                // if 0 == self.current_slide_index {
+                //     debug!("beginning slides");
+                //     return Action::None;
+                // }
                 // return self.update(Message::SlideChange(
                 //     self.current_slide_index - 1,
                 // ));
@@ -383,7 +387,7 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         slide_view(
-            &self.current_slide,
+            self.current_slide.clone(),
             &self.video,
             self.current_font,
             false,
@@ -393,7 +397,7 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         slide_view(
-            &self.current_slide,
+            self.current_slide.clone(),
             &self.video,
             self.current_font,
             false,
@@ -436,7 +440,7 @@ impl Presenter {
                 as i32;
 
         let container =
-            slide_view(&slide, &self.video, font, true, false);
+            slide_view(slide.clone(), &self.video, font, true, false);
         let delegate = mouse_area(
             Container::new(container)
                 .style(move |t| {
@@ -543,7 +547,7 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 }
 
 pub(crate) fn slide_view<'a>(
-    slide: &'a Slide,
+    slide: Slide,
     video: &'a Option<Video>,
     font: Font,
     delegate: bool,

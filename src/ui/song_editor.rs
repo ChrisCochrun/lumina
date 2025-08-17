@@ -289,12 +289,12 @@ impl SongEditor {
         if let Some(song) = &self.song {
             if let Ok(slides) = song.to_slides() {
                 let slides = slides
-                    .into_iter()
+                    .iter()
                     .enumerate()
                     .map(|(index, slide)| {
                         container(
                             slide_view(
-                                &slide,
+                                slide.clone(),
                                 if index == 0 {
                                     &self.video
                                 } else {

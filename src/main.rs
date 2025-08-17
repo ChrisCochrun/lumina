@@ -103,6 +103,7 @@ struct App {
     presenter: Presenter,
     windows: Vec<window::Id>,
     service: Vec<ServiceItem>,
+    current_item: (usize, usize),
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -214,6 +215,7 @@ impl cosmic::Application for App {
             editor_mode: None,
             song_editor,
             searching: false,
+            current_item: (0, 0),
         };
 
         let mut batch = vec![];
@@ -569,12 +571,49 @@ impl cosmic::Application for App {
                     }
                 }
                 match self.presenter.update(message) {
-                    // debug!(?x);
-                    // cosmic::app::Message::App(Message::None)
                     presenter::Action::Task(task) => task.map(|m| {
                         cosmic::Action::App(Message::Present(m))
                     }),
                     presenter::Action::None => Task::none(),
+                    presenter::Action::NextSlide => {
+                        let slide_index = self.current_item.1;
+                        let item_index = self.current_item.0;
+                        if let Some(item) =
+                            self.service.get(item_index)
+                        {
+                            if item.slides.len() > slide_index + 1 {
+                                let slide_length = item.slides.len();
+                                debug!(
+                                    slide_index,
+                                    slide_length,
+                                    ?item,
+                                    "Slides are longer"
+                                );
+                                let slide = item.slides
+                                    [slide_index + 1]
+                                    .clone();
+                                self.presenter.update(
+                                    presenter::Message::SlideChange(
+                                        slide,
+                                    ),
+                                );
+                                Task::none()
+                            } else {
+                                debug!("Slides are not longer");
+                                self.current_item =
+                                    (item_index + 1, 0);
+                                if let Some(item) =
+                                    self.service.get(item_index + 1)
+                                {
+                                    self.presenter.update(presenter::Message::SlideChange(item.slides[0].clone()));
+                                }
+                                Task::none()
+                            }
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presenter::Action::PrevSlide => todo!(),
                 }
             }
             Message::Library(message) => {
@@ -750,8 +789,14 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::ChangeServiceItem(index) => {
-                if let Some(item) = self.service.get(index) {
+                if let Some((index, item)) = self
+                    .service
+                    .iter()
+                    .enumerate()
+                    .find(|(id, _)| index == *id)
+                {
                     if let Some(slide) = item.slides.first() {
+                        self.current_item = (index, 0);
                         self.presenter.update(
                             presenter::Message::SlideChange(
                                 slide.clone(),
