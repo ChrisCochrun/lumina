@@ -17,6 +17,7 @@ use cosmic::{
         },
         span, stack,
         text::Rich,
+        vertical_rule,
     },
     prelude::*,
     widget::{
@@ -45,16 +46,15 @@ const REFERENCE_HEIGHT: f32 = 1080.0;
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
-    pub slides: Vec<Slide>,
     pub service: Vec<ServiceItem>,
     pub current_slide: Slide,
     pub current_item: usize,
-    pub current_slide_index: u16,
+    pub current_slide_index: usize,
     pub video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
     sink: (OutputStream, Arc<Sink>),
-    hovered_slide: i32,
+    hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
 }
@@ -78,7 +78,7 @@ pub(crate) enum Message {
     VideoPos(f32),
     VideoFrame,
     MissingPlugin(gstreamer::Message),
-    HoveredSlide(i32),
+    HoveredSlide(Option<(usize, usize)>),
     ChangeFont(String),
     Error(String),
     None,
@@ -124,27 +124,25 @@ impl Presenter {
     }
 
     pub fn with_items(items: Vec<ServiceItem>) -> Self {
-        let mut slides = vec![];
-        for item in &items {
-            for slide in item.to_slides().unwrap_or_default() {
-                slides.push(slide);
-            }
-        }
         let video = {
-            if let Some(slide) = slides.first() {
-                let path = slide.background().path.clone();
-                if path.exists() {
-                    let url = Url::from_file_path(path).unwrap();
-                    let result = Video::new(&url);
-                    match result {
-                        Ok(mut v) => {
-                            v.set_paused(true);
-                            Some(v)
+            if let Some(item) = items.first() {
+                if let Some(slide) = item.slides.first() {
+                    let path = slide.background().path.clone();
+                    if path.exists() {
+                        let url = Url::from_file_path(path).unwrap();
+                        let result = Video::new(&url);
+                        match result {
+                            Ok(mut v) => {
+                                v.set_paused(true);
+                                Some(v)
+                            }
+                            Err(e) => {
+                                error!("Had an error creating the video object: {e}, likely the first slide isn't a video");
+                                None
+                            }
                         }
-                        Err(e) => {
-                            error!("Had an error creating the video object: {e}, likely the first slide isn't a video");
-                            None
-                        }
+                    } else {
+                        None
                     }
                 } else {
                     None
@@ -154,15 +152,14 @@ impl Presenter {
             }
         };
         Self {
-            slides: slides.clone(),
-            service: items,
-            current_slide: slides[0].clone(),
+            current_slide: items[0].slides[0].clone(),
             current_item: 0,
             current_slide_index: 0,
             video,
-            audio: slides[0].audio(),
+            audio: items[0].slides[0].audio().clone(),
+            service: items,
             video_position: 0.0,
-            hovered_slide: -1,
+            hovered_slide: None,
             sink: {
                 let (stream, stream_handle) =
                     OutputStream::try_default().unwrap();
@@ -416,113 +413,217 @@ impl Presenter {
 
     pub fn preview_bar(&self) -> Element<Message> {
         let mut items = vec![];
-        // for item in &self.service {
-        //     let mut slides = vec![];
-        //     for slide in item.slides.iter() {
-        //         slides.push(self.slide_delegate(slide));
-        //     }
+        self.service.iter().enumerate().for_each(
+            |(item_index, item)| {
+                let mut slides = vec![];
+                item.slides.iter().enumerate().for_each(
+                    |(slide_index, slide)| {
+                        let font_name = slide.font().into_boxed_str();
+                        let family =
+                            Family::Name(Box::leak(font_name));
+                        let weight = Weight::Normal;
+                        let stretch = Stretch::Normal;
+                        let style = Style::Normal;
+                        let font = Font {
+                            family,
+                            weight,
+                            stretch,
+                            style,
+                        };
 
-        //     let row = scrollable(
-        //         Row::from_vec(slides).spacing(10).padding(15),
-        //     )
-        //     .direction(Direction::Horizontal(Scrollbar::new()))
-        //     .height(Length::Fill)
-        //     .width(Length::Fill)
-        //     .id(self.scroll_id.clone());
-        //     let label =
-        //         text::body(item.title.clone()).line_height(5.0);
-        //     let label_container =
-        //         container(horizontal_space().width(Length::Shrink))
-        //             .align_left(Length::Fill)
-        //             .align_top(Length::Fill)
-        //             .padding([3, 0, 0, 10]);
-        //     items.push(stack!(row, label_container).into());
-        // }
-        for slide in self.slides.iter() {
-            items.push(self.slide_delegate(slide));
-        }
+                        let is_current_slide =
+                            (item_index, slide_index)
+                                == (
+                                    self.current_item,
+                                    self.current_slide_index,
+                                );
+
+                        let container = slide_view(
+                            slide.clone(),
+                            &self.video,
+                            font,
+                            true,
+                            false,
+                        );
+                        let delegate = mouse_area(
+                            Container::new(container)
+                                .style(move |t| {
+                                    let mut style =
+                                        container::Style::default();
+                                    let theme = t.cosmic();
+                                    let hovered = self.hovered_slide
+                                        == Some((
+                                            item_index,
+                                            slide_index,
+                                        ));
+                                    style.background =
+                                        Some(Background::Color(
+                                            if is_current_slide {
+                                                theme
+                                                    .accent
+                                                    .base
+                                                    .into()
+                                            } else if hovered {
+                                                theme
+                                                    .accent
+                                                    .hover
+                                                    .into()
+                                            } else {
+                                                theme
+                                                    .palette
+                                                    .neutral_3
+                                                    .into()
+                                            },
+                                        ));
+                                    style.border = Border::default()
+                                        .rounded(10.0);
+                                    style.shadow = Shadow {
+                                        color: Color::BLACK,
+                                        offset: {
+                                            if is_current_slide {
+                                                Vector::new(5.0, 5.0)
+                                            } else if hovered {
+                                                Vector::new(5.0, 5.0)
+                                            } else {
+                                                Vector::new(0.0, 0.0)
+                                            }
+                                        },
+                                        blur_radius: {
+                                            if is_current_slide {
+                                                10.0
+                                            } else if hovered {
+                                                10.0
+                                            } else {
+                                                0.0
+                                            }
+                                        },
+                                    };
+                                    style
+                                })
+                                .center_x(100.0 * 16.0 / 9.0)
+                                .height(100)
+                                .padding(10),
+                        )
+                        .interaction(
+                            cosmic::iced::mouse::Interaction::Pointer,
+                        )
+                        .on_move(move |_| {
+                            Message::HoveredSlide(Some((
+                                item_index,
+                                slide_index,
+                            )))
+                        })
+                        .on_exit(Message::HoveredSlide(None))
+                        .on_press(Message::SlideChange(
+                            slide.clone(),
+                        ));
+                        slides.push(delegate.into());
+                    },
+                );
+                let row = Row::from_vec(slides)
+                    .spacing(10)
+                    .padding([20, 15]);
+                let label = text::body(item.title.clone());
+                let label_container = container(label)
+                    .align_top(Length::Fill)
+                    .align_left(Length::Fill)
+                    .padding([0, 0, 0, 35]);
+                let divider = vertical_rule(2);
+                items.push(
+                    container(stack!(row, label_container))
+                        .padding([5, 2])
+                        .into(),
+                );
+                items.push(divider.into());
+            },
+        );
         let row =
-            scrollable(Row::from_vec(items).spacing(10).padding(15))
-                .direction(Direction::Horizontal(Scrollbar::new()))
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .id(self.scroll_id.clone());
+            scrollable(container(Row::from_vec(items)).style(|t| {
+                let style = container::Style::default();
+                style.border(Border::default().width(2))
+            }))
+            .direction(Direction::Horizontal(Scrollbar::new()))
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .id(self.scroll_id.clone());
         row.into()
     }
 
-    fn slide_delegate(&self, slide: &Slide) -> Element<'_, Message> {
-        let font_name = slide.font().into_boxed_str();
-        let family = Family::Name(Box::leak(font_name));
-        let weight = Weight::Normal;
-        let stretch = Stretch::Normal;
-        let style = Style::Normal;
-        let font = Font {
-            family,
-            weight,
-            stretch,
-            style,
-        };
+    // fn slide_delegate(&self, slide: &Slide) -> Element<'_, Message> {
+    //     let font_name = slide.font().into_boxed_str();
+    //     let family = Family::Name(Box::leak(font_name));
+    //     let weight = Weight::Normal;
+    //     let stretch = Stretch::Normal;
+    //     let style = Style::Normal;
+    //     let font = Font {
+    //         family,
+    //         weight,
+    //         stretch,
+    //         style,
+    //     };
 
-        let slide_id =
-            self.slides.iter().position(|s| s == slide).unwrap()
-                as i32;
+    //     let is_current_slide = self.service[self.current_item]
+    //         .slides
+    //         .get(self.current_slide_index as usize)
+    //         .is_some();
+    //     let this_item_index = self
+    //         .service
+    //         .iter()
+    //         .position(|item| item == self.service[self.current_item])
+    //         .unwrap();
+    //     let this_slide_index = self.service[this_item_index].slides;
 
-        let container =
-            slide_view(slide.clone(), &self.video, font, true, false);
-        let delegate = mouse_area(
-            Container::new(container)
-                .style(move |t| {
-                    let mut style = container::Style::default();
-                    let theme = t.cosmic();
-                    let hovered = self.hovered_slide == slide_id;
-                    style.background = Some(Background::Color(
-                        if self.current_slide_index as i32 == slide_id
-                        {
-                            theme.accent.base.into()
-                        } else if hovered {
-                            theme.accent.hover.into()
-                        } else {
-                            theme.palette.neutral_3.into()
-                        },
-                    ));
-                    style.border = Border::default().rounded(10.0);
-                    style.shadow = Shadow {
-                        color: Color::BLACK,
-                        offset: {
-                            if self.current_slide_index as i32
-                                == slide_id
-                            {
-                                Vector::new(5.0, 5.0)
-                            } else if hovered {
-                                Vector::new(5.0, 5.0)
-                            } else {
-                                Vector::new(0.0, 0.0)
-                            }
-                        },
-                        blur_radius: {
-                            if self.current_slide_index as i32
-                                == slide_id
-                            {
-                                10.0
-                            } else if hovered {
-                                10.0
-                            } else {
-                                0.0
-                            }
-                        },
-                    };
-                    style
-                })
-                .center_x(100.0 * 16.0 / 9.0)
-                .height(100)
-                .padding(10),
-        )
-        .interaction(cosmic::iced::mouse::Interaction::Pointer)
-        .on_move(move |_| Message::HoveredSlide(slide_id))
-        .on_exit(Message::HoveredSlide(-1))
-        .on_press(Message::SlideChange(slide.clone()));
-        delegate.into()
-    }
+    //     let container =
+    //         slide_view(slide.clone(), &self.video, font, true, false);
+    //     let delegate = mouse_area(
+    //         Container::new(container)
+    //             .style(move |t| {
+    //                 let mut style = container::Style::default();
+    //                 let theme = t.cosmic();
+    //                 let hovered = self.hovered_slide == slide_id;
+    //                 style.background = Some(Background::Color(
+    //                     if is_current_slide {
+    //                         theme.accent.base.into()
+    //                     } else if hovered {
+    //                         theme.accent.hover.into()
+    //                     } else {
+    //                         theme.palette.neutral_3.into()
+    //                     },
+    //                 ));
+    //                 style.border = Border::default().rounded(10.0);
+    //                 style.shadow = Shadow {
+    //                     color: Color::BLACK,
+    //                     offset: {
+    //                         if is_current_slide {
+    //                             Vector::new(5.0, 5.0)
+    //                         } else if hovered {
+    //                             Vector::new(5.0, 5.0)
+    //                         } else {
+    //                             Vector::new(0.0, 0.0)
+    //                         }
+    //                     },
+    //                     blur_radius: {
+    //                         if is_current_slide {
+    //                             10.0
+    //                         } else if hovered {
+    //                             10.0
+    //                         } else {
+    //                             0.0
+    //                         }
+    //                     },
+    //                 };
+    //                 style
+    //             })
+    //             .center_x(100.0 * 16.0 / 9.0)
+    //             .height(100)
+    //             .padding(10),
+    //     )
+    //     .interaction(cosmic::iced::mouse::Interaction::Pointer)
+    //     .on_move(move |_| Message::HoveredSlide(slide_id))
+    //     .on_exit(Message::HoveredSlide(-1))
+    //     .on_press(Message::SlideChange(slide.clone()));
+    //     delegate.into()
+    // }
 
     fn reset_video(&mut self) {
         match self.current_slide.background().kind {

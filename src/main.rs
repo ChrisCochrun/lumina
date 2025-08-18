@@ -1037,7 +1037,7 @@ impl cosmic::Application for App {
             )
             .clip(true)
             .width(Length::Fill)
-            .center_y(130)
+            .center_y(180)
         ];
 
         if let Some(_editor) = &self.editor_mode {
