@@ -20,8 +20,8 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, Column,
-        Container, Id, Row, Space,
+        container, horizontal_space, image, mouse_area, responsive,
+        scrollable, text, Column, Container, Id, Row, Space,
     },
     Task,
 };
@@ -416,6 +416,28 @@ impl Presenter {
 
     pub fn preview_bar(&self) -> Element<Message> {
         let mut items = vec![];
+        // for item in &self.service {
+        //     let mut slides = vec![];
+        //     for slide in item.slides.iter() {
+        //         slides.push(self.slide_delegate(slide));
+        //     }
+
+        //     let row = scrollable(
+        //         Row::from_vec(slides).spacing(10).padding(15),
+        //     )
+        //     .direction(Direction::Horizontal(Scrollbar::new()))
+        //     .height(Length::Fill)
+        //     .width(Length::Fill)
+        //     .id(self.scroll_id.clone());
+        //     let label =
+        //         text::body(item.title.clone()).line_height(5.0);
+        //     let label_container =
+        //         container(horizontal_space().width(Length::Shrink))
+        //             .align_left(Length::Fill)
+        //             .align_top(Length::Fill)
+        //             .padding([3, 0, 0, 10]);
+        //     items.push(stack!(row, label_container).into());
+        // }
         for slide in self.slides.iter() {
             items.push(self.slide_delegate(slide));
         }
@@ -428,10 +450,7 @@ impl Presenter {
         row.into()
     }
 
-    fn slide_delegate<'a>(
-        &'a self,
-        slide: &'a Slide,
-    ) -> Element<'a, Message> {
+    fn slide_delegate(&self, slide: &Slide) -> Element<'_, Message> {
         let font_name = slide.font().into_boxed_str();
         let family = Family::Name(Box::leak(font_name));
         let weight = Weight::Normal;
