@@ -49,3 +49,6 @@ opt-level = 3
 [profile.release]
 opt-level = 3
 debug = true
+
+[lints.rust]
+mismatched_lifetime_syntaxes = "allow"

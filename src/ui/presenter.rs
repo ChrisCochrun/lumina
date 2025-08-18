@@ -564,13 +564,13 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
     }
 }
 
-pub(crate) fn slide_view<'a>(
+pub(crate) fn slide_view(
     slide: Slide,
-    video: &'a Option<Video>,
+    video: &Option<Video>,
     font: Font,
     delegate: bool,
     hide_mouse: bool,
-) -> Element<'a, Message> {
+) -> Element<'_, Message> {
     let res = responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let slide_text = slide.text();

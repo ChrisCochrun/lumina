@@ -1,27 +1,26 @@
 use clap::{command, Parser};
-use core::service_items::{Service, ServiceItem};
+use core::service_items::ServiceItem;
 use core::slide::*;
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
-use cosmic::iced::clipboard::dnd::DndAction;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{self, event, window, Length, Padding, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row};
 use cosmic::widget::dnd_destination::{
-    self, dnd_destination, dnd_destination_for_data, DragId,
+    dnd_destination, dnd_destination_for_data,
 };
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     button, horizontal_space, nav_bar, search_input, tooltip,
     vertical_space, Space,
 };
 use cosmic::widget::{icon, slider};
-use cosmic::widget::{mouse_area, text};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{prelude::*, theme};
 use cosmic::{widget::Container, Theme};
@@ -29,7 +28,6 @@ use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use rayon::prelude::*;
-use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
