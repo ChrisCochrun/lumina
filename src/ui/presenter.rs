@@ -232,44 +232,45 @@ impl Presenter {
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
-                if let Some(audio) = &mut self.current_slide.audio() {
-                    let audio = audio.to_str().unwrap().to_string();
-                    let audio = if let Some(audio) =
-                        audio.strip_prefix(r"file://")
+                if let Some(mut new_audio) =
+                    self.current_slide.audio()
+                {
+                    if let Some(stripped_audio) = new_audio
+                        .to_str()
+                        .unwrap()
+                        .to_string()
+                        .strip_prefix(r"file://")
                     {
-                        audio
-                    } else {
-                        audio.as_str()
-                    };
-                    let audio = PathBuf::from(audio);
-                    debug!("{:?}", audio);
-                    if audio.exists() {
+                        new_audio = PathBuf::from(stripped_audio);
+                    }
+                    debug!("{:?}", new_audio);
+                    if new_audio.exists() {
                         let old_audio = self.audio.clone();
                         match old_audio {
                             Some(current_audio)
-                                if current_audio != audio =>
+                                if current_audio != *new_audio =>
                             {
-                                self.audio = Some(audio.clone());
+                                self.audio = Some(new_audio.clone());
                                 debug!(
-                                    ?audio,
+                                    ?new_audio,
                                     ?current_audio,
-                                    "starting audio"
+                                    "audio needs to change"
                                 );
                                 tasks.push(self.start_audio());
                             }
                             Some(current_audio) => {
                                 debug!(
-                                    ?audio,
+                                    ?new_audio,
                                     ?current_audio,
-                                    "could not find audio"
+                                    "Same audio shouldn't change"
                                 );
                             }
                             None => {
                                 debug!(
-                                    ?audio,
-                                    "could not find audio"
+                                    ?new_audio,
+                                    "could not find audio, need to change"
                                 );
-                                self.audio = Some(audio.clone());
+                                self.audio = Some(new_audio.clone());
                                 tasks.push(self.start_audio());
                             }
                         };
@@ -281,6 +282,8 @@ impl Presenter {
                     self.audio = None;
                     self.update(Message::EndAudio);
                 }
+                let task_count = tasks.len();
+                debug!(?task_count);
                 return Action::Task(Task::batch(tasks));
             }
             Message::ChangeFont(s) => {
@@ -389,18 +392,6 @@ impl Presenter {
             }
         };
         Action::None
-    }
-
-    fn start_audio(&mut self) -> Task<Message> {
-        if let Some(audio) = &mut self.audio {
-            let audio = audio.clone();
-            Task::perform(
-                start_audio(Arc::clone(&self.sink.1), audio),
-                |_| Message::None,
-            )
-        } else {
-            Task::none()
-        }
     }
 
     pub fn view(&self) -> Element<Message> {
@@ -540,10 +531,26 @@ impl Presenter {
             }
         }
     }
+
+    fn start_audio(&mut self) -> Task<Message> {
+        if let Some(audio) = &mut self.audio {
+            debug!(?audio, "This is where audio should be changing");
+            let audio = audio.clone();
+            Task::perform(
+                start_audio(Arc::clone(&self.sink.1), audio),
+                |_| Message::None,
+            )
+        } else {
+            debug!(?self.audio, "Apparently this doesn't exist");
+            Task::none()
+        }
+    }
 }
 
+// This needs to be async so that rodio's audio will work
 #[allow(clippy::unused_async)]
 async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+    debug!(?audio);
     let file = BufReader::new(File::open(audio).unwrap());
     debug!(?file);
     let source = Decoder::new(file).unwrap();

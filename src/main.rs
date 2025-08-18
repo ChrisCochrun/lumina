@@ -570,6 +570,7 @@ impl cosmic::Application for App {
                 }
                 match self.presenter.update(message) {
                     presenter::Action::Task(task) => task.map(|m| {
+                        debug!("Should run future");
                         cosmic::Action::App(Message::Present(m))
                     }),
                     presenter::Action::None => Task::none(),
@@ -616,6 +617,7 @@ impl cosmic::Application for App {
                     presenter::Action::PrevSlide => {
                         let slide_index = self.current_item.1;
                         let item_index = self.current_item.0;
+                        let mut tasks = vec![];
                         if let Some(item) =
                             self.service.get(item_index)
                         {
@@ -623,14 +625,24 @@ impl cosmic::Application for App {
                                 let slide = item.slides
                                     [slide_index - 1]
                                     .clone();
-                                self.presenter.update(
+                                let action = self.presenter.update(
                                     presenter::Message::SlideChange(
                                         slide,
                                     ),
                                 );
+                                match action {
+                                    presenter::Action::Task(task) => {
+                                        tasks.push(task.map(|m| {
+                                            cosmic::Action::App(
+                                                Message::Present(m),
+                                            )
+                                        }))
+                                    }
+                                    _ => todo!(),
+                                }
                                 self.current_item =
                                     (item_index, slide_index - 1);
-                                Task::none()
+                                Task::batch(tasks)
                             } else if slide_index == 0
                                 && item_index == 0
                             {
@@ -653,9 +665,24 @@ impl cosmic::Application for App {
                                 if let Some(item) =
                                     self.service.get(item_index - 1)
                                 {
-                                    self.presenter.update(presenter::Message::SlideChange(item.slides[previous_item_slides_length - 1].clone()));
+                                    let action = self.presenter.update(presenter::Message::SlideChange(item.slides[previous_item_slides_length - 1].clone()));
+                                    match action {
+                                        presenter::Action::Task(
+                                            task,
+                                        ) => {
+                                            tasks
+                                                .push(task.map(|m| {
+                                                cosmic::Action::App(
+                                                    Message::Present(
+                                                        m,
+                                                    ),
+                                                )
+                                            }))
+                                        }
+                                        _ => todo!(),
+                                    }
                                 }
-                                Task::none()
+                                Task::batch(tasks)
                             }
                         } else {
                             Task::none()
