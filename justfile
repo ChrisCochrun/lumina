@@ -18,6 +18,7 @@ test:
 profile:
     cargo flamegraph --image-width 8000 -- {{ui}} {{file}}
 
+alias b := build
 alias r := run
 alias sr := srun
 alias c := clean
