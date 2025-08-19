@@ -47,13 +47,12 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
     fn try_from(
         value: (Vec<u8>, String),
     ) -> std::result::Result<Self, Self::Error> {
-        let sto = value.0.to_owned();
-        let song = Song {
-            title: "Death Was Arrested".to_string(),
-            ..Default::default()
-        };
         debug!(?value);
-        Ok(Self::from(&song))
+        let val = Value::from(
+            String::from_utf8(value.0)
+                .expect("Value couldn't be made"),
+        );
+        Ok(Self::from(&val))
     }
 }
 

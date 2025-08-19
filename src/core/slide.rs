@@ -321,6 +321,10 @@ impl Slide {
         self.id = index;
     }
 
+    pub(crate) fn text_to_image(&self) {
+        todo!()
+    }
+
     // pub fn slides_from_item(item: &ServiceItem) -> Result<Vec<Self>> {
     //     todo!()
     // }

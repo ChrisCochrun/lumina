@@ -312,6 +312,21 @@ impl cosmic::Application for App {
                         } else {
                             cosmic::Action::None
                         }
+                    }).on_drop(|index, idk| {
+                        debug!(index, idk);
+                        cosmic::Action::None
+                    }).on_data_received( move |mime, data| {
+                        debug!(?data, mime);
+                        let Ok(item) = ServiceItem::try_from((data.clone(), mime.clone())) else {
+                            return cosmic::Action::None;
+                        };
+                        cosmic::Action::App(Message::AddServiceItem(index, item))
+                    }).on_finish(move |mime, data, action, x, y| {
+                        debug!(mime, ?data, ?action, x, y);
+                        let Ok(item) = ServiceItem::try_from((data.clone(), mime.clone())) else {
+                            return cosmic::Action::None;
+                        };
+                        cosmic::Action::App(Message::AddServiceItem(index, item))
                     })
                     .into()
             });

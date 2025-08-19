@@ -333,10 +333,10 @@ impl Presenter {
                 }
             }
             Message::VideoFrame => {
-                // if let Some(video) = &self.video {
-                //     self.video_position =
-                //         video.position().as_secs_f32();
-                // }
+                if let Some(video) = &self.video {
+                    self.video_position =
+                        video.position().as_secs_f32();
+                }
             }
             Message::MissingPlugin(element) => {
                 if let Some(video) = &mut self.video {
