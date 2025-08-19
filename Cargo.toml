@@ -43,8 +43,8 @@ git = "https://github.com/jackpot51/iced_video_player.git"
 branch = "cosmic"
 features = ["wgpu"]
 
-[profile.dev]
-opt-level = 3
+# [profile.dev]
+# opt-level = 3
 
 [profile.release]
 opt-level = 3

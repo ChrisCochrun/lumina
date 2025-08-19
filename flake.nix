@@ -42,6 +42,7 @@
             stdenv
             gnumake
             gdb
+            lldb
             cmake
             makeWrapper
             vulkan-headers
