@@ -278,38 +278,42 @@ impl cosmic::Application for App {
             .iter()
             .enumerate()
             .map(|(index, item)| {
-                dnd_destination(tooltip( button::standard(item.title.clone())
-                                         .leading_icon({
-                                             match item.kind {
-                                                 core::kinds::ServiceItemKind::Song(_) => {
-                                                     icon::from_name("folder-music-symbolic")
-                                                 },
-                                                 core::kinds::ServiceItemKind::Video(_) => {
-                                                     icon::from_name("folder-videos-symbolic")
-                                                 },
-                                                 core::kinds::ServiceItemKind::Image(_) => {
-                                                     icon::from_name("folder-pictures-symbolic")
-                                                 },
-                                                 core::kinds::ServiceItemKind::Presentation(_) => {
-                                                     icon::from_name("x-office-presentation-symbolic")
-                                                 },
-                                                 core::kinds::ServiceItemKind::Content(_) => {
-                                                     icon::from_name("x-office-presentation-symbolic")
-                                                 },
-                                             }
-                                         })
-                                         .class(cosmic::theme::style::Button::HeaderBar)
-                                         .padding(5)
-                                         .width(Length::Fill)
-                                         .on_press(cosmic::Action::App(Message::ChangeServiceItem(index))),
-                                         text::body(item.kind.to_string()), TPosition::Right), vec!["application/service-item".into()]).data_received_for::<ServiceItem>( move |item| {
-                    if let Some(item) = item {
-                        cosmic::Action::App(Message::AddServiceItem(index, item))
-                    } else {
-                        cosmic::Action::None
-                    }
-                })
-                .into()
+                let button = button::standard(item.title.clone())
+                    .leading_icon({
+                        match item.kind {
+                            core::kinds::ServiceItemKind::Song(_) => {
+                                icon::from_name("folder-music-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Video(_) => {
+                                icon::from_name("folder-videos-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Image(_) => {
+                                icon::from_name("folder-pictures-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Presentation(_) => {
+                                icon::from_name("x-office-presentation-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Content(_) => {
+                                icon::from_name("x-office-presentation-symbolic")
+                            },
+                        }
+                    })
+                    .class(cosmic::theme::style::Button::HeaderBar)
+                    .padding(5)
+                    .width(Length::Fill)
+                    .on_press(cosmic::Action::App(Message::ChangeServiceItem(index)));
+                let tooltip = tooltip(button,
+                                      text::body(item.kind.to_string()),
+                                      TPosition::Right);
+                dnd_destination(tooltip, vec!["application/service-item".into()])
+                    .data_received_for::<ServiceItem>( move |item| {
+                        if let Some(item) = item {
+                            cosmic::Action::App(Message::AddServiceItem(index, item))
+                        } else {
+                            cosmic::Action::None
+                        }
+                    })
+                    .into()
             });
 
         let column = column![
