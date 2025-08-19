@@ -110,6 +110,7 @@ struct App {
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
     searching: bool,
+    library_dragged_item: Option<ServiceItem>,
 }
 
 #[derive(Debug, Clone)]
@@ -134,6 +135,7 @@ enum Message {
     SearchFocus,
     ChangeServiceItem(usize),
     AddServiceItem(usize, ServiceItem),
+    AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
 }
 
@@ -214,6 +216,7 @@ impl cosmic::Application for App {
             song_editor,
             searching: false,
             current_item: (0, 0),
+            library_dragged_item: None,
         };
 
         let mut batch = vec![];
@@ -305,6 +308,7 @@ impl cosmic::Application for App {
                 let tooltip = tooltip(button,
                                       text::body(item.kind.to_string()),
                                       TPosition::Right);
+                let dragged_item = &self.library_dragged_item;
                 dnd_destination(tooltip, vec!["application/service-item".into()])
                     .data_received_for::<ServiceItem>( move |item| {
                         if let Some(item) = item {
@@ -312,9 +316,9 @@ impl cosmic::Application for App {
                         } else {
                             cosmic::Action::None
                         }
-                    }).on_drop(|index, idk| {
-                        debug!(index, idk);
-                        cosmic::Action::None
+                    }).on_drop(move |x, y| {
+                        debug!(x, y);
+                        cosmic::Action::App(Message::AddServiceItemDrop(index))
                     }).on_data_received( move |mime, data| {
                         debug!(?data, mime);
                         let Ok(item) = ServiceItem::try_from((data.clone(), mime.clone())) else {
@@ -774,10 +778,12 @@ impl cosmic::Application for App {
                             service_item,
                         ) => {
                             debug!("hi");
-                            self.nav_model
-                                .insert()
-                                .text(service_item.title.clone())
-                                .data(service_item);
+                            self.library_dragged_item =
+                                Some(service_item);
+                            // self.nav_model
+                            //     .insert()
+                            //     .text(service_item.title.clone())
+                            //     .data(service_item);
                         }
                     }
                 }
@@ -927,6 +933,12 @@ impl cosmic::Application for App {
             }
             Message::AddServiceItem(index, item) => {
                 self.service.insert(index, item);
+                Task::none()
+            }
+            Message::AddServiceItemDrop(index) => {
+                if let Some(item) = &self.library_dragged_item {
+                    self.service.insert(index, item.clone());
+                }
                 Task::none()
             }
             Message::AppendServiceItem(item) => {

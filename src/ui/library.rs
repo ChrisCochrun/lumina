@@ -366,8 +366,6 @@ impl<'a> Library {
                     model.items.iter().enumerate().map(
                         |(index, item)| {
                             let service_item = item.to_service_item();
-                            let drag_item =
-                                Box::new(self.single_item(index, item, &model));
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|_| Message::None);
@@ -402,7 +400,7 @@ impl<'a> Library {
                                         let icon = match model {
                                                     LibraryKind::Song => icon::from_name(
                                                         "folder-music-symbolic",
-                                                    )
+                                                    ).symbolic(true)
                                                         ,
                                                     LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
                                                     LibraryKind::Image => icon::from_name("folder-pictures-symbolic"),
