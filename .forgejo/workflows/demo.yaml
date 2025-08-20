@@ -9,6 +9,7 @@ jobs:
       - run: | 
           apt update
           apt install sudo
+          apt install just
 
       - uses: https://github.com/cachix/install-nix-action@v27
         with:

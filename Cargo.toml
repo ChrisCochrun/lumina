@@ -33,7 +33,7 @@ gstreamer-app = "0.23"
 url = "2"
 colors-transform = "0.2.11"
 rayon = "1.11.0"
-resvg = "0.45.1"
+# resvg = "0.45.1"
 # femtovg = { version = "0.16.0", features = ["wgpu"] }
 # wgpu = "26.0.1"
 # mupdf = "0.5.0"
