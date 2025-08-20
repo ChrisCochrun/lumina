@@ -9,20 +9,17 @@ use cosmic::{
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
-    iced_core::text::Span,
     iced_widget::{
         rich_text,
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
-        span, stack,
-        text::Rich,
-        vertical_rule,
+        span, stack, vertical_rule,
     },
     prelude::*,
     widget::{
-        container, horizontal_space, image, mouse_area, responsive,
-        scrollable, text, Column, Container, Id, Row, Space,
+        container, image, mouse_area, responsive, scrollable, text,
+        Column, Container, Id, Row, Space,
     },
     Task,
 };
@@ -32,11 +29,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    core::{
-        service_items::{Service, ServiceItem},
-        slide::Slide,
-    },
-    ui::text_svg::{self, Font as SvgFont},
+    core::{service_items::ServiceItem, slide::Slide},
     // ui::widgets::slide_text,
     BackgroundKind,
 };

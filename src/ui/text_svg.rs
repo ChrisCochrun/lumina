@@ -10,7 +10,7 @@ use cosmic::{
         Length, Size,
     },
     prelude::*,
-    widget::{container, lazy, responsive, svg::Handle, Svg},
+    widget::{container, svg::Handle, Svg},
 };
 use tracing::error;
 
@@ -330,7 +330,7 @@ mod test {
 
     #[test]
     fn test_text_spans() {
-        let mut text = TextSvg::new();
+        let mut text = TextSvg::new("yes");
         text.text = "This is
 multiline
 text."

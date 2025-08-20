@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use cosmic::{
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
@@ -394,7 +392,7 @@ impl<'a> Library {
                             )
                                 .action(DndAction::Copy)
                                 .drag_icon({
-                                    let model = model.kind.clone();
+                                    let model = model.kind;
                                     move |i| {
                                         let state = State::None;
                                         let icon = match model {

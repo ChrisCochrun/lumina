@@ -157,7 +157,7 @@ impl cosmic::Application for App {
         input: Self::Flags,
     ) -> (Self, Task<Self::Message>) {
         debug!("init");
-        let mut nav_model = nav_bar::Model::default();
+        let nav_model = nav_bar::Model::default();
 
         let mut windows = vec![];
 
@@ -308,7 +308,6 @@ impl cosmic::Application for App {
                 let tooltip = tooltip(button,
                                       text::body(item.kind.to_string()),
                                       TPosition::Right);
-                let dragged_item = &self.library_dragged_item;
                 dnd_destination(tooltip, vec!["application/service-item".into()])
                     .data_received_for::<ServiceItem>( move |item| {
                         if let Some(item) = item {
@@ -600,10 +599,10 @@ impl cosmic::Application for App {
             }
             Message::Present(message) => {
                 // debug!(?message);
-                if self.presentation_open {
-                    if let Some(video) = &mut self.presenter.video {
-                        video.set_muted(false);
-                    }
+                if self.presentation_open
+                    && let Some(video) = &mut self.presenter.video
+                {
+                    video.set_muted(false);
                 }
                 match self.presenter.update(message) {
                     presenter::Action::Task(task) => task.map(|m| {
@@ -888,21 +887,21 @@ impl cosmic::Application for App {
                 // debug!(?action);
                 // debug!(?service_item);
 
-                if let Some(library) = &self.library {
-                    if let Some((lib, item)) = library.dragged_item {
-                        // match lib {
-                        //     core::model::LibraryKind::Song => ,
-                        //     core::model::LibraryKind::Video => todo!(),
-                        //     core::model::LibraryKind::Image => todo!(),
-                        //     core::model::LibraryKind::Presentation => todo!(),
-                        // }
-                        let item = library.get_song(item).unwrap();
-                        let item = ServiceItem::from(item);
-                        self.nav_model
-                            .insert()
-                            .text(item.title.clone())
-                            .data(item);
-                    }
+                if let Some(library) = &self.library
+                    && let Some((lib, item)) = library.dragged_item
+                {
+                    // match lib {
+                    //     core::model::LibraryKind::Song => ,
+                    //     core::model::LibraryKind::Video => todo!(),
+                    //     core::model::LibraryKind::Image => todo!(),
+                    //     core::model::LibraryKind::Presentation => todo!(),
+                    // }
+                    let item = library.get_song(item).unwrap();
+                    let item = ServiceItem::from(item);
+                    self.nav_model
+                        .insert()
+                        .text(item.title.clone())
+                        .data(item);
                 }
                 Task::none()
             }
@@ -933,15 +932,14 @@ impl cosmic::Application for App {
                     .iter()
                     .enumerate()
                     .find(|(id, _)| index == *id)
+                    && let Some(slide) = item.slides.first()
                 {
-                    if let Some(slide) = item.slides.first() {
-                        self.current_item = (index, 0);
-                        self.presenter.update(
-                            presenter::Message::SlideChange(
-                                slide.clone(),
-                            ),
-                        );
-                    }
+                    self.current_item = (index, 0);
+                    self.presenter.update(
+                        presenter::Message::SlideChange(
+                            slide.clone(),
+                        ),
+                    );
                 }
                 Task::none()
             }

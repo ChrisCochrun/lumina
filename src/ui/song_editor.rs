@@ -7,12 +7,11 @@ use cosmic::{
         Font, Length,
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::{row, stack},
+    iced_widget::row,
     theme,
     widget::{
-        button, column, combo_box, container, dropdown,
-        horizontal_space, icon, scrollable, svg::Handle, text,
-        text_editor, text_input, Svg,
+        button, column, combo_box, container, horizontal_space, icon,
+        scrollable, text, text_editor, text_input,
     },
     Element, Task,
 };
@@ -179,11 +178,11 @@ impl SongEditor {
                     .filter(|f| f.1 == font)
                     .map(|f| f.0)
                     .next();
-                if let Some(id) = font_id {
-                    if let Some(face) = self.font_db.face(id) {
-                        self.font = face.post_script_name.clone();
-                        // self.current_font = Font::from(face);
-                    }
+                if let Some(id) = font_id
+                    && let Some(face) = self.font_db.face(id)
+                {
+                    self.font = face.post_script_name.clone();
+                    // self.current_font = Font::from(face);
                 }
                 self.font = font.clone();
 
@@ -425,16 +424,16 @@ order",
     }
 
     fn background_video(&mut self, background: &Option<Background>) {
-        if let Some(background) = background {
-            if background.kind == BackgroundKind::Video {
-                let video =
-                    Video::try_from(background).ok().map(|mut v| {
-                        v.set_looping(true);
-                        v
-                    });
-                debug!(?video);
-                self.video = video;
-            }
+        if let Some(background) = background
+            && background.kind == BackgroundKind::Video
+        {
+            let video =
+                Video::try_from(background).ok().map(|mut v| {
+                    v.set_looping(true);
+                    v
+                });
+            debug!(?video);
+            self.video = video;
         }
     }
 }
