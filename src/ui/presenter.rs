@@ -50,6 +50,8 @@ pub(crate) struct Presenter {
     pub current_slide: Slide,
     pub current_item: usize,
     pub current_slide_index: usize,
+    pub absolute_slide_index: usize,
+    pub total_slides: usize,
     pub video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
@@ -151,10 +153,14 @@ impl Presenter {
                 None
             }
         };
+        let total_slides: usize =
+            items.iter().fold(0, |a, item| a + item.slides.len());
         Self {
             current_slide: items[0].slides[0].clone(),
             current_item: 0,
             current_slide_index: 0,
+            absolute_slide_index: 0,
+            total_slides,
             video,
             audio: items[0].slides[0].audio().clone(),
             service: items,

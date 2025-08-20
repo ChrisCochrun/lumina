@@ -488,7 +488,21 @@ impl cosmic::Application for App {
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
-        Some(text::body("Sux").into())
+        let total_items_text =
+            format!("Total Service Items: {}", self.service.len());
+        let total_slides_text =
+            format!("Total Slides: {}", self.presenter.total_slides);
+        let row = row![
+            text::body(total_items_text),
+            text::body(total_slides_text)
+        ]
+        .spacing(10);
+        Some(
+            Container::new(row)
+                .align_right(Length::Fill)
+                .padding([5, 0, 0, 0])
+                .into(),
+        )
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
