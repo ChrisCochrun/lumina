@@ -7,6 +7,7 @@ pub mod song_editor;
 pub mod text_svg;
 pub mod video;
 pub mod widgets;
+pub mod slide_editor;
 
 pub enum EditorMode {
     Song,
