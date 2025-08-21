@@ -21,6 +21,7 @@ use tracing::{debug, error};
 
 use crate::{
     core::{service_items::ServiceTrait, songs::Song},
+    ui::slide_editor::{self, SlideEditor},
     Background, BackgroundKind,
 };
 
@@ -45,6 +46,7 @@ pub struct SongEditor {
     video: Option<Video>,
     current_font: Font,
     ccli: String,
+    slide_state: SlideEditor,
 }
 
 pub enum Action {
@@ -133,6 +135,7 @@ impl SongEditor {
             video: None,
             current_font: cosmic::font::default(),
             ccli: "8".to_owned(),
+            slide_state: SlideEditor::default(),
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -285,46 +288,50 @@ impl SongEditor {
     }
 
     fn slide_preview(&self) -> Element<Message> {
-        if let Some(song) = &self.song {
-            if let Ok(slides) = song.to_slides() {
-                let slides = slides
-                    .iter()
-                    .enumerate()
-                    .map(|(index, slide)| {
-                        container(
-                            slide_view(
-                                slide.clone(),
-                                if index == 0 {
-                                    &self.video
-                                } else {
-                                    &None
-                                },
-                                self.current_font,
-                                false,
-                                false,
-                            )
-                            .map(|_| Message::None),
-                        )
-                        .height(250)
-                        .center_x(Length::Fill)
-                        .padding([0, 20])
-                        .clip(true)
-                        .into()
-                    })
-                    .collect();
-                scrollable(
-                    column::with_children(slides)
-                        .spacing(theme::active().cosmic().space_l()),
-                )
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .into()
-            } else {
-                horizontal_space().into()
-            }
-        } else {
-            horizontal_space().into()
-        }
+        // if let Some(song) = &self.song {
+        //     if let Ok(slides) = song.to_slides() {
+        //         let slides = slides
+        //             .iter()
+        //             .enumerate()
+        //             .map(|(index, slide)| {
+        //                 container(
+        //                     slide_view(
+        //                         slide.clone(),
+        //                         if index == 0 {
+        //                             &self.video
+        //                         } else {
+        //                             &None
+        //                         },
+        //                         self.current_font,
+        //                         false,
+        //                         false,
+        //                     )
+        //                     .map(|_| Message::None),
+        //                 )
+        //                 .height(250)
+        //                 .center_x(Length::Fill)
+        //                 .padding([0, 20])
+        //                 .clip(true)
+        //                 .into()
+        //             })
+        //             .collect();
+        //         scrollable(
+        //             column::with_children(slides)
+        //                 .spacing(theme::active().cosmic().space_l()),
+        //         )
+        //         .height(Length::Fill)
+        //         .width(Length::Fill)
+        //         .into()
+        //     } else {
+        //         horizontal_space().into()
+        //     }
+        // } else {
+        //     horizontal_space().into()
+        // }
+        self.slide_state
+            .view(Font::with_name("Quicksand Bold"))
+            .map(|_s| Message::None)
+            .into()
     }
 
     fn left_column(&self) -> Element<Message> {

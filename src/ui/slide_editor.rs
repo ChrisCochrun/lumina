@@ -1,23 +1,27 @@
 use std::{io, path::PathBuf};
 
 use cosmic::{
-    iced::{Color, Font},
+    iced::{Color, Font, Length},
+    prelude::*,
     widget::{
         self,
         canvas::{self, Program, Stroke},
+        container, Canvas,
     },
     Renderer,
 };
+use tracing::debug;
 
 #[derive(Debug, Default)]
 struct State {
     cache: canvas::Cache,
 }
 
-#[derive(Debug)]
-struct SlideEditor<'a> {
-    state: &'a State,
-    font: &'a Font,
+#[derive(Debug, Default)]
+pub struct SlideEditor {
+    state: State,
+    font: Font,
+    program: EditorProgram,
 }
 
 #[derive(Debug, Clone)]
@@ -45,23 +49,33 @@ pub enum SlideError {
     IOError(io::ErrorKind),
 }
 
-impl State {
+#[derive(Debug, Default)]
+struct EditorProgram {}
+
+impl SlideEditor {
     pub fn view<'a>(
         &'a self,
-        font: &'a Font,
-    ) -> cosmic::iced::Element<'a, SlideWidget> {
-        widget::canvas(SlideEditor { state: self, font }).into()
+        font: Font,
+    ) -> cosmic::Element<'a, SlideWidget> {
+        container(
+            widget::canvas(&self.program)
+                .height(Length::Fill)
+                .width(Length::Fill),
+        )
+        .into()
     }
 }
 
-impl<'a> Program<SlideWidget> for SlideEditor<'a> {
+impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
+    for EditorProgram
+{
     type State = ();
 
     fn draw(
         &self,
         state: &Self::State,
         renderer: &Renderer,
-        theme: &cosmic::iced_runtime::core::Theme,
+        theme: &cosmic::Theme,
         bounds: cosmic::iced::Rectangle,
         cursor: cosmic::iced_core::mouse::Cursor,
     ) -> Vec<canvas::Geometry<Renderer>> {
@@ -93,23 +107,27 @@ impl<'a> Program<SlideWidget> for SlideEditor<'a> {
     ) -> (canvas::event::Status, Option<SlideWidget>) {
         match event {
             canvas::Event::Mouse(event) => match event {
-                cosmic::iced::mouse::Event::CursorEntered => todo!(),
-                cosmic::iced::mouse::Event::CursorLeft => todo!(),
+                cosmic::iced::mouse::Event::CursorEntered => {
+                    debug!("cursor entered")
+                }
+                cosmic::iced::mouse::Event::CursorLeft => {
+                    debug!("cursor left")
+                }
                 cosmic::iced::mouse::Event::CursorMoved {
                     position,
-                } => todo!(),
+                } => debug!(?position, "cursor moved"),
                 cosmic::iced::mouse::Event::ButtonPressed(button) => {
-                    todo!()
+                    debug!(?button, "mouse button pressed")
                 }
                 cosmic::iced::mouse::Event::ButtonReleased(
                     button,
-                ) => todo!(),
+                ) => debug!(?button, "mouse button released"),
                 cosmic::iced::mouse::Event::WheelScrolled {
                     delta,
-                } => todo!(),
+                } => debug!(?delta, "scroll wheel"),
             },
-            canvas::Event::Touch(event) => todo!(),
-            canvas::Event::Keyboard(event) => todo!(),
+            canvas::Event::Touch(event) => debug!("test"),
+            canvas::Event::Keyboard(event) => debug!("test"),
         }
         (canvas::event::Status::Ignored, None)
     }
