@@ -221,9 +221,9 @@ impl From<&Value> for ServiceItem {
                     let song = lisp_to_song(list.clone());
                     Self::from(&song)
                 }
-                _ => todo!(),
+                _ => ServiceItem::default(),
             },
-            _ => todo!(),
+            _ => ServiceItem::default(),
         }
     }
 }

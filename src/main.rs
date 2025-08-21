@@ -318,38 +318,46 @@ impl cosmic::Application for App {
                     }).on_drop(move |x, y| {
                         debug!(x, y);
                         cosmic::Action::App(Message::AddServiceItemDrop(index))
-                    }).on_data_received( move |mime, data| {
-                        debug!(?data, mime);
-                        let Ok(item) = ServiceItem::try_from((data.clone(), mime.clone())) else {
-                            return cosmic::Action::None;
-                        };
-                        cosmic::Action::App(Message::AddServiceItem(index, item))
                     }).on_finish(move |mime, data, action, x, y| {
                         debug!(mime, ?data, ?action, x, y);
-                        let Ok(item) = ServiceItem::try_from((data.clone(), mime.clone())) else {
+                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
                             return cosmic::Action::None;
                         };
+                        debug!(?item);
                         cosmic::Action::App(Message::AddServiceItem(index, item))
                     })
                     .into()
             });
 
+        let end_index = self.service.len();
         let column = column![
             text::heading("Service List").center().width(280),
             column(list).spacing(10),
-            dnd_destination_for_data::<
-                ServiceItem,
-                cosmic::Action<Message>,
-            >(
-                Container::new(vertical_space()),
-                |item, _| {
-                    if let Some(item) = item {
-                        cosmic::Action::App(
-                            Message::AppendServiceItem(item),
-                        )
-                    } else {
-                        cosmic::Action::None
-                    }
+            dnd_destination(
+                vertical_space(),
+                vec!["application/service-item".into()]
+            )
+            .data_received_for::<ServiceItem>(|item| {
+                if let Some(item) = item {
+                    cosmic::Action::App(Message::AppendServiceItem(
+                        item,
+                    ))
+                } else {
+                    cosmic::Action::None
+                }
+            })
+            .on_finish(
+                move |mime, data, action, x, y| {
+                    debug!(mime, ?data, ?action, x, y);
+                    let Ok(item) =
+                        ServiceItem::try_from((data, mime))
+                    else {
+                        return cosmic::Action::None;
+                    };
+                    debug!(?item);
+                    cosmic::Action::App(Message::AddServiceItem(
+                        end_index, item,
+                    ))
                 }
             )
         ]
