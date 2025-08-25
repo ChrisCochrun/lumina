@@ -1,6 +1,13 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO [#A] Develop DnD for library items
+This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
+
+This needs lots more attention
+
+* TODO [#A] Need to fix tests now that the basic app is working
+
 * TODO Check into =mupdf-rs= for loading PDF's.
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
@@ -12,14 +19,9 @@ Since SVG's apparently run poorly in iced, instead I'll need to see about either
 
 * TODO [#C] Make the presenter more modular so things are easier to change.
 
-* TODO [#A] Need to fix tests now that the basic app is working
-
 * TODO Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
 I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
-** TODO [#A] Develop DnD for library items
-This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
-
 * TODO [#B] Build editors for each possible item
 ** TODO Develop ui for editors
 
