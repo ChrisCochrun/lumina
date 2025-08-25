@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 
 use cosmic::{
-    iced::{Color, Font, Length},
+    iced::{Color, Font, Length, Size},
     prelude::*,
     widget::{
         self,
@@ -50,7 +50,9 @@ pub enum SlideError {
 }
 
 #[derive(Debug, Default)]
-struct EditorProgram {}
+struct EditorProgram {
+    mouse_button_pressed: Option<cosmic::iced::mouse::Button>,
+}
 
 impl SlideEditor {
     pub fn view<'a>(
@@ -83,14 +85,25 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
     ) -> Vec<canvas::Geometry<Renderer>> {
         // We prepare a new `Frame`
         let mut frame = canvas::Frame::new(renderer, bounds.size());
+        let frame_rect = bounds.shrink(10);
 
         // We create a `Path` representing a simple circle
         let circle = canvas::Path::circle(frame.center(), 50.0);
+        let border = canvas::Path::rectangle(
+            cosmic::iced::Point { x: 10.0, y: 10.0 },
+            Size::new(frame_rect.width, frame_rect.height),
+        );
 
         // And fill it with some color
         frame.fill(&circle, Color::BLACK);
         frame.stroke(
             &circle,
+            Stroke::default()
+                .with_width(5.0)
+                .with_color(Color::BLACK),
+        );
+        frame.stroke(
+            &border,
             Stroke::default()
                 .with_width(5.0)
                 .with_color(Color::BLACK),
@@ -104,7 +117,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         &self,
         _state: &mut Self::State,
         event: canvas::Event,
-        _bounds: cosmic::iced::Rectangle,
+        bounds: cosmic::iced::Rectangle,
         _cursor: cosmic::iced_core::mouse::Cursor,
     ) -> (canvas::event::Status, Option<SlideWidget>) {
         match event {
@@ -117,8 +130,17 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                 }
                 cosmic::iced::mouse::Event::CursorMoved {
                     position,
-                } => debug!(?position, "cursor moved"),
+                } => {
+                    if bounds.x < position.x
+                        && bounds.y < position.y
+                        && (bounds.width + bounds.x) > position.x
+                        && (bounds.height + bounds.y) > position.y
+                    {
+                        debug!(?position, "cursor moved");
+                    }
+                }
                 cosmic::iced::mouse::Event::ButtonPressed(button) => {
+                    // self.mouse_button_pressed = Some(button);
                     debug!(?button, "mouse button pressed")
                 }
                 cosmic::iced::mouse::Event::ButtonReleased(
