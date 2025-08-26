@@ -6,18 +6,15 @@ use iced::{
     border,
     font::{Family, Stretch, Style, Weight},
     widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Row, Space,
-    },
-    widget::{
-        rich_text,
+        container, image, mouse_area, responsive, rich_text,
         scrollable::{
-            scroll_to, AbsoluteOffset, Direction, Scrollbar,
+            self, scroll_to, AbsoluteOffset, Direction, Id, Scrollbar,
         },
-        span, stack, vertical_rule,
+        span, stack, text, vertical_rule, Column, Container, Row,
+        Space,
     },
-    Background, Border, Color, ContentFit, Font, Length, Shadow,
-    Task, Vector,
+    Background, Border, Color, ContentFit, Element, Font, Length,
+    Shadow, Task, Vector,
 };
 use iced_video_player::{Position, Video, VideoPlayer};
 use rodio::{Decoder, OutputStream, Sink};
@@ -164,7 +161,7 @@ impl Presenter {
                 )
             },
             scroll_id: Id::unique(),
-            current_font: iced::font::default(),
+            current_font: iced::font::Font::DEFAULT,
         }
     }
 
@@ -340,27 +337,27 @@ impl Presenter {
                 return Action::Task(Task::perform(
                     async move {
                         tokio::task::spawn_blocking(move || {
-                            match gst_pbutils::MissingPluginMessage::parse(&element) {
-                                Ok(missing_plugin) => {
-                                    let mut install_ctx = gst_pbutils::InstallPluginsContext::new();
-                                    install_ctx
-                                        .set_desktop_id(&format!("{}.desktop", "org.chriscochrun.lumina"));
-                                    let install_detail = missing_plugin.installer_detail();
-                                    println!("installing plugins: {}", install_detail);
-                                    let status = gst_pbutils::missing_plugins::install_plugins_sync(
-                                        &[&install_detail],
-                                        Some(&install_ctx),
-                                    );
-                                    info!("plugin install status: {}", status);
-                                    info!(
-                                        "gstreamer registry update: {:?}",
-                                        gstreamer::Registry::update()
-                                    );
-                                }
-                                Err(err) => {
-                                    warn!("failed to parse missing plugin message: {err}");
-                                }
-                            }
+                            // match gst_pbutils::MissingPluginMessage::parse(&element) {
+                            //     Ok(missing_plugin) => {
+                            //         let mut install_ctx = gst_pbutils::InstallPluginsContext::new();
+                            //         install_ctx
+                            //             .set_desktop_id(&format!("{}.desktop", "org.chriscochrun.lumina"));
+                            //         let install_detail = missing_plugin.installer_detail();
+                            //         println!("installing plugins: {}", install_detail);
+                            //         let status = gst_pbutils::missing_plugins::install_plugins_sync(
+                            //             &[&install_detail],
+                            //             Some(&install_ctx),
+                            //         );
+                            //         info!("plugin install status: {}", status);
+                            //         info!(
+                            //             "gstreamer registry update: {:?}",
+                            //             gstreamer::Registry::update()
+                            //         );
+                            //     }
+                            //     Err(err) => {
+                            //         warn!("failed to parse missing plugin message: {err}");
+                            //     }
+                            // }
                             Message::None
                         })
                         .await
@@ -445,7 +442,7 @@ impl Presenter {
                                 .style(move |t| {
                                     let mut style =
                                         container::Style::default();
-                                    let theme = t.iced();
+                                    let theme = t;
                                     let hovered = self.hovered_slide
                                         == Some((
                                             item_index,
@@ -455,19 +452,25 @@ impl Presenter {
                                         Some(Background::Color(
                                             if is_current_slide {
                                                 theme
-                                                    .accent
-                                                    .base
-                                                    .into()
+                                                    .extended_palette(
+                                                    )
+                                                    .secondary
+                                                    .strong
+                                                    .color
                                             } else if hovered {
                                                 theme
-                                                    .accent
-                                                    .hover
-                                                    .into()
+                                                    .extended_palette(
+                                                    )
+                                                    .secondary
+                                                    .strong
+                                                    .color
                                             } else {
                                                 theme
-                                                    .palette
-                                                    .neutral_3
-                                                    .into()
+                                                    .extended_palette(
+                                                    )
+                                                    .background
+                                                    .neutral
+                                                    .color
                                             },
                                         ));
                                     style.border = Border::default()
@@ -500,7 +503,7 @@ impl Presenter {
                                 .padding(10),
                         )
                         .interaction(
-                            iced::iced::mouse::Interaction::Pointer,
+                            iced::mouse::Interaction::Pointer,
                         )
                         .on_move(move |_| {
                             Message::HoveredSlide(Some((
@@ -518,11 +521,11 @@ impl Presenter {
                 let row = Row::from_vec(slides)
                     .spacing(10)
                     .padding([20, 15]);
-                let label = text::body(item.title.clone());
+                let label = text(item.title.clone());
                 let label_container = container(label)
                     .align_top(Length::Fill)
                     .align_left(Length::Fill)
-                    .padding([0, 0, 0, 35]);
+                    .padding([0, 35]);
                 let divider = vertical_rule(2);
                 items.push(
                     container(stack!(row, label_container))
@@ -532,15 +535,16 @@ impl Presenter {
                 items.push(divider.into());
             },
         );
-        let row =
-            scrollable(container(Row::from_vec(items)).style(|t| {
+        let row = scrollable::Scrollable::new(
+            container(Row::from_vec(items)).style(|t| {
                 let style = container::Style::default();
                 style.border(Border::default().width(2))
-            }))
-            .direction(Direction::Horizontal(Scrollbar::new()))
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .id(self.scroll_id.clone());
+            }),
+        )
+        .direction(Direction::Horizontal(Scrollbar::new()))
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .id(self.scroll_id.clone());
         row.into()
     }
 
@@ -819,15 +823,15 @@ pub(crate) fn slide_view(
                 } else if let Some(video) = &video {
                     Container::new(
                         VideoPlayer::new(video)
-                            .mouse_hidden(hide_mouse)
+                            // .mouse_hidden(hide_mouse)
                             .width(width)
                             .height(size.height)
                             .on_end_of_stream(Message::EndVideo)
                             .on_new_frame(Message::VideoFrame)
-                            .on_missing_plugin(Message::MissingPlugin)
-                            .on_warning(|w| {
-                                Message::Error(w.to_string())
-                            })
+                            // .on_missing_plugin(Message::MissingPlugin)
+                            // .on_warning(|w| {
+                            //     Message::Error(w.to_string())
+                            // })
                             .on_error(|e| {
                                 Message::Error(e.to_string())
                             })

@@ -5,19 +5,22 @@ use iced::{
     advanced::graphics::text::cosmic_text::fontdb,
     font::{Family, Stretch, Style, Weight},
     theme,
-    widget::row,
     widget::{
-        button, column, combo_box, container, horizontal_space,
-        scrollable, text, text_editor, text_input,
+        button, column, combo_box, container, horizontal_space, row,
+        scrollable, text, text_editor, text_input, tooltip,
     },
     Element, Font, Length, Task,
 };
 use iced_video_player::Video;
+use rfd::AsyncFileDialog;
 use tracing::{debug, error};
 
 use crate::{
     core::{service_items::ServiceTrait, songs::Song},
-    ui::slide_editor::{self, SlideEditor},
+    ui::{
+        slide_editor::{self, SlideEditor},
+        widgets::icon,
+    },
     Background, BackgroundKind,
 };
 
@@ -129,7 +132,7 @@ impl SongEditor {
             audio: PathBuf::new(),
             background: None,
             video: None,
-            current_font: iced::font::default(),
+            current_font: iced::font::Font::DEFAULT,
             ccli: "8".to_owned(),
             slide_state: SlideEditor::default(),
         }
@@ -269,7 +272,7 @@ impl SongEditor {
         let slide_preview = container(self.slide_preview())
             .width(Length::FillPortion(2));
 
-        let column = column::with_children(vec![
+        let column = column![
             self.toolbar(),
             row![
                 container(self.left_column())
@@ -278,8 +281,8 @@ impl SongEditor {
                     .center_x(Length::FillPortion(3))
             ]
             .into(),
-        ])
-        .spacing(theme::active().iced().space_l());
+        ]
+        .spacing(15);
         column.into()
     }
 
@@ -332,37 +335,34 @@ impl SongEditor {
 
     fn left_column(&self) -> Element<Message> {
         let title_input = text_input("song", &self.title)
-            .on_input(Message::ChangeTitle)
-            .label("Song Title");
+            .on_input(Message::ChangeTitle);
 
         let author_input = text_input("author", &self.author)
-            .on_input(Message::ChangeAuthor)
-            .label("Song Author");
+            .on_input(Message::ChangeAuthor);
 
         let verse_input = text_input(
             "Verse
 order",
             &self.verse_order,
         )
-        .label("Verse Order")
         .on_input(Message::ChangeVerseOrder);
 
         let lyric_title = text("Lyrics");
-        let lyric_input = column::with_children(vec![
+        let lyric_input = column![
             lyric_title.into(),
             text_editor(&self.lyrics)
                 .on_action(Message::ChangeLyrics)
                 .height(Length::Fill)
                 .into(),
-        ])
+        ]
         .spacing(5);
 
-        column::with_children(vec![
+        column![
             title_input.into(),
             author_input.into(),
             verse_input.into(),
             lyric_input.into(),
-        ])
+        ]
         .spacing(25)
         .width(Length::FillPortion(2))
         .into()
@@ -397,16 +397,20 @@ order",
                 )
             },
         )
-        .width(theme::active().iced().space_xxl());
+        .width(200);
 
-        let background_selector = button::icon(
+        let background_selector = button(row!(
             icon::from_name("folder-pictures-symbolic").scale(2),
-        )
-        .label("Background")
-        .tooltip("Select an image or video background")
+            "Background"
+        ))
         .on_press(Message::PickBackground)
         .padding(10);
 
+        let background_selector = tooltip(
+            background_selector,
+            "Select an image or video background",
+            tooltip::Position::FollowCursor,
+        );
         row![
             font_selector,
             font_size,
@@ -448,18 +452,19 @@ impl Default for SongEditor {
 }
 
 async fn pick_background() -> Result<PathBuf, SongError> {
-    let dialog = Dialog::new().title("Choose a background...");
-    dialog
-        .open_file()
-        .await
-        .map_err(|_| SongError::DialogClosed)
-        .map(|file| file.url().to_file_path().unwrap())
-    // rfd::AsyncFileDialog::new()
-    //     .set_title("Choose a background...")
+    // let dialog =
+    //     AsyncFileDialog::new().set_title("Choose a background...");
+    // dialog
     //     .pick_file()
     //     .await
-    //     .ok_or(SongError::DialogClosed)
-    //     .map(|file| file.path().to_owned())
+    //     .map_err(|_| SongError::DialogClosed)
+    //     .map(|file| file.url().to_file_path().unwrap())
+    rfd::AsyncFileDialog::new()
+        .set_title("Choose a background...")
+        .pick_file()
+        .await
+        .ok_or(SongError::DialogClosed)
+        .map(|file| file.path().to_owned())
 }
 
 #[derive(Debug, Clone)]

@@ -7,7 +7,7 @@ use colors_transform::Rgb;
 use iced::{
     font::{Style, Weight},
     widget::{container, svg::Handle, Svg},
-    Length, Size,
+    Element, Length, Size,
 };
 use tracing::error;
 
@@ -47,9 +47,7 @@ impl From<iced::font::Font> for Font {
     fn from(value: iced::font::Font) -> Self {
         Self {
             name: match value.family {
-                iced::iced::font::Family::Name(name) => {
-                    name.to_string()
-                }
+                iced::font::Family::Name(name) => name.to_string(),
                 _ => "Quicksand Bold".into(),
             },
             size: 20,

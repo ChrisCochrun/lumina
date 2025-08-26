@@ -7,8 +7,8 @@ use iced::keyboard::{Key, Modifiers};
 use iced::theme::{self, Palette};
 use iced::widget::tooltip::Position as TPosition;
 use iced::widget::{
-    button, horizontal_space, slider, text, tooltip, vertical_space,
-    Space,
+    button, horizontal_space, mouse_area, slider, text, text_input,
+    tooltip, vertical_space, Space,
 };
 use iced::widget::{column, row};
 use iced::window::{Mode, Position};
@@ -30,6 +30,8 @@ use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
+
+use crate::ui::widgets::icon;
 
 pub mod core;
 pub mod lisp;
@@ -62,26 +64,24 @@ fn main() -> Result<()> {
         .with_timer(timer)
         .init();
 
-    let args = Cli::parse();
+    // let settings;
+    // if args.ui {
+    //     debug!("main view");
+    //     settings = iced::daemon::Settings::default()
+    //         .debug(false)
+    //         .is_daemon(true)
+    //         .transparent(true);
+    // } else {
+    //     debug!("window view");
+    //     settings = Settings::default()
+    //         .debug(false)
+    //         .no_main_window(true)
+    //         .is_daemon(true);
+    // }
 
-    let settings;
-    if args.ui {
-        debug!("main view");
-        settings = Settings::default()
-            .debug(false)
-            .is_daemon(true)
-            .transparent(true);
-    } else {
-        debug!("window view");
-        settings = Settings::default()
-            .debug(false)
-            .no_main_window(true)
-            .is_daemon(true);
-    }
-
-    iced::daemon(move || App::init(args), App::update, App::view)
-        .settings(settings)
-        .subscription(App::subsrciption)
+    iced::daemon(App::init, App::update, App::view)
+        .settings(Settings::default())
+        .subscription(App::subscription)
         .theme(App::theme)
         .title(App::title)
         .run()
@@ -128,10 +128,10 @@ enum Message {
     ChangeServiceItem(usize),
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
-    AppendServiceItem(ServiceItem),
+    AppendServiceItem(Option<ServiceItem>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Window {
     title: String,
     scale_input: String,
@@ -145,31 +145,66 @@ impl Default for Window {
             title: Default::default(),
             scale_input: Default::default(),
             current_scale: Default::default(),
-            theme: App::theme(),
+            theme: Theme::custom(
+                "Snazzy",
+                Palette {
+                    background: color!(0x282a36),
+                    text: color!(0xe2e4e5),
+                    primary: color!(0x57c7ff),
+                    success: color!(0x5af78e),
+                    warning: color!(0xff9f43),
+                    danger: color!(0xff5c57),
+                },
+            ),
         }
     }
 }
 
-const HEADER_SPACE: u16 = 6;
+const HEADER_SPACE: f32 = 6.0;
 
 impl App {
     const APP_ID: &'static str = "lumina";
-    fn init(input: Cli) -> (Self, Task<Self::Message>) {
+    fn title(&self, id: window::Id) -> String {
+        self.windows
+            .get(&id)
+            .map(|window| window.title.clone())
+            .unwrap_or(String::from("Lumina"))
+    }
+
+    fn init() -> (Self, Task<Message>) {
         debug!("init");
+        let args = Cli::parse();
 
         let mut batch = vec![];
         let mut windows = BTreeMap::new();
-        if input.ui {
+        if args.ui {
             let settings = window::Settings {
                 ..Default::default()
             };
             let (id, open) = window::open(settings);
-            batch.push(open);
+            batch
+                .push(open.map(|id| Message::WindowOpened(id, None)));
+            let window = Window {
+                title: "Lumina".into(),
+                scale_input: "".into(),
+                current_scale: 1.0,
+                theme: Theme::custom(
+                    "Snazzy",
+                    Palette {
+                        background: color!(0x282a36),
+                        text: color!(0xe2e4e5),
+                        primary: color!(0x57c7ff),
+                        success: color!(0x5af78e),
+                        warning: color!(0xff9f43),
+                        danger: color!(0xff5c57),
+                    },
+                ),
+            };
 
-            windows.insert(id, Window::default());
+            windows.insert(id, window);
         }
 
-        let items = match read_to_string(input.file) {
+        let items = match read_to_string(args.file) {
             Ok(lisp) => {
                 let mut slide_vector = vec![];
                 let lisp = crisp::reader::read(&lisp);
@@ -210,7 +245,7 @@ impl App {
             file: PathBuf::default(),
             windows,
             presentation_open: false,
-            cli_mode: !input.ui,
+            cli_mode: !args.ui,
             library: None,
             library_open: true,
             library_width: 60.0,
@@ -221,9 +256,9 @@ impl App {
             library_dragged_item: None,
         };
 
-        if input.ui {
+        if args.ui {
             debug!("main view");
-            batch.push(app.update_title())
+            // batch.push(app.update_title())
         } else {
             debug!("window view");
             batch.push(app.show_window())
@@ -236,9 +271,9 @@ impl App {
     }
 
     fn nav_bar(&self) -> Option<Element<Message>> {
-        if !self.core().nav_bar_active() {
-            return None;
-        }
+        // if !self.core().nav_bar_active() {
+        //     return None;
+        // }
 
         // let nav_model = self.nav_model()?;
 
@@ -271,89 +306,52 @@ impl App {
         // .width(Length::Shrink)
         // .height(Length::Shrink);
 
-        let list = self
-            .service
-            .iter()
-            .enumerate()
-            .map(|(index, item)| {
-                let button = button(item.title.clone()
-                    .leading_icon({
-                        match item.kind {
-                            core::kinds::ServiceItemKind::Song(_) => {
-                                icon::from_name("folder-music-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Video(_) => {
-                                icon::from_name("folder-videos-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Image(_) => {
-                                icon::from_name("folder-pictures-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Presentation(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Content(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                        }
-                    }))
-                    .class(iced::theme::style::Button::HeaderBar)
-                    .padding(5)
-                    .width(Length::Fill)
-                    .on_press(iced::Action::App(Message::ChangeServiceItem(index)));
-                let tooltip = tooltip(button,
-                                      text::body(item.kind.to_string()),
-                                      TPosition::Right);
-                dnd_destination(tooltip, vec!["application/service-item".into()])
-                    .data_received_for::<ServiceItem>( move |item| {
-                        if let Some(item) = item {
-                            iced::Action::App(Message::AddServiceItem(index, item))
-                        } else {
-                            iced::Action::None
-                        }
-                    }).on_drop(move |x, y| {
-                        debug!(x, y);
-                        iced::Action::App(Message::AddServiceItemDrop(index))
-                    }).on_finish(move |mime, data, action, x, y| {
-                        debug!(mime, ?data, ?action, x, y);
-                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
-                            return iced::Action::None;
-                        };
-                        debug!(?item);
-                        iced::Action::App(Message::AddServiceItem(index, item))
-                    })
+        let list =
+            self.service.iter().enumerate().map(|(index, item)| {
+                let icon = match item.kind {
+                    core::kinds::ServiceItemKind::Song(_) => {
+                        icon::from_name("folder-music-symbolic")
+                    }
+                    core::kinds::ServiceItemKind::Video(_) => {
+                        icon::from_name("folder-videos-symbolic")
+                    }
+                    core::kinds::ServiceItemKind::Image(_) => {
+                        icon::from_name("folder-pictures-symbolic")
+                    }
+                    core::kinds::ServiceItemKind::Presentation(_) => {
+                        icon::from_name(
+                            "x-office-presentation-symbolic",
+                        )
+                    }
+                    core::kinds::ServiceItemKind::Content(_) => {
+                        icon::from_name(
+                            "x-office-presentation-symbolic",
+                        )
+                    }
+                };
+                let button =
+                    button(row![text(item.title.clone()), icon])
+                        .padding(5)
+                        .width(Length::Fill)
+                        .on_press(Message::ChangeServiceItem(index));
+                let tooltip = tooltip(
+                    button,
+                    text(item.kind.to_string()),
+                    TPosition::Right,
+                );
+                mouse_area(tooltip)
+                    .on_release(Message::AddServiceItemDrop(index))
                     .into()
             });
 
         let end_index = self.service.len();
         let column = column![
-            text::heading("Service List").center().width(280),
+            text("Service List").center().width(280),
             column(list).spacing(10),
-            dnd_destination(
-                vertical_space(),
-                vec!["application/service-item".into()]
-            )
-            .data_received_for::<ServiceItem>(|item| {
-                if let Some(item) = item {
-                    iced::Action::App(Message::AppendServiceItem(
-                        item,
-                    ))
-                } else {
-                    iced::Action::None
-                }
-            })
-            .on_finish(
-                move |mime, data, action, x, y| {
-                    debug!(mime, ?data, ?action, x, y);
-                    let Ok(item) =
-                        ServiceItem::try_from((data, mime))
-                    else {
-                        return iced::Action::None;
-                    };
-                    debug!(?item);
-                    iced::Action::App(Message::AddServiceItem(
-                        end_index, item,
-                    ))
-                }
+            mouse_area(vertical_space(),).on_release(
+                Message::AppendServiceItem(
+                    self.library_dragged_item.clone()
+                )
             )
         ]
         .padding(10)
@@ -361,52 +359,51 @@ impl App {
         let padding = Padding::new(0.0).top(20);
         let mut container = Container::new(column)
             // .height(Length::Fill)
-            .style(nav_bar_style)
+            // .style(nav_bar_style)
             .padding(padding);
 
-        if !self.core().is_condensed() {
-            container = container.max_width(280);
-        }
+        // if !self.core().is_condensed() {
+        //     container = container.max_width(280);
+        // }
         Some(container.into())
     }
 
-    fn header_start(&self) -> Vec<Element<Self::Message>> {
+    fn header_start(&self) -> Vec<Element<Message>> {
         vec![]
     }
 
-    fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![search_input("Search...", "")
+    fn header_center(&self) -> Vec<Element<Message>> {
+        vec![text_input("Search...", "")
             .on_input(|_| Message::None)
-            .on_submit(|_| Message::None)
-            .on_focus(Message::SearchFocus)
+            .on_submit(Message::None)
             .width(1200)
             .into()]
     }
 
-    fn header_end(&self) -> Vec<Element<Self::Message>> {
+    fn header_end(&self) -> Vec<Element<Message>> {
         // let editor_toggle = toggler(self.editor_mode.is_some())
         //     .label("Editor")
         //     .spacing(10)
         //     .width(Length::Shrink)
         //     .on_toggle(Message::EditorToggle);
 
-        let presenter_window = self.windows.get(1);
-        let text = if self.presentation_open {
-            text::body("End Presentation")
+        let presenter_window = self.windows.len() > 1;
+        let presentation_button_text = if self.presentation_open {
+            text("End Presentation")
         } else {
-            text::body("Present")
+            text("Present")
         };
 
         let row = row![
             tooltip(
-                button::custom(
+                button(
                     row!(
                         Container::new(
                             icon::from_name("document-edit-symbolic")
                                 .scale(3)
                         )
                         .center_y(Length::Fill),
-                        text::body(if self.editor_mode.is_some() {
+                        text(if self.editor_mode.is_some() {
                             "Present Mode"
                         } else {
                             "Edit Mode"
@@ -414,7 +411,6 @@ impl App {
                     )
                     .spacing(5),
                 )
-                .class(iced::theme::style::Button::HeaderBar)
                 .on_press(Message::EditorToggle(
                     self.editor_mode.is_none(),
                 )),
@@ -422,7 +418,7 @@ impl App {
                 TPosition::Bottom,
             ),
             tooltip(
-                button::custom(
+                button(
                     row!(
                         Container::new(
                             icon::from_name(
@@ -435,16 +431,16 @@ impl App {
                             .scale(3)
                         )
                         .center_y(Length::Fill),
-                        text
+                        presentation_button_text
                     )
                     .spacing(5),
                 )
-                .class(iced::theme::style::Button::HeaderBar)
                 .on_press({
                     if self.presentation_open {
-                        Message::CloseWindow(
-                            presenter_window.copied(),
-                        )
+                        // Message::CloseWindow(
+                        //     presenter_window.copied(),
+                        // )
+                        Message::None
                     } else {
                         Message::OpenWindow
                     }
@@ -453,14 +449,14 @@ impl App {
                 TPosition::Bottom,
             ),
             tooltip(
-                button::custom(
+                button(
                     row!(
                         Container::new(
                             icon::from_name("view-list-symbolic")
                                 .scale(3)
                         )
                         .center_y(Length::Fill),
-                        text::body(if self.library_open {
+                        text(if self.library_open {
                             "Close Library"
                         } else {
                             "Open Library"
@@ -468,7 +464,6 @@ impl App {
                     )
                     .spacing(5),
                 )
-                .class(iced::theme::style::Button::HeaderBar)
                 .on_press(Message::LibraryToggle),
                 "Open Library",
                 TPosition::Bottom,
@@ -479,25 +474,23 @@ impl App {
         vec![row]
     }
 
-    fn footer(&self) -> Option<Element<Self::Message>> {
+    fn footer(&self) -> Option<Element<Message>> {
         let total_items_text =
             format!("Total Service Items: {}", self.service.len());
         let total_slides_text =
             format!("Total Slides: {}", self.presenter.total_slides);
-        let row = row![
-            text::body(total_items_text),
-            text::body(total_slides_text)
-        ]
-        .spacing(10);
+        let row =
+            row![text(total_items_text), text(total_slides_text)]
+                .spacing(10);
         Some(
             Container::new(row)
                 .align_right(Length::Fill)
-                .padding([5, 0, 0, 0])
+                .padding([5, 0])
                 .into(),
         )
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
+    fn subscription(&self) -> Subscription<Message> {
         event::listen_with(|event, _, id| {
             // debug!(?event);
             match event {
@@ -530,31 +523,12 @@ impl App {
                     }
                 }
                 iced::Event::Touch(_touch) => None,
-                iced::Event::A11y(_id, _action_request) => None,
-                iced::Event::Dnd(_dnd_event) => None,
-                iced::Event::PlatformSpecific(_platform_specific) => {
-                    None
-                }
+                iced::Event::InputMethod(event) => todo!(),
             }
         })
     }
 
-    fn context_drawer(
-        &self,
-    ) -> Option<iced::app::context_drawer::ContextDrawer<Self::Message>>
-    {
-        ContextDrawer {
-            title: Some("Context".into()),
-            header_actions: vec![],
-            header: Some("hi".into()),
-            content: "Sup".into(),
-            footer: Some("foot".into()),
-            on_close: Message::None,
-        };
-        None
-    }
-
-    fn dialog(&self) -> Option<Element<'_, Self::Message>> {
+    fn dialog(&self) -> Option<Element<'_, Message>> {
         if self.searching {
             Some(text("hello").into())
         } else {
@@ -571,9 +545,7 @@ impl App {
                 // debug!(?message);
                 match self.song_editor.update(message) {
                     song_editor::Action::Task(task) => {
-                        task.map(|m| {
-                            iced::Action::App(Message::SongEditor(m))
-                        })
+                        task.map(|m| Message::SongEditor(m))
                     }
                     song_editor::Action::UpdateSong(song) => {
                         if let Some(library) = &mut self.library {
@@ -595,10 +567,9 @@ impl App {
                     video.set_muted(false);
                 }
                 match self.presenter.update(message) {
-                    presenter::Action::Task(task) => task.map(|m| {
-                        // debug!("Should run future");
-                        iced::Action::App(Message::Present(m))
-                    }),
+                    presenter::Action::Task(task) => {
+                        task.map(|m| Message::Present(m))
+                    }
                     presenter::Action::None => Task::none(),
                     presenter::Action::NextSlide => {
                         let slide_index = self.current_item.1;
@@ -626,9 +597,7 @@ impl App {
                                 match action {
                                     presenter::Action::Task(task) => {
                                         tasks.push(task.map(|m| {
-                                            iced::Action::App(
-                                                Message::Present(m),
-                                            )
+                                            Message::Present(m)
                                         }))
                                     }
                                     _ => todo!(),
@@ -648,13 +617,7 @@ impl App {
                                         presenter::Action::Task(
                                             task,
                                         ) => tasks.push(task.map(
-                                            |m| {
-                                                iced::Action::App(
-                                                    Message::Present(
-                                                        m,
-                                                    ),
-                                                )
-                                            },
+                                            |m| Message::Present(m),
                                         )),
                                         _ => todo!(),
                                     }
@@ -684,9 +647,7 @@ impl App {
                                 match action {
                                     presenter::Action::Task(task) => {
                                         tasks.push(task.map(|m| {
-                                            iced::Action::App(
-                                                Message::Present(m),
-                                            )
+                                            Message::Present(m)
                                         }))
                                     }
                                     _ => todo!(),
@@ -721,13 +682,7 @@ impl App {
                                         presenter::Action::Task(
                                             task,
                                         ) => tasks.push(task.map(
-                                            |m| {
-                                                iced::Action::App(
-                                                    Message::Present(
-                                                        m,
-                                                    ),
-                                                )
-                                            },
+                                            |m| Message::Present(m),
                                         )),
                                         _ => todo!(),
                                     }
@@ -749,9 +704,7 @@ impl App {
                         }
                         library::Action::Task(task) => {
                             return task.map(|message| {
-                                iced::Action::App(Message::Library(
-                                    message,
-                                ))
+                                Message::Library(message)
                             });
                         }
                         library::Action::None => return Task::none(),
@@ -796,27 +749,7 @@ impl App {
                 self.file = file;
                 Task::none()
             }
-            Message::OpenWindow => {
-                let count = self.windows.len() + 1;
-
-                let (id, spawn_window) =
-                    window::open(window::Settings {
-                        position: Position::Centered,
-                        exit_on_close_request: count % 2 == 0,
-                        decorations: false,
-                        ..Default::default()
-                    });
-
-                self.windows.push(id);
-                _ = self.set_window_title(
-                    format!("window_{}", count),
-                    id,
-                );
-
-                spawn_window.map(|id| {
-                    iced::Action::App(Message::WindowOpened(id, None))
-                })
-            }
+            Message::OpenWindow => self.show_window(),
             Message::CloseWindow(id) => {
                 if let Some(id) = id {
                     window::close(id)
@@ -826,27 +759,21 @@ impl App {
             }
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
-                if self.cli_mode
-                                            || id > self.core.main_window_id().expect("Iced core seems to be missing a main window, was this started in cli mode?")
-                                        {
-                                            self.presentation_open = true;
-                                            if let Some(video) = &mut self.presenter.video {
-                                                video.set_muted(false);
-                                            }
-                                            window::change_mode(id, Mode::Fullscreen)
-                                        } else {
-                                            Task::none()
-                                        }
+                let main_id =
+                    self.windows.first_key_value().unwrap().0;
+                if self.cli_mode || &id > main_id {
+                    self.presentation_open = true;
+                    if let Some(video) = &mut self.presenter.video {
+                        video.set_muted(false);
+                    }
+                    window::set_mode(id, Mode::Fullscreen)
+                } else {
+                    Task::none()
+                }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
-                let Some(window) =
-                    self.windows.iter().position(|w| *w == id)
-                else {
-                    error!("Nothing matches this window id: {id}");
-                    return Task::none();
-                };
-                self.windows.remove(window);
+                self.windows.remove(&id);
                 // This closes the app if using the cli example
                 if self.windows.is_empty() {
                     self.update(Message::Quit)
@@ -862,9 +789,8 @@ impl App {
                 self.library_open = !self.library_open;
                 Task::none()
             }
-            Message::Quit => iced::iced::exit(),
-            Message::DndEnter(entity, data) => {
-                debug!(?entity);
+            Message::Quit => iced::exit(),
+            Message::DndEnter(data) => {
                 debug!(?data);
                 Task::none()
             }
@@ -884,10 +810,6 @@ impl App {
                     // }
                     let item = library.get_song(item).unwrap();
                     let item = ServiceItem::from(item);
-                    self.nav_model
-                        .insert()
-                        .text(item.title.clone())
-                        .data(item);
                 }
                 Task::none()
             }
@@ -896,7 +818,7 @@ impl App {
                 Task::none()
             }
             Message::None => Task::none(),
-            Message::DndLeave(entity) => {
+            Message::DndLeave() => {
                 // debug!(?entity);
                 Task::none()
             }
@@ -940,14 +862,24 @@ impl App {
                 Task::none()
             }
             Message::AppendServiceItem(item) => {
-                self.service.push(item);
+                if let Some(item) = item {
+                    self.service.push(item);
+                }
                 Task::none()
             }
         }
     }
 
     // Main window view
-    fn view(&self) -> Element<Message> {
+    fn view(&self, window: window::Id) -> Element<Message> {
+        if window == *self.windows.first_key_value().unwrap().0 {
+            self.main_view()
+        } else {
+            self.view_presenter()
+        }
+    }
+
+    fn main_view(&self) -> Element<Message> {
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
 
@@ -956,25 +888,30 @@ impl App {
             |video| video.duration().as_secs_f32(),
         );
 
-        let video_button_icon =
-            if let Some(video) = &self.presenter.video {
-                let (icon_name, tooltip) = if video.paused() {
-                    ("media-play", "Play")
-                } else {
-                    ("media-pause", "Pause")
-                };
-                button::icon(icon::from_name(icon_name))
-                    .tooltip(tooltip)
-                    .on_press(Message::Present(
-                        presenter::Message::StartVideo,
-                    ))
+        let video_button_icon = if let Some(video) =
+            &self.presenter.video
+        {
+            let (icon_name, tt) = if video.paused() {
+                ("media-play", "Play")
             } else {
-                button::icon(icon::from_name("media-play"))
-                    .tooltip("Play")
-                    .on_press(Message::Present(
-                        presenter::Message::StartVideo,
-                    ))
+                ("media-pause", "Pause")
             };
+            tooltip(
+                button(icon::from_name(icon_name)).on_press(
+                    Message::Present(presenter::Message::StartVideo),
+                ),
+                tt,
+                TPosition::FollowCursor,
+            )
+        } else {
+            tooltip(
+                button(icon::from_name("media-play")).on_press(
+                    Message::Present(presenter::Message::StartVideo),
+                ),
+                "Play",
+                TPosition::FollowCursor,
+            )
+        };
 
         let slide_preview = column![
             Space::with_height(Length::Fill),
@@ -999,7 +936,7 @@ impl App {
                         .step(0.1)
                     )
                     .center_x(Length::Fill)
-                    .padding([7, 0, 0, 0])
+                    .padding([7, 0])
                 ]
                 .padding(5)
             } else {
@@ -1016,7 +953,7 @@ impl App {
             } else {
                 Space::new(0, 0).into()
             })
-            .style(nav_bar_style)
+            // .style(nav_bar_style)
             .center(Length::FillPortion(2))
         } else {
             Container::new(horizontal_space().width(0))
@@ -1026,31 +963,25 @@ impl App {
             self.song_editor.view().map(Message::SongEditor);
 
         let row = row![
-            Container::new(
-                button::icon(icon_left)
-                    .icon_size(128)
-                    .tooltip("Previous Slide")
-                    .width(128)
-                    .on_press(Message::Present(
-                        presenter::Message::PrevSlide
-                    ))
-                    .class(theme::style::Button::Transparent)
-            )
+            Container::new(tooltip(
+                button(icon_left.size(128)).width(128).on_press(
+                    Message::Present(presenter::Message::PrevSlide)
+                ),
+                "Previous Slide",
+                TPosition::FollowCursor
+            ))
             .center_y(Length::Fill)
             .align_right(Length::FillPortion(1)),
             Container::new(slide_preview)
                 .center_y(Length::Fill)
                 .width(Length::FillPortion(3)),
-            Container::new(
-                button::icon(icon_right)
-                    .icon_size(128)
-                    .tooltip("Next Slide")
-                    .width(128)
-                    .on_press(Message::Present(
-                        presenter::Message::NextSlide
-                    ))
-                    .class(theme::style::Button::Transparent)
-            )
+            Container::new(tooltip(
+                button(icon_right.size(128)).width(128).on_press(
+                    Message::Present(presenter::Message::NextSlide)
+                ),
+                "Next Slide",
+                TPosition::FollowCursor
+            ))
             .center_y(Length::Fill)
             .align_left(Length::FillPortion(1)),
             library
@@ -1077,49 +1008,38 @@ impl App {
     }
 
     // View for presentation
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_presenter(&self) -> Element<Message> {
         self.presenter.view().map(Message::Present)
     }
-}
 
-impl App
-where
-    Self: iced::Application,
-{
-    fn active_page_title(&self) -> &str {
-        let Some(label) =
-            self.nav_model.text(self.nav_model.active())
-        else {
-            return "Lumina";
-        };
-        label
-    }
-
-    fn update_title(&mut self) -> Task<Message> {
-        let header_title = self.active_page_title().to_owned();
-        let window_title = format!("{header_title} — Lumina");
-        self.core.main_window_id().map_or_else(Task::none, |id| {
-            self.set_window_title(window_title, id)
-        })
-    }
+    // fn update_title(&mut self) -> Task<Message> {
+    //     let window_title = "Lumina";
+    //     self.windows.first_key_value().unwrap().1.title =
+    //         window_title.to_string();
+    //     Task::none()
+    // }
 
     fn show_window(&mut self) -> Task<Message> {
         let (id, spawn_window) = window::open(window::Settings {
             position: Position::Centered,
             exit_on_close_request: true,
             decorations: false,
+            fullscreen: true,
             ..Default::default()
         });
-        self.windows.push(id);
-        _ = self.set_window_title("Lumina Presenter".to_owned(), id);
-        spawn_window.map(|id| {
-            iced::Action::App(Message::WindowOpened(id, None))
-        })
+        let window = Window {
+            title: "Presentation".into(),
+            scale_input: "".into(),
+            current_scale: 1.0,
+            theme: self.theme(id),
+        };
+        self.windows.insert(id, window);
+        spawn_window.map(|id| Message::WindowOpened(id, None))
     }
 
     fn add_library(&mut self) -> Task<Message> {
         Task::perform(async move { Library::new().await }, |x| {
-            iced::Action::App(Message::AddLibrary(x))
+            Message::AddLibrary(x)
         })
     }
 
@@ -1191,7 +1111,7 @@ where
         }
     }
 
-    fn theme() -> Theme {
+    fn theme(&self, _window: window::Id) -> Theme {
         Theme::custom(
             "Snazzy",
             Palette {

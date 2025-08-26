@@ -8,7 +8,6 @@ use super::{
     slide::Slide,
 };
 use crisp::types::{Keyword, Symbol, Value};
-use iced::iced::Executor;
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{

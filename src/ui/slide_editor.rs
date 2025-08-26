@@ -49,7 +49,7 @@ pub enum SlideError {
 
 #[derive(Debug, Default)]
 struct EditorProgram {
-    mouse_button_pressed: Option<iced::iced::mouse::Button>,
+    mouse_button_pressed: Option<iced::mouse::Button>,
 }
 
 impl SlideEditor {
@@ -78,8 +78,8 @@ impl<'a> Program<SlideWidget, iced::Theme, iced::Renderer>
         state: &Self::State,
         renderer: &Renderer,
         theme: &iced::Theme,
-        bounds: iced::iced::Rectangle,
-        cursor: iced::iced_core::mouse::Cursor,
+        bounds: iced::Rectangle,
+        cursor: iced::mouse::Cursor,
     ) -> Vec<canvas::Geometry<Renderer>> {
         // We prepare a new `Frame`
         let mut frame = canvas::Frame::new(renderer, bounds.size());
@@ -88,7 +88,7 @@ impl<'a> Program<SlideWidget, iced::Theme, iced::Renderer>
         // We create a `Path` representing a simple circle
         let circle = canvas::Path::circle(frame.center(), 50.0);
         let border = canvas::Path::rectangle(
-            iced::iced::Point { x: 10.0, y: 10.0 },
+            iced::Point { x: 10.0, y: 10.0 },
             Size::new(frame_rect.width, frame_rect.height),
         );
 
@@ -114,21 +114,19 @@ impl<'a> Program<SlideWidget, iced::Theme, iced::Renderer>
     fn update(
         &self,
         _state: &mut Self::State,
-        event: canvas::Event,
-        bounds: iced::iced::Rectangle,
-        _cursor: iced::iced_core::mouse::Cursor,
-    ) -> (canvas::event::Status, Option<SlideWidget>) {
+        event: &iced::Event,
+        bounds: iced::Rectangle,
+        _cursor: iced::mouse::Cursor,
+    ) -> std::option::Option<iced::widget::Action<SlideWidget>> {
         match event {
-            canvas::Event::Mouse(event) => match event {
-                iced::iced::mouse::Event::CursorEntered => {
+            iced::Event::Mouse(event) => match event {
+                iced::mouse::Event::CursorEntered => {
                     debug!("cursor entered")
                 }
-                iced::iced::mouse::Event::CursorLeft => {
+                iced::mouse::Event::CursorLeft => {
                     debug!("cursor left")
                 }
-                iced::iced::mouse::Event::CursorMoved {
-                    position,
-                } => {
+                iced::mouse::Event::CursorMoved { position } => {
                     if bounds.x < position.x
                         && bounds.y < position.y
                         && (bounds.width + bounds.x) > position.x
@@ -137,29 +135,34 @@ impl<'a> Program<SlideWidget, iced::Theme, iced::Renderer>
                         debug!(?position, "cursor moved");
                     }
                 }
-                iced::iced::mouse::Event::ButtonPressed(button) => {
+                iced::mouse::Event::ButtonPressed(button) => {
                     // self.mouse_button_pressed = Some(button);
                     debug!(?button, "mouse button pressed")
                 }
-                iced::iced::mouse::Event::ButtonReleased(button) => {
+                iced::mouse::Event::ButtonReleased(button) => {
                     debug!(?button, "mouse button released")
                 }
-                iced::iced::mouse::Event::WheelScrolled { delta } => {
+                iced::mouse::Event::WheelScrolled { delta } => {
                     debug!(?delta, "scroll wheel")
                 }
             },
-            canvas::Event::Touch(event) => debug!("test"),
-            canvas::Event::Keyboard(event) => debug!("test"),
+            iced::Event::Touch(event) => debug!("test"),
+            iced::Event::Keyboard(event) => debug!("test"),
+            iced::Event::Keyboard(event) => todo!(),
+            iced::Event::Mouse(event) => todo!(),
+            iced::Event::Window(event) => todo!(),
+            iced::Event::Touch(event) => todo!(),
+            iced::Event::InputMethod(event) => todo!(),
         }
-        (canvas::event::Status::Ignored, None)
+        None
     }
 
     fn mouse_interaction(
         &self,
         _state: &Self::State,
-        _bounds: iced::iced::Rectangle,
-        _cursor: iced::iced_core::mouse::Cursor,
-    ) -> iced::iced_core::mouse::Interaction {
-        iced::iced_core::mouse::Interaction::default()
+        _bounds: iced::Rectangle,
+        _cursor: iced::mouse::Cursor,
+    ) -> iced::mouse::Interaction {
+        iced::mouse::Interaction::default()
     }
 }

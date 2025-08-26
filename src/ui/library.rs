@@ -4,24 +4,27 @@ use iced::{
     futures::FutureExt,
     theme,
     widget::{
-        button, container, horizontal_space, mouse_area, responsive,
-        row, scrollable, text, text_input, Container, Space,
+        button, column, container, horizontal_space, mouse_area,
+        responsive, row, scrollable, text, text_input, Container,
+        Space,
     },
-    widget::{column, row as rowm, text as textm},
     Background, Border, Color, Element, Length, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
-use crate::core::{
-    content::Content,
-    images::{update_image_in_db, Image},
-    model::{LibraryKind, Model},
-    presentations::{update_presentation_in_db, Presentation},
-    service_items::ServiceItem,
-    songs::{update_song_in_db, Song},
-    videos::{update_video_in_db, Video},
+use crate::{
+    core::{
+        content::Content,
+        images::{update_image_in_db, Image},
+        model::{LibraryKind, Model},
+        presentations::{update_presentation_in_db, Presentation},
+        service_items::ServiceItem,
+        songs::{update_song_in_db, Song},
+        videos::{update_video_in_db, Video},
+    },
+    ui::widgets::icon,
 };
 
 #[derive(Debug, Clone)]
@@ -276,40 +279,40 @@ impl<'a> Library {
     where
         T: Content,
     {
-        let mut row = row::<Message>().spacing(5);
+        let mut row = row![].spacing(5);
         match &model.kind {
             LibraryKind::Song => {
                 row = row
                     .push(icon::from_name("folder-music-symbolic"));
-                row = row
-                    .push(textm!("Songs").align_y(Vertical::Center));
+                row =
+                    row.push(text("Songs").align_y(Vertical::Center));
             }
             LibraryKind::Video => {
                 row = row
                     .push(icon::from_name("folder-videos-symbolic"));
                 row = row
-                    .push(textm!("Videos").align_y(Vertical::Center));
+                    .push(text("Videos").align_y(Vertical::Center));
             }
             LibraryKind::Image => {
                 row = row.push(icon::from_name(
                     "folder-pictures-symbolic",
                 ));
                 row = row
-                    .push(textm!("Images").align_y(Vertical::Center));
+                    .push(text("Images").align_y(Vertical::Center));
             }
             LibraryKind::Presentation => {
                 row = row.push(icon::from_name(
                     "x-office-presentation-symbolic",
                 ));
                 row = row.push(
-                    textm!("Presentations").align_y(Vertical::Center),
+                    text("Presentations").align_y(Vertical::Center),
                 );
             }
         };
         let item_count = model.items.len();
         row = row.push(horizontal_space());
         row = row
-            .push(textm!("{}", item_count).align_y(Vertical::Center));
+            .push(text!("{}", item_count).align_y(Vertical::Center));
         row = row.push(
             icon::from_name({
                 if self.library_open == Some(model.kind) {
@@ -329,21 +332,26 @@ impl<'a> Library {
                             match self.library_hovered {
                                 Some(lib) => Background::Color(
                                     if lib == model.kind {
-                                        t.iced().button.hover.into()
+                                        t.extended_palette()
+                                            .primary
+                                            .strong
+                                            .color
                                     } else {
-                                        t.iced().button.base.into()
+                                        t.extended_palette()
+                                            .background
+                                            .base
+                                            .color
                                     },
                                 ),
                                 None => Background::Color(
-                                    t.iced().button.base.into(),
+                                    t.extended_palette()
+                                        .background
+                                        .base
+                                        .color,
                                 ),
                             }
                         })
-                        .border(
-                            Border::default().rounded(
-                                t.iced().corner_radii.radius_s,
-                            ),
-                        )
+                        .border(Border::default().rounded(5))
                 })
                 .center_x(Length::Fill)
                 .center_y(Length::Shrink);
@@ -366,65 +374,34 @@ impl<'a> Library {
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|_| Message::None);
-                            DndSource::<Message, ServiceItem>::new(
-                                mouse_area(visual_item)
-                                    .on_drag(Message::DragItem(service_item.clone()))
-                                    .on_enter(Message::HoverItem(
-                                        Some((
-                                            model.kind,
-                                            index as i32,
-                                        )),
-                                    ))
-                                    .on_double_click(
-                                        Message::OpenItem(Some((
-                                            model.kind,
-                                            index as i32,
-                                        ))),
-                                    )
-                                    .on_exit(Message::HoverItem(None))
-                                    .on_press(Message::SelectItem(
-                                        Some((
-                                            model.kind,
-                                            index as i32,
-                                        )),
-                                    )),
-                            )
-                                .action(DndAction::Copy)
-                                .drag_icon({
-                                    let model = model.kind;
-                                    move |i| {
-                                        let state = State::None;
-                                        let icon = match model {
-                                                    LibraryKind::Song => icon::from_name(
-                                                        "folder-music-symbolic",
-                                                    ).symbolic(true)
-                                                        ,
-                                                    LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
-                                                    LibraryKind::Image => icon::from_name("folder-pictures-symbolic"),
-                                                    LibraryKind::Presentation => icon::from_name("x-office-presentation-symbolic"),
-                                                };
-                                            (
-                                                icon.into(),
-                                                state,
-                                                i,
-                                            )
-                            }})
-                            .drag_content(move || {
-                                service_item.to_owned()
-                            })
-                            .into()
+                            mouse_area(visual_item)
+                                // .on_drag(Message::DragItem(
+                                //     service_item.clone(),
+                                // ))
+                                .on_enter(Message::HoverItem(Some((
+                                    model.kind,
+                                    index as i32,
+                                ))))
+                                .on_double_click(Message::OpenItem(
+                                    Some((model.kind, index as i32)),
+                                ))
+                                .on_exit(Message::HoverItem(None))
+                                .on_press(Message::SelectItem(Some(
+                                    (model.kind, index as i32),
+                                )))
+                                .into()
                         },
                     )
                 })
-                    .spacing(2)
-                    .width(Length::Fill),
+                .spacing(2)
+                .width(Length::Fill),
             )
-                .spacing(5)
-                .height(Length::Fill);
+            .spacing(5)
+            .height(Length::Fill);
 
-            let library_toolbar = rowm!(
+            let library_toolbar = row!(
                 text_input("Search...", ""),
-                button::icon(icon::from_name("add"))
+                button(icon::from_name("add"))
             );
             let library_column =
                 column![library_toolbar, items].spacing(3);
@@ -445,33 +422,36 @@ impl<'a> Library {
     where
         T: Content,
     {
-        let text = Container::new(responsive(|size| {
-            text::heading(elide_text(item.title(), size.width))
+        let item_text = Container::new(responsive(|size| {
+            text(elide_text(item.title(), size.width))
                 .center()
-                .wrapping(textm::Wrapping::None)
+                .wrapping(text::Wrapping::None)
                 .into()
         }))
         .center_y(20)
         .center_x(Length::Fill);
         let subtext = container(responsive(|size| {
-            let color: Color = if item.background().is_some() {
-                theme::active().iced().accent_text_color().into()
+            if item.background().is_some() {
+                text(elide_text(item.subtext(), size.width))
+                    .style(text::primary)
+                    .center()
+                    .wrapping(text::Wrapping::None)
+                    .into()
             } else {
-                theme::active().iced().destructive_text_color().into()
-            };
-            text::body(elide_text(item.subtext(), size.width))
-                .center()
-                .wrapping(textm::Wrapping::None)
-                .class(color)
-                .into()
+                text(elide_text(item.subtext(), size.width))
+                    .style(text::primary)
+                    .center()
+                    .wrapping(text::Wrapping::None)
+                    .into()
+            }
         }))
         .center_y(20)
         .center_x(Length::Fill);
 
-        let texts = column([text.into(), subtext.into()]);
+        let texts = column([item_text.into(), subtext.into()]);
 
         Container::new(
-            rowm![horizontal_space().width(0), texts]
+            row![horizontal_space().width(0), texts]
                 .spacing(10)
                 .align_y(Vertical::Center),
         )
@@ -486,9 +466,9 @@ impl<'a> Library {
                         if model.kind == library
                             && selected == index as i32
                         {
-                            t.iced().accent.selected.into()
+                            t.extended_palette().primary.strong.color
                         } else {
-                            t.iced().button.base.into()
+                            t.extended_palette().primary.base.color
                         }
                     } else if let Some((library, hovered)) =
                         self.hovered_item
@@ -496,18 +476,15 @@ impl<'a> Library {
                         if model.kind == library
                             && hovered == index as i32
                         {
-                            t.iced().button.hover.into()
+                            t.extended_palette().primary.strong.color
                         } else {
-                            t.iced().button.base.into()
+                            t.extended_palette().primary.base.color
                         }
                     } else {
-                        t.iced().button.base.into()
+                        t.extended_palette().background.strong.color
                     },
                 ))
-                .border(
-                    Border::default()
-                        .rounded(t.iced().corner_radii.radius_m),
-                )
+                .border(Border::default().rounded(10))
         })
         .into()
     }

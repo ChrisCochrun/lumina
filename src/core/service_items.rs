@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use crisp::types::{Keyword, Symbol, Value};
-use iced::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
+// use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::Result;
 use tracing::{debug, error};
 
@@ -56,29 +56,29 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
     }
 }
 
-impl AllowedMimeTypes for ServiceItem {
-    fn allowed() -> Cow<'static, [String]> {
-        Cow::from(vec!["application/service-item".to_string()])
-    }
-}
+// impl AllowedMimeTypes for ServiceItem {
+//     fn allowed() -> Cow<'static, [String]> {
+//         Cow::from(vec!["application/service-item".to_string()])
+//     }
+// }
 
-impl AsMimeTypes for ServiceItem {
-    fn available(&self) -> Cow<'static, [String]> {
-        debug!(?self);
-        Cow::from(vec!["application/service-item".to_string()])
-    }
+// impl AsMimeTypes for ServiceItem {
+//     fn available(&self) -> Cow<'static, [String]> {
+//         debug!(?self);
+//         Cow::from(vec!["application/service-item".to_string()])
+//     }
 
-    fn as_bytes(
-        &self,
-        mime_type: &str,
-    ) -> Option<std::borrow::Cow<'static, [u8]>> {
-        debug!(?self);
-        debug!(mime_type);
-        let val = Value::from(self);
-        let val = String::from(val);
-        Some(Cow::from(val.into_bytes()))
-    }
-}
+//     fn as_bytes(
+//         &self,
+//         mime_type: &str,
+//     ) -> Option<std::borrow::Cow<'static, [u8]>> {
+//         debug!(?self);
+//         debug!(mime_type);
+//         let val = Value::from(self);
+//         let val = String::from(val);
+//         Some(Cow::from(val.into_bytes()))
+//     }
+// }
 
 impl From<&ServiceItem> for Value {
     fn from(value: &ServiceItem) -> Self {
