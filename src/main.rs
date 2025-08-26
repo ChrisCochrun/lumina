@@ -276,7 +276,7 @@ impl App {
             .iter()
             .enumerate()
             .map(|(index, item)| {
-                let button = button::standard(item.title.clone())
+                let button = button(item.title.clone()
                     .leading_icon({
                         match item.kind {
                             core::kinds::ServiceItemKind::Song(_) => {
@@ -295,7 +295,7 @@ impl App {
                                 icon::from_name("x-office-presentation-symbolic")
                             },
                         }
-                    })
+                    }))
                     .class(iced::theme::style::Button::HeaderBar)
                     .padding(5)
                     .width(Length::Fill)
