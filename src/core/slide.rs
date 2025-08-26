@@ -1,4 +1,4 @@
-// use cosmic::dialog::ashpd::url::Url;
+// use iced::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use miette::{miette, Result};

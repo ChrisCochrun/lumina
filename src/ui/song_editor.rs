@@ -1,21 +1,17 @@
 use std::{io, path::PathBuf};
 
-use cosmic::{
-    dialog::file_chooser::open::Dialog,
-    iced::{
-        font::{Family, Stretch, Style, Weight},
-        Font, Length,
-    },
-    iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::row,
+use dirs::font_dir;
+use iced::{
+    advanced::graphics::text::cosmic_text::fontdb,
+    font::{Family, Stretch, Style, Weight},
     theme,
+    widget::row,
     widget::{
-        button, column, combo_box, container, horizontal_space, icon,
+        button, column, combo_box, container, horizontal_space,
         scrollable, text, text_editor, text_input,
     },
-    Element, Task,
+    Element, Font, Length, Task,
 };
-use dirs::font_dir;
 use iced_video_player::Video;
 use tracing::{debug, error};
 
@@ -133,7 +129,7 @@ impl SongEditor {
             audio: PathBuf::new(),
             background: None,
             video: None,
-            current_font: cosmic::font::default(),
+            current_font: iced::font::default(),
             ccli: "8".to_owned(),
             slide_state: SlideEditor::default(),
         }
@@ -283,7 +279,7 @@ impl SongEditor {
             ]
             .into(),
         ])
-        .spacing(theme::active().cosmic().space_l());
+        .spacing(theme::active().iced().space_l());
         column.into()
     }
 
@@ -317,7 +313,7 @@ impl SongEditor {
         //             .collect();
         //         scrollable(
         //             column::with_children(slides)
-        //                 .spacing(theme::active().cosmic().space_l()),
+        //                 .spacing(theme::active().iced().space_l()),
         //         )
         //         .height(Length::Fill)
         //         .width(Length::Fill)
@@ -401,7 +397,7 @@ order",
                 )
             },
         )
-        .width(theme::active().cosmic().space_xxl());
+        .width(theme::active().iced().space_xxl());
 
         let background_selector = button::icon(
             icon::from_name("folder-pictures-symbolic").scale(2),

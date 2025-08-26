@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use cosmic::iced::Length;
+use iced::Length;
 
 struct DoubleSlider<'a, T, Message> {
     range: RangeInclusive<T>,

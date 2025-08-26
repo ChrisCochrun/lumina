@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
+use iced::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::Result;
 use tracing::{debug, error};
 

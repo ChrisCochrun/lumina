@@ -1,11 +1,11 @@
-use cosmic::iced::advanced::layout::{self, Layout};
-use cosmic::iced::advanced::renderer;
-use cosmic::iced::advanced::widget::{self, Widget};
-use cosmic::iced::border;
-use cosmic::iced::mouse;
-use cosmic::iced::{Color, Element, Length, Rectangle, Size};
 use femtovg::renderer::WGPURenderer;
 use femtovg::{Canvas, TextContext};
+use iced::iced::advanced::layout::{self, Layout};
+use iced::iced::advanced::renderer;
+use iced::iced::advanced::widget::{self, Widget};
+use iced::iced::border;
+use iced::iced::mouse;
+use iced::iced::{Color, Element, Length, Rectangle, Size};
 
 pub struct SlideText {
     text: String,
@@ -23,7 +23,7 @@ impl SlideText {
             });
         let surface =
             instance.create_surface(window.clone()).unwrap();
-        let adapter = cosmic::iced::wgpu::util::initialize_adapter_from_env_or_default(&instance, Some(&surface))
+        let adapter = iced::iced::wgpu::util::initialize_adapter_from_env_or_default(&instance, Some(&surface))
             .await
             .expect("Failed to find an appropriate adapter");
         let (device, queue) = adapter

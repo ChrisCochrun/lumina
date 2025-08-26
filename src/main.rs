@@ -2,32 +2,25 @@ use clap::{command, Parser};
 use core::service_items::ServiceItem;
 use core::slide::*;
 use core::songs::Song;
-use cosmic::app::context_drawer::ContextDrawer;
-use cosmic::app::{Core, Settings, Task};
-use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Padding, Point};
-use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row};
-use cosmic::widget::dnd_destination::{
-    dnd_destination, dnd_destination_for_data,
-};
-use cosmic::widget::nav_bar::nav_bar_style;
-use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::text;
-use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{
-    button, horizontal_space, nav_bar, search_input, tooltip,
-    vertical_space, Space,
-};
-use cosmic::widget::{icon, slider};
-use cosmic::{executor, Application, ApplicationExt, Element};
-use cosmic::{prelude::*, theme};
-use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
+use iced::keyboard::{Key, Modifiers};
+use iced::theme::{self, Palette};
+use iced::widget::tooltip::Position as TPosition;
+use iced::widget::{
+    button, horizontal_space, slider, text, tooltip, vertical_space,
+    Space,
+};
+use iced::widget::{column, row};
+use iced::window::{Mode, Position};
+use iced::{self, event, window, Length, Padding, Point};
+use iced::{color, Subscription};
+use iced::{executor, Application, Element};
+use iced::{widget::Container, Theme};
+use iced::{Settings, Task};
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use rayon::prelude::*;
+use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use tracing::{debug, level_filters::LevelFilter};
@@ -86,20 +79,19 @@ fn main() -> Result<()> {
             .is_daemon(true);
     }
 
-    cosmic::app::run::<App>(settings, args)
+    iced::daemon(move || App::init(args), App::update, App::view)
+        .settings(settings)
+        .subscription(App::subsrciption)
+        .theme(App::theme)
+        .title(App::title)
+        .run()
         .map_err(|e| miette!("Invalid things... {}", e))
 }
 
-fn theme(_state: &App) -> Theme {
-    Theme::dark()
-}
-
 struct App {
-    core: Core,
-    nav_model: nav_bar::Model,
     file: PathBuf,
     presenter: Presenter,
-    windows: Vec<window::Id>,
+    windows: BTreeMap<window::Id, Window>,
     service: Vec<ServiceItem>,
     current_item: (usize, usize),
     presentation_open: bool,
@@ -119,7 +111,7 @@ enum Message {
     Library(library::Message),
     SongEditor(song_editor::Message),
     File(PathBuf),
-    DndEnter(Entity, Vec<String>),
+    DndEnter(Vec<String>),
     DndDrop,
     OpenWindow,
     CloseWindow(Option<window::Id>),
@@ -130,7 +122,7 @@ enum Message {
     Quit,
     Key(Key, Modifiers),
     None,
-    DndLeave(Entity),
+    DndLeave(),
     EditorToggle(bool),
     SearchFocus,
     ChangeServiceItem(usize),
@@ -139,30 +131,42 @@ enum Message {
     AppendServiceItem(ServiceItem),
 }
 
+#[derive(Debug)]
+struct Window {
+    title: String,
+    scale_input: String,
+    current_scale: f64,
+    theme: Theme,
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Self {
+            title: Default::default(),
+            scale_input: Default::default(),
+            current_scale: Default::default(),
+            theme: App::theme(),
+        }
+    }
+}
+
 const HEADER_SPACE: u16 = 6;
 
-impl cosmic::Application for App {
-    type Executor = executor::Default;
-    type Flags = Cli;
-    type Message = Message;
+impl App {
     const APP_ID: &'static str = "lumina";
-    fn core(&self) -> &Core {
-        &self.core
-    }
-    fn core_mut(&mut self) -> &mut Core {
-        &mut self.core
-    }
-    fn init(
-        core: Core,
-        input: Self::Flags,
-    ) -> (Self, Task<Self::Message>) {
+    fn init(input: Cli) -> (Self, Task<Self::Message>) {
         debug!("init");
-        let nav_model = nav_bar::Model::default();
 
-        let mut windows = vec![];
-
+        let mut batch = vec![];
+        let mut windows = BTreeMap::new();
         if input.ui {
-            windows.push(core.main_window_id().unwrap());
+            let settings = window::Settings {
+                ..Default::default()
+            };
+            let (id, open) = window::open(settings);
+            batch.push(open);
+
+            windows.insert(id, Window::default());
         }
 
         let items = match read_to_string(input.file) {
@@ -202,8 +206,6 @@ impl cosmic::Application for App {
 
         let mut app = App {
             presenter,
-            core,
-            nav_model,
             service: items,
             file: PathBuf::default(),
             windows,
@@ -219,8 +221,6 @@ impl cosmic::Application for App {
             library_dragged_item: None,
         };
 
-        let mut batch = vec![];
-
         if input.ui {
             debug!("main view");
             batch.push(app.update_title())
@@ -235,39 +235,34 @@ impl cosmic::Application for App {
         (app, batch)
     }
 
-    /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
-    fn nav_model(&self) -> Option<&nav_bar::Model> {
-        Some(&self.nav_model)
-    }
-
-    fn nav_bar(&self) -> Option<Element<cosmic::Action<Message>>> {
+    fn nav_bar(&self) -> Option<Element<Message>> {
         if !self.core().nav_bar_active() {
             return None;
         }
 
         // let nav_model = self.nav_model()?;
 
-        // let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-        //     cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
+        // let mut nav = iced::widget::nav_bar(nav_model, |id| {
+        //     iced::Action::Iced(iced::app::Action::NavBar(id))
         // })
         // .on_dnd_drop::<ServiceItem>(|entity, data, action| {
         //     debug!(?entity);
         //     debug!(?data);
         //     debug!(?action);
-        //     cosmic::Action::App(Message::DndDrop)
+        //     iced::Action::App(Message::DndDrop)
         // })
         // .on_dnd_enter(|entity, data| {
         //     debug!("entered");
-        //     cosmic::Action::App(Message::DndEnter(entity, data))
+        //     iced::Action::App(Message::DndEnter(entity, data))
         // })
         // .on_dnd_leave(|entity| {
         //     debug!("left");
-        //     cosmic::Action::App(Message::DndLeave(entity))
+        //     iced::Action::App(Message::DndLeave(entity))
         // })
         // .drag_id(DragId::new())
         // .on_context(|id| {
-        //     cosmic::Action::Cosmic(
-        //         cosmic::app::Action::NavBarContext(id),
+        //     iced::Action::Iced(
+        //         iced::app::Action::NavBarContext(id),
         //     )
         // })
         // .context_menu(None)
@@ -301,30 +296,30 @@ impl cosmic::Application for App {
                             },
                         }
                     })
-                    .class(cosmic::theme::style::Button::HeaderBar)
+                    .class(iced::theme::style::Button::HeaderBar)
                     .padding(5)
                     .width(Length::Fill)
-                    .on_press(cosmic::Action::App(Message::ChangeServiceItem(index)));
+                    .on_press(iced::Action::App(Message::ChangeServiceItem(index)));
                 let tooltip = tooltip(button,
                                       text::body(item.kind.to_string()),
                                       TPosition::Right);
                 dnd_destination(tooltip, vec!["application/service-item".into()])
                     .data_received_for::<ServiceItem>( move |item| {
                         if let Some(item) = item {
-                            cosmic::Action::App(Message::AddServiceItem(index, item))
+                            iced::Action::App(Message::AddServiceItem(index, item))
                         } else {
-                            cosmic::Action::None
+                            iced::Action::None
                         }
                     }).on_drop(move |x, y| {
                         debug!(x, y);
-                        cosmic::Action::App(Message::AddServiceItemDrop(index))
+                        iced::Action::App(Message::AddServiceItemDrop(index))
                     }).on_finish(move |mime, data, action, x, y| {
                         debug!(mime, ?data, ?action, x, y);
                         let Ok(item) = ServiceItem::try_from((data, mime)) else {
-                            return cosmic::Action::None;
+                            return iced::Action::None;
                         };
                         debug!(?item);
-                        cosmic::Action::App(Message::AddServiceItem(index, item))
+                        iced::Action::App(Message::AddServiceItem(index, item))
                     })
                     .into()
             });
@@ -339,11 +334,11 @@ impl cosmic::Application for App {
             )
             .data_received_for::<ServiceItem>(|item| {
                 if let Some(item) = item {
-                    cosmic::Action::App(Message::AppendServiceItem(
+                    iced::Action::App(Message::AppendServiceItem(
                         item,
                     ))
                 } else {
-                    cosmic::Action::None
+                    iced::Action::None
                 }
             })
             .on_finish(
@@ -352,10 +347,10 @@ impl cosmic::Application for App {
                     let Ok(item) =
                         ServiceItem::try_from((data, mime))
                     else {
-                        return cosmic::Action::None;
+                        return iced::Action::None;
                     };
                     debug!(?item);
-                    cosmic::Action::App(Message::AddServiceItem(
+                    iced::Action::App(Message::AddServiceItem(
                         end_index, item,
                     ))
                 }
@@ -373,16 +368,6 @@ impl cosmic::Application for App {
             container = container.max_width(280);
         }
         Some(container.into())
-    }
-
-    /// Called when a navigation item is selected.
-    fn on_nav_select(
-        &mut self,
-        id: nav_bar::Id,
-    ) -> Task<Self::Message> {
-        self.nav_model.activate(id);
-        // debug!(?id);
-        self.update_title()
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
@@ -429,7 +414,7 @@ impl cosmic::Application for App {
                     )
                     .spacing(5),
                 )
-                .class(cosmic::theme::style::Button::HeaderBar)
+                .class(iced::theme::style::Button::HeaderBar)
                 .on_press(Message::EditorToggle(
                     self.editor_mode.is_none(),
                 )),
@@ -454,7 +439,7 @@ impl cosmic::Application for App {
                     )
                     .spacing(5),
                 )
-                .class(cosmic::theme::style::Button::HeaderBar)
+                .class(iced::theme::style::Button::HeaderBar)
                 .on_press({
                     if self.presentation_open {
                         Message::CloseWindow(
@@ -483,7 +468,7 @@ impl cosmic::Application for App {
                     )
                     .spacing(5),
                 )
-                .class(cosmic::theme::style::Button::HeaderBar)
+                .class(iced::theme::style::Button::HeaderBar)
                 .on_press(Message::LibraryToggle),
                 "Open Library",
                 TPosition::Bottom,
@@ -556,9 +541,8 @@ impl cosmic::Application for App {
 
     fn context_drawer(
         &self,
-    ) -> Option<
-        cosmic::app::context_drawer::ContextDrawer<Self::Message>,
-    > {
+    ) -> Option<iced::app::context_drawer::ContextDrawer<Self::Message>>
+    {
         ContextDrawer {
             title: Some("Context".into()),
             header_actions: vec![],
@@ -588,9 +572,7 @@ impl cosmic::Application for App {
                 match self.song_editor.update(message) {
                     song_editor::Action::Task(task) => {
                         task.map(|m| {
-                            cosmic::Action::App(Message::SongEditor(
-                                m,
-                            ))
+                            iced::Action::App(Message::SongEditor(m))
                         })
                     }
                     song_editor::Action::UpdateSong(song) => {
@@ -615,7 +597,7 @@ impl cosmic::Application for App {
                 match self.presenter.update(message) {
                     presenter::Action::Task(task) => task.map(|m| {
                         // debug!("Should run future");
-                        cosmic::Action::App(Message::Present(m))
+                        iced::Action::App(Message::Present(m))
                     }),
                     presenter::Action::None => Task::none(),
                     presenter::Action::NextSlide => {
@@ -644,7 +626,7 @@ impl cosmic::Application for App {
                                 match action {
                                     presenter::Action::Task(task) => {
                                         tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
+                                            iced::Action::App(
                                                 Message::Present(m),
                                             )
                                         }))
@@ -665,16 +647,15 @@ impl cosmic::Application for App {
                                     match action {
                                         presenter::Action::Task(
                                             task,
-                                        ) => {
-                                            tasks
-                                                .push(task.map(|m| {
-                                                cosmic::Action::App(
+                                        ) => tasks.push(task.map(
+                                            |m| {
+                                                iced::Action::App(
                                                     Message::Present(
                                                         m,
                                                     ),
                                                 )
-                                            }))
-                                        }
+                                            },
+                                        )),
                                         _ => todo!(),
                                     }
                                 }
@@ -703,7 +684,7 @@ impl cosmic::Application for App {
                                 match action {
                                     presenter::Action::Task(task) => {
                                         tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
+                                            iced::Action::App(
                                                 Message::Present(m),
                                             )
                                         }))
@@ -739,16 +720,15 @@ impl cosmic::Application for App {
                                     match action {
                                         presenter::Action::Task(
                                             task,
-                                        ) => {
-                                            tasks
-                                                .push(task.map(|m| {
-                                                cosmic::Action::App(
+                                        ) => tasks.push(task.map(
+                                            |m| {
+                                                iced::Action::App(
                                                     Message::Present(
                                                         m,
                                                     ),
                                                 )
-                                            }))
-                                        }
+                                            },
+                                        )),
                                         _ => todo!(),
                                     }
                                 }
@@ -769,7 +749,7 @@ impl cosmic::Application for App {
                         }
                         library::Action::Task(task) => {
                             return task.map(|message| {
-                                cosmic::Action::App(Message::Library(
+                                iced::Action::App(Message::Library(
                                     message,
                                 ))
                             });
@@ -834,9 +814,7 @@ impl cosmic::Application for App {
                 );
 
                 spawn_window.map(|id| {
-                    cosmic::Action::App(Message::WindowOpened(
-                        id, None,
-                    ))
+                    iced::Action::App(Message::WindowOpened(id, None))
                 })
             }
             Message::CloseWindow(id) => {
@@ -849,7 +827,7 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                            || id > self.core.main_window_id().expect("Iced core seems to be missing a main window, was this started in cli mode?")
                                         {
                                             self.presentation_open = true;
                                             if let Some(video) = &mut self.presenter.video {
@@ -884,7 +862,7 @@ impl cosmic::Application for App {
                 self.library_open = !self.library_open;
                 Task::none()
             }
-            Message::Quit => cosmic::iced::exit(),
+            Message::Quit => iced::iced::exit(),
             Message::DndEnter(entity, data) => {
                 debug!(?entity);
                 debug!(?data);
@@ -1106,7 +1084,7 @@ impl cosmic::Application for App {
 
 impl App
 where
-    Self: cosmic::Application,
+    Self: iced::Application,
 {
     fn active_page_title(&self) -> &str {
         let Some(label) =
@@ -1135,13 +1113,13 @@ where
         self.windows.push(id);
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
         spawn_window.map(|id| {
-            cosmic::Action::App(Message::WindowOpened(id, None))
+            iced::Action::App(Message::WindowOpened(id, None))
         })
     }
 
     fn add_library(&mut self) -> Task<Message> {
         Task::perform(async move { Library::new().await }, |x| {
-            cosmic::Action::App(Message::AddLibrary(x))
+            iced::Action::App(Message::AddLibrary(x))
         })
     }
 
@@ -1163,7 +1141,7 @@ where
     //         |x| {
     //             let len = x.len();
     //             debug!(len, "to append: ");
-    //             cosmic::Action::App(Message::AppendService(x))
+    //             iced::Action::App(Message::AppendService(x))
     //         },
     //     )
     // }
@@ -1211,6 +1189,20 @@ where
             }
             _ => Task::none(),
         }
+    }
+
+    fn theme() -> Theme {
+        Theme::custom(
+            "Snazzy",
+            Palette {
+                background: color!(0x282a36),
+                text: color!(0xe2e4e5),
+                primary: color!(0x57c7ff),
+                success: color!(0x5af78e),
+                warning: color!(0xff9f43),
+                danger: color!(0xff5c57),
+            },
+        )
     }
 }
 

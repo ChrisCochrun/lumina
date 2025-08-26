@@ -1,17 +1,14 @@
-use cosmic::{
-    iced::{
-        alignment::Vertical, clipboard::dnd::DndAction,
-        futures::FutureExt, Background, Border, Color, Length,
-    },
-    iced_core::widget::tree::State,
-    iced_widget::{column, row as rowm, text as textm},
+use iced::{
+    advanced::widget::{tree::State, Widget},
+    alignment::Vertical,
+    futures::FutureExt,
     theme,
     widget::{
-        button, container, horizontal_space, icon, mouse_area,
-        responsive, row, scrollable, text, text_input, Container,
-        DndSource, Space, Widget,
+        button, container, horizontal_space, mouse_area, responsive,
+        row, scrollable, text, text_input, Container, Space,
     },
-    Element, Task,
+    widget::{column, row as rowm, text as textm},
+    Background, Border, Color, Element, Length, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
@@ -332,19 +329,21 @@ impl<'a> Library {
                             match self.library_hovered {
                                 Some(lib) => Background::Color(
                                     if lib == model.kind {
-                                        t.cosmic().button.hover.into()
+                                        t.iced().button.hover.into()
                                     } else {
-                                        t.cosmic().button.base.into()
+                                        t.iced().button.base.into()
                                     },
                                 ),
                                 None => Background::Color(
-                                    t.cosmic().button.base.into(),
+                                    t.iced().button.base.into(),
                                 ),
                             }
                         })
-                        .border(Border::default().rounded(
-                            t.cosmic().corner_radii.radius_s,
-                        ))
+                        .border(
+                            Border::default().rounded(
+                                t.iced().corner_radii.radius_s,
+                            ),
+                        )
                 })
                 .center_x(Length::Fill)
                 .center_y(Length::Shrink);
@@ -456,12 +455,9 @@ impl<'a> Library {
         .center_x(Length::Fill);
         let subtext = container(responsive(|size| {
             let color: Color = if item.background().is_some() {
-                theme::active().cosmic().accent_text_color().into()
+                theme::active().iced().accent_text_color().into()
             } else {
-                theme::active()
-                    .cosmic()
-                    .destructive_text_color()
-                    .into()
+                theme::active().iced().destructive_text_color().into()
             };
             text::body(elide_text(item.subtext(), size.width))
                 .center()
@@ -490,9 +486,9 @@ impl<'a> Library {
                         if model.kind == library
                             && selected == index as i32
                         {
-                            t.cosmic().accent.selected.into()
+                            t.iced().accent.selected.into()
                         } else {
-                            t.cosmic().button.base.into()
+                            t.iced().button.base.into()
                         }
                     } else if let Some((library, hovered)) =
                         self.hovered_item
@@ -500,17 +496,17 @@ impl<'a> Library {
                         if model.kind == library
                             && hovered == index as i32
                         {
-                            t.cosmic().button.hover.into()
+                            t.iced().button.hover.into()
                         } else {
-                            t.cosmic().button.base.into()
+                            t.iced().button.base.into()
                         }
                     } else {
-                        t.cosmic().button.base.into()
+                        t.iced().button.base.into()
                     },
                 ))
                 .border(
                     Border::default()
-                        .rounded(t.cosmic().corner_radii.radius_m),
+                        .rounded(t.iced().corner_radii.radius_m),
                 )
         })
         .into()

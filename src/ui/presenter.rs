@@ -1,29 +1,25 @@
 use miette::{IntoDiagnostic, Result};
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
-use cosmic::{
-    iced::{
-        alignment::Horizontal,
-        border,
-        font::{Family, Stretch, Style, Weight},
-        Background, Border, Color, ContentFit, Font, Length, Shadow,
-        Vector,
+use iced::{
+    alignment::Horizontal,
+    border,
+    font::{Family, Stretch, Style, Weight},
+    widget::{
+        container, image, mouse_area, responsive, scrollable, text,
+        Column, Container, Row, Space,
     },
-    iced_widget::{
+    widget::{
         rich_text,
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
         },
         span, stack, vertical_rule,
     },
-    prelude::*,
-    widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Row, Space,
-    },
-    Task,
+    Background, Border, Color, ContentFit, Font, Length, Shadow,
+    Task, Vector,
 };
-use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
+use iced_video_player::{Position, Video, VideoPlayer};
 use rodio::{Decoder, OutputStream, Sink};
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -168,7 +164,7 @@ impl Presenter {
                 )
             },
             scroll_id: Id::unique(),
-            current_font: cosmic::font::default(),
+            current_font: iced::font::default(),
         }
     }
 
@@ -449,7 +445,7 @@ impl Presenter {
                                 .style(move |t| {
                                     let mut style =
                                         container::Style::default();
-                                    let theme = t.cosmic();
+                                    let theme = t.iced();
                                     let hovered = self.hovered_slide
                                         == Some((
                                             item_index,
@@ -504,7 +500,7 @@ impl Presenter {
                                 .padding(10),
                         )
                         .interaction(
-                            cosmic::iced::mouse::Interaction::Pointer,
+                            iced::iced::mouse::Interaction::Pointer,
                         )
                         .on_move(move |_| {
                             Message::HoveredSlide(Some((
@@ -578,7 +574,7 @@ impl Presenter {
     //         Container::new(container)
     //             .style(move |t| {
     //                 let mut style = container::Style::default();
-    //                 let theme = t.cosmic();
+    //                 let theme = t.iced();
     //                 let hovered = self.hovered_slide == slide_id;
     //                 style.background = Some(Background::Color(
     //                     if is_current_slide {
@@ -617,7 +613,7 @@ impl Presenter {
     //             .height(100)
     //             .padding(10),
     //     )
-    //     .interaction(cosmic::iced::mouse::Interaction::Pointer)
+    //     .interaction(iced::iced::mouse::Interaction::Pointer)
     //     .on_move(move |_| Message::HoveredSlide(slide_id))
     //     .on_exit(Message::HoveredSlide(-1))
     //     .on_press(Message::SlideChange(slide.clone()));

@@ -7,8 +7,8 @@ use super::{
     service_items::ServiceTrait,
     slide::Slide,
 };
-use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
+use iced::iced::Executor;
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{

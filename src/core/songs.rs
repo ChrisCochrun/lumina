@@ -1,7 +1,7 @@
 use std::{collections::HashMap, option::Option, path::PathBuf};
 
-use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
+use iced::iced::Executor;
 use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{

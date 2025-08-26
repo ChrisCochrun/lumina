@@ -1,6 +1,6 @@
 use std::mem::replace;
 
-use cosmic::iced::Executor;
+use iced::iced::Executor;
 use miette::{miette, Result};
 use sqlx::{Connection, SqliteConnection};
 

@@ -4,13 +4,10 @@ use std::{
 };
 
 use colors_transform::Rgb;
-use cosmic::{
-    iced::{
-        font::{Style, Weight},
-        Length, Size,
-    },
-    prelude::*,
+use iced::{
+    font::{Style, Weight},
     widget::{container, svg::Handle, Svg},
+    Length, Size,
 };
 use tracing::error;
 
@@ -46,11 +43,11 @@ pub struct Font {
     size: u8,
 }
 
-impl From<cosmic::font::Font> for Font {
-    fn from(value: cosmic::font::Font) -> Self {
+impl From<iced::font::Font> for Font {
+    fn from(value: iced::font::Font) -> Self {
         Self {
             name: match value.family {
-                cosmic::iced::font::Family::Name(name) => {
+                iced::iced::font::Family::Name(name) => {
                     name.to_string()
                 }
                 _ => "Quicksand Bold".into(),

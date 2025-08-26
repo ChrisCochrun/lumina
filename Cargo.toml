@@ -8,7 +8,7 @@ description = "A cli presentation system"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["debug", "derive"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["debug", "winit", "desktop", "winit_wgpu", "winit_tokio", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window"] }
+# libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["debug", "winit", "desktop", "winit_wgpu", "winit_tokio", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window"] }
 lexpr = "0.2.7"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
@@ -37,12 +37,17 @@ rayon = "1.11.0"
 # femtovg = { version = "0.16.0", features = ["wgpu"] }
 # wgpu = "26.0.1"
 # mupdf = "0.5.0"
-# rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
+rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
+
+[dependencies.iced]
+git = "https://github.com/iced-rs/iced"
+branch = "master"
+features = ["wgpu", "image", "advanced", "svg", "canvas", "hot", "debug", "lazy", "tokio"]
 
 [dependencies.iced_video_player]
-git = "https://github.com/jackpot51/iced_video_player.git"
-branch = "cosmic"
-features = ["wgpu"]
+git = "https://github.com/jazzfool/iced_video_player.git"
+branch = "master"
+# branch = "cosmic"
 
 # [profile.dev]
 # opt-level = 3
