@@ -47,7 +47,7 @@ branch = "master"
 features = ["wgpu", "image", "advanced", "svg", "canvas", "hot", "debug", "lazy", "tokio"]
 
 [dependencies.iced_video_player]
-git = "https://github.com/jazzfool/iced_video_player.git"
+git = "https://git.tfcconnection.org/chris/iced_video_player"
 branch = "master"
 # branch = "cosmic"
 

@@ -4,15 +4,14 @@ use dirs::font_dir;
 use iced::{
     advanced::graphics::text::cosmic_text::fontdb,
     font::{Family, Stretch, Style, Weight},
-    theme,
     widget::{
         button, column, combo_box, container, horizontal_space, row,
         scrollable, text, text_editor, text_input, tooltip,
+        TextInput,
     },
     Element, Font, Length, Task,
 };
 use iced_video_player::Video;
-use rfd::AsyncFileDialog;
 use tracing::{debug, error};
 
 use crate::{
@@ -279,66 +278,62 @@ impl SongEditor {
                     .center_x(Length::FillPortion(2)),
                 container(slide_preview)
                     .center_x(Length::FillPortion(3))
-            ]
-            .into(),
+            ],
         ]
         .spacing(15);
         column.into()
     }
 
     fn slide_preview(&self) -> Element<Message> {
-        // if let Some(song) = &self.song {
-        //     if let Ok(slides) = song.to_slides() {
-        //         let slides = slides
-        //             .iter()
-        //             .enumerate()
-        //             .map(|(index, slide)| {
-        //                 container(
-        //                     slide_view(
-        //                         slide.clone(),
-        //                         if index == 0 {
-        //                             &self.video
-        //                         } else {
-        //                             &None
-        //                         },
-        //                         self.current_font,
-        //                         false,
-        //                         false,
-        //                     )
-        //                     .map(|_| Message::None),
-        //                 )
-        //                 .height(250)
-        //                 .center_x(Length::Fill)
-        //                 .padding([0, 20])
-        //                 .clip(true)
-        //                 .into()
-        //             })
-        //             .collect();
-        //         scrollable(
-        //             column::with_children(slides)
-        //                 .spacing(theme::active().iced().space_l()),
-        //         )
-        //         .height(Length::Fill)
-        //         .width(Length::Fill)
-        //         .into()
-        //     } else {
-        //         horizontal_space().into()
-        //     }
-        // } else {
-        //     horizontal_space().into()
-        // }
-        self.slide_state
-            .view(Font::with_name("Quicksand Bold"))
-            .map(|_s| Message::None)
-            .into()
+        if let Some(song) = &self.song {
+            if let Ok(slides) = song.to_slides() {
+                let slides = slides
+                    .iter()
+                    .enumerate()
+                    .map(|(index, slide)| {
+                        container(
+                            slide_view(
+                                slide.clone(),
+                                if index == 0 {
+                                    &self.video
+                                } else {
+                                    &None
+                                },
+                                self.current_font,
+                                false,
+                                false,
+                            )
+                            .map(|_| Message::None),
+                        )
+                        .height(250)
+                        .center_x(Length::Fill)
+                        .padding([0, 20])
+                        .clip(true)
+                        .into()
+                    })
+                    .collect();
+                scrollable(column(slides).spacing(20))
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .into()
+            } else {
+                horizontal_space().into()
+            }
+        } else {
+            horizontal_space().into()
+        }
+        // self.slide_state
+        //     .view(Font::with_name("Quicksand Bold"))
+        //     .map(|_s| Message::None)
+        //     .into()
     }
 
     fn left_column(&self) -> Element<Message> {
-        let title_input = text_input("song", &self.title)
-            .on_input(Message::ChangeTitle);
+        let title_input = text_input("song", self.title.as_ref())
+            .on_input(|_| Message::ChangeTitle);
 
         let author_input = text_input("author", &self.author)
-            .on_input(Message::ChangeAuthor);
+            .on_input(|_| Message::ChangeAuthor);
 
         let verse_input = text_input(
             "Verse

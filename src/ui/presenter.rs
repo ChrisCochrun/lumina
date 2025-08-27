@@ -709,7 +709,13 @@ pub(crate) fn slide_view(
             let lines = slide_text.lines();
             let text: Vec<Element<Message>> = lines
                 .map(|t| {
-                    rich_text([span(format!("{}\n", t))
+                    rich_text::<
+                        '_,
+                        &str,
+                        Message,
+                        iced::Theme,
+                        iced::Renderer,
+                    >([span(format!("{}\n", t))
                         .background(
                             Background::Color(Color::BLACK)
                                 .scale_alpha(0.4),
