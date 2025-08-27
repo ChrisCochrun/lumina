@@ -235,155 +235,155 @@ impl cosmic::Application for App {
         (app, batch)
     }
 
-    /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
-    fn nav_model(&self) -> Option<&nav_bar::Model> {
-        Some(&self.nav_model)
-    }
+    // /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
+    // fn nav_model(&self) -> Option<&nav_bar::Model> {
+    //     Some(&self.nav_model)
+    // }
 
-    fn nav_bar(&self) -> Option<Element<cosmic::Action<Message>>> {
-        if !self.core().nav_bar_active() {
-            return None;
-        }
+    // fn nav_bar(&self) -> Option<Element<cosmic::Action<Message>>> {
+    //     if !self.core().nav_bar_active() {
+    //         return None;
+    //     }
 
-        // let nav_model = self.nav_model()?;
+    //     // let nav_model = self.nav_model()?;
 
-        // let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-        //     cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
-        // })
-        // .on_dnd_drop::<ServiceItem>(|entity, data, action| {
-        //     debug!(?entity);
-        //     debug!(?data);
-        //     debug!(?action);
-        //     cosmic::Action::App(Message::DndDrop)
-        // })
-        // .on_dnd_enter(|entity, data| {
-        //     debug!("entered");
-        //     cosmic::Action::App(Message::DndEnter(entity, data))
-        // })
-        // .on_dnd_leave(|entity| {
-        //     debug!("left");
-        //     cosmic::Action::App(Message::DndLeave(entity))
-        // })
-        // .drag_id(DragId::new())
-        // .on_context(|id| {
-        //     cosmic::Action::Cosmic(
-        //         cosmic::app::Action::NavBarContext(id),
-        //     )
-        // })
-        // .context_menu(None)
-        // .into_container()
-        // // XXX both must be shrink to avoid flex layout from ignoring it
-        // .width(Length::Shrink)
-        // .height(Length::Shrink);
+    //     // let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
+    //     //     cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
+    //     // })
+    //     // .on_dnd_drop::<ServiceItem>(|entity, data, action| {
+    //     //     debug!(?entity);
+    //     //     debug!(?data);
+    //     //     debug!(?action);
+    //     //     cosmic::Action::App(Message::DndDrop)
+    //     // })
+    //     // .on_dnd_enter(|entity, data| {
+    //     //     debug!("entered");
+    //     //     cosmic::Action::App(Message::DndEnter(entity, data))
+    //     // })
+    //     // .on_dnd_leave(|entity| {
+    //     //     debug!("left");
+    //     //     cosmic::Action::App(Message::DndLeave(entity))
+    //     // })
+    //     // .drag_id(DragId::new())
+    //     // .on_context(|id| {
+    //     //     cosmic::Action::Cosmic(
+    //     //         cosmic::app::Action::NavBarContext(id),
+    //     //     )
+    //     // })
+    //     // .context_menu(None)
+    //     // .into_container()
+    //     // // XXX both must be shrink to avoid flex layout from ignoring it
+    //     // .width(Length::Shrink)
+    //     // .height(Length::Shrink);
 
-        let list = self
-            .service
-            .iter()
-            .enumerate()
-            .map(|(index, item)| {
-                let button = button::standard(item.title.clone())
-                    .leading_icon({
-                        match item.kind {
-                            core::kinds::ServiceItemKind::Song(_) => {
-                                icon::from_name("folder-music-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Video(_) => {
-                                icon::from_name("folder-videos-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Image(_) => {
-                                icon::from_name("folder-pictures-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Presentation(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Content(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                        }
-                    })
-                    .class(cosmic::theme::style::Button::HeaderBar)
-                    .padding(5)
-                    .width(Length::Fill)
-                    .on_press(cosmic::Action::App(Message::ChangeServiceItem(index)));
-                let tooltip = tooltip(button,
-                                      text::body(item.kind.to_string()),
-                                      TPosition::Right);
-                dnd_destination(tooltip, vec!["application/service-item".into()])
-                    .data_received_for::<ServiceItem>( move |item| {
-                        if let Some(item) = item {
-                            cosmic::Action::App(Message::AddServiceItem(index, item))
-                        } else {
-                            cosmic::Action::None
-                        }
-                    }).on_drop(move |x, y| {
-                        debug!(x, y);
-                        cosmic::Action::App(Message::AddServiceItemDrop(index))
-                    }).on_finish(move |mime, data, action, x, y| {
-                        debug!(mime, ?data, ?action, x, y);
-                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
-                            return cosmic::Action::None;
-                        };
-                        debug!(?item);
-                        cosmic::Action::App(Message::AddServiceItem(index, item))
-                    })
-                    .into()
-            });
+    //     let list = self
+    //         .service
+    //         .iter()
+    //         .enumerate()
+    //         .map(|(index, item)| {
+    //             let button = button::standard(item.title.clone())
+    //                 .leading_icon({
+    //                     match item.kind {
+    //                         core::kinds::ServiceItemKind::Song(_) => {
+    //                             icon::from_name("folder-music-symbolic")
+    //                         },
+    //                         core::kinds::ServiceItemKind::Video(_) => {
+    //                             icon::from_name("folder-videos-symbolic")
+    //                         },
+    //                         core::kinds::ServiceItemKind::Image(_) => {
+    //                             icon::from_name("folder-pictures-symbolic")
+    //                         },
+    //                         core::kinds::ServiceItemKind::Presentation(_) => {
+    //                             icon::from_name("x-office-presentation-symbolic")
+    //                         },
+    //                         core::kinds::ServiceItemKind::Content(_) => {
+    //                             icon::from_name("x-office-presentation-symbolic")
+    //                         },
+    //                     }
+    //                 })
+    //                 .class(cosmic::theme::style::Button::HeaderBar)
+    //                 .padding(5)
+    //                 .width(Length::Fill)
+    //                 .on_press(cosmic::Action::App(Message::ChangeServiceItem(index)));
+    //             let tooltip = tooltip(button,
+    //                                   text::body(item.kind.to_string()),
+    //                                   TPosition::Right);
+    //             dnd_destination(tooltip, vec!["application/service-item".into()])
+    //                 .data_received_for::<ServiceItem>( move |item| {
+    //                     if let Some(item) = item {
+    //                         cosmic::Action::App(Message::AddServiceItem(index, item))
+    //                     } else {
+    //                         cosmic::Action::None
+    //                     }
+    //                 }).on_drop(move |x, y| {
+    //                     debug!(x, y);
+    //                     cosmic::Action::App(Message::AddServiceItemDrop(index))
+    //                 }).on_finish(move |mime, data, action, x, y| {
+    //                     debug!(mime, ?data, ?action, x, y);
+    //                     let Ok(item) = ServiceItem::try_from((data, mime)) else {
+    //                         return cosmic::Action::None;
+    //                     };
+    //                     debug!(?item);
+    //                     cosmic::Action::App(Message::AddServiceItem(index, item))
+    //                 })
+    //                 .into()
+    //         });
 
-        let end_index = self.service.len();
-        let column = column![
-            text::heading("Service List").center().width(280),
-            column(list).spacing(10),
-            dnd_destination(
-                vertical_space(),
-                vec!["application/service-item".into()]
-            )
-            .data_received_for::<ServiceItem>(|item| {
-                if let Some(item) = item {
-                    cosmic::Action::App(Message::AppendServiceItem(
-                        item,
-                    ))
-                } else {
-                    cosmic::Action::None
-                }
-            })
-            .on_finish(
-                move |mime, data, action, x, y| {
-                    debug!(mime, ?data, ?action, x, y);
-                    let Ok(item) =
-                        ServiceItem::try_from((data, mime))
-                    else {
-                        return cosmic::Action::None;
-                    };
-                    debug!(?item);
-                    cosmic::Action::App(Message::AddServiceItem(
-                        end_index, item,
-                    ))
-                }
-            )
-        ]
-        .padding(10)
-        .spacing(10);
-        let padding = Padding::new(0.0).top(20);
-        let mut container = Container::new(column)
-            // .height(Length::Fill)
-            .style(nav_bar_style)
-            .padding(padding);
+    //     let end_index = self.service.len();
+    //     let column = column![
+    //         text::heading("Service List").center().width(280),
+    //         column(list).spacing(10),
+    //         dnd_destination(
+    //             vertical_space(),
+    //             vec!["application/service-item".into()]
+    //         )
+    //         .data_received_for::<ServiceItem>(|item| {
+    //             if let Some(item) = item {
+    //                 cosmic::Action::App(Message::AppendServiceItem(
+    //                     item,
+    //                 ))
+    //             } else {
+    //                 cosmic::Action::None
+    //             }
+    //         })
+    //         .on_finish(
+    //             move |mime, data, action, x, y| {
+    //                 debug!(mime, ?data, ?action, x, y);
+    //                 let Ok(item) =
+    //                     ServiceItem::try_from((data, mime))
+    //                 else {
+    //                     return cosmic::Action::None;
+    //                 };
+    //                 debug!(?item);
+    //                 cosmic::Action::App(Message::AddServiceItem(
+    //                     end_index, item,
+    //                 ))
+    //             }
+    //         )
+    //     ]
+    //     .padding(10)
+    //     .spacing(10);
+    //     let padding = Padding::new(0.0).top(20);
+    //     let mut container = Container::new(column)
+    //         // .height(Length::Fill)
+    //         .style(nav_bar_style)
+    //         .padding(padding);
 
-        if !self.core().is_condensed() {
-            container = container.max_width(280);
-        }
-        Some(container.into())
-    }
+    //     if !self.core().is_condensed() {
+    //         container = container.max_width(280);
+    //     }
+    //     Some(container.into())
+    // }
 
     /// Called when a navigation item is selected.
-    fn on_nav_select(
-        &mut self,
-        id: nav_bar::Id,
-    ) -> Task<Self::Message> {
-        self.nav_model.activate(id);
-        // debug!(?id);
-        self.update_title()
-    }
+    // fn on_nav_select(
+    //     &mut self,
+    //     id: nav_bar::Id,
+    // ) -> Task<Self::Message> {
+    //     self.nav_model.activate(id);
+    //     // debug!(?id);
+    //     self.update_title()
+    // }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![]
@@ -998,6 +998,9 @@ impl cosmic::Application for App {
                     ))
             };
 
+        let service_list =
+            Container::new(self.service_list()).padding(5);
+
         let slide_preview = column![
             Space::with_height(Length::Fill),
             Container::new(
@@ -1048,6 +1051,7 @@ impl cosmic::Application for App {
             self.song_editor.view().map(Message::SongEditor);
 
         let row = row![
+            service_list,
             Container::new(
                 button::icon(icon_left)
                     .icon_size(128)
@@ -1211,6 +1215,101 @@ where
             }
             _ => Task::none(),
         }
+    }
+
+    fn service_list(&self) -> Element<Message> {
+        let list = self
+            .service
+            .iter()
+            .enumerate()
+            .map(|(index, item)| {
+                let button = button::standard(item.title.clone())
+                    .leading_icon({
+                        match item.kind {
+                            core::kinds::ServiceItemKind::Song(_) => {
+                                icon::from_name("folder-music-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Video(_) => {
+                                icon::from_name("folder-videos-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Image(_) => {
+                                icon::from_name("folder-pictures-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Presentation(_) => {
+                                icon::from_name("x-office-presentation-symbolic")
+                            },
+                            core::kinds::ServiceItemKind::Content(_) => {
+                                icon::from_name("x-office-presentation-symbolic")
+                            },
+                        }
+                    })
+                    .class(cosmic::theme::style::Button::HeaderBar)
+                    .padding(5)
+                    .width(Length::Fill)
+                    .on_press(Message::ChangeServiceItem(index));
+                let tooltip = tooltip(button,
+                                      text::body(item.kind.to_string()),
+                                      TPosition::Right);
+                dnd_destination(tooltip, vec!["application/service-item".into()])
+                    .data_received_for::<ServiceItem>( move |item| {
+                        if let Some(item) = item {
+                            Message::AddServiceItem(index, item)
+                        } else {
+                            Message::None
+                        }
+                    }).on_drop(move |x, y| {
+                        debug!(x, y);
+                        Message::AddServiceItemDrop(index)
+                    }).on_finish(move |mime, data, action, x, y| {
+                        debug!(mime, ?data, ?action, x, y);
+                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
+                            return Message::None;
+                        };
+                        debug!(?item);
+                        Message::AddServiceItem(index, item)
+                    })
+                    .into()
+            });
+
+        let end_index = self.service.len();
+        let column = column![
+            text::heading("Service List").center().width(280),
+            iced::widget::horizontal_rule(1),
+            column(list).spacing(10),
+            dnd_destination(
+                vertical_space(),
+                vec!["application/service-item".into()]
+            )
+            .data_received_for::<ServiceItem>(|item| {
+                if let Some(item) = item {
+                    Message::AppendServiceItem(item)
+                } else {
+                    Message::None
+                }
+            })
+            .on_finish(
+                move |mime, data, action, x, y| {
+                    debug!(mime, ?data, ?action, x, y);
+                    let Ok(item) =
+                        ServiceItem::try_from((data, mime))
+                    else {
+                        return Message::None;
+                    };
+                    debug!(?item);
+                    Message::AddServiceItem(end_index, item)
+                }
+            )
+        ]
+        .padding(10)
+        .spacing(10);
+        let mut container = Container::new(column)
+            // .height(Length::Fill)
+            .style(nav_bar_style);
+
+        if !self.core().is_condensed() {
+            container = container.max_width(280);
+        }
+        container.into()
     }
 }
 
