@@ -264,12 +264,18 @@ impl<'a> Library {
         let presentation_library =
             self.library_item(&self.presentation_library);
         let column = column![
+            text::heading("Library").center().width(Length::Fill),
+            cosmic::iced::widget::horizontal_rule(1),
             song_library,
             image_library,
             video_library,
             presentation_library,
-        ];
-        column.height(Length::Fill).spacing(5).into()
+        ]
+        .height(Length::Fill)
+        .padding(10)
+        .spacing(10)
+        .into();
+        column
     }
 
     pub fn library_item<T>(

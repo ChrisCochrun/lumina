@@ -998,9 +998,6 @@ impl cosmic::Application for App {
                     ))
             };
 
-        let service_list =
-            Container::new(self.service_list()).padding(5);
-
         let slide_preview = column![
             Space::with_height(Length::Fill),
             Container::new(
@@ -1035,14 +1032,23 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
+        let service_list = Container::new(self.service_list())
+            .padding(5)
+            .width(Length::FillPortion(2));
+
         let library = if self.library_open {
-            Container::new(if let Some(library) = &self.library {
-                library.view().map(Message::Library)
-            } else {
-                Space::new(0, 0).into()
-            })
-            .style(nav_bar_style)
-            .center(Length::FillPortion(2))
+            Container::new(
+                Container::new(
+                    if let Some(library) = &self.library {
+                        library.view().map(Message::Library)
+                    } else {
+                        Space::new(0, 0).into()
+                    },
+                )
+                .style(nav_bar_style),
+            )
+            .padding(5)
+            .width(Length::FillPortion(2))
         } else {
             Container::new(horizontal_space().width(0))
         };
@@ -1051,6 +1057,7 @@ impl cosmic::Application for App {
             self.song_editor.view().map(Message::SongEditor);
 
         let row = row![
+            library,
             service_list,
             Container::new(
                 button::icon(icon_left)
@@ -1079,7 +1086,6 @@ impl cosmic::Application for App {
             )
             .center_y(Length::Fill)
             .align_left(Length::FillPortion(1)),
-            library
         ]
         .width(Length::Fill)
         .height(Length::Fill)
@@ -1273,7 +1279,9 @@ where
 
         let end_index = self.service.len();
         let column = column![
-            text::heading("Service List").center().width(280),
+            text::heading("Service List")
+                .center()
+                .width(Length::Fill),
             iced::widget::horizontal_rule(1),
             column(list).spacing(10),
             dnd_destination(
@@ -1306,10 +1314,7 @@ where
             // .height(Length::Fill)
             .style(nav_bar_style);
 
-        if !self.core().is_condensed() {
-            container = container.max_width(280);
-        }
-        container.into()
+        container.center(Length::FillPortion(2)).into()
     }
 }
 
