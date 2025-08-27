@@ -2,16 +2,52 @@
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use miette::{miette, Result};
+use resvg::usvg::fontdb;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 use tracing::error;
 
 use crate::ui::text_svg::{self, TextSvg};
 
 use super::songs::Song;
+
+#[derive(
+    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
+)]
+pub struct Slide {
+    id: i32,
+    background: Background,
+    text: String,
+    font: String,
+    font_size: i32,
+    text_alignment: TextAlignment,
+    audio: Option<PathBuf>,
+    video_loop: bool,
+    video_start_time: f32,
+    video_end_time: f32,
+    #[serde(skip)]
+    pub text_svg: TextSvg,
+}
+
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+)]
+pub enum BackgroundKind {
+    #[default]
+    Image,
+    Video,
+}
+
+#[derive(Debug, Clone, Default)]
+struct Image {
+    pub source: String,
+    pub fit: String,
+    pub children: Vec<String>,
+}
 
 #[derive(
     Clone,
@@ -203,15 +239,6 @@ impl Display for ParseError {
     }
 }
 
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
-pub enum BackgroundKind {
-    #[default]
-    Image,
-    Video,
-}
-
 impl From<String> for BackgroundKind {
     fn from(value: String) -> Self {
         if value == "image" {
@@ -220,24 +247,6 @@ impl From<String> for BackgroundKind {
             BackgroundKind::Video
         }
     }
-}
-
-#[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
-)]
-pub struct Slide {
-    id: i32,
-    background: Background,
-    text: String,
-    font: String,
-    font_size: i32,
-    text_alignment: TextAlignment,
-    audio: Option<PathBuf>,
-    video_loop: bool,
-    video_start_time: f32,
-    video_end_time: f32,
-    #[serde(skip)]
-    pub text_svg: TextSvg,
 }
 
 impl From<&Slide> for Value {
@@ -654,13 +663,6 @@ impl SlideBuilder {
             })
         }
     }
-}
-
-#[derive(Debug, Clone, Default)]
-struct Image {
-    pub source: String,
-    pub fit: String,
-    pub children: Vec<String>,
 }
 
 impl Image {

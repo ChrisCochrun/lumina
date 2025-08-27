@@ -1,22 +1,28 @@
 use std::{
     fmt::Display,
     hash::{Hash, Hasher},
+    io::Read,
+    sync::Arc,
 };
 
 use colors_transform::Rgb;
 use cosmic::{
     iced::{
         font::{Style, Weight},
-        Length, Size,
+        ContentFit, Length, Size,
     },
     prelude::*,
-    widget::{container, svg::Handle, Svg},
+    widget::{container, image::Handle, Image},
 };
-use tracing::error;
+use resvg::{
+    tiny_skia::{self, Pixmap},
+    usvg::Tree,
+};
+use tracing::{debug, error};
 
 use crate::TextAlignment;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct TextSvg {
     text: String,
     font: Font,
@@ -25,6 +31,19 @@ pub struct TextSvg {
     fill: Color,
     alignment: TextAlignment,
     handle: Option<Handle>,
+    fontdb: Arc<resvg::usvg::fontdb::Database>,
+}
+
+impl PartialEq for TextSvg {
+    fn eq(&self, other: &Self) -> bool {
+        self.text == other.text
+            && self.font == other.font
+            && self.shadow == other.shadow
+            && self.stroke == other.stroke
+            && self.fill == other.fill
+            && self.alignment == other.alignment
+            && self.handle == other.handle
+    }
 }
 
 impl Hash for TextSvg {
@@ -45,6 +64,27 @@ pub struct Font {
     style: Style,
     size: u8,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Hash)]
+pub struct Shadow {
+    pub offset_x: i16,
+    pub offset_y: i16,
+    pub spread: u16,
+    pub color: Color,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Hash)]
+pub struct Stroke {
+    size: u16,
+    color: Color,
+}
+
+pub enum Message {
+    None,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Color(Rgb);
 
 impl From<cosmic::font::Font> for Font {
     fn from(value: cosmic::font::Font) -> Self {
@@ -113,9 +153,6 @@ impl Font {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Color(Rgb);
-
 impl Hash for Color {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.to_css_hex_string().hash(state);
@@ -156,24 +193,6 @@ impl Display for Color {
     ) -> std::fmt::Result {
         write!(f, "{}", self.0.to_css_hex_string())
     }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Hash)]
-pub struct Shadow {
-    pub offset_x: i16,
-    pub offset_y: i16,
-    pub spread: u16,
-    pub color: Color,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Hash)]
-pub struct Stroke {
-    size: u16,
-    color: Color,
-}
-
-pub enum Message {
-    None,
 }
 
 impl TextSvg {
@@ -234,7 +253,7 @@ impl TextSvg {
         } else {
             "".into()
         };
-        let size = Size::new(640.0, 360.0);
+        let size = Size::new(1920.0, 1080.0);
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
         let middle_position = size.height / 2.0;
@@ -266,20 +285,31 @@ impl TextSvg {
                                         self.font.name,
                                         self.font.size,
                                         self.fill, stroke, text);
-        let handle = Handle::from_memory(
-            Box::leak(
-                <std::string::String as Clone>::clone(&final_svg)
-                    .into_boxed_str(),
-            )
-            .as_bytes(),
-        );
+        debug!(?final_svg);
+        let resvg_tree = Tree::from_str(
+            &final_svg,
+            &resvg::usvg::Options {
+                fontdb: Arc::clone(&self.fontdb),
+                ..Default::default()
+            },
+        )
+        .expect("Woops mama");
+        // debug!(?resvg_tree);
+        let transform = tiny_skia::Transform::default();
+        let mut pixmap =
+            Pixmap::new(size.width as u32, size.height as u32)
+                .expect("opops");
+        resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
+        // debug!(?pixmap);
+        let handle = Handle::from_bytes(pixmap.data().to_owned());
         self.handle = Some(handle);
         self
     }
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
         container(
-            Svg::new(self.handle.clone().unwrap())
+            Image::new(self.handle.clone().unwrap())
+                .content_fit(ContentFit::Contain)
                 .width(Length::Fill)
                 .height(Length::Fill),
         )

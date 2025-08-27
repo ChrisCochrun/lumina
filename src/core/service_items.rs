@@ -6,6 +6,7 @@ use std::sync::Arc;
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
 use miette::Result;
+use resvg::usvg::fontdb;
 use tracing::{debug, error};
 
 use crate::Slide;
@@ -17,7 +18,7 @@ use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ServiceItem {
     pub id: i32,
     pub title: String,
