@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ops::Deref;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
@@ -24,7 +24,7 @@ pub struct ServiceItem {
     pub title: String,
     pub database_id: i32,
     pub kind: ServiceItemKind,
-    pub slides: Arc<[Slide]>,
+    pub slides: Vec<Slide>,
     // pub item: Box<dyn ServiceTrait>,
 }
 
@@ -122,7 +122,7 @@ impl Default for ServiceItem {
             title: String::default(),
             database_id: 0,
             kind: ServiceItemKind::Content(Slide::default()),
-            slides: Arc::new([]),
+            slides: vec![],
             // item: Box::new(Image::default()),
         }
     }
@@ -172,7 +172,7 @@ impl From<&Value> for ServiceItem {
                             kind: ServiceItemKind::Content(
                                 slide.clone(),
                             ),
-                            slides: Arc::new([slide]),
+                            slides: vec![slide],
                         }
                     } else if let Some(background) =
                         list.get(background_pos)

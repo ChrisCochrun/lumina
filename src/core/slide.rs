@@ -30,7 +30,7 @@ pub struct Slide {
     video_start_time: f32,
     video_end_time: f32,
     #[serde(skip)]
-    pub text_svg: TextSvg,
+    pub text_svg: Option<TextSvg>,
 }
 
 #[derive(
@@ -261,6 +261,11 @@ impl Slide {
         self
     }
 
+    pub fn with_text_svg(mut self, text_svg: TextSvg) -> Self {
+        self.text_svg = Some(text_svg);
+        self
+    }
+
     pub fn set_font(mut self, font: impl AsRef<str>) -> Self {
         self.font = font.as_ref().into();
         self
@@ -282,6 +287,10 @@ impl Slide {
 
     pub fn text(&self) -> String {
         self.text.clone()
+    }
+
+    pub fn text_alignment(&self) -> TextAlignment {
+        self.text_alignment.clone()
     }
 
     pub fn font_size(&self) -> i32 {
@@ -623,45 +632,19 @@ impl SlideBuilder {
         let Some(video_end_time) = self.video_end_time else {
             return Err(miette!("No video_end_time"));
         };
-        if let Some(text_svg) = self.text_svg {
-            Ok(Slide {
-                background,
-                text,
-                font,
-                font_size,
-                text_alignment,
-                audio: self.audio,
-                video_loop,
-                video_start_time,
-                video_end_time,
-                text_svg,
-                ..Default::default()
-            })
-        } else {
-            let text_svg = TextSvg::new(text.clone())
-                .alignment(text_alignment)
-                .fill("#fff")
-                .shadow(text_svg::shadow(2, 2, 5, "#000000"))
-                .stroke(text_svg::stroke(3, "#000"))
-                .font(
-                    text_svg::Font::from(font.clone())
-                        .size(font_size.try_into().unwrap()),
-                )
-                .build();
-            Ok(Slide {
-                background,
-                text,
-                font,
-                font_size,
-                text_alignment,
-                audio: self.audio,
-                video_loop,
-                video_start_time,
-                video_end_time,
-                text_svg,
-                ..Default::default()
-            })
-        }
+        Ok(Slide {
+            background,
+            text,
+            font,
+            font_size,
+            text_alignment,
+            audio: self.audio,
+            video_loop,
+            video_start_time,
+            video_end_time,
+            text_svg: self.text_svg,
+            ..Default::default()
+        })
     }
 }
 

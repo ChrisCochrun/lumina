@@ -1,4 +1,4 @@
-use std::{io, path::PathBuf};
+use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
     dialog::file_chooser::open::Dialog,
@@ -31,7 +31,7 @@ use super::presenter::slide_view;
 pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
-    font_db: fontdb::Database,
+    font_db: Arc<fontdb::Database>,
     fonts: Vec<(fontdb::ID, String)>,
     fonts_combo: combo_box::State<String>,
     font_sizes: combo_box::State<String>,
@@ -72,11 +72,9 @@ pub enum Message {
 }
 
 impl SongEditor {
-    pub fn new() -> Self {
+    pub fn new(font_db: Arc<fontdb::Database>) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
-        let mut font_db = fontdb::Database::new();
-        font_db.load_system_fonts();
         let mut fonts: Vec<(fontdb::ID, String)> = font_db
             .faces()
             .map(|f| {
@@ -447,7 +445,9 @@ order",
 
 impl Default for SongEditor {
     fn default() -> Self {
-        Self::new()
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+        Self::new(Arc::new(fontdb))
     }
 }
 

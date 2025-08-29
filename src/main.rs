@@ -28,8 +28,10 @@ use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use rayon::prelude::*;
+use resvg::usvg::fontdb;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
@@ -37,6 +39,8 @@ use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
+
+use crate::ui::text_svg;
 
 pub mod core;
 pub mod lisp;
@@ -111,6 +115,7 @@ struct App {
     song_editor: SongEditor,
     searching: bool,
     library_dragged_item: Option<ServiceItem>,
+    fontdb: Arc<fontdb::Database>,
 }
 
 #[derive(Debug, Clone)]
@@ -159,15 +164,19 @@ impl cosmic::Application for App {
         debug!("init");
         let nav_model = nav_bar::Model::default();
 
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+        let fontdb = Arc::new(fontdb);
+
         let mut windows = vec![];
 
         if input.ui {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let items = match read_to_string(input.file) {
+        let mut items = match read_to_string(input.file) {
             Ok(lisp) => {
-                let mut slide_vector = vec![];
+                let mut service_items = vec![];
                 let lisp = crisp::reader::read(&lisp);
                 match lisp {
                     Value::List(vec) => {
@@ -178,12 +187,12 @@ impl cosmic::Application for App {
                         // slide_vector.append(items);
                         for value in vec {
                             let mut inner_vector = parse_lisp(value);
-                            slide_vector.append(&mut inner_vector);
+                            service_items.append(&mut inner_vector);
                         }
                     }
                     _ => todo!(),
                 }
-                slide_vector
+                service_items
             }
             Err(e) => {
                 warn!("Missing file or could not read: {e}");
@@ -191,15 +200,32 @@ impl cosmic::Application for App {
             }
         };
 
+        let items: Vec<ServiceItem> = items
+            .into_par_iter()
+            .map(|mut item| {
+                item.slides = item
+                    .slides
+                    .into_par_iter()
+                    .map(|mut slide| {
+                        text_svg::text_svg_generator(
+                            &mut slide,
+                            Arc::clone(&fontdb),
+                        );
+                        slide
+                    })
+                    .collect();
+                item
+            })
+            .collect();
+
         let presenter = Presenter::with_items(items.clone());
-        let song_editor = SongEditor::new();
+        let song_editor = SongEditor::new(Arc::clone(&fontdb));
 
         // for item in items.iter() {
         //     nav_model.insert().text(item.title()).data(item.clone());
         // }
 
         // nav_model.activate_position(0);
-
         let mut app = App {
             presenter,
             core,
@@ -217,6 +243,7 @@ impl cosmic::Application for App {
             searching: false,
             current_item: (0, 0),
             library_dragged_item: None,
+            fontdb,
         };
 
         let mut batch = vec![];
@@ -1289,11 +1316,10 @@ where
                 vec!["application/service-item".into()]
             )
             .data_received_for::<ServiceItem>(|item| {
-                if let Some(item) = item {
-                    Message::AppendServiceItem(item)
-                } else {
-                    Message::None
-                }
+                item.map_or_else(
+                    || Message::None,
+                    |item| Message::AppendServiceItem(item),
+                )
             })
             .on_finish(
                 move |mime, data, action, x, y| {

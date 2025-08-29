@@ -16,7 +16,7 @@ use cosmic::{
 };
 use resvg::{
     tiny_skia::{self, Pixmap},
-    usvg::Tree,
+    usvg::{fontdb, Tree},
 };
 use tracing::{debug, error};
 
@@ -230,6 +230,11 @@ impl TextSvg {
         self
     }
 
+    pub fn fontdb(mut self, fontdb: Arc<fontdb::Database>) -> Self {
+        self.fontdb = fontdb;
+        self
+    }
+
     pub fn alignment(mut self, alignment: TextAlignment) -> Self {
         self.alignment = alignment;
         self
@@ -285,7 +290,7 @@ impl TextSvg {
                                         self.font.name,
                                         self.font.size,
                                         self.fill, stroke, text);
-        debug!(?final_svg);
+        // debug!(?final_svg);
         let resvg_tree = Tree::from_str(
             &final_svg,
             &resvg::usvg::Options {
@@ -301,21 +306,17 @@ impl TextSvg {
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!(?pixmap);
-        let handle = Handle::from_bytes(pixmap.data().to_owned());
+        let handle = Handle::from_bytes(pixmap.take());
         self.handle = Some(handle);
         self
     }
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
-        container(
-            Image::new(self.handle.clone().unwrap())
-                .content_fit(ContentFit::Contain)
-                .width(Length::Fill)
-                .height(Length::Fill),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+        Image::new(self.handle.clone().unwrap())
+            .content_fit(ContentFit::Contain)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     fn text_spans(&self) -> Vec<String> {
@@ -350,6 +351,26 @@ pub fn stroke(size: u16, color: impl Into<Color>) -> Stroke {
 
 pub fn color(color: impl AsRef<str>) -> Color {
     Color::from_hex_str(color)
+}
+
+pub fn text_svg_generator(
+    slide: &mut crate::core::slide::Slide,
+    fontdb: Arc<fontdb::Database>,
+) {
+    if slide.text().len() > 0 {
+        let text_svg = TextSvg::new(slide.text())
+            .alignment(slide.text_alignment())
+            .fill("#fff")
+            .shadow(shadow(2, 2, 5, "#000000"))
+            .stroke(stroke(3, "#000"))
+            .font(
+                Font::from(slide.font().clone())
+                    .size(slide.font_size().try_into().unwrap()),
+            )
+            .fontdb(Arc::clone(&fontdb))
+            .build();
+        slide.text_svg = Some(text_svg);
+    }
 }
 
 #[cfg(test)]

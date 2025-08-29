@@ -1,4 +1,5 @@
 use miette::{IntoDiagnostic, Result};
+use resvg::usvg::fontdb;
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
@@ -30,7 +31,7 @@ use url::Url;
 
 use crate::{
     core::{service_items::ServiceItem, slide::Slide},
-    // ui::widgets::slide_text,
+    ui::text_svg,
     BackgroundKind,
 };
 
@@ -148,6 +149,7 @@ impl Presenter {
         };
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
+
         Self {
             current_slide: items[0].slides[0].clone(),
             current_item: 0,
@@ -741,7 +743,12 @@ pub(crate) fn slide_view(
                 .align_x(Horizontal::Left)
         } else {
             // SVG based
-            let text = slide.text_svg.view().map(|m| Message::None);
+            let text: Element<Message> =
+                if let Some(text) = &slide.text_svg {
+                    text.view().map(|_| Message::None).into()
+                } else {
+                    Space::with_width(0).into()
+                };
             Container::new(text)
                 .center(Length::Fill)
                 .align_x(Horizontal::Left)
