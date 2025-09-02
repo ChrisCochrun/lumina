@@ -460,14 +460,45 @@ impl<'a> Library {
         }))
         .center_y(20)
         .center_x(Length::Fill);
-        let subtext = container(responsive(|size| {
+        let subtext = container(responsive(move |size| {
             let color: Color = if item.background().is_some() {
-                theme::active().cosmic().accent_text_color().into()
+                if let Some((library, selected)) = self.selected_item
+                {
+                    if model.kind == library
+                        && selected == index as i32
+                    {
+                        theme::active().cosmic().control_0().into()
+                    } else {
+                        theme::active()
+                            .cosmic()
+                            .accent_text_color()
+                            .into()
+                    }
+                } else {
+                    theme::active()
+                        .cosmic()
+                        .accent_text_color()
+                        .into()
+                }
             } else {
-                theme::active()
-                    .cosmic()
-                    .destructive_text_color()
-                    .into()
+                if let Some((library, selected)) = self.selected_item
+                {
+                    if model.kind == library
+                        && selected == index as i32
+                    {
+                        theme::active().cosmic().control_0().into()
+                    } else {
+                        theme::active()
+                            .cosmic()
+                            .destructive_text_color()
+                            .into()
+                    }
+                } else {
+                    theme::active()
+                        .cosmic()
+                        .destructive_text_color()
+                        .into()
+                }
             };
             text::body(elide_text(item.subtext(), size.width))
                 .center()
@@ -498,7 +529,19 @@ impl<'a> Library {
                         {
                             t.cosmic().accent.selected.into()
                         } else {
-                            t.cosmic().button.base.into()
+                            if let Some((library, hovered)) =
+                                self.hovered_item
+                            {
+                                if model.kind == library
+                                    && hovered == index as i32
+                                {
+                                    t.cosmic().button.hover.into()
+                                } else {
+                                    t.cosmic().button.base.into()
+                                }
+                            } else {
+                                t.cosmic().button.base.into()
+                            }
                         }
                     } else if let Some((library, hovered)) =
                         self.hovered_item
@@ -519,6 +562,7 @@ impl<'a> Library {
                         .rounded(t.cosmic().corner_radii.radius_m),
                 )
         })
+        .padding([3, 0])
         .into()
     }
 

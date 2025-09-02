@@ -290,7 +290,7 @@ impl TextSvg {
                                         self.font.name,
                                         self.font.size,
                                         self.fill, stroke, text);
-        // debug!(?final_svg);
+        debug!("starting...");
         let resvg_tree = Tree::from_str(
             &final_svg,
             &resvg::usvg::Options {
@@ -299,15 +299,17 @@ impl TextSvg {
             },
         )
         .expect("Woops mama");
-        // debug!(?resvg_tree);
+        debug!("parsed");
         let transform = tiny_skia::Transform::default();
         let mut pixmap =
             Pixmap::new(size.width as u32, size.height as u32)
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!(?pixmap);
+        debug!("rendered");
         let handle = Handle::from_bytes(pixmap.take());
         self.handle = Some(handle);
+        debug!("stored");
         self
     }
 
