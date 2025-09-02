@@ -1,38 +1,37 @@
 use miette::{IntoDiagnostic, Result};
-use resvg::usvg::fontdb;
 use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
+    Task,
     iced::{
+        Background, Border, Color, ContentFit, Font, Length, Shadow,
+        Vector,
         alignment::Horizontal,
         border,
         font::{Family, Stretch, Style, Weight},
-        Background, Border, Color, ContentFit, Font, Length, Shadow,
-        Vector,
     },
     iced_widget::{
         rich_text,
         scrollable::{
-            scroll_to, AbsoluteOffset, Direction, Scrollbar,
+            AbsoluteOffset, Direction, Scrollbar, scroll_to,
         },
         span, stack, vertical_rule,
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Row, Space,
+        Column, Container, Id, Row, Space, container, image,
+        mouse_area, responsive, scrollable, text,
     },
-    Task,
 };
-use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
+use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use rodio::{Decoder, OutputStream, Sink};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
+    BackgroundKind,
     core::{service_items::ServiceItem, slide::Slide},
     ui::text_svg,
-    BackgroundKind,
 };
 
 const REFERENCE_WIDTH: f32 = 1920.0;
@@ -133,7 +132,9 @@ impl Presenter {
                                 Some(v)
                             }
                             Err(e) => {
-                                error!("Had an error creating the video object: {e}, likely the first slide isn't a video");
+                                error!(
+                                    "Had an error creating the video object: {e}, likely the first slide isn't a video"
+                                );
                                 None
                             }
                         }
@@ -379,7 +380,7 @@ impl Presenter {
                 self.hovered_slide = slide;
             }
             Message::StartAudio => {
-                return Action::Task(self.start_audio())
+                return Action::Task(self.start_audio());
             }
             Message::EndAudio => {
                 self.sink.1.stop();
@@ -642,7 +643,9 @@ impl Presenter {
                             self.video = Some(v)
                         }
                         Err(e) => {
-                            error!("Had an error creating the video object: {e}");
+                            error!(
+                                "Had an error creating the video object: {e}"
+                            );
                             self.video = None;
                         }
                     }
