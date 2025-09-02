@@ -16,6 +16,10 @@ Actually, what if we just made the svg at load/creation time and stored it in th
 
 ** SVG performs badly
 Since SVG's apparently run poorly in iced, instead I'll need to see about either creating a new text element, or teaching Iced to render strokes and shadows on text.
+** Fork Cryoglyph
+This fork will render text 3 times. Once for the text, once for the stroke, once for the shadow. This will only be used in the slides and therefore should not be much of a performance hit since we will only be render 3 copies of the given text. This should not be bad performance since it's not a large amount of text.
+
+This also means in our custom widget with our custom fork, we can animate each individually perhaps.
 
 * TODO [#C] Make the presenter more modular so things are easier to change.
 
