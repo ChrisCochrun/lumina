@@ -2,6 +2,7 @@ use std::{
     fmt::Display,
     hash::{Hash, Hasher},
     io::Read,
+    path::PathBuf,
     sync::Arc,
 };
 
@@ -30,7 +31,7 @@ pub struct TextSvg {
     stroke: Option<Stroke>,
     fill: Color,
     alignment: TextAlignment,
-    handle: Option<Handle>,
+    pub handle: Option<Handle>,
     fontdb: Arc<resvg::usvg::fontdb::Database>,
 }
 
@@ -258,7 +259,7 @@ impl TextSvg {
         } else {
             "".into()
         };
-        let size = Size::new(1920.0, 1080.0);
+        let size = Size::new(3840.0, 2160.0);
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
         let middle_position = size.height / 2.0;
@@ -291,8 +292,8 @@ impl TextSvg {
                                         self.font.size,
                                         self.fill, stroke, text);
         debug!("starting...");
-        let resvg_tree = Tree::from_str(
-            &final_svg,
+        let resvg_tree = Tree::from_data(
+            &final_svg.as_bytes(),
             &resvg::usvg::Options {
                 fontdb: Arc::clone(&self.fontdb),
                 ..Default::default()
@@ -306,6 +307,14 @@ impl TextSvg {
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!(?pixmap);
+        // let mut path = dirs::data_local_dir().unwrap();
+        // path.push(PathBuf::from("lumina"));
+        // path.push(PathBuf::from("temp"));
+        // let file_title =
+        //     &self.text.lines().next().unwrap().trim_end();
+        // path.push(PathBuf::from(file_title));
+        // path.set_extension("png");
+        // let _ = pixmap.save_png(path);
         debug!("rendered");
         let handle = Handle::from_bytes(pixmap.take());
         self.handle = Some(handle);
@@ -315,7 +324,7 @@ impl TextSvg {
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
         Image::new(self.handle.clone().unwrap())
-            .content_fit(ContentFit::Contain)
+            .content_fit(ContentFit::Cover)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()

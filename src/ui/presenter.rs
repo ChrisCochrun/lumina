@@ -19,7 +19,7 @@ use cosmic::{
     prelude::*,
     widget::{
         container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Row, Space,
+        Column, Container, Id, Image, Row, Space,
     },
     Task,
 };
@@ -707,91 +707,100 @@ pub(crate) fn slide_view(
         let slide_text = slide.text();
 
         // let font = SvgFont::from(font).size(font_size.floor() as u8);
-        let text_container = if delegate {
-            // text widget based
-            let font_size =
-                scale_font(slide.font_size() as f32, width);
-            let lines = slide_text.lines();
-            let text: Vec<Element<Message>> = lines
-                .map(|t| {
-                    rich_text([span(format!("{}\n", t))
-                        .background(
-                            Background::Color(Color::BLACK)
-                                .scale_alpha(0.4),
-                        )
-                        .border(border::rounded(10))
-                        .padding(10)])
-                    .size(font_size)
-                    .font(font)
-                    .center()
-                    .into()
-                    // let chars: Vec<Span> = t
-                    //     .chars()
-                    //     .map(|c| -> Span {
-                    //         let character: String = format!("{}/n", c);
-                    //         span(character)
-                    //             .size(font_size)
-                    //             .font(font)
-                    //             .background(
-                    //                 Background::Color(Color::BLACK)
-                    //                     .scale_alpha(0.4),
-                    //             )
-                    //             .border(border::rounded(10))
-                    //             .padding(10)
-                })
-                .collect();
-            let text = Column::with_children(text).spacing(26);
-            Container::new(text)
-                .center(Length::Fill)
-                .align_x(Horizontal::Left)
-        } else {
-            // SVG based
-            let text: Element<Message> =
-                if let Some(text) = &slide.text_svg {
-                    text.view().map(|_| Message::None).into()
-                } else {
-                    Space::with_width(0).into()
-                };
-            Container::new(text)
-                .center(Length::Fill)
-                .align_x(Horizontal::Left)
-            // text widget based
-            // let font_size =
-            //     scale_font(slide.font_size() as f32, width);
-            // let lines = slide_text.lines();
-            // let text: Vec<Element<Message>> = lines
-            //     .map(|t| {
-            //         rich_text([span(format!("{}\n", t))
-            //             .background(
-            //                 Background::Color(Color::BLACK)
-            //                     .scale_alpha(0.4),
-            //             )
-            //             .border(border::rounded(10))
-            //             .padding(10)])
-            //         .size(font_size)
-            //         .font(font)
-            //         .center()
-            //         .into()
-            //         // let chars: Vec<Span> = t
-            //         //     .chars()
-            //         //     .map(|c| -> Span {
-            //         //         let character: String = format!("{}/n", c);
-            //         //         span(character)
-            //         //             .size(font_size)
-            //         //             .font(font)
-            //         //             .background(
-            //         //                 Background::Color(Color::BLACK)
-            //         //                     .scale_alpha(0.4),
-            //         //             )
-            //         //             .border(border::rounded(10))
-            //         //             .padding(10)
-            //     })
-            //     .collect();
-            // let text = Column::with_children(text).spacing(26);
-            // Container::new(text)
-            //     .center(Length::Fill)
-            //     .align_x(Horizontal::Left)
-        };
+        // let text_container = if delegate {
+        //     // text widget based
+        //     let font_size =
+        //         scale_font(slide.font_size() as f32, width);
+        //     let lines = slide_text.lines();
+        //     let text: Vec<Element<Message>> = lines
+        //         .map(|t| {
+        //             rich_text([span(format!("{}\n", t))
+        //                 .background(
+        //                     Background::Color(Color::BLACK)
+        //                         .scale_alpha(0.4),
+        //                 )
+        //                 .border(border::rounded(10))
+        //                 .padding(10)])
+        //             .size(font_size)
+        //             .font(font)
+        //             .center()
+        //             .into()
+        //             // let chars: Vec<Span> = t
+        //             //     .chars()
+        //             //     .map(|c| -> Span {
+        //             //         let character: String = format!("{}/n", c);
+        //             //         span(character)
+        //             //             .size(font_size)
+        //             //             .font(font)
+        //             //             .background(
+        //             //                 Background::Color(Color::BLACK)
+        //             //                     .scale_alpha(0.4),
+        //             //             )
+        //             //             .border(border::rounded(10))
+        //             //             .padding(10)
+        //         })
+        //         .collect();
+        //     let text = Column::with_children(text).spacing(26);
+        //     Container::new(text)
+        //         .center(Length::Fill)
+        //         .align_x(Horizontal::Left)
+        // } else {
+        //     // SVG based
+        //     let text: Element<Message> =
+        //         if let Some(text) = &slide.text_svg {
+        //             if let Some(handle) = &text.handle {
+        //                 debug!("we made it boys");
+        //                 Image::new(handle)
+        //                     .content_fit(ContentFit::Cover)
+        //                     .width(Length::Fill)
+        //                     .height(Length::Fill)
+        //                     .into()
+        //             } else {
+        //                 Space::with_width(0).into()
+        //             }
+        //         } else {
+        //             Space::with_width(0).into()
+        //         };
+        //     Container::new(text)
+        //         .center(Length::Fill)
+        //         .align_x(Horizontal::Left)
+        //     // text widget based
+        //     // let font_size =
+        //     //     scale_font(slide.font_size() as f32, width);
+        //     // let lines = slide_text.lines();
+        //     // let text: Vec<Element<Message>> = lines
+        //     //     .map(|t| {
+        //     //         rich_text([span(format!("{}\n", t))
+        //     //             .background(
+        //     //                 Background::Color(Color::BLACK)
+        //     //                     .scale_alpha(0.4),
+        //     //             )
+        //     //             .border(border::rounded(10))
+        //     //             .padding(10)])
+        //     //         .size(font_size)
+        //     //         .font(font)
+        //     //         .center()
+        //     //         .into()
+        //     //         // let chars: Vec<Span> = t
+        //     //         //     .chars()
+        //     //         //     .map(|c| -> Span {
+        //     //         //         let character: String = format!("{}/n", c);
+        //     //         //         span(character)
+        //     //         //             .size(font_size)
+        //     //         //             .font(font)
+        //     //         //             .background(
+        //     //         //                 Background::Color(Color::BLACK)
+        //     //         //                     .scale_alpha(0.4),
+        //     //         //             )
+        //     //         //             .border(border::rounded(10))
+        //     //         //             .padding(10)
+        //     //     })
+        //     //     .collect();
+        //     // let text = Column::with_children(text).spacing(26);
+        //     // Container::new(text)
+        //     //     .center(Length::Fill)
+        //     //     .align_x(Horizontal::Left)
+        // };
 
         // let stroke_text_container = Container::new(stroke_text)
         //     .center(Length::Fill)
@@ -799,6 +808,22 @@ pub(crate) fn slide_view(
 
         // let text_stack =
         //     stack!(stroke_text_container, text_container);
+
+        let text: Element<Message> =
+            if let Some(text) = &slide.text_svg {
+                if let Some(handle) = &text.handle {
+                    debug!("we made it boys");
+                    Image::new(handle)
+                        .content_fit(ContentFit::Cover)
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .into()
+                } else {
+                    Space::with_width(0).into()
+                }
+            } else {
+                Space::with_width(0).into()
+            };
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
@@ -806,7 +831,7 @@ pub(crate) fn slide_view(
             .clip(true)
             .width(width)
             .height(size.height);
-        let container = match slide.background().kind {
+        let background = match slide.background().kind {
             BackgroundKind::Image => {
                 let path = slide.background().path.clone();
                 Container::new(
@@ -855,11 +880,8 @@ pub(crate) fn slide_view(
                 }
             }
         };
-        let stack = stack!(
-            black,
-            container.center(Length::Fill),
-            text_container
-        );
+        let stack =
+            stack!(black, background.center(Length::Fill), text);
         Container::new(stack).center(Length::Fill).into()
     });
     // let vid = if let Some(video) = &video {
