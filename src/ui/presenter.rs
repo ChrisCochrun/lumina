@@ -812,10 +812,10 @@ pub(crate) fn slide_view(
         let text: Element<Message> =
             if let Some(text) = &slide.text_svg {
                 if let Some(handle) = &text.handle {
-                    Image::new(handle)
+                    image(handle)
                         .content_fit(ContentFit::Cover)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
+                        .width(width)
+                        .height(size.height)
                         .into()
                 } else {
                     Space::with_width(0).into()

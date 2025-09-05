@@ -1,5 +1,5 @@
 (song :id 7 :author "North Point Worship"
-      :font "Quicksand Bold" :font-size 60
+      :font "Quicksand" :font-size 140
       :title "Death Was Arrested"
       :background (image :source "~/nc/tfc/openlp/CMG - Bright Mountains 01.jpg" :fit cover)
       :text-alignment center

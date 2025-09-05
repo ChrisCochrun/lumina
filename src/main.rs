@@ -201,23 +201,23 @@ impl cosmic::Application for App {
             }
         };
 
-        // let items: Vec<ServiceItem> = items
-        //     .into_par_iter()
-        //     .map(|mut item| {
-        //         item.slides = item
-        //             .slides
-        //             .into_par_iter()
-        //             .map(|mut slide| {
-        //                 text_svg::text_svg_generator(
-        //                     &mut slide,
-        //                     Arc::clone(&fontdb),
-        //                 );
-        //                 slide
-        //             })
-        //             .collect();
-        //         item
-        //     })
-        //     .collect();
+        let items: Vec<ServiceItem> = items
+            .into_par_iter()
+            .map(|mut item| {
+                item.slides = item
+                    .slides
+                    .into_par_iter()
+                    .map(|mut slide| {
+                        text_svg::text_svg_generator(
+                            &mut slide,
+                            Arc::clone(&fontdb),
+                        );
+                        slide
+                    })
+                    .collect();
+                item
+            })
+            .collect();
 
         let presenter = Presenter::with_items(items.clone());
         let song_editor = SongEditor::new(Arc::clone(&fontdb));
@@ -258,7 +258,7 @@ impl cosmic::Application for App {
         };
 
         batch.push(app.add_library());
-        batch.push(app.add_service(items, Arc::clone(&fontdb)));
+        // batch.push(app.add_service(items, Arc::clone(&fontdb)));
         let batch = Task::batch(batch);
         (app, batch)
     }
