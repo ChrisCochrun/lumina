@@ -142,6 +142,7 @@ enum Message {
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
+    AddService(Vec<ServiceItem>),
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -174,7 +175,7 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let mut items = match read_to_string(input.file) {
+        let items = match read_to_string(input.file) {
             Ok(lisp) => {
                 let mut service_items = vec![];
                 let lisp = crisp::reader::read(&lisp);
@@ -200,23 +201,23 @@ impl cosmic::Application for App {
             }
         };
 
-        let items: Vec<ServiceItem> = items
-            .into_par_iter()
-            .map(|mut item| {
-                item.slides = item
-                    .slides
-                    .into_par_iter()
-                    .map(|mut slide| {
-                        text_svg::text_svg_generator(
-                            &mut slide,
-                            Arc::clone(&fontdb),
-                        );
-                        slide
-                    })
-                    .collect();
-                item
-            })
-            .collect();
+        // let items: Vec<ServiceItem> = items
+        //     .into_par_iter()
+        //     .map(|mut item| {
+        //         item.slides = item
+        //             .slides
+        //             .into_par_iter()
+        //             .map(|mut slide| {
+        //                 text_svg::text_svg_generator(
+        //                     &mut slide,
+        //                     Arc::clone(&fontdb),
+        //                 );
+        //                 slide
+        //             })
+        //             .collect();
+        //         item
+        //     })
+        //     .collect();
 
         let presenter = Presenter::with_items(items.clone());
         let song_editor = SongEditor::new(Arc::clone(&fontdb));
@@ -230,7 +231,7 @@ impl cosmic::Application for App {
             presenter,
             core,
             nav_model,
-            service: items,
+            service: items.clone(),
             file: PathBuf::default(),
             windows,
             presentation_open: false,
@@ -243,7 +244,7 @@ impl cosmic::Application for App {
             searching: false,
             current_item: (0, 0),
             library_dragged_item: None,
-            fontdb,
+            fontdb: Arc::clone(&fontdb),
         };
 
         let mut batch = vec![];
@@ -257,7 +258,7 @@ impl cosmic::Application for App {
         };
 
         batch.push(app.add_library());
-        // batch.push(app.add_service(items));
+        batch.push(app.add_service(items, Arc::clone(&fontdb)));
         let batch = Task::batch(batch);
         (app, batch)
     }
@@ -944,6 +945,10 @@ impl cosmic::Application for App {
                 self.library = Some(library);
                 Task::none()
             }
+            Message::AddService(service) => {
+                self.service = service;
+                Task::none()
+            }
             Message::None => Task::none(),
             Message::DndLeave(entity) => {
                 // debug!(?entity);
@@ -1182,28 +1187,35 @@ where
         })
     }
 
-    // fn add_service(
-    //     &mut self,
-    //     items: Vec<ServiceItem>,
-    // ) -> Task<Message> {
-    //     Task::perform(
-    //         async move {
-    //             for item in items {
-    //                 debug!(?item, "Item to be appended");
-    //                 let slides = item.to_slides().unwrap_or(vec![]);
-    //                 map.insert(item, slides);
-    //             }
-    //             let len = map.len();
-    //             debug!(len, "to be append: ");
-    //             map
-    //         },
-    //         |x| {
-    //             let len = x.len();
-    //             debug!(len, "to append: ");
-    //             cosmic::Action::App(Message::AppendService(x))
-    //         },
-    //     )
-    // }
+    fn add_service(
+        &mut self,
+        items: Vec<ServiceItem>,
+        fontdb: Arc<fontdb::Database>,
+    ) -> Task<Message> {
+        Task::perform(
+            async move {
+                let items: Vec<ServiceItem> = items
+                    .into_par_iter()
+                    .map(|mut item| {
+                        item.slides = item
+                            .slides
+                            .into_par_iter()
+                            .map(|mut slide| {
+                                text_svg::text_svg_generator(
+                                    &mut slide,
+                                    Arc::clone(&fontdb),
+                                );
+                                slide
+                            })
+                            .collect();
+                        item
+                    })
+                    .collect();
+                items
+            },
+            |x| cosmic::Action::App(Message::AddService(x)),
+        )
+    }
 
     fn process_key_press(
         &mut self,

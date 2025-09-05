@@ -812,7 +812,6 @@ pub(crate) fn slide_view(
         let text: Element<Message> =
             if let Some(text) = &slide.text_svg {
                 if let Some(handle) = &text.handle {
-                    debug!("we made it boys");
                     Image::new(handle)
                         .content_fit(ContentFit::Cover)
                         .width(Length::Fill)

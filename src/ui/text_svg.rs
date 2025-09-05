@@ -242,6 +242,7 @@ impl TextSvg {
     }
 
     pub fn build(mut self) -> Self {
+        debug!("starting...");
         let shadow = if let Some(shadow) = &self.shadow {
             format!("<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
                 shadow.offset_x,
@@ -260,12 +261,12 @@ impl TextSvg {
             "".into()
         };
         let size = Size::new(3840.0, 2160.0);
+        let font_size = self.font.size as f32 * (size.width / 960.0);
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
         let middle_position = size.height / 2.0;
         let line_spacing = 10.0;
-        let text_and_line_spacing =
-            self.font.size as f32 + line_spacing;
+        let text_and_line_spacing = font_size + line_spacing;
         let starting_y_position =
             middle_position - (half_lines * text_and_line_spacing);
 
@@ -289,9 +290,9 @@ impl TextSvg {
                                         size.height,
                                         shadow,
                                         self.font.name,
-                                        self.font.size,
+                                        font_size,
                                         self.fill, stroke, text);
-        debug!("starting...");
+        debug!("text string built...");
         let resvg_tree = Tree::from_data(
             &final_svg.as_bytes(),
             &resvg::usvg::Options {
@@ -314,9 +315,13 @@ impl TextSvg {
         //     &self.text.lines().next().unwrap().trim_end();
         // path.push(PathBuf::from(file_title));
         // path.set_extension("png");
-        // let _ = pixmap.save_png(path);
+        // let _ = pixmap.save_png(&path);
         debug!("rendered");
-        let handle = Handle::from_bytes(pixmap.take());
+        let handle = Handle::from_rgba(
+            size.width as u32,
+            size.height as u32,
+            pixmap.take(),
+        );
         self.handle = Some(handle);
         debug!("stored");
         self
