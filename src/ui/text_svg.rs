@@ -244,20 +244,20 @@ impl TextSvg {
     pub fn build(mut self) -> Self {
         debug!("starting...");
 
-        let mut path = dirs::data_local_dir().unwrap();
-        path.push(PathBuf::from("lumina"));
-        path.push(PathBuf::from("temp"));
-        let file_title =
-            &self.text.lines().next().unwrap().trim_end();
-        path.push(PathBuf::from(file_title));
-        path.set_extension("png");
+        // let mut path = dirs::data_local_dir().unwrap();
+        // path.push(PathBuf::from("lumina"));
+        // path.push(PathBuf::from("temp"));
+        // let file_title =
+        //     &self.text.lines().next().unwrap().trim_end();
+        // path.push(PathBuf::from(file_title));
+        // path.set_extension("png");
 
-        if path.exists() {
-            debug!("cached");
-            let handle = Handle::from_path(path);
-            self.handle = Some(handle);
-            return self;
-        }
+        // if path.exists() {
+        //     debug!("cached");
+        //     let handle = Handle::from_path(path);
+        //     self.handle = Some(handle);
+        //     return self;
+        // }
         let shadow = if let Some(shadow) = &self.shadow {
             format!("<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
                 shadow.offset_x,
@@ -322,10 +322,15 @@ impl TextSvg {
             Pixmap::new(size.width as u32, size.height as u32)
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
-        let _ = pixmap.save_png(&path);
+        // let _ = pixmap.save_png(&path);
 
         debug!("rendered");
-        let handle = Handle::from_path(path);
+        // let handle = Handle::from_path(path);
+        let handle = Handle::from_rgba(
+            size.width as u32,
+            size.height as u32,
+            pixmap.take(),
+        );
         self.handle = Some(handle);
         debug!("stored");
         self

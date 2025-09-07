@@ -202,15 +202,19 @@ impl Presenter {
                 // ));
             }
             Message::SlideChange(slide) => {
-                debug!(?slide, "slide changed");
-                let old_background =
-                    self.current_slide.background().clone();
+                let slide_text = slide.text();
+                debug!(slide_text, "slide changed");
+                debug!("comparing background...");
+                let backgrounds_match =
+                    self.current_slide.background()
+                        == slide.background();
                 // self.current_slide_index = slide;
+                debug!("cloning slide...");
                 self.current_slide = slide.clone();
                 let _ =
                     self.update(Message::ChangeFont(slide.font()));
-                if self.current_slide.background() != &old_background
-                {
+                debug!("changing video now...");
+                if !backgrounds_match {
                     if let Some(video) = &mut self.video {
                         let _ = video.restart_stream();
                     }
@@ -228,6 +232,7 @@ impl Presenter {
                     },
                     y: 0.0,
                 };
+                debug!(?offset);
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
@@ -249,12 +254,12 @@ impl Presenter {
                             Some(current_audio)
                                 if current_audio != *new_audio =>
                             {
-                                self.audio = Some(new_audio.clone());
                                 debug!(
                                     ?new_audio,
                                     ?current_audio,
                                     "audio needs to change"
                                 );
+                                self.audio = Some(new_audio.clone());
                                 tasks.push(self.start_audio());
                             }
                             Some(current_audio) => {
@@ -395,7 +400,7 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         slide_view(
-            self.current_slide.clone(),
+            &self.current_slide,
             &self.video,
             self.current_font,
             false,
@@ -405,7 +410,7 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         slide_view(
-            self.current_slide.clone(),
+            &self.current_slide,
             &self.video,
             self.current_font,
             false,
@@ -441,7 +446,7 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            slide.clone(),
+                            &slide,
                             &self.video,
                             font,
                             true,
@@ -695,55 +700,54 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
     }
 }
 
-pub(crate) fn slide_view(
-    slide: Slide,
-    video: &Option<Video>,
+pub(crate) fn slide_view<'a>(
+    slide: &'a Slide,
+    video: &'a Option<Video>,
     font: Font,
     delegate: bool,
     hide_mouse: bool,
-) -> Element<'_, Message> {
+) -> Element<'a, Message> {
     let res = responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
-        let slide_text = slide.text();
+        // let slide_text = slide.text();
 
         // let font = SvgFont::from(font).size(font_size.floor() as u8);
         // let text_container = if delegate {
         //     // text widget based
-        //     let font_size =
-        //         scale_font(slide.font_size() as f32, width);
-        //     let lines = slide_text.lines();
-        //     let text: Vec<Element<Message>> = lines
-        //         .map(|t| {
-        //             rich_text([span(format!("{}\n", t))
-        //                 .background(
-        //                     Background::Color(Color::BLACK)
-        //                         .scale_alpha(0.4),
-        //                 )
-        //                 .border(border::rounded(10))
-        //                 .padding(10)])
-        //             .size(font_size)
-        //             .font(font)
-        //             .center()
-        //             .into()
-        //             // let chars: Vec<Span> = t
-        //             //     .chars()
-        //             //     .map(|c| -> Span {
-        //             //         let character: String = format!("{}/n", c);
-        //             //         span(character)
-        //             //             .size(font_size)
-        //             //             .font(font)
-        //             //             .background(
-        //             //                 Background::Color(Color::BLACK)
-        //             //                     .scale_alpha(0.4),
-        //             //             )
-        //             //             .border(border::rounded(10))
-        //             //             .padding(10)
-        //         })
-        //         .collect();
-        //     let text = Column::with_children(text).spacing(26);
-        //     Container::new(text)
-        //         .center(Length::Fill)
-        //         .align_x(Horizontal::Left)
+        // let font_size = scale_font(slide.font_size() as f32, width);
+        // let lines = slide_text.lines();
+        // let text: Vec<Element<Message>> = lines
+        //     .map(|t| {
+        //         rich_text([span(format!("{}\n", t))
+        //             .background(
+        //                 Background::Color(Color::BLACK)
+        //                     .scale_alpha(0.4),
+        //             )
+        //             .border(border::rounded(10))
+        //             .padding(10)])
+        //         .size(font_size)
+        //         .font(font)
+        //         .center()
+        //         .into()
+        //         // let chars: Vec<Span> = t
+        //         //     .chars()
+        //         //     .map(|c| -> Span {
+        //         //         let character: String = format!("{}/n", c);
+        //         //         span(character)
+        //         //             .size(font_size)
+        //         //             .font(font)
+        //         //             .background(
+        //         //                 Background::Color(Color::BLACK)
+        //         //                     .scale_alpha(0.4),
+        //         //             )
+        //         //             .border(border::rounded(10))
+        //         //             .padding(10)
+        //     })
+        //     .collect();
+        // let text = Column::with_children(text).spacing(26);
+        // let text = Container::new(text)
+        //     .center(Length::Fill)
+        //     .align_x(Horizontal::Left);
         // } else {
         //     // SVG based
         //     let text: Element<Message> =
@@ -813,7 +817,7 @@ pub(crate) fn slide_view(
             if let Some(text) = &slide.text_svg {
                 if let Some(handle) = &text.handle {
                     image(handle)
-                        .content_fit(ContentFit::Cover)
+                        .content_fit(ContentFit::ScaleDown)
                         .width(width)
                         .height(size.height)
                         .into()
