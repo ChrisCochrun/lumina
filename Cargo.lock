@@ -3858,6 +3858,7 @@ dependencies = [
  "libcosmic",
  "miette",
  "pretty_assertions",
+ "rapidfuzz",
  "rapidhash",
  "rayon",
  "resvg 0.45.1",
@@ -5342,6 +5343,12 @@ name = "rangemap"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f93e7e49bb0bf967717f7bd674458b3d6b0c5f48ec7e3038166026a69fc22223"
+
+[[package]]
+name = "rapidfuzz"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "270e04e5ea61d40841942bb15e451c29ee1618637bcf97fc7ede5dd4a9b1601b"
 
 [[package]]
 name = "rapidhash"

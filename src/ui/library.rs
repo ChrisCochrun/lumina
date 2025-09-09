@@ -14,6 +14,7 @@ use cosmic::{
     Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
+use rapidfuzz::distance::levenshtein;
 use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
@@ -570,15 +571,39 @@ impl<'a> Library {
         &self,
         query: String,
     ) -> Vec<ServiceItem> {
-        let song1 = Song {
-            title: "Death Was Arrested".to_string(),
-            ..Default::default()
-        };
-        let song2 = Song {
-            title: "Smelly_Belly".to_string(),
-            ..Default::default()
-        };
-        vec![ServiceItem::from(&song1), ServiceItem::from(&song2)]
+        let mut items: Vec<ServiceItem> = self
+            .song_library
+            .items
+            .iter()
+            .filter(|song| song.title.contains(&query))
+            .map(|song| song.to_service_item())
+            .collect();
+        let videos: Vec<ServiceItem> = self
+            .video_library
+            .items
+            .iter()
+            .filter(|vid| vid.title.contains(&query))
+            .map(|vid| vid.to_service_item())
+            .collect();
+        let images: Vec<ServiceItem> = self
+            .image_library
+            .items
+            .iter()
+            .filter(|image| image.title.contains(&query))
+            .map(|image| image.to_service_item())
+            .collect();
+        let presentations: Vec<ServiceItem> = self
+            .presentation_library
+            .items
+            .iter()
+            .filter(|pres| pres.title.contains(&query))
+            .map(|pres| pres.to_service_item())
+            .collect();
+        items.extend(videos);
+        items.extend(images);
+        items.extend(presentations);
+        items.sort_by(|a, b| todo!());
+        items
     }
 
     // fn update_item<C: Content>(self, item: C) -> Task<Message> {
