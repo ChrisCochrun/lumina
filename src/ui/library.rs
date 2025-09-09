@@ -602,8 +602,21 @@ impl<'a> Library {
         items.extend(videos);
         items.extend(images);
         items.extend(presentations);
-        items.sort_by(|a, b| todo!());
-        items
+        let mut items: Vec<(usize, ServiceItem)> = items
+            .into_iter()
+            .map(|item| {
+                (
+                    levenshtein::distance(
+                        query.bytes(),
+                        item.title.bytes(),
+                    ),
+                    item,
+                )
+            })
+            .collect();
+
+        items.sort_by(|a, b| a.0.cmp(&b.0));
+        items.into_iter().map(|item| item.1).collect()
     }
 
     // fn update_item<C: Content>(self, item: C) -> Task<Message> {
