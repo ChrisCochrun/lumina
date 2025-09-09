@@ -279,12 +279,7 @@ impl cosmic::Application for App {
     }
 
     fn header_center(&self) -> Vec<Element<Self::Message>> {
-        vec![search_input("Search...", "")
-            .on_input(|_| Message::None)
-            .on_submit(|_| Message::None)
-            .on_focus(Message::SearchFocus)
-            .width(1200)
-            .into()]
+        vec![]
     }
 
     fn header_end(&self) -> Vec<Element<Self::Message>> {
@@ -302,6 +297,24 @@ impl cosmic::Application for App {
         };
 
         let row = row![
+            tooltip(
+                button::custom(
+                    row!(
+                        Container::new(
+                            icon::from_name("search")
+                                .scale(5)
+                                .symbolic(true)
+                        )
+                        .center_y(Length::Fill),
+                        text::body("Search")
+                    )
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press(Message::SearchFocus),
+                "Search Library",
+                TPosition::Bottom,
+            ),
             tooltip(
                 button::custom(
                     row!(
