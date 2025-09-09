@@ -3858,6 +3858,7 @@ dependencies = [
  "libcosmic",
  "miette",
  "pretty_assertions",
+ "rapidhash",
  "rayon",
  "resvg 0.45.1",
  "rodio",
@@ -5341,6 +5342,15 @@ name = "rangemap"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f93e7e49bb0bf967717f7bd674458b3d6b0c5f48ec7e3038166026a69fc22223"
+
+[[package]]
+name = "rapidhash"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d126f24bc587b080d7823a831d0fe832090a606fd3fd244ecbe23c561104ab8"
+dependencies = [
+ "rustversion",
+]
 
 [[package]]
 name = "rav1e"
