@@ -74,7 +74,7 @@
         in rec
         {
           devShell = pkgs.mkShell.override {
-            # stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
+            stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
           } {
             nativeBuildInputs = nbi;
             buildInputs = bi;
