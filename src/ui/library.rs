@@ -566,6 +566,21 @@ impl<'a> Library {
         .into()
     }
 
+    pub async fn search_items(
+        &self,
+        query: String,
+    ) -> Vec<ServiceItem> {
+        let song1 = Song {
+            title: "Death Was Arrested".to_string(),
+            ..Default::default()
+        };
+        let song2 = Song {
+            title: "Smelly_Belly".to_string(),
+            ..Default::default()
+        };
+        vec![ServiceItem::from(&song1), ServiceItem::from(&song2)]
+    }
+
     // fn update_item<C: Content>(self, item: C) -> Task<Message> {
     //     let Some((kind, index)) = self.editing_item else {
     //         error!("Not editing an item");

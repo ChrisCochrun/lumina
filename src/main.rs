@@ -4,22 +4,26 @@ use core::slide::*;
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Padding, Point};
+use cosmic::iced::{
+    self, event, window, Background as BG, Color, Length, Padding,
+    Point, Shadow, Vector,
+};
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row};
+use cosmic::iced_widget::{column, row, stack};
 use cosmic::widget::dnd_destination::{
     dnd_destination, dnd_destination_for_data,
 };
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, nav_bar, search_input, tooltip,
-    vertical_space, Space,
+    button, horizontal_space, mouse_area, nav_bar, search_input,
+    tooltip, vertical_space, Space,
 };
+use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic::{prelude::*, theme};
@@ -114,6 +118,8 @@ struct App {
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
     searching: bool,
+    search_query: String,
+    search_results: Vec<ServiceItem>,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
 }
@@ -137,12 +143,15 @@ enum Message {
     None,
     DndLeave(Entity),
     EditorToggle(bool),
-    SearchFocus,
     ChangeServiceItem(usize),
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
     AddService(Vec<ServiceItem>),
+    SearchFocus,
+    Search(String),
+    CloseSearch,
+    UpdateSearchResults(Vec<ServiceItem>),
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -242,6 +251,8 @@ impl cosmic::Application for App {
             editor_mode: None,
             song_editor,
             searching: false,
+            search_results: vec![],
+            search_query: "".into(),
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
@@ -262,156 +273,6 @@ impl cosmic::Application for App {
         let batch = Task::batch(batch);
         (app, batch)
     }
-
-    // /// Allows COSMIC to integrate with your application's [`nav_bar::Model`].
-    // fn nav_model(&self) -> Option<&nav_bar::Model> {
-    //     Some(&self.nav_model)
-    // }
-
-    // fn nav_bar(&self) -> Option<Element<cosmic::Action<Message>>> {
-    //     if !self.core().nav_bar_active() {
-    //         return None;
-    //     }
-
-    //     // let nav_model = self.nav_model()?;
-
-    //     // let mut nav = cosmic::widget::nav_bar(nav_model, |id| {
-    //     //     cosmic::Action::Cosmic(cosmic::app::Action::NavBar(id))
-    //     // })
-    //     // .on_dnd_drop::<ServiceItem>(|entity, data, action| {
-    //     //     debug!(?entity);
-    //     //     debug!(?data);
-    //     //     debug!(?action);
-    //     //     cosmic::Action::App(Message::DndDrop)
-    //     // })
-    //     // .on_dnd_enter(|entity, data| {
-    //     //     debug!("entered");
-    //     //     cosmic::Action::App(Message::DndEnter(entity, data))
-    //     // })
-    //     // .on_dnd_leave(|entity| {
-    //     //     debug!("left");
-    //     //     cosmic::Action::App(Message::DndLeave(entity))
-    //     // })
-    //     // .drag_id(DragId::new())
-    //     // .on_context(|id| {
-    //     //     cosmic::Action::Cosmic(
-    //     //         cosmic::app::Action::NavBarContext(id),
-    //     //     )
-    //     // })
-    //     // .context_menu(None)
-    //     // .into_container()
-    //     // // XXX both must be shrink to avoid flex layout from ignoring it
-    //     // .width(Length::Shrink)
-    //     // .height(Length::Shrink);
-
-    //     let list = self
-    //         .service
-    //         .iter()
-    //         .enumerate()
-    //         .map(|(index, item)| {
-    //             let button = button::standard(item.title.clone())
-    //                 .leading_icon({
-    //                     match item.kind {
-    //                         core::kinds::ServiceItemKind::Song(_) => {
-    //                             icon::from_name("folder-music-symbolic")
-    //                         },
-    //                         core::kinds::ServiceItemKind::Video(_) => {
-    //                             icon::from_name("folder-videos-symbolic")
-    //                         },
-    //                         core::kinds::ServiceItemKind::Image(_) => {
-    //                             icon::from_name("folder-pictures-symbolic")
-    //                         },
-    //                         core::kinds::ServiceItemKind::Presentation(_) => {
-    //                             icon::from_name("x-office-presentation-symbolic")
-    //                         },
-    //                         core::kinds::ServiceItemKind::Content(_) => {
-    //                             icon::from_name("x-office-presentation-symbolic")
-    //                         },
-    //                     }
-    //                 })
-    //                 .class(cosmic::theme::style::Button::HeaderBar)
-    //                 .padding(5)
-    //                 .width(Length::Fill)
-    //                 .on_press(cosmic::Action::App(Message::ChangeServiceItem(index)));
-    //             let tooltip = tooltip(button,
-    //                                   text::body(item.kind.to_string()),
-    //                                   TPosition::Right);
-    //             dnd_destination(tooltip, vec!["application/service-item".into()])
-    //                 .data_received_for::<ServiceItem>( move |item| {
-    //                     if let Some(item) = item {
-    //                         cosmic::Action::App(Message::AddServiceItem(index, item))
-    //                     } else {
-    //                         cosmic::Action::None
-    //                     }
-    //                 }).on_drop(move |x, y| {
-    //                     debug!(x, y);
-    //                     cosmic::Action::App(Message::AddServiceItemDrop(index))
-    //                 }).on_finish(move |mime, data, action, x, y| {
-    //                     debug!(mime, ?data, ?action, x, y);
-    //                     let Ok(item) = ServiceItem::try_from((data, mime)) else {
-    //                         return cosmic::Action::None;
-    //                     };
-    //                     debug!(?item);
-    //                     cosmic::Action::App(Message::AddServiceItem(index, item))
-    //                 })
-    //                 .into()
-    //         });
-
-    //     let end_index = self.service.len();
-    //     let column = column![
-    //         text::heading("Service List").center().width(280),
-    //         column(list).spacing(10),
-    //         dnd_destination(
-    //             vertical_space(),
-    //             vec!["application/service-item".into()]
-    //         )
-    //         .data_received_for::<ServiceItem>(|item| {
-    //             if let Some(item) = item {
-    //                 cosmic::Action::App(Message::AppendServiceItem(
-    //                     item,
-    //                 ))
-    //             } else {
-    //                 cosmic::Action::None
-    //             }
-    //         })
-    //         .on_finish(
-    //             move |mime, data, action, x, y| {
-    //                 debug!(mime, ?data, ?action, x, y);
-    //                 let Ok(item) =
-    //                     ServiceItem::try_from((data, mime))
-    //                 else {
-    //                     return cosmic::Action::None;
-    //                 };
-    //                 debug!(?item);
-    //                 cosmic::Action::App(Message::AddServiceItem(
-    //                     end_index, item,
-    //                 ))
-    //             }
-    //         )
-    //     ]
-    //     .padding(10)
-    //     .spacing(10);
-    //     let padding = Padding::new(0.0).top(20);
-    //     let mut container = Container::new(column)
-    //         // .height(Length::Fill)
-    //         .style(nav_bar_style)
-    //         .padding(padding);
-
-    //     if !self.core().is_condensed() {
-    //         container = container.max_width(280);
-    //     }
-    //     Some(container.into())
-    // }
-
-    /// Called when a navigation item is selected.
-    // fn on_nav_select(
-    //     &mut self,
-    //     id: nav_bar::Id,
-    // ) -> Task<Self::Message> {
-    //     self.nav_model.activate(id);
-    //     // debug!(?id);
-    //     self.update_title()
-    // }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
         vec![]
@@ -600,7 +461,47 @@ impl cosmic::Application for App {
 
     fn dialog(&self) -> Option<Element<'_, Self::Message>> {
         if self.searching {
-            Some(text("hello").into())
+            let items: Vec<Element<Message>> = self
+                .search_results
+                .iter()
+                .map(|item| {
+                    let title = text::title4(item.title.clone());
+                    let subtitle = text::body(item.kind.to_string());
+                    Element::from(column![title, subtitle].spacing(
+                        cosmic::theme::active().cosmic().space_xxs(),
+                    ))
+                })
+                .collect();
+            let modal = Container::new(
+                column![
+                    search_input(
+                        "Amazing Grace",
+                        self.search_query.clone()
+                    )
+                    .select_on_focus(true)
+                    .on_input(Message::Search)
+                    .on_submit(Message::Search),
+                    column(items).spacing(
+                        cosmic::theme::active().cosmic().space_xxs()
+                    )
+                ]
+                .spacing(cosmic::theme::active().cosmic().space_s()),
+            )
+            .padding(cosmic::theme::active().cosmic().space_xxxl())
+            .style(nav_bar_style);
+            let modal = Container::new(modal)
+                .padding([
+                    cosmic::theme::active().cosmic().space_xxl(),
+                    cosmic::theme::active().cosmic().space_xxxl() * 2,
+                ])
+                .center_x(Length::Fill)
+                .align_top(Length::Fill);
+            let mouse_stack = stack!(
+                mouse_area(Space::new(Length::Fill, Length::Fill))
+                    .on_press(Message::CloseSearch),
+                modal
+            );
+            Some(mouse_stack.into())
         } else {
             None
         }
@@ -877,16 +778,16 @@ impl cosmic::Application for App {
             Message::WindowOpened(id, _) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                                        {
-                                            self.presentation_open = true;
-                                            if let Some(video) = &mut self.presenter.video {
-                                                video.set_muted(false);
-                                            }
-                                            window::change_mode(id, Mode::Fullscreen)
-                                        } else {
-                                            Task::none()
-                                        }
+                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                                {
+                                                    self.presentation_open = true;
+                                                    if let Some(video) = &mut self.presenter.video {
+                                                        video.set_muted(false);
+                                                    }
+                                                    window::change_mode(id, Mode::Fullscreen)
+                                                } else {
+                                                    Task::none()
+                                                }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -995,6 +896,20 @@ impl cosmic::Application for App {
             }
             Message::AppendServiceItem(item) => {
                 self.service.push(item);
+                Task::none()
+            }
+            Message::Search(query) => {
+                self.search_query = query.clone();
+                return self.search(query);
+            }
+            Message::UpdateSearchResults(items) => {
+                self.search_results = items;
+                Task::none()
+            }
+            Message::CloseSearch => {
+                self.search_query = "".into();
+                self.search_results = vec![];
+                self.searching = false;
                 Task::none()
             }
         }
@@ -1185,6 +1100,21 @@ where
         Task::perform(async move { Library::new().await }, |x| {
             cosmic::Action::App(Message::AddLibrary(x))
         })
+    }
+
+    fn search(&self, query: String) -> Task<Message> {
+        if let Some(library) = self.library.clone() {
+            return Task::perform(
+                async move { library.search_items(query).await },
+                |items| {
+                    cosmic::Action::App(Message::UpdateSearchResults(
+                        items,
+                    ))
+                },
+            );
+        } else {
+            Task::none()
+        }
     }
 
     fn add_service(

@@ -818,8 +818,8 @@ pub(crate) fn slide_view<'a>(
                 if let Some(handle) = &text.handle {
                     image(handle)
                         .content_fit(ContentFit::ScaleDown)
-                        .width(width)
-                        .height(size.height)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink)
                         .into()
                 } else {
                     Space::with_width(0).into()
@@ -883,8 +883,11 @@ pub(crate) fn slide_view<'a>(
                 }
             }
         };
-        let stack =
-            stack!(black, background.center(Length::Fill), text);
+        let stack = stack!(
+            black,
+            background.center_x(Length::Fill),
+            container(text).center(Length::Fill)
+        );
         Container::new(stack).center(Length::Fill).into()
     });
     // let vid = if let Some(video) = &video {
