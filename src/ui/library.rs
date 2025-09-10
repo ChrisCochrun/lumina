@@ -575,28 +575,45 @@ impl<'a> Library {
             .song_library
             .items
             .iter()
-            .filter(|song| song.title.contains(&query))
+            .filter(|song| {
+                song.title
+                    .to_lowercase()
+                    .contains(&query.to_lowercase())
+            })
             .map(|song| song.to_service_item())
             .collect();
         let videos: Vec<ServiceItem> = self
             .video_library
             .items
             .iter()
-            .filter(|vid| vid.title.contains(&query))
+            .filter(|vid| {
+                vid.title
+                    .to_lowercase()
+                    .contains(&query.to_lowercase())
+            })
             .map(|vid| vid.to_service_item())
             .collect();
         let images: Vec<ServiceItem> = self
             .image_library
             .items
             .iter()
-            .filter(|image| image.title.contains(&query))
+            .filter(|image| {
+                image
+                    .title
+                    .to_lowercase()
+                    .contains(&query.to_lowercase())
+            })
             .map(|image| image.to_service_item())
             .collect();
         let presentations: Vec<ServiceItem> = self
             .presentation_library
             .items
             .iter()
-            .filter(|pres| pres.title.contains(&query))
+            .filter(|pres| {
+                pres.title
+                    .to_lowercase()
+                    .contains(&query.to_lowercase())
+            })
             .map(|pres| pres.to_service_item())
             .collect();
         items.extend(videos);
