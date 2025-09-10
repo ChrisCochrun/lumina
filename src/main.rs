@@ -1,4 +1,4 @@
-use clap::{command, Parser};
+use clap::{Parser, command};
 use core::service_items::ServiceItem;
 use core::slide::*;
 use core::songs::Song;
@@ -8,29 +8,27 @@ use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
-    self, event, window, Background as BG, Color, Length, Padding,
-    Point, Shadow, Vector,
+    self, Background as BG, Color, Length, Padding, Point, Shadow,
+    Vector, event, window,
 };
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
-use cosmic::widget::dnd_destination::{
-    dnd_destination, dnd_destination_for_data,
-};
+use cosmic::theme;
+use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, search_input,
-    tooltip, vertical_space, Space,
+    Space, button, horizontal_space, mouse_area, nav_bar,
+    search_input, tooltip, vertical_space,
 };
-use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::{executor, Application, ApplicationExt, Element};
-use cosmic::{prelude::*, theme};
-use cosmic::{widget::Container, Theme};
+use cosmic::{Application, ApplicationExt, Element, executor};
+use cosmic::{Theme, widget::Container};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{miette, Result};
+use miette::{Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::fs::read_to_string;
@@ -39,10 +37,10 @@ use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
+use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
-use ui::EditorMode;
 
 use crate::ui::text_svg;
 
