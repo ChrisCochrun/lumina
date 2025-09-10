@@ -480,9 +480,25 @@ impl cosmic::Application for App {
                 .map(|item| {
                     let title = text::title4(item.title.clone());
                     let subtitle = text::body(item.kind.to_string());
-                    Element::from(column![title, subtitle].spacing(
-                        cosmic::theme::active().cosmic().space_xxs(),
-                    ))
+                    Element::from(Container::new(row![
+                        column![title, subtitle].spacing(
+                            cosmic::theme::active()
+                                .cosmic()
+                                .space_xxs(),
+                        ),
+                        button::icon(
+                            icon::from_name("add")
+                                .scale(
+                                    cosmic::theme::active()
+                                        .cosmic()
+                                        .space_l()
+                                )
+                                .symbolic(true)
+                        )
+                        .on_press(
+                            Message::AppendServiceItem(item.clone())
+                        )
+                    ]))
                 })
                 .collect();
             let modal = Container::new(

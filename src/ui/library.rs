@@ -571,26 +571,19 @@ impl<'a> Library {
         &self,
         query: String,
     ) -> Vec<ServiceItem> {
+        let query = query.to_lowercase();
         let mut items: Vec<ServiceItem> = self
             .song_library
             .items
             .iter()
-            .filter(|song| {
-                song.title
-                    .to_lowercase()
-                    .contains(&query.to_lowercase())
-            })
+            .filter(|song| song.title.to_lowercase().contains(&query))
             .map(|song| song.to_service_item())
             .collect();
         let videos: Vec<ServiceItem> = self
             .video_library
             .items
             .iter()
-            .filter(|vid| {
-                vid.title
-                    .to_lowercase()
-                    .contains(&query.to_lowercase())
-            })
+            .filter(|vid| vid.title.to_lowercase().contains(&query))
             .map(|vid| vid.to_service_item())
             .collect();
         let images: Vec<ServiceItem> = self
@@ -598,10 +591,7 @@ impl<'a> Library {
             .items
             .iter()
             .filter(|image| {
-                image
-                    .title
-                    .to_lowercase()
-                    .contains(&query.to_lowercase())
+                image.title.to_lowercase().contains(&query)
             })
             .map(|image| image.to_service_item())
             .collect();
@@ -609,11 +599,7 @@ impl<'a> Library {
             .presentation_library
             .items
             .iter()
-            .filter(|pres| {
-                pres.title
-                    .to_lowercase()
-                    .contains(&query.to_lowercase())
-            })
+            .filter(|pres| pres.title.to_lowercase().contains(&query))
             .map(|pres| pres.to_service_item())
             .collect();
         items.extend(videos);
