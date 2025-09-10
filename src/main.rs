@@ -1,12 +1,13 @@
-use clap::{Parser, command};
+use clap::{command, Parser};
 use core::service_items::ServiceItem;
 use core::slide::*;
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, Length, Point, event, window};
+use cosmic::iced::{self, event, window, Length, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
@@ -16,15 +17,15 @@ use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    Space, button, horizontal_space, mouse_area, nav_bar,
-    search_input, tooltip, vertical_space,
+    button, horizontal_space, mouse_area, nav_bar, search_input,
+    tooltip, vertical_space, Space,
 };
 use cosmic::widget::{icon, slider};
-use cosmic::{Application, ApplicationExt, Element, executor};
-use cosmic::{Theme, widget::Container};
+use cosmic::{executor, Application, ApplicationExt, Element};
+use cosmic::{widget::Container, Theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{Result, miette};
+use miette::{miette, Result};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::fs::read_to_string;
@@ -33,11 +34,12 @@ use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
-use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
+use ui::EditorMode;
 
+use crate::core::kinds::ServiceItemKind;
 use crate::ui::text_svg;
 
 pub mod core;
@@ -113,6 +115,7 @@ struct App {
     searching: bool,
     search_query: String,
     search_results: Vec<ServiceItem>,
+    search_id: cosmic::widget::Id,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
 }
@@ -145,6 +148,7 @@ enum Message {
     Search(String),
     CloseSearch,
     UpdateSearchResults(Vec<ServiceItem>),
+    OpenEditor(ServiceItem),
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -245,6 +249,7 @@ impl cosmic::Application for App {
             searching: false,
             search_results: vec![],
             search_query: "".into(),
+            search_id: cosmic::widget::Id::unique(),
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
@@ -472,25 +477,51 @@ impl cosmic::Application for App {
                 .map(|item| {
                     let title = text::title4(item.title.clone());
                     let subtitle = text::body(item.kind.to_string());
-                    Element::from(Container::new(row![
-                        column![title, subtitle].spacing(
-                            cosmic::theme::active()
-                                .cosmic()
-                                .space_xxs(),
-                        ),
-                        button::icon(
-                            icon::from_name("add")
-                                .scale(
+                    Element::from(Container::new(
+                        row![
+                            column![title, subtitle].spacing(
+                                cosmic::theme::active()
+                                    .cosmic()
+                                    .space_xxs(),
+                            ),
+                            horizontal_space(),
+                            tooltip(
+                                button::icon(
+                                    icon::from_name("add")
+                                        .symbolic(true)
+                                )
+                                .icon_size(
                                     cosmic::theme::active()
                                         .cosmic()
                                         .space_l()
                                 )
-                                .symbolic(true)
-                        )
-                        .on_press(
-                            Message::AppendServiceItem(item.clone())
-                        )
-                    ]))
+                                .on_press(
+                                    Message::AppendServiceItem(
+                                        item.clone()
+                                    )
+                                ),
+                                "Add to service",
+                                TPosition::FollowCursor
+                            ),
+                            tooltip(
+                                button::icon(
+                                    icon::from_name("edit")
+                                        .symbolic(true)
+                                )
+                                .icon_size(
+                                    cosmic::theme::active()
+                                        .cosmic()
+                                        .space_l()
+                                )
+                                .on_press(Message::OpenEditor(
+                                    item.clone()
+                                )),
+                                "Edit Item",
+                                TPosition::FollowCursor
+                            ),
+                        ]
+                        .align_y(Vertical::Center),
+                    ))
                 })
                 .collect();
             let modal = Container::new(
@@ -499,6 +530,7 @@ impl cosmic::Application for App {
                         "Amazing Grace",
                         self.search_query.clone()
                     )
+                    .id(self.search_id.clone())
                     .select_on_focus(true)
                     .on_input(Message::Search)
                     .on_submit(Message::Search),
@@ -886,7 +918,9 @@ impl cosmic::Application for App {
             }
             Message::SearchFocus => {
                 self.searching = true;
-                Task::none()
+                cosmic::widget::text_input::focus(
+                    self.search_id.clone(),
+                )
             }
             Message::ChangeServiceItem(index) => {
                 if let Some((index, item)) = self
@@ -932,6 +966,23 @@ impl cosmic::Application for App {
                 self.search_results = vec![];
                 self.searching = false;
                 Task::none()
+            }
+            Message::OpenEditor(item) => {
+                let kind = item.kind;
+                match kind {
+                    ServiceItemKind::Song(song) => {
+                        self.editor_mode = Some(EditorMode::Song);
+                        self.update(Message::SongEditor(
+                            song_editor::Message::ChangeSong(song),
+                        ))
+                    }
+                    ServiceItemKind::Video(video) => todo!(),
+                    ServiceItemKind::Image(image) => todo!(),
+                    ServiceItemKind::Presentation(presentation) => {
+                        todo!()
+                    }
+                    ServiceItemKind::Content(slide) => todo!(),
+                }
             }
         }
     }
@@ -1173,14 +1224,31 @@ where
         key: Key,
         modifiers: Modifiers,
     ) -> Task<Message> {
-        debug!(?key, ?modifiers);
+        // debug!(?key, ?modifiers);
         if self.editor_mode.is_some() {
             return Task::none();
         }
         if self.song_editor.editing() {
             return Task::none();
         }
+        if self.searching {
+            match (key, modifiers) {
+                (
+                    Key::Named(iced::keyboard::key::Named::Escape),
+                    _,
+                ) => return self.update(Message::CloseSearch),
+                _ => return Task::none(),
+            }
+        }
         match (key, modifiers) {
+            (Key::Character(k), Modifiers::CTRL)
+                if k == *"k" || k == *"f" =>
+            {
+                self.update(Message::SearchFocus)
+            }
+            (Key::Character(k), _) if k == *"/" => {
+                self.update(Message::SearchFocus)
+            }
             (
                 Key::Named(iced::keyboard::key::Named::ArrowRight),
                 _,
