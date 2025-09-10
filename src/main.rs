@@ -951,6 +951,7 @@ impl cosmic::Application for App {
             }
             Message::AppendServiceItem(item) => {
                 self.service.push(item);
+                self.presenter.update_items(self.service.clone());
                 Task::none()
             }
             Message::Search(query) => {

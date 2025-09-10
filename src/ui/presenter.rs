@@ -674,6 +674,10 @@ impl Presenter {
             Task::none()
         }
     }
+
+    pub fn update_items(&mut self, items: Vec<ServiceItem>) {
+        self.service = items;
+    }
 }
 
 // This needs to be async so that rodio's audio will work
