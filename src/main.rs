@@ -4,13 +4,9 @@ use core::slide::*;
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
-use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{
-    self, Background as BG, Color, Length, Padding, Point, Shadow,
-    Vector, event, window,
-};
+use cosmic::iced::{self, Length, Point, event, window};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
@@ -112,7 +108,6 @@ struct App {
     cli_mode: bool,
     library: Option<Library>,
     library_open: bool,
-    library_width: f32,
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
     searching: bool,
@@ -128,8 +123,6 @@ enum Message {
     Library(library::Message),
     SongEditor(song_editor::Message),
     File(PathBuf),
-    DndEnter(Entity, Vec<String>),
-    DndDrop,
     OpenWindow,
     CloseWindow(Option<window::Id>),
     WindowOpened(window::Id, Option<Point>),
@@ -140,6 +133,8 @@ enum Message {
     Key(Key, Modifiers),
     None,
     DndLeave(Entity),
+    DndEnter(Entity, Vec<String>),
+    DndDrop,
     EditorToggle(bool),
     ChangeServiceItem(usize),
     AddServiceItem(usize, ServiceItem),
@@ -245,7 +240,6 @@ impl cosmic::Application for App {
             cli_mode: !input.ui,
             library: None,
             library_open: true,
-            library_width: 60.0,
             editor_mode: None,
             song_editor,
             searching: false,
