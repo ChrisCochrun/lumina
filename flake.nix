@@ -44,6 +44,7 @@
             gdb
             lldb
             cmake
+            clang
             makeWrapper
             vulkan-headers
             vulkan-loader
@@ -65,6 +66,7 @@
             # podofo
             # mpv
             ffmpeg-full
+            mupdf
             # yt-dlp
 
             just
@@ -74,7 +76,7 @@
         in rec
         {
           devShell = pkgs.mkShell.override {
-            stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
+            # stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
           } {
             nativeBuildInputs = nbi;
             buildInputs = bi;
@@ -85,6 +87,8 @@
                 pkgs.wayland
                 pkgs.wayland-protocols
                 pkgs.libxkbcommon
+                pkgs.mupdf
+                pkgs.clang
               ]
             }";
             DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
