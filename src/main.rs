@@ -7,7 +7,7 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Point};
+use cosmic::iced::{self, event, window, Color, Length, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
@@ -40,7 +40,7 @@ use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
-use crate::ui::text_svg;
+use crate::ui::text_svg::{self, shadow, stroke, TextSvg};
 
 pub mod core;
 pub mod lisp;
@@ -396,8 +396,14 @@ impl cosmic::Application for App {
     fn footer(&self) -> Option<Element<Self::Message>> {
         let total_items_text =
             format!("Total Service Items: {}", self.service.len());
+
+        let total_slides = self
+            .service
+            .iter()
+            .fold(0, |a, item| a + item.slides.len());
+
         let total_slides_text =
-            format!("Total Slides: {}", self.presenter.total_slides);
+            format!("Total Slides: {}", total_slides);
         let row = row![
             text::body(total_items_text),
             text::body(total_slides_text)
@@ -949,7 +955,18 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
-            Message::AppendServiceItem(item) => {
+            Message::AppendServiceItem(mut item) => {
+                item.slides = item
+                    .slides
+                    .into_par_iter()
+                    .map(|mut slide| {
+                        let fontdb = Arc::clone(&self.fontdb);
+                        text_svg::text_svg_generator(
+                            &mut slide, fontdb,
+                        );
+                        slide
+                    })
+                    .collect();
                 self.service.push(item);
                 self.presenter.update_items(self.service.clone());
                 Task::none()

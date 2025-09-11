@@ -676,7 +676,10 @@ impl Presenter {
     }
 
     pub fn update_items(&mut self, items: Vec<ServiceItem>) {
+        let total_slides: usize =
+            items.iter().fold(0, |a, item| a + item.slides.len());
         self.service = items;
+        self.total_slides = total_slides;
     }
 }
 
