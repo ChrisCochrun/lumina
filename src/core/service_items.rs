@@ -5,8 +5,9 @@ use std::sync::{Arc, Mutex};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
-use miette::Result;
+use miette::{IntoDiagnostic, Result};
 use resvg::usvg::fontdb;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 use crate::Slide;
@@ -18,7 +19,7 @@ use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ServiceItem {
     pub id: i32,
     pub title: String,
@@ -49,11 +50,7 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
         value: (Vec<u8>, String),
     ) -> std::result::Result<Self, Self::Error> {
         debug!(?value);
-        let val = Value::from(
-            String::from_utf8(value.0)
-                .expect("Value couldn't be made"),
-        );
-        Ok(Self::from(&val))
+        ron::de::from_bytes(&value.0).into_diagnostic()
     }
 }
 
@@ -75,9 +72,9 @@ impl AsMimeTypes for ServiceItem {
     ) -> Option<std::borrow::Cow<'static, [u8]>> {
         debug!(?self);
         debug!(mime_type);
-        let val = Value::from(self);
-        let val = String::from(val);
-        Some(Cow::from(val.into_bytes()))
+        let ron = ron::ser::to_string(self).ok()?;
+        debug!(ron);
+        Some(Cow::from(ron.into_bytes()))
     }
 }
 

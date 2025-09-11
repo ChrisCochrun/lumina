@@ -945,8 +945,20 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
-            Message::AddServiceItem(index, item) => {
+            Message::AddServiceItem(index, mut item) => {
+                item.slides = item
+                    .slides
+                    .into_par_iter()
+                    .map(|mut slide| {
+                        let fontdb = Arc::clone(&self.fontdb);
+                        text_svg::text_svg_generator(
+                            &mut slide, fontdb,
+                        );
+                        slide
+                    })
+                    .collect();
                 self.service.insert(index, item);
+                self.presenter.update_items(self.service.clone());
                 Task::none()
             }
             Message::AddServiceItemDrop(index) => {
@@ -1325,8 +1337,11 @@ where
                             },
                         }
                     })
+                    // .icon_size(cosmic::theme::spacing().space_l)
                     .class(cosmic::theme::style::Button::HeaderBar)
-                    .padding(5)
+                    // .spacing(cosmic::theme::spacing().space_l)
+                    // .padding(cosmic::theme::spacing().space_m)
+                    // .height(cosmic::theme::spacing().space_xxxl)
                     .width(Length::Fill)
                     .on_press(Message::ChangeServiceItem(index));
                 let tooltip = tooltip(button,
@@ -1339,9 +1354,6 @@ where
                         } else {
                             Message::None
                         }
-                    }).on_drop(move |x, y| {
-                        debug!(x, y);
-                        Message::AddServiceItemDrop(index)
                     }).on_finish(move |mime, data, action, x, y| {
                         debug!(mime, ?data, ?action, x, y);
                         let Ok(item) = ServiceItem::try_from((data, mime)) else {
@@ -1353,7 +1365,6 @@ where
                     .into()
             });
 
-        let end_index = self.service.len();
         let column = column![
             text::heading("Service List")
                 .center()
@@ -1361,7 +1372,7 @@ where
             iced::widget::horizontal_rule(1),
             column(list).spacing(10),
             dnd_destination(
-                vertical_space(),
+                vertical_space().width(Length::Fill),
                 vec!["application/service-item".into()]
             )
             .data_received_for::<ServiceItem>(|item| {
@@ -1379,7 +1390,7 @@ where
                         return Message::None;
                     };
                     debug!(?item);
-                    Message::AddServiceItem(end_index, item)
+                    Message::AppendServiceItem(item)
                 }
             )
         ]
