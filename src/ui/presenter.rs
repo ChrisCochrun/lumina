@@ -30,9 +30,10 @@ use url::Url;
 
 use crate::{
     core::{service_items::ServiceItem, slide::Slide},
-    ui::text_svg,
     BackgroundKind,
 };
+
+use crate::ui::pdf::PdfViewer;
 
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
@@ -52,6 +53,7 @@ pub(crate) struct Presenter {
     hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
+    pdf_viewer: PdfViewer,
 }
 
 pub(crate) enum Action {
