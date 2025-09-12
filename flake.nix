@@ -45,6 +45,7 @@
             lldb
             cmake
             clang
+            libclang
             makeWrapper
             vulkan-headers
             vulkan-loader
@@ -88,9 +89,10 @@
                 pkgs.wayland-protocols
                 pkgs.libxkbcommon
                 pkgs.mupdf
-                pkgs.clang
+                pkgs.libclang
               ]
             }";
+            # LIBCLANG_PATH = "${pkgs.clang}";
             DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
           };
           defaultPackage = naersk'.buildPackage {
