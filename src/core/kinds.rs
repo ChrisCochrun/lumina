@@ -21,11 +21,11 @@ pub enum ServiceItemKind {
 impl std::fmt::Display for ServiceItemKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = match self {
-            Self::Song(s) => "song".to_owned(),
-            Self::Image(i) => "image".to_owned(),
-            Self::Video(v) => "video".to_owned(),
-            Self::Presentation(p) => "html".to_owned(),
-            Self::Content(s) => "content".to_owned(),
+            Self::Song(_) => "song".to_owned(),
+            Self::Image(_) => "image".to_owned(),
+            Self::Video(_) => "video".to_owned(),
+            Self::Presentation(_) => "html".to_owned(),
+            Self::Content(_) => "content".to_owned(),
         };
         write!(f, "{s}")
     }
@@ -76,7 +76,9 @@ impl Display for ParseError {
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         let message = match self {
-            Self::UnknownType => "The type does not exist. It needs to be one of 'song', 'video', 'image', 'presentation', or 'content'",
+            Self::UnknownType => {
+                "The type does not exist. It needs to be one of 'song', 'video', 'image', 'presentation', or 'content'"
+            }
         };
         write!(f, "Error: {message}")
     }

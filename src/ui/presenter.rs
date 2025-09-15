@@ -221,7 +221,8 @@ impl Presenter {
                 let offset = AbsoluteOffset {
                     x: {
                         if self.current_slide_index > 2 {
-                            (self.current_slide_index as f32).mul_add(187.5, -187.5)
+                            (self.current_slide_index as f32)
+                                .mul_add(187.5, -187.5)
                         } else {
                             0.0
                         }

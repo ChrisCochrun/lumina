@@ -121,15 +121,18 @@ impl From<&str> for Font {
 }
 
 impl Font {
-    #[must_use] pub fn get_name(&self) -> String {
+    #[must_use]
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    #[must_use] pub const fn get_weight(&self) -> Weight {
+    #[must_use]
+    pub const fn get_weight(&self) -> Weight {
         self.weight
     }
 
-    #[must_use] pub const fn get_style(&self) -> Style {
+    #[must_use]
+    pub const fn get_style(&self) -> Style {
         self.style
     }
 
@@ -148,7 +151,8 @@ impl Font {
         self
     }
 
-    #[must_use] pub const fn size(mut self, size: u8) -> Self {
+    #[must_use]
+    pub const fn size(mut self, size: u8) -> Self {
         self.size = size;
         self
     }
@@ -236,7 +240,10 @@ impl TextSvg {
         self
     }
 
-    pub const fn alignment(mut self, alignment: TextAlignment) -> Self {
+    pub const fn alignment(
+        mut self,
+        alignment: TextAlignment,
+    ) -> Self {
         self.alignment = alignment;
         self
     }
@@ -272,8 +279,8 @@ impl TextSvg {
         let middle_position = size.height / 2.0;
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
-        let starting_y_position =
-            half_lines.mul_add(-text_and_line_spacing, middle_position);
+        let starting_y_position = half_lines
+            .mul_add(-text_and_line_spacing, middle_position);
 
         let text_pieces: Vec<String> = self
             .text
@@ -282,7 +289,10 @@ impl TextSvg {
             .map(|(index, text)| {
                 format!(
                     "<tspan x=\"50%\" y=\"{}\">{}</tspan>",
-                    (index as f32).mul_add(text_and_line_spacing, starting_y_position),
+                    (index as f32).mul_add(
+                        text_and_line_spacing,
+                        starting_y_position
+                    ),
                     text
                 )
             })

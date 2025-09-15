@@ -7,13 +7,12 @@ use super::{
     service_items::ServiceTrait,
     slide::Slide,
 };
-use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
-    SqlitePool,
+    Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
+    query, query_as,
 };
 use std::path::PathBuf;
 use tracing::error;
@@ -57,7 +56,9 @@ impl Content for Video {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map_or("Missing video".into(), |f| f.to_string_lossy().to_string())
+                .map_or("Missing video".into(), |f| {
+                    f.to_string_lossy().to_string()
+                })
         } else {
             "Missing video".into()
         }
@@ -196,7 +197,9 @@ impl Model<Video> {
                 }
             }
             Err(e) => {
-                error!("There was an error in converting videos: {e}");
+                error!(
+                    "There was an error in converting videos: {e}"
+                );
             }
         }
     }

@@ -52,7 +52,9 @@ impl Content for Image {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map_or("Missing image".into(), |f| f.to_string_lossy().to_string())
+                .map_or("Missing image".into(), |f| {
+                    f.to_string_lossy().to_string()
+                })
         } else {
             "Missing image".into()
         }
@@ -158,7 +160,9 @@ impl Model<Image> {
                 }
             }
             Err(e) => {
-                error!("There was an error in converting images: {e}");
+                error!(
+                    "There was an error in converting images: {e}"
+                );
             }
         }
     }

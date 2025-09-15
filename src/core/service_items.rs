@@ -172,30 +172,32 @@ impl From<&Value> for ServiceItem {
                     } else if let Some(background) =
                         list.get(background_pos)
                     {
-                        if let Value::List(item) = background { match &item[0] {
-                            Value::Symbol(Symbol(s))
-                                if s == "image" =>
-                            {
-                                Self::from(&Image::from(
-                                    background,
-                                ))
+                        if let Value::List(item) = background {
+                            match &item[0] {
+                                Value::Symbol(Symbol(s))
+                                    if s == "image" =>
+                                {
+                                    Self::from(&Image::from(
+                                        background,
+                                    ))
+                                }
+                                Value::Symbol(Symbol(s))
+                                    if s == "video" =>
+                                {
+                                    Self::from(&Video::from(
+                                        background,
+                                    ))
+                                }
+                                Value::Symbol(Symbol(s))
+                                    if s == "presentation" =>
+                                {
+                                    Self::from(&Presentation::from(
+                                        background,
+                                    ))
+                                }
+                                _ => todo!(),
                             }
-                            Value::Symbol(Symbol(s))
-                                if s == "video" =>
-                            {
-                                Self::from(&Video::from(
-                                    background,
-                                ))
-                            }
-                            Value::Symbol(Symbol(s))
-                                if s == "presentation" =>
-                            {
-                                Self::from(&Presentation::from(
-                                    background,
-                                ))
-                            }
-                            _ => todo!(),
-                        } } else {
+                        } else {
                             error!(
                                 "There is no background here: {:?}",
                                 background

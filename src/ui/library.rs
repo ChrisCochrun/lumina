@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cosmic::{
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
@@ -7,9 +9,10 @@ use cosmic::{
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        button, container, horizontal_space, icon, mouse_area,
-        responsive, row, scrollable, text, text_input, Container,
-        DndSource, Space, Widget,
+        button, container, context_menu, horizontal_space, icon,
+        menu::{self, Action as MenuAction},
+        mouse_area, responsive, row, scrollable, text, text_input,
+        Container, DndSource, Space,
     },
     Element, Task,
 };
@@ -41,6 +44,29 @@ pub(crate) struct Library {
     pub dragged_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: SqlitePool,
+    menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
+    context_menu: Option<i32>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+enum MenuMessage {
+    Delete((LibraryKind, i32)),
+    Open,
+    None,
+}
+
+impl MenuAction for MenuMessage {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuMessage::Delete((kind, index)) => {
+                Message::DeleteItem((*kind, *index))
+            }
+            MenuMessage::Open => todo!(),
+            MenuMessage::None => todo!(),
+        }
+    }
 }
 
 pub(crate) enum Action {
@@ -53,7 +79,7 @@ pub(crate) enum Action {
 #[derive(Clone, Debug)]
 pub(crate) enum Message {
     AddItem,
-    RemoveItem,
+    DeleteItem((LibraryKind, i32)),
     OpenItem(Option<(LibraryKind, i32)>),
     HoverLibrary(Option<LibraryKind>),
     OpenLibrary(Option<LibraryKind>),
@@ -69,6 +95,7 @@ pub(crate) enum Message {
     UpdatePresentation(Presentation),
     PresentationChanged,
     Error(String),
+    OpenContext(i32),
     None,
 }
 
@@ -90,6 +117,8 @@ impl<'a> Library {
             dragged_item: None,
             editing_item: None,
             db,
+            menu_keys: HashMap::new(),
+            context_menu: None,
         }
     }
 
@@ -101,7 +130,16 @@ impl<'a> Library {
         match message {
             Message::AddItem => (),
             Message::None => (),
-            Message::RemoveItem => (),
+            Message::DeleteItem((kind, index)) => {
+                match kind {
+                    LibraryKind::Song => todo!(),
+                    LibraryKind::Video => todo!(),
+                    LibraryKind::Image => todo!(),
+                    LibraryKind::Presentation => {
+                        self.presentation_library.remove_item(index);
+                    }
+                };
+            }
             Message::OpenItem(item) => {
                 debug!(?item);
                 self.editing_item = item;
@@ -144,7 +182,7 @@ impl<'a> Library {
                             Task::future(self.db.acquire()).and_then(
                                 move |conn| update_in_db(&song, conn),
                             ),
-                        )
+                        );
                     }
                     Err(_) => todo!(),
                 }
@@ -181,7 +219,7 @@ impl<'a> Library {
                                     )
                                 },
                             ),
-                        )
+                        );
                     }
                     Err(_) => todo!(),
                 }
@@ -215,7 +253,7 @@ impl<'a> Library {
                                     )
                                 },
                             ),
-                        )
+                        );
                     }
                     Err(_) => todo!(),
                 }
@@ -254,6 +292,9 @@ impl<'a> Library {
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
+            Message::OpenContext(index) => {
+                self.context_menu = Some(index);
+            }
         }
         Action::None
     }
@@ -264,7 +305,7 @@ impl<'a> Library {
         let video_library = self.library_item(&self.video_library);
         let presentation_library =
             self.library_item(&self.presentation_library);
-        
+
         column![
             text::heading("Library").center().width(Length::Fill),
             cosmic::iced::widget::horizontal_rule(1),
@@ -374,28 +415,46 @@ impl<'a> Library {
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|()| Message::None);
-                            DndSource::<Message, ServiceItem>::new(
-                                mouse_area(visual_item)
-                                    .on_drag(Message::DragItem(service_item.clone()))
-                                    .on_enter(Message::HoverItem(
-                                        Some((
-                                            model.kind,
-                                            index as i32,
-                                        )),
-                                    ))
-                                    .on_double_click(
-                                        Message::OpenItem(Some((
-                                            model.kind,
-                                            index as i32,
-                                        ))),
-                                    )
-                                    .on_exit(Message::HoverItem(None))
-                                    .on_press(Message::SelectItem(
-                                        Some((
-                                            model.kind,
-                                            index as i32,
-                                        )),
-                                    )),
+                            DndSource::<Message, ServiceItem>::new({
+                                let mouse_area = Element::from(mouse_area(visual_item)
+                                                               .on_drag(Message::DragItem(service_item.clone()))
+                                                               .on_enter(Message::HoverItem(
+                                                                   Some((
+                                                                       model.kind,
+                                                                       index as i32,
+                                                                   )),
+                                                               ))
+                                                               .on_double_click(
+                                                                   Message::OpenItem(Some((
+                                                                       model.kind,
+                                                                       index as i32,
+                                                                   ))),
+                                                               )
+                                                               .on_right_press(Message::OpenContext(index as i32))
+                                                               .on_exit(Message::HoverItem(None))
+                                                               .on_press(Message::SelectItem(
+                                                                   Some((
+                                                                       model.kind,
+                                                                       index as i32,
+                                                                   )),
+                                                               )));
+                                if let Some(context_id) = self.context_menu {
+                                    if index == context_id as usize {
+                                        let context_menu = context_menu(
+                                            mouse_area,
+                                            self.context_menu.map_or_else(|| None, |id| {
+                                                Some(menu::items(&self.menu_keys,
+                                                                 vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))]))
+                                            })
+                                        );
+                                        Element::from(context_menu)
+                                    } else {
+                                        Element::from(mouse_area)
+                                    }
+                                } else {
+                                    Element::from(mouse_area)
+                                }
+                            }
                             )
                                 .action(DndAction::Copy)
                                 .drag_icon({
@@ -403,8 +462,8 @@ impl<'a> Library {
                                     move |i| {
                                         let state = State::None;
                                         let icon = match model {
-                                                    LibraryKind::Song => icon::from_name(
-                                                        "folder-music-symbolic",
+                                            LibraryKind::Song => icon::from_name(
+                                                "folder-music-symbolic",
                                                     ).symbolic(true)
                                                         ,
                                                     LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
@@ -481,11 +540,10 @@ impl<'a> Library {
                         .accent_text_color()
                         .into()
                 }
-            } else if let Some((library, selected)) = self.selected_item
+            } else if let Some((library, selected)) =
+                self.selected_item
             {
-                if model.kind == library
-                    && selected == index as i32
-                {
+                if model.kind == library && selected == index as i32 {
                     theme::active().cosmic().control_0().into()
                 } else {
                     theme::active()
@@ -563,6 +621,7 @@ impl<'a> Library {
         .into()
     }
 
+    #[allow(clippy::unused_async)]
     pub async fn search_items(
         &self,
         query: String,
@@ -573,14 +632,18 @@ impl<'a> Library {
             .items
             .iter()
             .filter(|song| song.title.to_lowercase().contains(&query))
-            .map(super::super::core::content::Content::to_service_item)
+            .map(
+                super::super::core::content::Content::to_service_item,
+            )
             .collect();
         let videos: Vec<ServiceItem> = self
             .video_library
             .items
             .iter()
             .filter(|vid| vid.title.to_lowercase().contains(&query))
-            .map(super::super::core::content::Content::to_service_item)
+            .map(
+                super::super::core::content::Content::to_service_item,
+            )
             .collect();
         let images: Vec<ServiceItem> = self
             .image_library
@@ -589,14 +652,18 @@ impl<'a> Library {
             .filter(|image| {
                 image.title.to_lowercase().contains(&query)
             })
-            .map(super::super::core::content::Content::to_service_item)
+            .map(
+                super::super::core::content::Content::to_service_item,
+            )
             .collect();
         let presentations: Vec<ServiceItem> = self
             .presentation_library
             .items
             .iter()
             .filter(|pres| pres.title.to_lowercase().contains(&query))
-            .map(super::super::core::content::Content::to_service_item)
+            .map(
+                super::super::core::content::Content::to_service_item,
+            )
             .collect();
         items.extend(videos);
         items.extend(images);

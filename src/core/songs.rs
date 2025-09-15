@@ -1,16 +1,15 @@
 use std::{collections::HashMap, option::Option, path::PathBuf};
 
-use cosmic::iced::Executor;
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    pool::PoolConnection, query, sqlite::SqliteRow, FromRow, Row,
-    Sqlite, SqliteConnection, SqlitePool,
+    FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
+    pool::PoolConnection, query, sqlite::SqliteRow,
 };
 use tracing::error;
 
-use crate::{core::slide, Slide, SlideBuilder};
+use crate::{Slide, SlideBuilder, core::slide};
 
 use super::{
     content::Content,
@@ -128,7 +127,9 @@ impl FromRow<'_, SqliteRow> for Song {
             })),
             verse_order: Some({
                 let str: &str = row.try_get(0)?;
-                str.split(' ').map(std::string::ToString::to_string).collect()
+                str.split(' ')
+                    .map(std::string::ToString::to_string)
+                    .collect()
             }),
             background: {
                 let string: String = row.try_get(7)?;
@@ -250,8 +251,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         .position(|v| v == &Value::Keyword(Keyword::from("title")))
     {
         let pos = key_pos + 1;
-        list.get(pos)
-            .map_or(String::from("song"), String::from)
+        list.get(pos).map_or(String::from("song"), String::from)
     } else {
         String::from("song")
     };
@@ -625,7 +625,27 @@ You saved my soul"
         let lyrics = song.get_lyrics();
         match lyrics {
             Ok(lyrics) => {
-                assert_eq!(vec!["From the Day\nI Am They", "When You found me,\nI was so blind\nMy sin was before me,\nI was swallowed by pride", "But out of the darkness,\nYou brought me to Your light\nYou showed me new mercy\nAnd opened up my eyes", "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home", "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul", "Where brilliant light\nIs all around\nAnd endless joy\nIs the only sound", "Oh, rest my heart\nForever now\nOh, in Your arms\nI'll always be found", "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home", "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul", "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever", "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever", "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home", "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul", "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home", "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul", "Oh Oh Oh\nFrom the day\nYou saved my soul\n"], lyrics);
+                assert_eq!(
+                    vec![
+                        "From the Day\nI Am They",
+                        "When You found me,\nI was so blind\nMy sin was before me,\nI was swallowed by pride",
+                        "But out of the darkness,\nYou brought me to Your light\nYou showed me new mercy\nAnd opened up my eyes",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
+                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "Where brilliant light\nIs all around\nAnd endless joy\nIs the only sound",
+                        "Oh, rest my heart\nForever now\nOh, in Your arms\nI'll always be found",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
+                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever",
+                        "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
+                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
+                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "Oh Oh Oh\nFrom the day\nYou saved my soul\n"
+                    ],
+                    lyrics
+                );
             }
             Err(e) => {
                 assert!(false, "{:?}", e)

@@ -1,31 +1,32 @@
-use clap::{command, Parser};
+use clap::{Parser, command};
 use core::service_items::ServiceItem;
-use core::slide::{Background, Slide, SlideBuilder, TextAlignment, BackgroundKind};
+use core::slide::{
+    Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
+};
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Point};
+use cosmic::iced::{self, Length, Point, event, window};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
+use cosmic::widget::Container;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::nav_bar::nav_bar_style;
-use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, search_input,
-    tooltip, vertical_space, Space,
+    Space, button, horizontal_space, mouse_area, nav_bar,
+    search_input, tooltip, vertical_space,
 };
 use cosmic::widget::{icon, slider};
-use cosmic::{executor, Application, ApplicationExt, Element};
-use cosmic::{widget::Container, Theme};
+use cosmic::{Application, ApplicationExt, Element, executor};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{miette, Result};
+use miette::{Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::fs::read_to_string;
@@ -34,10 +35,10 @@ use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
+use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
-use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::ui::text_svg::{self};
@@ -94,9 +95,9 @@ fn main() -> Result<()> {
         .map_err(|e| miette!("Invalid things... {}", e))
 }
 
-fn theme(_state: &App) -> Theme {
-    Theme::dark()
-}
+// fn theme(_state: &App) -> Theme {
+//     Theme::dark()
+// }
 
 struct App {
     core: Core,
@@ -135,9 +136,6 @@ enum Message {
     Quit,
     Key(Key, Modifiers),
     None,
-    DndLeave(Entity),
-    DndEnter(Entity, Vec<String>),
-    DndDrop,
     EditorToggle(bool),
     ChangeServiceItem(usize),
     AddServiceItem(usize, ServiceItem),
@@ -816,10 +814,8 @@ impl cosmic::Application for App {
                     });
 
                 self.windows.push(id);
-                _ = self.set_window_title(
-                    format!("window_{count}"),
-                    id,
-                );
+                _ = self
+                    .set_window_title(format!("window_{count}"), id);
 
                 spawn_window.map(|id| {
                     cosmic::Action::App(Message::WindowOpened(
@@ -873,34 +869,6 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::Quit => cosmic::iced::exit(),
-            Message::DndEnter(entity, data) => {
-                debug!(?entity);
-                debug!(?data);
-                Task::none()
-            }
-            Message::DndDrop => {
-                // debug!(?entity);
-                // debug!(?action);
-                // debug!(?service_item);
-
-                if let Some(library) = &self.library
-                    && let Some((lib, item)) = library.dragged_item
-                {
-                    // match lib {
-                    //     core::model::LibraryKind::Song => ,
-                    //     core::model::LibraryKind::Video => todo!(),
-                    //     core::model::LibraryKind::Image => todo!(),
-                    //     core::model::LibraryKind::Presentation => todo!(),
-                    // }
-                    let item = library.get_song(item).unwrap();
-                    let item = ServiceItem::from(item);
-                    self.nav_model
-                        .insert()
-                        .text(item.title.clone())
-                        .data(item);
-                }
-                Task::none()
-            }
             Message::AddLibrary(library) => {
                 self.library = Some(library);
                 Task::none()
@@ -910,10 +878,6 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::None => Task::none(),
-            Message::DndLeave(entity) => {
-                // debug!(?entity);
-                Task::none()
-            }
             Message::EditorToggle(edit) => {
                 if edit {
                     self.editor_mode = Some(EditorMode::Song);
@@ -1006,12 +970,12 @@ impl cosmic::Application for App {
                             song_editor::Message::ChangeSong(song),
                         ))
                     }
-                    ServiceItemKind::Video(video) => todo!(),
-                    ServiceItemKind::Image(image) => todo!(),
-                    ServiceItemKind::Presentation(presentation) => {
+                    ServiceItemKind::Video(_video) => todo!(),
+                    ServiceItemKind::Image(_image) => todo!(),
+                    ServiceItemKind::Presentation(_presentation) => {
                         todo!()
                     }
-                    ServiceItemKind::Content(slide) => todo!(),
+                    ServiceItemKind::Content(_slide) => todo!(),
                 }
             }
         }
@@ -1198,7 +1162,7 @@ where
         })
     }
 
-    fn add_library(&mut self) -> Task<Message> {
+    fn add_library(&self) -> Task<Message> {
         Task::perform(async move { Library::new().await }, |x| {
             cosmic::Action::App(Message::AddLibrary(x))
         })
@@ -1220,7 +1184,7 @@ where
     }
 
     fn add_service(
-        &mut self,
+        &self,
         items: Vec<ServiceItem>,
         fontdb: Arc<fontdb::Database>,
     ) -> Task<Message> {

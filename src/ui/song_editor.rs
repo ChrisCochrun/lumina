@@ -1,29 +1,28 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
+    Element, Task,
     dialog::file_chooser::open::Dialog,
     iced::{
-        font::{Family, Stretch, Style, Weight},
         Font, Length,
+        font::{Family, Stretch, Style, Weight},
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::row,
     theme,
     widget::{
-        button, column, combo_box, container, horizontal_space, icon, text, text_editor, text_input,
+        button, column, combo_box, container, horizontal_space, icon,
+        text, text_editor, text_input,
     },
-    Element, Task,
 };
 use dirs::font_dir;
 use iced_video_player::Video;
 use tracing::{debug, error};
 
 use crate::{
-    core::{service_items::ServiceTrait, songs::Song},
+    Background, BackgroundKind, core::songs::Song,
     ui::slide_editor::SlideEditor,
-    Background, BackgroundKind,
 };
-
 
 #[derive(Debug)]
 pub struct SongEditor {
@@ -244,8 +243,7 @@ impl SongEditor {
             Message::ChangeBackground(Ok(path)) => {
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
-                    let background =
-                        Background::try_from(path).ok();
+                    let background = Background::try_from(path).ok();
                     self.background_video(&background);
                     song.background = background;
                     return self.update_song(song);
@@ -258,7 +256,7 @@ impl SongEditor {
                 return Action::Task(Task::perform(
                     pick_background(),
                     Message::ChangeBackground,
-                ))
+                ));
             }
             _ => (),
         }

@@ -75,7 +75,9 @@ impl Content for Presentation {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map_or("Missing presentation".into(), |f| f.to_string_lossy().to_string())
+                .map_or("Missing presentation".into(), |f| {
+                    f.to_string_lossy().to_string()
+                })
         } else {
             "Missing presentation".into()
         }
@@ -189,14 +191,16 @@ impl ServiceTrait for Presentation {
 }
 
 impl Presentation {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             title: String::new(),
             ..Default::default()
         }
     }
 
-    #[must_use] pub const fn get_kind(&self) -> &PresKind {
+    #[must_use]
+    pub const fn get_kind(&self) -> &PresKind {
         &self.kind
     }
 }

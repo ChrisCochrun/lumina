@@ -1,7 +1,6 @@
 use std::mem::replace;
 
-use cosmic::iced::Executor;
-use miette::{miette, Result};
+use miette::{Result, miette};
 use sqlx::{Connection, SqliteConnection};
 
 #[derive(Debug, Clone)]
@@ -46,7 +45,8 @@ impl<T> Model<T> {
         Ok(())
     }
 
-    #[must_use] pub fn get_item(&self, index: i32) -> Option<&T> {
+    #[must_use]
+    pub fn get_item(&self, index: i32) -> Option<&T> {
         self.items.get(index as usize)
     }
 
