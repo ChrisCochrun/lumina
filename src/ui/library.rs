@@ -133,13 +133,13 @@ impl<'a> Library {
                 if kind != LibraryKind::Song {
                     error!("Not editing a song item");
                     return Action::None;
-                };
+                }
 
                 match self
                     .song_library
                     .update_item(song.clone(), index)
                 {
-                    Ok(_) => {
+                    Ok(()) => {
                         return Action::Task(
                             Task::future(self.db.acquire()).and_then(
                                 move |conn| update_in_db(&song, conn),
@@ -162,13 +162,13 @@ impl<'a> Library {
                 if kind != LibraryKind::Image {
                     error!("Not editing a image item");
                     return Action::None;
-                };
+                }
 
                 match self
                     .image_library
                     .update_item(image.clone(), index)
                 {
-                    Ok(_) => {
+                    Ok(()) => {
                         return Action::Task(
                             Task::future(self.db.acquire()).and_then(
                                 move |conn| {
@@ -196,13 +196,13 @@ impl<'a> Library {
                 if kind != LibraryKind::Video {
                     error!("Not editing a video item");
                     return Action::None;
-                };
+                }
 
                 match self
                     .video_library
                     .update_item(video.clone(), index)
                 {
-                    Ok(_) => {
+                    Ok(()) => {
                         return Action::Task(
                             Task::future(self.db.acquire()).and_then(
                                 move |conn| {
@@ -230,13 +230,13 @@ impl<'a> Library {
                 if kind != LibraryKind::Presentation {
                     error!("Not editing a presentation item");
                     return Action::None;
-                };
+                }
 
                 match self
                     .presentation_library
                     .update_item(presentation.clone(), index)
                 {
-                    Ok(_) => return Action::Task(
+                    Ok(()) => return Action::Task(
                         Task::future(self.db.acquire()).and_then(
                             move |conn| {
                                 Task::perform(
@@ -254,7 +254,7 @@ impl<'a> Library {
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
-        };
+        }
         Action::None
     }
 
@@ -315,7 +315,7 @@ impl<'a> Library {
                     textm!("Presentations").align_y(Vertical::Center),
                 );
             }
-        };
+        }
         let item_count = model.items.len();
         row = row.push(horizontal_space());
         row = row
@@ -373,7 +373,7 @@ impl<'a> Library {
                             let service_item = item.to_service_item();
                             let visual_item = self
                                 .single_item(index, item, model)
-                                .map(|_| Message::None);
+                                .map(|()| Message::None);
                             DndSource::<Message, ServiceItem>::new(
                                 mouse_area(visual_item)
                                     .on_drag(Message::DragItem(service_item.clone()))
@@ -418,7 +418,7 @@ impl<'a> Library {
                                             )
                             }})
                             .drag_content(move || {
-                                service_item.to_owned()
+                                service_item.clone()
                             })
                             .into()
                         },
@@ -573,14 +573,14 @@ impl<'a> Library {
             .items
             .iter()
             .filter(|song| song.title.to_lowercase().contains(&query))
-            .map(|song| song.to_service_item())
+            .map(super::super::core::content::Content::to_service_item)
             .collect();
         let videos: Vec<ServiceItem> = self
             .video_library
             .items
             .iter()
             .filter(|vid| vid.title.to_lowercase().contains(&query))
-            .map(|vid| vid.to_service_item())
+            .map(super::super::core::content::Content::to_service_item)
             .collect();
         let images: Vec<ServiceItem> = self
             .image_library
@@ -589,14 +589,14 @@ impl<'a> Library {
             .filter(|image| {
                 image.title.to_lowercase().contains(&query)
             })
-            .map(|image| image.to_service_item())
+            .map(super::super::core::content::Content::to_service_item)
             .collect();
         let presentations: Vec<ServiceItem> = self
             .presentation_library
             .items
             .iter()
             .filter(|pres| pres.title.to_lowercase().contains(&query))
-            .map(|pres| pres.to_service_item())
+            .map(super::super::core::content::Content::to_service_item)
             .collect();
         items.extend(videos);
         items.extend(images);
@@ -656,7 +656,7 @@ fn update_in_db(
     Task::perform(
         update_song_in_db(song.to_owned(), conn).map(
             move |r| match r {
-                Ok(_) => {
+                Ok(()) => {
                     warn!(
                         "Should have updated song: {:?}",
                         song_title
@@ -667,7 +667,7 @@ fn update_in_db(
                 }
             },
         ),
-        |_| Message::SongChanged,
+        |()| Message::SongChanged,
     )
 }
 

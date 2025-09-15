@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use tracing::error;
 
 #[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
+    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
 )]
 pub struct Image {
     pub id: i32,
@@ -52,8 +52,7 @@ impl Content for Image {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map(|f| f.to_string_lossy().to_string())
-                .unwrap_or("Missing image".into())
+                .map_or("Missing image".into(), |f| f.to_string_lossy().to_string())
         } else {
             "Missing image".into()
         }
@@ -85,7 +84,7 @@ impl From<&Value> for Image {
                     let path =
                         p.to_str().unwrap_or_default().to_string();
                     let title =
-                        path.rsplit_once("/").unwrap_or_default().1;
+                        path.rsplit_once('/').unwrap_or_default().1;
                     title.to_string()
                 });
                 Self {
@@ -154,14 +153,14 @@ impl Model<Image> {
             .await;
         match result {
             Ok(v) => {
-                for image in v.into_iter() {
+                for image in v {
                     let _ = self.add_item(image);
                 }
             }
             Err(e) => {
-                error!("There was an error in converting images: {e}")
+                error!("There was an error in converting images: {e}");
             }
-        };
+        }
     }
 }
 
@@ -172,7 +171,7 @@ pub async fn update_image_in_db(
     let path = image
         .path
         .to_str()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_default();
     query!(
         r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,

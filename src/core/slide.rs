@@ -107,9 +107,9 @@ impl TryFrom<&Background> for Video {
     fn try_from(
         value: &Background,
     ) -> std::result::Result<Self, Self::Error> {
-        Video::new(
+        Self::new(
             &url::Url::from_file_path(value.path.clone())
-                .map_err(|_| ParseError::BackgroundNotVideo)?,
+                .map_err(|()| ParseError::BackgroundNotVideo)?,
         )
         .map_err(|_| ParseError::BackgroundNotVideo)
     }
@@ -121,9 +121,9 @@ impl TryFrom<Background> for Video {
     fn try_from(
         value: Background,
     ) -> std::result::Result<Self, Self::Error> {
-        Video::new(
+        Self::new(
             &url::Url::from_file_path(value.path)
-                .map_err(|_| ParseError::BackgroundNotVideo)?,
+                .map_err(|()| ParseError::BackgroundNotVideo)?,
         )
         .map_err(|_| ParseError::BackgroundNotVideo)
     }
@@ -132,7 +132,7 @@ impl TryFrom<Background> for Video {
 impl TryFrom<String> for Background {
     type Error = ParseError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        Background::try_from(value.as_str())
+        Self::try_from(value.as_str())
     }
 }
 
@@ -147,7 +147,7 @@ impl TryFrom<PathBuf> for Background {
                 .to_str()
                 .unwrap()
                 .to_string();
-            let path = path.replace("~", &home);
+            let path = path.replace('~', &home);
             PathBuf::from(path)
         } else {
             path
@@ -192,10 +192,10 @@ impl TryFrom<&str> for Background {
     type Error = ParseError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = value.trim_start_matches("file://");
-        if value.starts_with("~") {
+        if value.starts_with('~') {
             if let Some(home) = dirs::home_dir() {
                 if let Some(home) = home.to_str() {
-                    let value = value.replace("~", home);
+                    let value = value.replace('~', home);
                     Self::try_from(PathBuf::from(value))
                 } else {
                     Self::try_from(PathBuf::from(value))
@@ -252,9 +252,9 @@ impl Display for ParseError {
 impl From<String> for BackgroundKind {
     fn from(value: String) -> Self {
         if value == "image" {
-            BackgroundKind::Image
+            Self::Image
         } else {
-            BackgroundKind::Video
+            Self::Video
         }
     }
 }
@@ -281,7 +281,7 @@ impl Slide {
         self
     }
 
-    pub fn set_font_size(mut self, font_size: i32) -> Self {
+    pub const fn set_font_size(mut self, font_size: i32) -> Self {
         self.font_size = font_size;
         self
     }
@@ -291,12 +291,12 @@ impl Slide {
         self
     }
 
-    pub fn set_pdf_index(mut self, pdf_index: u32) -> Self {
+    pub const fn set_pdf_index(mut self, pdf_index: u32) -> Self {
         self.pdf_index = pdf_index;
         self
     }
 
-    pub fn background(&self) -> &Background {
+    pub const fn background(&self) -> &Background {
         &self.background
     }
 
@@ -304,11 +304,11 @@ impl Slide {
         self.text.clone()
     }
 
-    pub fn text_alignment(&self) -> TextAlignment {
+    pub const fn text_alignment(&self) -> TextAlignment {
         self.text_alignment
     }
 
-    pub fn font_size(&self) -> i32 {
+    pub const fn font_size(&self) -> i32 {
         self.font_size
     }
 
@@ -316,7 +316,7 @@ impl Slide {
         self.font.clone()
     }
 
-    pub fn video_loop(&self) -> bool {
+    pub const fn video_loop(&self) -> bool {
         self.video_loop
     }
 
@@ -328,13 +328,13 @@ impl Slide {
         self.pdf_page.clone()
     }
 
-    pub fn pdf_index(&self) -> u32 {
+    pub const fn pdf_index(&self) -> u32 {
         self.pdf_index
     }
 
     pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
         let lyrics = song.get_lyrics()?;
-        let slides: Vec<Slide> = lyrics
+        let slides: Vec<Self> = lyrics
             .iter()
             .map(|l| {
                 let song = song.clone();
@@ -358,7 +358,7 @@ impl Slide {
         Ok(slides)
     }
 
-    pub(crate) fn set_index(&mut self, index: i32) {
+    pub(crate) const fn set_index(&mut self, index: i32) {
         self.id = index;
     }
 
@@ -381,7 +381,7 @@ impl From<&Value> for Slide {
     fn from(value: &Value) -> Self {
         match value {
             Value::List(list) => lisp_to_slide(list),
-            _ => Slide::default(),
+            _ => Self::default(),
         }
     }
 }
@@ -404,7 +404,7 @@ fn lisp_to_slide(lisp: &Vec<Value>) -> Slide {
         slide = slide.background(lisp_to_background(background));
     } else {
         slide = slide.background(Background::default());
-    };
+    }
 
     let text_position = lisp.iter().position(|v| match v {
         Value::List(vec) => {
@@ -691,9 +691,7 @@ impl SlideBuilder {
 
 impl Image {
     fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+        Default::default()
     }
 }
 

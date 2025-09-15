@@ -11,7 +11,9 @@ pub fn bg_from_video(
     video: &Path,
     screenshot: &Path,
 ) -> Result<(), Box<dyn Error>> {
-    if !screenshot.exists() {
+    if screenshot.exists() {
+        debug!("Screenshot already exists");
+    } else {
         let output_duration = Command::new("ffprobe")
             .args(["-i", &video.to_string_lossy()])
             .output()
@@ -26,9 +28,9 @@ pub fn bg_from_video(
             let mut duration = log.split_off(duration_index + 10);
             duration.truncate(11);
             // debug!("rust-duration-is: {duration}");
-            let mut hours = String::from("");
-            let mut minutes = String::from("");
-            let mut seconds = String::from("");
+            let mut hours = String::new();
+            let mut minutes = String::new();
+            let mut seconds = String::new();
             for (i, c) in duration.chars().enumerate() {
                 if i <= 1 {
                     hours.push(c);
@@ -63,8 +65,6 @@ pub fn bg_from_video(
             .expect("failed to execute ffmpeg");
         // io::stdout().write_all(&output.stdout).unwrap();
         // io::stderr().write_all(&output.stderr).unwrap();
-    } else {
-        debug!("Screenshot already exists");
     }
     Ok(())
 }

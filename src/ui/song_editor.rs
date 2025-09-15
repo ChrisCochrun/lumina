@@ -140,11 +140,11 @@ impl SongEditor {
                 self.song = Some(song.clone());
                 self.title = song.title;
                 if let Some(font) = song.font {
-                    self.font = font
-                };
+                    self.font = font;
+                }
                 if let Some(font_size) = song.font_size {
-                    self.font_size = font_size as usize
-                };
+                    self.font_size = font_size as usize;
+                }
                 if let Some(verse_order) = song.verse_order {
                     self.verse_order = verse_order
                         .into_iter()
@@ -155,18 +155,18 @@ impl SongEditor {
                         .collect();
                 }
                 if let Some(author) = song.author {
-                    self.author = author
-                };
+                    self.author = author;
+                }
                 if let Some(audio) = song.audio {
-                    self.audio = audio
-                };
+                    self.audio = audio;
+                }
                 if let Some(ccli) = song.ccli {
-                    self.ccli = ccli
-                };
+                    self.ccli = ccli;
+                }
                 if let Some(lyrics) = song.lyrics {
                     self.lyrics =
-                        text_editor::Content::with_text(&lyrics)
-                };
+                        text_editor::Content::with_text(&lyrics);
+                }
                 self.background_video(&song.background);
                 self.background = song.background;
             }
@@ -212,8 +212,8 @@ impl SongEditor {
                 self.verse_order = verse_order.clone();
                 if let Some(mut song) = self.song.clone() {
                     let verse_order = verse_order
-                        .split(" ")
-                        .map(|s| s.to_owned())
+                        .split(' ')
+                        .map(std::borrow::ToOwned::to_owned)
                         .collect();
                     song.verse_order = Some(verse_order);
                     return self.update_song(song);
@@ -245,7 +245,7 @@ impl SongEditor {
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
                     let background =
-                        Background::try_from(path.clone()).ok();
+                        Background::try_from(path).ok();
                     self.background_video(&background);
                     song.background = background;
                     return self.update_song(song);
@@ -416,7 +416,7 @@ order",
         .into()
     }
 
-    pub fn editing(&self) -> bool {
+    pub const fn editing(&self) -> bool {
         self.editing
     }
 

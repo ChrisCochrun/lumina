@@ -10,7 +10,7 @@ pub struct Model<T> {
     pub kind: LibraryKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum LibraryKind {
     Song,
     Video,
@@ -46,7 +46,7 @@ impl<T> Model<T> {
         Ok(())
     }
 
-    pub fn get_item(&self, index: i32) -> Option<&T> {
+    #[must_use] pub fn get_item(&self, index: i32) -> Option<&T> {
         self.items.get(index as usize)
     }
 

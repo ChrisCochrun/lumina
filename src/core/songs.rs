@@ -128,7 +128,7 @@ impl FromRow<'_, SqliteRow> for Song {
             })),
             verse_order: Some({
                 let str: &str = row.try_get(0)?;
-                str.split(' ').map(|s| s.to_string()).collect()
+                str.split(' ').map(std::string::ToString::to_string).collect()
             }),
             background: {
                 let string: String = row.try_get(7)?;
@@ -251,8 +251,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
     {
         let pos = key_pos + 1;
         list.get(pos)
-            .map(String::from)
-            .unwrap_or(String::from("song"))
+            .map_or(String::from("song"), String::from)
     } else {
         String::from("song")
     };
@@ -319,30 +318,30 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         let lyric = String::from(&lyric[1]);
 
         let verse_title = match lyric_verse.as_str() {
-            "i1" => r#"\n\nIntro 1\n"#,
-            "i2" => r#"\n\nIntro 1\n"#,
-            "v1" => r#"\n\nVerse 1\n"#,
-            "v2" => r#"\n\nVerse 2\n"#,
-            "v3" => r#"\n\nVerse 3\n"#,
-            "v4" => r#"\n\nVerse 4\n"#,
-            "v5" => r#"\n\nVerse 5\n"#,
-            "c1" => r#"\n\nChorus 1\n"#,
-            "c2" => r#"\n\nChorus 2\n"#,
-            "c3" => r#"\n\nChorus 3\n"#,
-            "c4" => r#"\n\nChorus 4\n"#,
-            "b1" => r#"\n\nBridge 1\n"#,
-            "b2" => r#"\n\nBridge 2\n"#,
-            "e1" => r#"\n\nEnding 1\n"#,
-            "e2" => r#"\n\nEnding 2\n"#,
-            "o1" => r#"\n\nOther 1\n"#,
-            "o2" => r#"\n\nOther 2\n"#,
+            "i1" => r"\n\nIntro 1\n",
+            "i2" => r"\n\nIntro 1\n",
+            "v1" => r"\n\nVerse 1\n",
+            "v2" => r"\n\nVerse 2\n",
+            "v3" => r"\n\nVerse 3\n",
+            "v4" => r"\n\nVerse 4\n",
+            "v5" => r"\n\nVerse 5\n",
+            "c1" => r"\n\nChorus 1\n",
+            "c2" => r"\n\nChorus 2\n",
+            "c3" => r"\n\nChorus 3\n",
+            "c4" => r"\n\nChorus 4\n",
+            "b1" => r"\n\nBridge 1\n",
+            "b2" => r"\n\nBridge 2\n",
+            "e1" => r"\n\nEnding 1\n",
+            "e2" => r"\n\nEnding 2\n",
+            "o1" => r"\n\nOther 1\n",
+            "o2" => r"\n\nOther 2\n",
             _ => "",
         };
 
         let lyric = format!("{verse_title}{lyric}");
         let lyric = lyric.replace(
-            "\\n", r#"
-"#,
+            "\\n", r"
+",
         );
         lyrics.push(lyric);
     }
@@ -392,15 +391,15 @@ impl Model<Song> {
         let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(db).await;
         match result {
             Ok(s) => {
-                for song in s.into_iter() {
+                for song in s {
                     match Song::from_row(&song) {
                         Ok(song) => {
                             let _ = self.add_item(song);
                         }
                         Err(e) => {
-                            error!("Could not convert song: {e}")
+                            error!("Could not convert song: {e}");
                         }
-                    };
+                    }
                 }
             }
             Err(e) => {
@@ -425,7 +424,7 @@ pub async fn update_song_in_db(
                 })
                 .collect::<String>()
         } else {
-            String::from("")
+            String::new()
         }
     };
 
@@ -488,13 +487,13 @@ impl Song {
             let verse_order = self.verse_order.clone();
 
             let mut lyric_map = HashMap::new();
-            let mut verse_title = String::from("");
-            let mut lyric = String::from("");
+            let mut verse_title = String::new();
+            let mut lyric = String::new();
             for (i, line) in raw_lyrics.split('\n').enumerate() {
                 if VERSE_KEYWORDS.contains(&line) {
                     if i != 0 {
                         lyric_map.insert(verse_title, lyric);
-                        lyric = String::from("");
+                        lyric = String::new();
                         verse_title = line.to_string();
                     } else {
                         verse_title = line.to_string();
@@ -535,7 +534,7 @@ impl Song {
                     lyric_list.push(lyric.to_string());
                 } else {
                     // error!("NOT WORKING!");
-                };
+                }
             }
             // for lyric in lyric_list.iter() {
             //     debug!(lyric = ?lyric)

@@ -121,15 +121,15 @@ impl From<&str> for Font {
 }
 
 impl Font {
-    pub fn get_name(&self) -> String {
+    #[must_use] pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    pub fn get_weight(&self) -> Weight {
+    #[must_use] pub const fn get_weight(&self) -> Weight {
         self.weight
     }
 
-    pub fn get_style(&self) -> Style {
+    #[must_use] pub const fn get_style(&self) -> Style {
         self.style
     }
 
@@ -148,7 +148,7 @@ impl Font {
         self
     }
 
-    pub fn size(mut self, size: u8) -> Self {
+    #[must_use] pub const fn size(mut self, size: u8) -> Self {
         self.size = size;
         self
     }
@@ -161,12 +161,12 @@ impl Hash for Color {
 }
 
 impl Color {
-    pub fn from_hex_str(color: impl AsRef<str>) -> Color {
+    pub fn from_hex_str(color: impl AsRef<str>) -> Self {
         match Rgb::from_hex_str(color.as_ref()) {
-            Ok(rgb) => Color(rgb),
+            Ok(rgb) => Self(rgb),
             Err(e) => {
                 error!("error in making color from hex_str: {:?}", e);
-                Color::default()
+                Self::default()
             }
         }
     }
@@ -236,7 +236,7 @@ impl TextSvg {
         self
     }
 
-    pub fn alignment(mut self, alignment: TextAlignment) -> Self {
+    pub const fn alignment(mut self, alignment: TextAlignment) -> Self {
         self.alignment = alignment;
         self
     }
@@ -255,7 +255,7 @@ impl TextSvg {
                 shadow.spread,
                 shadow.color)
         } else {
-            "".into()
+            String::new()
         };
         let stroke = if let Some(stroke) = &self.stroke {
             format!(
@@ -263,17 +263,17 @@ impl TextSvg {
                 stroke.color, stroke.size
             )
         } else {
-            "".into()
+            String::new()
         };
         let size = Size::new(1920.0, 1080.0);
-        let font_size = self.font.size as f32;
+        let font_size = f32::from(self.font.size);
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
         let middle_position = size.height / 2.0;
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
         let starting_y_position =
-            middle_position - (half_lines * text_and_line_spacing);
+            half_lines.mul_add(-text_and_line_spacing, middle_position);
 
         let text_pieces: Vec<String> = self
             .text
@@ -282,8 +282,7 @@ impl TextSvg {
             .map(|(index, text)| {
                 format!(
                     "<tspan x=\"50%\" y=\"{}\">{}</tspan>",
-                    starting_y_position
-                        + (index as f32 * text_and_line_spacing),
+                    (index as f32).mul_add(text_and_line_spacing, starting_y_position),
                     text
                 )
             })
@@ -350,7 +349,7 @@ impl TextSvg {
         self.text
             .lines()
             .enumerate()
-            .map(|(i, t)| format!("<tspan x=\"50%\">{}</tspan>", t))
+            .map(|(i, t)| format!("<tspan x=\"50%\">{t}</tspan>"))
             .collect()
     }
 }
@@ -391,7 +390,7 @@ pub fn text_svg_generator(
             .shadow(shadow(2, 2, 5, "#000000"))
             .stroke(stroke(3, "#000"))
             .font(
-                Font::from(slide.font().clone())
+                Font::from(slide.font())
                     .size(slide.font_size().try_into().unwrap()),
             )
             .fontdb(Arc::clone(&fontdb))

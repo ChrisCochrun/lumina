@@ -79,13 +79,13 @@ impl AsMimeTypes for ServiceItem {
 impl From<&ServiceItem> for Value {
     fn from(value: &ServiceItem) -> Self {
         match &value.kind {
-            ServiceItemKind::Song(song) => Value::from(song),
-            ServiceItemKind::Video(video) => Value::from(video),
-            ServiceItemKind::Image(image) => Value::from(image),
+            ServiceItemKind::Song(song) => Self::from(song),
+            ServiceItemKind::Video(video) => Self::from(video),
+            ServiceItemKind::Image(image) => Self::from(image),
             ServiceItemKind::Presentation(presentation) => {
-                Value::from(presentation)
+                Self::from(presentation)
             }
-            ServiceItemKind::Content(slide) => Value::from(slide),
+            ServiceItemKind::Content(slide) => Self::from(slide),
         }
     }
 }
@@ -172,54 +172,51 @@ impl From<&Value> for ServiceItem {
                     } else if let Some(background) =
                         list.get(background_pos)
                     {
-                        match background {
-                            Value::List(item) => match &item[0] {
-                                Value::Symbol(Symbol(s))
-                                    if s == "image" =>
-                                {
-                                    Self::from(&Image::from(
-                                        background,
-                                    ))
-                                }
-                                Value::Symbol(Symbol(s))
-                                    if s == "video" =>
-                                {
-                                    Self::from(&Video::from(
-                                        background,
-                                    ))
-                                }
-                                Value::Symbol(Symbol(s))
-                                    if s == "presentation" =>
-                                {
-                                    Self::from(&Presentation::from(
-                                        background,
-                                    ))
-                                }
-                                _ => todo!(),
-                            },
-                            _ => {
-                                error!(
-                                    "There is no background here: {:?}",
-                                    background
-                                );
-                                ServiceItem::default()
+                        if let Value::List(item) = background { match &item[0] {
+                            Value::Symbol(Symbol(s))
+                                if s == "image" =>
+                            {
+                                Self::from(&Image::from(
+                                    background,
+                                ))
                             }
+                            Value::Symbol(Symbol(s))
+                                if s == "video" =>
+                            {
+                                Self::from(&Video::from(
+                                    background,
+                                ))
+                            }
+                            Value::Symbol(Symbol(s))
+                                if s == "presentation" =>
+                            {
+                                Self::from(&Presentation::from(
+                                    background,
+                                ))
+                            }
+                            _ => todo!(),
+                        } } else {
+                            error!(
+                                "There is no background here: {:?}",
+                                background
+                            );
+                            Self::default()
                         }
                     } else {
                         error!(
                             "There is no background here: {:?}",
                             background_pos
                         );
-                        ServiceItem::default()
+                        Self::default()
                     }
                 }
                 Value::Symbol(Symbol(s)) if s == "song" => {
                     let song = lisp_to_song(list.clone());
                     Self::from(&song)
                 }
-                _ => ServiceItem::default(),
+                _ => Self::default(),
             },
-            _ => ServiceItem::default(),
+            _ => Self::default(),
         }
     }
 }

@@ -57,8 +57,7 @@ impl Content for Video {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map(|f| f.to_string_lossy().to_string())
-                .unwrap_or("Missing video".into())
+                .map_or("Missing video".into(), |f| f.to_string_lossy().to_string())
         } else {
             "Missing video".into()
         }
@@ -90,7 +89,7 @@ impl From<&Value> for Video {
                     let path =
                         p.to_str().unwrap_or_default().to_string();
                     let title =
-                        path.rsplit_once("/").unwrap_or_default().1;
+                        path.rsplit_once('/').unwrap_or_default().1;
                     title.to_string()
                 });
 
@@ -124,8 +123,7 @@ impl From<&Value> for Video {
                     }) {
                     let pos = loop_pos + 1;
                     list.get(pos)
-                        .map(|l| String::from(l) == *"true")
-                        .unwrap_or_default()
+                        .is_some_and(|l| String::from(l) == *"true")
                 } else {
                     false
                 };
@@ -193,14 +191,14 @@ impl Model<Video> {
         let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(db).await;
         match result {
             Ok(v) => {
-                for video in v.into_iter() {
+                for video in v {
                     let _ = self.add_item(video);
                 }
             }
             Err(e) => {
-                error!("There was an error in converting videos: {e}")
+                error!("There was an error in converting videos: {e}");
             }
-        };
+        }
     }
 }
 
@@ -211,7 +209,7 @@ pub async fn update_video_in_db(
     let path = video
         .path
         .to_str()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_default();
     query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,

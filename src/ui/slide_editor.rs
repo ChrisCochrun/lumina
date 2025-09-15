@@ -54,10 +54,10 @@ struct EditorProgram {
 }
 
 impl SlideEditor {
-    pub fn view<'a>(
-        &'a self,
+    pub fn view(
+        &self,
         font: Font,
-    ) -> cosmic::Element<'a, SlideWidget> {
+    ) -> cosmic::Element<'_, SlideWidget> {
         container(
             widget::canvas(&self.program)
                 .height(Length::Fill)
@@ -122,10 +122,10 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         match event {
             canvas::Event::Mouse(event) => match event {
                 cosmic::iced::mouse::Event::CursorEntered => {
-                    debug!("cursor entered")
+                    debug!("cursor entered");
                 }
                 cosmic::iced::mouse::Event::CursorLeft => {
-                    debug!("cursor left")
+                    debug!("cursor left");
                 }
                 cosmic::iced::mouse::Event::CursorMoved {
                     position,
@@ -140,7 +140,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                 }
                 cosmic::iced::mouse::Event::ButtonPressed(button) => {
                     // self.mouse_button_pressed = Some(button);
-                    debug!(?button, "mouse button pressed")
+                    debug!(?button, "mouse button pressed");
                 }
                 cosmic::iced::mouse::Event::ButtonReleased(
                     button,

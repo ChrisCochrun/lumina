@@ -1,6 +1,6 @@
 use clap::{command, Parser};
 use core::service_items::ServiceItem;
-use core::slide::*;
+use core::slide::{Background, Slide, SlideBuilder, TextAlignment, BackgroundKind};
 use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
@@ -233,11 +233,11 @@ impl cosmic::Application for App {
         // }
 
         // nav_model.activate_position(0);
-        let mut app = App {
+        let mut app = Self {
             presenter,
             core,
             nav_model,
-            service: items.clone(),
+            service: items,
             file: PathBuf::default(),
             windows,
             presentation_open: false,
@@ -248,7 +248,7 @@ impl cosmic::Application for App {
             song_editor,
             searching: false,
             search_results: vec![],
-            search_query: "".into(),
+            search_query: String::new(),
             search_id: cosmic::widget::Id::unique(),
             current_item: (0, 0),
             library_dragged_item: None,
@@ -259,11 +259,11 @@ impl cosmic::Application for App {
 
         if input.ui {
             debug!("main view");
-            batch.push(app.update_title())
+            batch.push(app.update_title());
         } else {
             debug!("window view");
-            batch.push(app.show_window())
-        };
+            batch.push(app.show_window());
+        }
 
         batch.push(app.add_library());
         // batch.push(app.add_service(items, Arc::clone(&fontdb)));
@@ -403,7 +403,7 @@ impl cosmic::Application for App {
             .fold(0, |a, item| a + item.slides.len());
 
         let total_slides_text =
-            format!("Total Slides: {}", total_slides);
+            format!("Total Slides: {total_slides}");
         let row = row![
             text::body(total_items_text),
             text::body(total_slides_text)
@@ -635,7 +635,7 @@ impl cosmic::Application for App {
                                             cosmic::Action::App(
                                                 Message::Present(m),
                                             )
-                                        }))
+                                        }));
                                     }
                                     _ => todo!(),
                                 }
@@ -661,7 +661,7 @@ impl cosmic::Application for App {
                                                         m,
                                                     ),
                                                 )
-                                            }))
+                                            }));
                                         }
                                         _ => todo!(),
                                     }
@@ -694,7 +694,7 @@ impl cosmic::Application for App {
                                             cosmic::Action::App(
                                                 Message::Present(m),
                                             )
-                                        }))
+                                        }));
                                     }
                                     _ => todo!(),
                                 }
@@ -735,7 +735,7 @@ impl cosmic::Application for App {
                                                         m,
                                                     ),
                                                 )
-                                            }))
+                                            }));
                                         }
                                         _ => todo!(),
                                     }
@@ -817,7 +817,7 @@ impl cosmic::Application for App {
 
                 self.windows.push(id);
                 _ = self.set_window_title(
-                    format!("window_{}", count),
+                    format!("window_{count}"),
                     id,
                 );
 
@@ -992,7 +992,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::CloseSearch => {
-                self.search_query = "".into();
+                self.search_query = String::new();
                 self.search_results = vec![];
                 self.searching = false;
                 Task::none()

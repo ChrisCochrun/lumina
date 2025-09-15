@@ -50,7 +50,7 @@ impl std::fmt::Display for ServiceItemKind {
 // }
 
 impl From<ServiceItemKind> for String {
-    fn from(val: ServiceItemKind) -> String {
+    fn from(val: ServiceItemKind) -> Self {
         match val {
             ServiceItemKind::Song(_) => "song".to_owned(),
             ServiceItemKind::Video(_) => "video".to_owned(),

@@ -154,7 +154,7 @@ impl Presenter {
             absolute_slide_index: 0,
             total_slides,
             video,
-            audio: items[0].slides[0].audio().clone(),
+            audio: items[0].slides[0].audio(),
             service: items,
             video_position: 0.0,
             hovered_slide: None,
@@ -221,8 +221,7 @@ impl Presenter {
                 let offset = AbsoluteOffset {
                     x: {
                         if self.current_slide_index > 2 {
-                            self.current_slide_index as f32 * 187.5
-                                - 187.5
+                            (self.current_slide_index as f32).mul_add(187.5, -187.5)
                         } else {
                             0.0
                         }
@@ -256,7 +255,7 @@ impl Presenter {
                                     ?current_audio,
                                     "audio needs to change"
                                 );
-                                self.audio = Some(new_audio.clone());
+                                self.audio = Some(new_audio);
                                 tasks.push(self.start_audio());
                             }
                             Some(current_audio) => {
@@ -271,10 +270,10 @@ impl Presenter {
                                     ?new_audio,
                                     "could not find audio, need to change"
                                 );
-                                self.audio = Some(new_audio.clone());
+                                self.audio = Some(new_audio);
                                 tasks.push(self.start_audio());
                             }
-                        };
+                        }
                     } else {
                         self.audio = None;
                         self.update(Message::EndAudio);
@@ -326,7 +325,7 @@ impl Presenter {
                         std::time::Duration::from_secs_f32(position),
                     );
                     match video.seek(position, false) {
-                        Ok(_) => debug!(
+                        Ok(()) => debug!(
                             "Video position changed: {:?}",
                             position
                         ),
@@ -355,7 +354,7 @@ impl Presenter {
                                     install_ctx
                                         .set_desktop_id(&format!("{}.desktop", "org.chriscochrun.lumina"));
                                     let install_detail = missing_plugin.installer_detail();
-                                    println!("installing plugins: {}", install_detail);
+                                    println!("installing plugins: {install_detail}");
                                     let status = gst_pbutils::missing_plugins::install_plugins_sync(
                                         &[&install_detail],
                                         Some(&install_ctx),
@@ -391,7 +390,7 @@ impl Presenter {
             Message::Error(error) => {
                 error!(error);
             }
-        };
+        }
         Action::None
     }
 
@@ -641,7 +640,7 @@ impl Presenter {
                             v.set_looping(
                                 self.current_slide.video_loop(),
                             );
-                            self.video = Some(v)
+                            self.video = Some(v);
                         }
                         Err(e) => {
                             error!(
@@ -664,7 +663,7 @@ impl Presenter {
             let audio = audio.clone();
             Task::perform(
                 start_audio(Arc::clone(&self.sink.1), audio),
-                |_| Message::None,
+                |()| Message::None,
             )
         } else {
             debug!(?self.audio, "Apparently this doesn't exist");

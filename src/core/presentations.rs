@@ -75,8 +75,7 @@ impl Content for Presentation {
         if self.path.exists() {
             self.path
                 .file_name()
-                .map(|f| f.to_string_lossy().to_string())
-                .unwrap_or("Missing presentation".into())
+                .map_or("Missing presentation".into(), |f| f.to_string_lossy().to_string())
         } else {
             "Missing presentation".into()
         }
@@ -190,14 +189,14 @@ impl ServiceTrait for Presentation {
 }
 
 impl Presentation {
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         Self {
-            title: "".to_string(),
+            title: String::new(),
             ..Default::default()
         }
     }
 
-    pub fn get_kind(&self) -> &PresKind {
+    #[must_use] pub const fn get_kind(&self) -> &PresKind {
         &self.kind
     }
 }
@@ -240,7 +239,7 @@ impl Model<Presentation> {
             .await;
         match result {
             Ok(v) => {
-                for presentation in v.into_iter() {
+                for presentation in v {
                     let _ = self.add_item(Presentation {
                         id: presentation.id,
                         title: presentation.title,
@@ -267,7 +266,7 @@ pub async fn update_presentation_in_db(
     let path = presentation
         .path
         .to_str()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     query!(
