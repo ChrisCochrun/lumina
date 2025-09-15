@@ -1,12 +1,13 @@
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
+use mupdf::{Document, Page};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
     Row, Sqlite, SqliteConnection, SqlitePool,
 };
-use std::path::PathBuf;
-use tracing::error;
+use std::{path::PathBuf, sync::Arc};
+use tracing::{debug, error};
 
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
@@ -27,14 +28,23 @@ pub enum PresKind {
     Generic,
 }
 
-#[derive(
-    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Presentation {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
     pub kind: PresKind,
+}
+
+impl Eq for Presentation {}
+
+impl PartialEq for Presentation {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.title == other.title
+            && self.path == other.path
+            && self.kind == other.kind
+    }
 }
 
 impl From<&Presentation> for Value {
@@ -117,22 +127,36 @@ impl ServiceTrait for Presentation {
     }
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
-        let slide = SlideBuilder::new()
-            .background(
-                Background::try_from(self.path.clone())
-                    .into_diagnostic()?,
-            )
-            .text("")
-            .audio("")
-            .font("")
-            .font_size(50)
-            .text_alignment(TextAlignment::MiddleCenter)
-            .video_loop(false)
-            .video_start_time(0.0)
-            .video_end_time(0.0)
-            .build()?;
-
-        Ok(vec![slide])
+        debug!(?self);
+        let background = Background::try_from(self.path.clone())
+            .into_diagnostic()?;
+        debug!(?background);
+        let doc = Document::open(background.path.as_path())
+            .into_diagnostic()?;
+        debug!(?doc);
+        let pages = doc.page_count().into_diagnostic()?;
+        debug!(?pages);
+        let mut slides: Vec<Slide> = vec![];
+        for page in 0..pages {
+            let slide = SlideBuilder::new()
+                .background(
+                    Background::try_from(self.path.clone())
+                        .into_diagnostic()?,
+                )
+                .text("")
+                .audio("")
+                .font("")
+                .font_size(50)
+                .text_alignment(TextAlignment::MiddleCenter)
+                .video_loop(false)
+                .video_start_time(0.0)
+                .video_end_time(0.0)
+                .pdf_index(page as u32)
+                .build()?;
+            slides.push(slide);
+        }
+        debug!(?slides);
+        Ok(slides)
     }
 
     fn box_clone(&self) -> Box<dyn ServiceTrait> {

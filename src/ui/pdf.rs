@@ -11,26 +11,42 @@ use miette::Severity;
 use mupdf::Colorspace;
 use mupdf::Document;
 use mupdf::Matrix;
-use mupdf::Page;
+use tracing::debug;
+use tracing::error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PdfViewer {
     document: Option<Document>,
-    pages: Option<Vec<Page>>,
-    current_page: Option<Page>,
+    pages: Option<Vec<Handle>>,
+    current_page: Option<Handle>,
     current_index: usize,
-    handle: Option<Handle>,
 }
 
-enum Message {}
+pub enum Message {}
 
 impl PdfViewer {
     pub fn with_pdf(pdf: impl AsRef<Path>) -> Result<Self> {
         let pdf_path = pdf.as_ref();
         let document = Document::open(pdf_path).into_diagnostic()?;
         let pages = document.pages().into_diagnostic()?;
-        let pages: Vec<Page> =
-            pages.filter_map(|page| page.ok()).collect();
+        let pages: Vec<Handle> = pages
+            .filter_map(|page| {
+                let Some(page) = page.ok() else {
+                    return None;
+                };
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let Ok(pixmap) = page
+                    .to_pixmap(&matrix, &colorspace, true, true)
+                    .into_diagnostic()
+                else {
+                    error!("Can't turn this page into pixmap");
+                    return None;
+                };
+                let handle = pixmap.samples().to_vec();
+                Some(Handle::from_bytes(handle))
+            })
+            .collect();
         let Some(page) = document.pages().into_diagnostic()?.next()
         else {
             return Err(miette::miette!(
@@ -48,9 +64,8 @@ impl PdfViewer {
         Ok(Self {
             document: Some(document),
             pages: Some(pages),
-            current_page: Some(page),
             current_index: 0,
-            handle: Some(Handle::from_bytes(handle)),
+            current_page: Some(Handle::from_bytes(handle)),
         })
     }
 
@@ -61,8 +76,29 @@ impl PdfViewer {
         let pdf_path = pdf.as_ref();
         let document = Document::open(pdf_path).into_diagnostic()?;
         let pages = document.pages().into_diagnostic()?;
-        let pages: Vec<Page> =
-            pages.filter_map(|page| page.ok()).collect();
+
+        let pages: Vec<Handle> = pages
+            .filter_map(|page| {
+                let Some(page) = page.ok() else {
+                    return None;
+                };
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let Ok(pixmap) = page
+                    .to_pixmap(&matrix, &colorspace, true, true)
+                    .into_diagnostic()
+                else {
+                    error!("Can't turn this page into pixmap");
+                    return None;
+                };
+                debug!(?pixmap);
+                Some(Handle::from_rgba(
+                    pixmap.width(),
+                    pixmap.height(),
+                    pixmap.samples().to_vec(),
+                ))
+            })
+            .collect();
         let Some(page) = document.pages().into_diagnostic()?.next()
         else {
             return Err(miette::miette!(
@@ -70,18 +106,11 @@ impl PdfViewer {
                 "There isn't a first page here"
             ));
         };
-        let page = page.into_diagnostic()?;
-        let matrix = Matrix::IDENTITY;
-        let colorspace = Colorspace::device_rgb();
-        let pixmap = page
-            .to_pixmap(&matrix, &colorspace, true, true)
-            .into_diagnostic()?;
-        let handle = pixmap.samples().to_vec();
+        self.current_page = pages.get(0).map(|h| h.to_owned());
         self.document = Some(document);
         self.pages = Some(pages);
-        self.current_page = Some(page);
         self.current_index = 0;
-        self.handle = Some(Handle::from_bytes(handle));
+        debug!(?self);
         Ok(())
     }
 
@@ -92,15 +121,8 @@ impl PdfViewer {
         let Some(page) = pages.get(self.current_index + 1) else {
             return Err(miette::miette!("There isn't a next page"));
         };
-        let matrix = Matrix::IDENTITY;
-        let colorspace = Colorspace::device_rgb();
-        let pixmap = page
-            .to_pixmap(&matrix, &colorspace, true, true)
-            .into_diagnostic()?;
-        let handle = pixmap.samples().to_vec();
         self.current_page = Some(page.to_owned());
         self.current_index += 1;
-        self.handle = Some(Handle::from_bytes(handle));
         Ok(())
     }
 
@@ -116,20 +138,16 @@ impl PdfViewer {
                 "There isn't a previous page"
             ));
         };
-        let matrix = Matrix::IDENTITY;
-        let colorspace = Colorspace::device_rgb();
-        let pixmap = page
-            .to_pixmap(&matrix, &colorspace, true, true)
-            .into_diagnostic()?;
-        let handle = pixmap.samples().to_vec();
         self.current_page = Some(page.to_owned());
         self.current_index -= 1;
-        self.handle = Some(Handle::from_bytes(handle));
         Ok(())
     }
 
-    pub fn view(&self) -> Option<Element<Message>> {
-        let Some(handle) = self.handle.clone() else {
+    pub fn view(&self, index: u32) -> Option<Element<Message>> {
+        let Some(pages) = &self.pages else {
+            return None;
+        };
+        let Some(handle) = pages.get(index as usize) else {
             return None;
         };
         Some(

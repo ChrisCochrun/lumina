@@ -11,7 +11,10 @@ use std::{
 };
 use tracing::error;
 
-use crate::ui::text_svg::{self, TextSvg};
+use crate::ui::{
+    pdf::PdfViewer,
+    text_svg::{self, TextSvg},
+};
 
 use super::songs::Song;
 
@@ -29,6 +32,7 @@ pub struct Slide {
     video_loop: bool,
     video_start_time: f32,
     video_end_time: f32,
+    pdf_index: u32,
     #[serde(skip)]
     pub text_svg: Option<TextSvg>,
 }
@@ -40,6 +44,8 @@ pub enum BackgroundKind {
     #[default]
     Image,
     Video,
+    Pdf,
+    Html,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -157,15 +163,21 @@ impl TryFrom<PathBuf> for Background {
                     .to_str()
                     .unwrap_or_default();
                 match extension {
-                    "jpeg" | "jpg" | "png" | "webp" | "html" => {
-                        Ok(Self {
-                            path: value,
-                            kind: BackgroundKind::Image,
-                        })
-                    }
+                    "jpeg" | "jpg" | "png" | "webp" => Ok(Self {
+                        path: value,
+                        kind: BackgroundKind::Image,
+                    }),
                     "mp4" | "mkv" | "webm" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Video,
+                    }),
+                    "pdf" => Ok(Self {
+                        path: value,
+                        kind: BackgroundKind::Pdf,
+                    }),
+                    "html" => Ok(Self {
+                        path: value,
+                        kind: BackgroundKind::Html,
                     }),
                     _ => Err(ParseError::NonBackgroundFile),
                 }
@@ -281,6 +293,11 @@ impl Slide {
         self
     }
 
+    pub fn set_pdf_index(mut self, pdf_index: u32) -> Self {
+        self.pdf_index = pdf_index;
+        self
+    }
+
     pub fn background(&self) -> &Background {
         &self.background
     }
@@ -307,6 +324,10 @@ impl Slide {
 
     pub fn audio(&self) -> Option<PathBuf> {
         self.audio.clone()
+    }
+
+    pub fn pdf_index(&self) -> u32 {
+        self.pdf_index
     }
 
     pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
@@ -524,6 +545,7 @@ pub struct SlideBuilder {
     video_loop: Option<bool>,
     video_start_time: Option<f32>,
     video_end_time: Option<f32>,
+    pdf_index: Option<u32>,
     #[serde(skip)]
     text_svg: Option<TextSvg>,
 }
@@ -607,6 +629,14 @@ impl SlideBuilder {
         self
     }
 
+    pub(crate) fn pdf_index(
+        mut self,
+        pdf_index: impl Into<u32>,
+    ) -> Self {
+        let _ = self.pdf_index.insert(pdf_index.into());
+        self
+    }
+
     pub(crate) fn build(self) -> Result<Slide> {
         let Some(background) = self.background else {
             return Err(miette!("No background"));
@@ -643,6 +673,7 @@ impl SlideBuilder {
             video_start_time,
             video_end_time,
             text_svg: self.text_svg,
+            pdf_index: self.pdf_index.unwrap_or_default(),
             ..Default::default()
         })
     }

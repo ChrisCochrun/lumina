@@ -3,6 +3,7 @@
 (slide (video :source "~/vids/test/camprules2024.mp4" :fit contain))
 ;; (slide (video :source "~/vids/never give up.mkv" :fit contain))
 ;; (slide (video :source "~/vids/The promise of Rust.mkv" :fit contain))
+(slide :background (presentation :source "~/docs/description-of-a-discipled-person-assessment-2016.pdf" :fit contain))
 (song :id 7 :author "North Point Worship"
       :font "Quicksand" :font-size 120
       :shadow "" :stroke ""

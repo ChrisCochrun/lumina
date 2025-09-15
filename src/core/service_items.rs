@@ -318,8 +318,8 @@ impl From<&Image> for ServiceItem {
 
 impl From<&Presentation> for ServiceItem {
     fn from(presentation: &Presentation) -> Self {
-        if let Ok(slides) = presentation.to_slides() {
-            Self {
+        match presentation.to_slides() {
+            Ok(slides) => Self {
                 kind: ServiceItemKind::Presentation(
                     presentation.clone(),
                 ),
@@ -327,15 +327,17 @@ impl From<&Presentation> for ServiceItem {
                 title: presentation.title.clone(),
                 slides: slides.into(),
                 ..Default::default()
-            }
-        } else {
-            Self {
-                kind: ServiceItemKind::Presentation(
-                    presentation.clone(),
-                ),
-                database_id: presentation.id,
-                title: presentation.title.clone(),
-                ..Default::default()
+            },
+            Err(e) => {
+                error!(?e);
+                Self {
+                    kind: ServiceItemKind::Presentation(
+                        presentation.clone(),
+                    ),
+                    database_id: presentation.id,
+                    title: presentation.title.clone(),
+                    ..Default::default()
+                }
             }
         }
     }
