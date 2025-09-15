@@ -258,7 +258,7 @@ impl From<&Song> for ServiceItem {
                 kind: ServiceItemKind::Song(song.clone()),
                 database_id: song.id,
                 title: song.title.clone(),
-                slides: slides,
+                slides,
                 ..Default::default()
             }
         } else {
@@ -279,7 +279,7 @@ impl From<&Video> for ServiceItem {
                 kind: ServiceItemKind::Video(video.clone()),
                 database_id: video.id,
                 title: video.title.clone(),
-                slides: slides,
+                slides,
                 ..Default::default()
             }
         } else {
@@ -300,7 +300,7 @@ impl From<&Image> for ServiceItem {
                 kind: ServiceItemKind::Image(image.clone()),
                 database_id: image.id,
                 title: image.title.clone(),
-                slides: slides,
+                slides,
                 ..Default::default()
             }
         } else {
@@ -323,7 +323,7 @@ impl From<&Presentation> for ServiceItem {
                 ),
                 database_id: presentation.id,
                 title: presentation.title.clone(),
-                slides: slides,
+                slides,
                 ..Default::default()
             },
             Err(e) => {

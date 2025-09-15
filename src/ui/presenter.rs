@@ -10,11 +10,13 @@ use cosmic::{
     iced_widget::{
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
-        }, stack, vertical_rule,
+        },
+        stack, vertical_rule,
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, text, Container, Id, Row, Space,
+        container, image, mouse_area, responsive, scrollable, text,
+        Container, Id, Row, Space,
     },
     Task,
 };
