@@ -1,6 +1,7 @@
+use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
-use mupdf::{Document, Page};
+use mupdf::{Colorspace, Document, Matrix, Page};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
@@ -131,13 +132,36 @@ impl ServiceTrait for Presentation {
         let background = Background::try_from(self.path.clone())
             .into_diagnostic()?;
         debug!(?background);
-        let doc = Document::open(background.path.as_path())
+        let document = Document::open(background.path.as_path())
             .into_diagnostic()?;
-        debug!(?doc);
-        let pages = doc.page_count().into_diagnostic()?;
+        debug!(?document);
+        let pages = document.pages().into_diagnostic()?;
         debug!(?pages);
+        let pages: Vec<Handle> = pages
+            .filter_map(|page| {
+                let Some(page) = page.ok() else {
+                    return None;
+                };
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let Ok(pixmap) = page
+                    .to_pixmap(&matrix, &colorspace, true, true)
+                    .into_diagnostic()
+                else {
+                    error!("Can't turn this page into pixmap");
+                    return None;
+                };
+                debug!(?pixmap);
+                Some(Handle::from_rgba(
+                    pixmap.width(),
+                    pixmap.height(),
+                    pixmap.samples().to_vec(),
+                ))
+            })
+            .collect();
+
         let mut slides: Vec<Slide> = vec![];
-        for page in 0..pages {
+        for (index, page) in pages.into_iter().enumerate() {
             let slide = SlideBuilder::new()
                 .background(
                     Background::try_from(self.path.clone())
@@ -151,7 +175,8 @@ impl ServiceTrait for Presentation {
                 .video_loop(false)
                 .video_start_time(0.0)
                 .video_end_time(0.0)
-                .pdf_index(page as u32)
+                .pdf_index(index as u32)
+                .pdf_page(page)
                 .build()?;
             slides.push(slide);
         }

@@ -1,3 +1,4 @@
+use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
@@ -33,6 +34,8 @@ pub struct Slide {
     video_start_time: f32,
     video_end_time: f32,
     pdf_index: u32,
+    #[serde(skip)]
+    pdf_page: Option<Handle>,
     #[serde(skip)]
     pub text_svg: Option<TextSvg>,
 }
@@ -326,6 +329,10 @@ impl Slide {
         self.audio.clone()
     }
 
+    pub fn pdf_page(&self) -> Option<Handle> {
+        self.pdf_page.clone()
+    }
+
     pub fn pdf_index(&self) -> u32 {
         self.pdf_index
     }
@@ -547,6 +554,8 @@ pub struct SlideBuilder {
     video_end_time: Option<f32>,
     pdf_index: Option<u32>,
     #[serde(skip)]
+    pdf_page: Option<Handle>,
+    #[serde(skip)]
     text_svg: Option<TextSvg>,
 }
 
@@ -629,6 +638,11 @@ impl SlideBuilder {
         self
     }
 
+    pub(crate) fn pdf_page(mut self, pdf_page: Handle) -> Self {
+        let _ = self.pdf_page.insert(pdf_page);
+        self
+    }
+
     pub(crate) fn pdf_index(
         mut self,
         pdf_index: impl Into<u32>,
@@ -674,6 +688,7 @@ impl SlideBuilder {
             video_end_time,
             text_svg: self.text_svg,
             pdf_index: self.pdf_index.unwrap_or_default(),
+            pdf_page: self.pdf_page,
             ..Default::default()
         })
     }

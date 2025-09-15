@@ -53,7 +53,6 @@ pub(crate) struct Presenter {
     hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
-    pdf_viewer: PdfViewer,
 }
 
 pub(crate) enum Action {
@@ -174,7 +173,6 @@ impl Presenter {
             },
             scroll_id: Id::unique(),
             current_font: cosmic::font::default(),
-            pdf_viewer: PdfViewer::default(),
         }
     }
 
@@ -223,11 +221,6 @@ impl Presenter {
                         let _ = video.restart_stream();
                     }
                     self.reset_video();
-                }
-
-                if slide.background().kind == BackgroundKind::Pdf {
-                    self.pdf_viewer
-                        .insert_pdf(&slide.background().path);
                 }
 
                 let offset = AbsoluteOffset {
@@ -411,7 +404,6 @@ impl Presenter {
         slide_view(
             &self.current_slide,
             &self.video,
-            &self.pdf_viewer,
             self.current_font,
             false,
             true,
@@ -422,7 +414,6 @@ impl Presenter {
         slide_view(
             &self.current_slide,
             &self.video,
-            &self.pdf_viewer,
             self.current_font,
             false,
             false,
@@ -459,7 +450,6 @@ impl Presenter {
                         let container = slide_view(
                             &slide,
                             &self.video,
-                            &self.pdf_viewer,
                             font,
                             true,
                             false,
@@ -722,7 +712,6 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
     video: &'a Option<Video>,
-    pdf_viewer: &'a PdfViewer,
     font: Font,
     delegate: bool,
     hide_mouse: bool,
@@ -799,17 +788,26 @@ pub(crate) fn slide_view<'a>(
                     Container::new(Space::new(0, 0))
                 }
             }
-            BackgroundKind::Pdf => Container::new(
-                if let Some(pdf) = pdf_viewer.view(slide.pdf_index())
-                {
-                    pdf.map(|_| Message::None)
+            BackgroundKind::Pdf => {
+                if let Some(pdf) = slide.pdf_page() {
+                    Container::new(
+                        image(pdf)
+                            .content_fit(ContentFit::Cover)
+                            .width(width)
+                            .height(size.height),
+                    )
+                    .center_x(width)
+                    .center_y(size.height)
+                    .clip(true)
+                    .into()
                 } else {
-                    Space::new(0.0, 0.0).into()
-                },
-            )
-            .center_x(width)
-            .center_y(size.height)
-            .clip(true),
+                    Container::new(Space::new(0.0, 0.0))
+                        .center_x(width)
+                        .center_y(size.height)
+                        .clip(true)
+                        .into()
+                }
+            }
             BackgroundKind::Html => todo!(),
         };
         let stack = stack!(

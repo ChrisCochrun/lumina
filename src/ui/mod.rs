@@ -2,7 +2,6 @@ use crate::core::model::LibraryKind;
 
 pub mod double_ended_slider;
 pub mod library;
-pub mod pdf;
 pub mod presenter;
 pub mod slide_editor;
 pub mod song_editor;
