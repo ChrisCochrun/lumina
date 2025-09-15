@@ -1,13 +1,13 @@
 use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
-use mupdf::{Colorspace, Document, Matrix, Page};
+use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
     Row, Sqlite, SqliteConnection, SqlitePool,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 use tracing::{debug, error};
 
 use crate::{Background, Slide, SlideBuilder, TextAlignment};

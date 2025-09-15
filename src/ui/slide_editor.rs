@@ -2,11 +2,10 @@ use std::{io, path::PathBuf};
 
 use cosmic::{
     iced::{Color, Font, Length, Size},
-    prelude::*,
     widget::{
         self,
         canvas::{self, Program, Stroke},
-        container, Canvas,
+        container,
     },
     Renderer,
 };

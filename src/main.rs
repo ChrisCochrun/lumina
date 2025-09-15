@@ -7,7 +7,7 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Color, Length, Point};
+use cosmic::iced::{self, event, window, Length, Point};
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
@@ -40,7 +40,7 @@ use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
-use crate::ui::text_svg::{self, shadow, stroke, TextSvg};
+use crate::ui::text_svg::{self};
 
 pub mod core;
 pub mod lisp;
@@ -985,7 +985,7 @@ impl cosmic::Application for App {
             }
             Message::Search(query) => {
                 self.search_query = query.clone();
-                return self.search(query);
+                self.search(query)
             }
             Message::UpdateSearchResults(items) => {
                 self.search_results = items;
@@ -1206,14 +1206,14 @@ where
 
     fn search(&self, query: String) -> Task<Message> {
         if let Some(library) = self.library.clone() {
-            return Task::perform(
+            Task::perform(
                 async move { library.search_items(query).await },
                 |items| {
                     cosmic::Action::App(Message::UpdateSearchResults(
                         items,
                     ))
                 },
-            );
+            )
         } else {
             Task::none()
         }
@@ -1378,7 +1378,7 @@ where
             .data_received_for::<ServiceItem>(|item| {
                 item.map_or_else(
                     || Message::None,
-                    |item| Message::AppendServiceItem(item),
+                    Message::AppendServiceItem,
                 )
             })
             .on_finish(
@@ -1396,7 +1396,7 @@ where
         ]
         .padding(10)
         .spacing(10);
-        let mut container = Container::new(column)
+        let container = Container::new(column)
             // .height(Length::Fill)
             .style(nav_bar_style);
 

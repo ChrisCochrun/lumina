@@ -264,7 +264,8 @@ impl<'a> Library {
         let video_library = self.library_item(&self.video_library);
         let presentation_library =
             self.library_item(&self.presentation_library);
-        let column = column![
+        
+        column![
             text::heading("Library").center().width(Length::Fill),
             cosmic::iced::widget::horizontal_rule(1),
             song_library,
@@ -275,8 +276,7 @@ impl<'a> Library {
         .height(Length::Fill)
         .padding(10)
         .spacing(10)
-        .into();
-        column
+        .into()
     }
 
     pub fn library_item<T>(
@@ -481,25 +481,23 @@ impl<'a> Library {
                         .accent_text_color()
                         .into()
                 }
-            } else {
-                if let Some((library, selected)) = self.selected_item
+            } else if let Some((library, selected)) = self.selected_item
+            {
+                if model.kind == library
+                    && selected == index as i32
                 {
-                    if model.kind == library
-                        && selected == index as i32
-                    {
-                        theme::active().cosmic().control_0().into()
-                    } else {
-                        theme::active()
-                            .cosmic()
-                            .destructive_text_color()
-                            .into()
-                    }
+                    theme::active().cosmic().control_0().into()
                 } else {
                     theme::active()
                         .cosmic()
                         .destructive_text_color()
                         .into()
                 }
+            } else {
+                theme::active()
+                    .cosmic()
+                    .destructive_text_color()
+                    .into()
             };
             text::body(elide_text(item.subtext(), size.width))
                 .center()
@@ -529,20 +527,18 @@ impl<'a> Library {
                             && selected == index as i32
                         {
                             t.cosmic().accent.selected.into()
-                        } else {
-                            if let Some((library, hovered)) =
-                                self.hovered_item
+                        } else if let Some((library, hovered)) =
+                            self.hovered_item
+                        {
+                            if model.kind == library
+                                && hovered == index as i32
                             {
-                                if model.kind == library
-                                    && hovered == index as i32
-                                {
-                                    t.cosmic().button.hover.into()
-                                } else {
-                                    t.cosmic().button.base.into()
-                                }
+                                t.cosmic().button.hover.into()
                             } else {
                                 t.cosmic().button.base.into()
                             }
+                        } else {
+                            t.cosmic().button.base.into()
                         }
                     } else if let Some((library, hovered)) =
                         self.hovered_item

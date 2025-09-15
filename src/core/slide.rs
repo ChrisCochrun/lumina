@@ -3,19 +3,14 @@ use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use miette::{miette, Result};
-use resvg::usvg::fontdb;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 use tracing::error;
 
-use crate::ui::{
-    pdf::PdfViewer,
-    text_svg::{self, TextSvg},
-};
+use crate::ui::text_svg::TextSvg;
 
 use super::songs::Song;
 
@@ -310,7 +305,7 @@ impl Slide {
     }
 
     pub fn text_alignment(&self) -> TextAlignment {
-        self.text_alignment.clone()
+        self.text_alignment
     }
 
     pub fn font_size(&self) -> i32 {

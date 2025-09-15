@@ -1,7 +1,6 @@
 use std::{
     fmt::Display,
     hash::{Hash, Hasher},
-    io::Read,
     path::PathBuf,
     sync::Arc,
 };
@@ -13,7 +12,7 @@ use cosmic::{
         ContentFit, Length, Size,
     },
     prelude::*,
-    widget::{container, image::Handle, Image},
+    widget::{image::Handle, Image},
 };
 use rapidhash::v3::rapidhash_v3;
 use resvg::{
@@ -312,7 +311,7 @@ impl TextSvg {
 
         debug!("text string built...");
         let resvg_tree = Tree::from_data(
-            &final_svg.as_bytes(),
+            final_svg.as_bytes(),
             &resvg::usvg::Options {
                 fontdb: Arc::clone(&self.fontdb),
                 ..Default::default()
@@ -385,7 +384,7 @@ pub fn text_svg_generator(
     slide: &mut crate::core::slide::Slide,
     fontdb: Arc<fontdb::Database>,
 ) {
-    if slide.text().len() > 0 {
+    if !slide.text().is_empty() {
         let text_svg = TextSvg::new(slide.text())
             .alignment(slide.text_alignment())
             .fill("#fff")

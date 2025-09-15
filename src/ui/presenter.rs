@@ -3,23 +3,18 @@ use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
 use cosmic::{
     iced::{
-        alignment::Horizontal,
-        border,
         font::{Family, Stretch, Style, Weight},
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
     },
     iced_widget::{
-        rich_text,
         scrollable::{
             scroll_to, AbsoluteOffset, Direction, Scrollbar,
-        },
-        span, stack, vertical_rule,
+        }, stack, vertical_rule,
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Column, Container, Id, Image, Row, Space,
+        container, image, mouse_area, responsive, scrollable, text, Container, Id, Row, Space,
     },
     Task,
 };
@@ -32,8 +27,6 @@ use crate::{
     core::{service_items::ServiceItem, slide::Slide},
     BackgroundKind,
 };
-
-use crate::ui::pdf::PdfViewer;
 
 const REFERENCE_WIDTH: f32 = 1920.0;
 const REFERENCE_HEIGHT: f32 = 1080.0;
@@ -448,7 +441,7 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            &slide,
+                            slide,
                             &self.video,
                             font,
                             true,
@@ -799,13 +792,11 @@ pub(crate) fn slide_view<'a>(
                     .center_x(width)
                     .center_y(size.height)
                     .clip(true)
-                    .into()
                 } else {
                     Container::new(Space::new(0.0, 0.0))
                         .center_x(width)
                         .center_y(size.height)
                         .clip(true)
-                        .into()
                 }
             }
             BackgroundKind::Html => todo!(),

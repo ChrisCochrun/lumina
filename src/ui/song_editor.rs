@@ -10,8 +10,7 @@ use cosmic::{
     iced_widget::row,
     theme,
     widget::{
-        button, column, combo_box, container, horizontal_space, icon,
-        scrollable, text, text_editor, text_input,
+        button, column, combo_box, container, horizontal_space, icon, text, text_editor, text_input,
     },
     Element, Task,
 };
@@ -21,11 +20,10 @@ use tracing::{debug, error};
 
 use crate::{
     core::{service_items::ServiceTrait, songs::Song},
-    ui::slide_editor::{self, SlideEditor},
+    ui::slide_editor::SlideEditor,
     Background, BackgroundKind,
 };
 
-use super::presenter::slide_view;
 
 #[derive(Debug)]
 pub struct SongEditor {
@@ -329,7 +327,6 @@ impl SongEditor {
         self.slide_state
             .view(Font::with_name("Quicksand Bold"))
             .map(|_s| Message::None)
-            .into()
     }
 
     fn left_column(&self) -> Element<Message> {
