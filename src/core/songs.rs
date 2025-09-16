@@ -1,15 +1,15 @@
 use std::{collections::HashMap, option::Option, path::PathBuf};
 
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{IntoDiagnostic, Result, miette};
+use miette::{miette, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
-    pool::PoolConnection, query, sqlite::SqliteRow,
+    pool::PoolConnection, query, sqlite::SqliteRow, Acquire, FromRow,
+    Row, Sqlite, SqliteConnection, SqlitePool,
 };
 use tracing::error;
 
-use crate::{Slide, SlideBuilder, core::slide};
+use crate::{core::slide, Slide, SlideBuilder};
 
 use super::{
     content::Content,
@@ -406,6 +406,19 @@ impl Model<Song> {
                 error!("There was an error in converting songs: {e}");
             }
         }
+    }
+
+    pub async fn remove_from_db(
+        &mut self,
+        db: &mut SqlitePool,
+        id: i32,
+    ) -> Result<()> {
+        let db = db.acquire().await.expect("probs");
+        query!("delete from songs where id = $1", id)
+            .execute(&mut db.detach())
+            .await
+            .into_diagnostic()
+            .map(|_| ())
     }
 }
 

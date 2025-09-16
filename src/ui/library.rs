@@ -1,34 +1,34 @@
 use std::collections::HashMap;
 
 use cosmic::{
+    Element, Task,
     iced::{
-        alignment::Vertical, clipboard::dnd::DndAction,
-        futures::FutureExt, Background, Border, Color, Length,
+        Background, Border, Color, Length, alignment::Vertical,
+        clipboard::dnd::DndAction, futures::FutureExt,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        button, container, context_menu, horizontal_space, icon,
+        Container, DndSource, Space, button, container, context_menu,
+        horizontal_space, icon,
         menu::{self, Action as MenuAction},
         mouse_area, responsive, row, scrollable, text, text_input,
-        Container, DndSource, Space,
     },
-    Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
+use sqlx::{Sqlite, SqlitePool, pool::PoolConnection};
 use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{update_image_in_db, Image},
+    images::{Image, update_image_in_db},
     model::{LibraryKind, Model},
-    presentations::{update_presentation_in_db, Presentation},
+    presentations::{Presentation, update_presentation_in_db},
     service_items::ServiceItem,
-    songs::{update_song_in_db, Song},
-    videos::{update_video_in_db, Video},
+    songs::{Song, update_song_in_db},
+    videos::{Video, update_video_in_db},
 };
 
 #[derive(Debug, Clone)]
@@ -132,11 +132,34 @@ impl<'a> Library {
             Message::None => (),
             Message::DeleteItem((kind, index)) => {
                 match kind {
-                    LibraryKind::Song => todo!(),
-                    LibraryKind::Video => todo!(),
-                    LibraryKind::Image => todo!(),
+                    LibraryKind::Song => {
+                        if let Err(e) =
+                            self.song_library.remove_item(index)
+                        {
+                            error!(?e);
+                        }
+                    }
+                    LibraryKind::Video => {
+                        if let Err(e) =
+                            self.video_library.remove_item(index)
+                        {
+                            error!(?e);
+                        }
+                    }
+                    LibraryKind::Image => {
+                        if let Err(e) =
+                            self.image_library.remove_item(index)
+                        {
+                            error!(?e);
+                        }
+                    }
                     LibraryKind::Presentation => {
-                        self.presentation_library.remove_item(index);
+                        if let Err(e) = self
+                            .presentation_library
+                            .remove_item(index)
+                        {
+                            error!(?e);
+                        }
                     }
                 };
             }
