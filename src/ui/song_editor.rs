@@ -1,27 +1,28 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    Element, Task,
     dialog::file_chooser::open::Dialog,
     iced::{
-        Font, Length,
         font::{Family, Stretch, Style, Weight},
+        Font, Length,
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::row,
     theme,
     widget::{
         button, column, combo_box, container, horizontal_space, icon,
-        text, text_editor, text_input,
+        scrollable, text, text_editor, text_input,
     },
+    Element, Task,
 };
 use dirs::font_dir;
 use iced_video_player::Video;
 use tracing::{debug, error};
 
 use crate::{
-    Background, BackgroundKind, core::songs::Song,
-    ui::slide_editor::SlideEditor,
+    core::{service_items::ServiceTrait, songs::Song},
+    ui::{presenter::slide_view, slide_editor::SlideEditor},
+    Background, BackgroundKind,
 };
 
 #[derive(Debug)]
@@ -282,49 +283,48 @@ impl SongEditor {
     }
 
     fn slide_preview(&self) -> Element<Message> {
-        // if let Some(song) = &self.song {
-        //     if let Ok(slides) = song.to_slides() {
-        //         let slides = slides
-        //             .iter()
-        //             .enumerate()
-        //             .map(|(index, slide)| {
-        //                 container(
-        //                     slide_view(
-        //                         slide.clone(),
-        //                         if index == 0 {
-        //                             &self.video
-        //                         } else {
-        //                             &None
-        //                         },
-        //                         self.current_font,
-        //                         false,
-        //                         false,
-        //                     )
-        //                     .map(|_| Message::None),
-        //                 )
-        //                 .height(250)
-        //                 .center_x(Length::Fill)
-        //                 .padding([0, 20])
-        //                 .clip(true)
-        //                 .into()
-        //             })
-        //             .collect();
-        //         scrollable(
-        //             column::with_children(slides)
-        //                 .spacing(theme::active().cosmic().space_l()),
-        //         )
-        //         .height(Length::Fill)
-        //         .width(Length::Fill)
-        //         .into()
-        //     } else {
-        //         horizontal_space().into()
-        //     }
-        // } else {
-        //     horizontal_space().into()
-        // }
-        self.slide_state
-            .view(Font::with_name("Quicksand Bold"))
-            .map(|_s| Message::None)
+        if let Some(song) = &self.song {
+            if let Ok(slides) = song.to_slides() {
+                let slides: Vec<Element<Message>> = slides
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, slide)| {
+                        container(
+                            slide_view(
+                                slide,
+                                if index == 0 {
+                                    &self.video
+                                } else {
+                                    &None
+                                },
+                                false,
+                                false,
+                            )
+                            .map(|_| Message::None),
+                        )
+                        .height(250)
+                        .center_x(Length::Fill)
+                        .padding([0, 20])
+                        .clip(true)
+                        .into()
+                    })
+                    .collect();
+                scrollable(
+                    column::with_children(slides)
+                        .spacing(theme::active().cosmic().space_l()),
+                )
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .into()
+            } else {
+                horizontal_space().into()
+            }
+        } else {
+            horizontal_space().into()
+        }
+        // self.slide_state
+        //     .view(Font::with_name("Quicksand Bold"))
+        //     .map(|_s| Message::None)
     }
 
     fn left_column(&self) -> Element<Message> {

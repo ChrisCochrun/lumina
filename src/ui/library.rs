@@ -19,7 +19,7 @@ use cosmic::{
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
+use sqlx::{migrate, pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{
@@ -33,7 +33,7 @@ use crate::core::{
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct Library {
+pub struct Library {
     song_library: Model<Song>,
     image_library: Model<Image>,
     video_library: Model<Video>,
@@ -42,7 +42,6 @@ pub(crate) struct Library {
     library_hovered: Option<LibraryKind>,
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
-    pub dragged_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: SqlitePool,
     menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
@@ -70,7 +69,7 @@ impl MenuAction for MenuMessage {
     }
 }
 
-pub(crate) enum Action {
+pub enum Action {
     OpenItem(Option<(LibraryKind, i32)>),
     DraggedItem(ServiceItem),
     Task(Task<Message>),
@@ -103,6 +102,9 @@ pub(crate) enum Message {
 impl<'a> Library {
     pub async fn new() -> Self {
         let mut db = add_db().await.expect("probs");
+        if let Err(e) = migrate!("./migrations").run(&db).await {
+            error!(?e)
+        }
         Self {
             song_library: Model::new_song_model(&mut db).await,
             image_library: Model::new_image_model(&mut db).await,
@@ -115,7 +117,6 @@ impl<'a> Library {
             library_hovered: None,
             selected_item: None,
             hovered_item: None,
-            dragged_item: None,
             editing_item: None,
             db,
             menu_keys: HashMap::new(),
@@ -297,6 +298,27 @@ impl<'a> Library {
                         }
                     }
                 };
+            }
+            Message::AddItem => {
+                let kind =
+                    self.library_open.unwrap_or(LibraryKind::Song);
+                let item = match kind {
+                    LibraryKind::Song => {
+                        let song = Song::default();
+                        self.song_library
+                            .add_item(song)
+                            .map(|_| {
+                                let index =
+                                    self.song_library.items.len();
+                                (LibraryKind::Song, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Video => todo!(),
+                    LibraryKind::Image => todo!(),
+                    LibraryKind::Presentation => todo!(),
+                };
+                return self.update(Message::OpenItem(item));
             }
             Message::OpenItem(item) => {
                 debug!(?item);
@@ -600,7 +622,7 @@ impl<'a> Library {
                                     if index == context_id as usize {
                                         let context_menu = context_menu(
                                             mouse_area,
-                                            self.context_menu.map_or_else(|| None, |id| {
+                                            self.context_menu.map_or_else(|| None, |_| {
                                                 Some(menu::items(&self.menu_keys,
                                                                  vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))]))
                                             })

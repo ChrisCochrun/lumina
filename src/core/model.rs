@@ -1,6 +1,6 @@
 use std::mem::replace;
 
-use miette::{Result, miette};
+use miette::{miette, Result};
 use sqlx::{Connection, SqliteConnection};
 
 #[derive(Debug, Clone)]
