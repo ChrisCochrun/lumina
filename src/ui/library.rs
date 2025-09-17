@@ -1,38 +1,38 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    Element, Task,
     iced::{
-        Background, Border, Color, Length, alignment::Vertical,
-        clipboard::dnd::DndAction, futures::FutureExt,
+        alignment::Vertical, clipboard::dnd::DndAction,
+        futures::FutureExt, Background, Border, Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        Container, DndSource, Space, button, container, context_menu,
-        horizontal_space, icon,
+        button, container, context_menu, horizontal_space, icon,
         menu::{self, Action as MenuAction},
         mouse_area, responsive, row, scrollable, text, text_input,
+        Container, DndSource, Space,
     },
+    Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{Sqlite, SqlitePool, pool::PoolConnection};
+use sqlx::{migrate, pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{Image, update_image_in_db},
+    images::{update_image_in_db, Image},
     model::{LibraryKind, Model},
-    presentations::{Presentation, update_presentation_in_db},
+    presentations::{update_presentation_in_db, Presentation},
     service_items::ServiceItem,
-    songs::{Song, update_song_in_db},
-    videos::{Video, update_video_in_db},
+    songs::{update_song_in_db, Song},
+    videos::{update_video_in_db, Video},
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct Library {
+pub struct Library {
     song_library: Model<Song>,
     image_library: Model<Image>,
     video_library: Model<Video>,
@@ -41,7 +41,6 @@ pub(crate) struct Library {
     library_hovered: Option<LibraryKind>,
     selected_item: Option<(LibraryKind, i32)>,
     hovered_item: Option<(LibraryKind, i32)>,
-    pub dragged_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: SqlitePool,
     menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
@@ -69,7 +68,7 @@ impl MenuAction for MenuMessage {
     }
 }
 
-pub(crate) enum Action {
+pub enum Action {
     OpenItem(Option<(LibraryKind, i32)>),
     DraggedItem(ServiceItem),
     Task(Task<Message>),
@@ -77,7 +76,7 @@ pub(crate) enum Action {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum Message {
+pub enum Message {
     AddItem,
     DeleteItem((LibraryKind, i32)),
     OpenItem(Option<(LibraryKind, i32)>),
@@ -102,6 +101,9 @@ pub(crate) enum Message {
 impl<'a> Library {
     pub async fn new() -> Self {
         let mut db = add_db().await.expect("probs");
+        if let Err(e) = migrate!("./migrations").run(&db).await {
+            error!(?e)
+        }
         Self {
             song_library: Model::new_song_model(&mut db).await,
             image_library: Model::new_image_model(&mut db).await,
@@ -114,7 +116,6 @@ impl<'a> Library {
             library_hovered: None,
             selected_item: None,
             hovered_item: None,
-            dragged_item: None,
             editing_item: None,
             db,
             menu_keys: HashMap::new(),
@@ -465,7 +466,7 @@ impl<'a> Library {
                                     if index == context_id as usize {
                                         let context_menu = context_menu(
                                             mouse_area,
-                                            self.context_menu.map_or_else(|| None, |id| {
+                                            self.context_menu.map_or_else(|| None, |_| {
                                                 Some(menu::items(&self.menu_keys,
                                                                  vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))]))
                                             })

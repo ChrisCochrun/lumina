@@ -1,11 +1,10 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    Element, Task,
     dialog::file_chooser::open::Dialog,
     iced::{
-        Font, Length,
         font::{Family, Stretch, Style, Weight},
+        Font, Length,
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::row,
@@ -14,14 +13,15 @@ use cosmic::{
         button, column, combo_box, container, horizontal_space, icon,
         text, text_editor, text_input,
     },
+    Element, Task,
 };
 use dirs::font_dir;
 use iced_video_player::Video;
 use tracing::{debug, error};
 
 use crate::{
-    Background, BackgroundKind, core::songs::Song,
-    ui::slide_editor::SlideEditor,
+    core::songs::Song, ui::slide_editor::SlideEditor, Background,
+    BackgroundKind,
 };
 
 #[derive(Debug)]

@@ -11,8 +11,8 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    query, query_as,
+    pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
+    SqlitePool,
 };
 use std::path::PathBuf;
 use tracing::error;
