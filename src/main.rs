@@ -15,13 +15,13 @@ use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::nav_bar::nav_bar_style;
-use cosmic::widget::text;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::Container;
 use cosmic::widget::{
     button, horizontal_space, mouse_area, nav_bar, search_input,
     tooltip, vertical_space, Space,
 };
+use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use crisp::types::Value;
@@ -1115,7 +1115,9 @@ impl cosmic::Application for App {
         ];
 
         if let Some(_editor) = &self.editor_mode {
-            Element::from(song_editor)
+            container(song_editor)
+                .padding(cosmic::theme::spacing().space_xxl)
+                .into()
         } else {
             Element::from(column)
         }

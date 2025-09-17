@@ -21,7 +21,7 @@ use cosmic::{
     Task,
 };
 use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
@@ -44,7 +44,7 @@ pub(crate) struct Presenter {
     pub video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
-    sink: (OutputStream, Arc<Sink>),
+    sink: (Arc<Sink>, OutputStream),
     hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
@@ -159,11 +159,14 @@ impl Presenter {
             video_position: 0.0,
             hovered_slide: None,
             sink: {
-                let (stream, stream_handle) =
-                    OutputStream::try_default().unwrap();
+                let stream_handle =
+                    OutputStreamBuilder::open_default_stream()
+                        .expect("Can't open default rodio stream");
                 (
-                    stream,
-                    Arc::new(Sink::try_new(&stream_handle).unwrap()),
+                    Arc::new(Sink::connect_new(
+                        &stream_handle.mixer(),
+                    )),
+                    stream_handle,
                 )
             },
             scroll_id: Id::unique(),
@@ -385,7 +388,7 @@ impl Presenter {
                 return Action::Task(self.start_audio());
             }
             Message::EndAudio => {
-                self.sink.1.stop();
+                self.sink.0.stop();
             }
             Message::None => debug!("Presenter Message::None"),
             Message::Error(error) => {
@@ -660,7 +663,7 @@ impl Presenter {
             debug!(?audio, "This is where audio should be changing");
             let audio = audio.clone();
             Task::perform(
-                start_audio(Arc::clone(&self.sink.1), audio),
+                start_audio(Arc::clone(&self.sink.0), audio),
                 |()| Message::None,
             )
         } else {
