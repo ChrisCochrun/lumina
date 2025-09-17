@@ -168,6 +168,17 @@ impl Model<Image> {
     }
 }
 
+pub async fn remove_from_db(
+    db: PoolConnection<Sqlite>,
+    id: i32,
+) -> Result<()> {
+    query!("DELETE FROM images WHERE id = $1", id)
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()
+        .map(|_| ())
+}
+
 pub async fn update_image_in_db(
     image: Image,
     db: PoolConnection<Sqlite>,

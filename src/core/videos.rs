@@ -11,10 +11,10 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    query, query_as,
+    pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
+    SqlitePool,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::error;
 
 #[derive(
@@ -32,6 +32,25 @@ pub struct Video {
 impl From<&Video> for Value {
     fn from(value: &Video) -> Self {
         Self::List(vec![Self::Symbol(Symbol("video".into()))])
+    }
+}
+
+impl From<PathBuf> for Video {
+    fn from(value: PathBuf) -> Self {
+        let title: String = value.file_name().map_or_else(|| "Video".into(), |filename| {
+            filename.to_str().unwrap_or("Video").into()
+        });
+        Self {
+            title,
+            path: value,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&Path> for Video {
+    fn from(value: &Path) -> Self {
+        Self::from(value.to_owned())
     }
 }
 
@@ -203,6 +222,17 @@ impl Model<Video> {
             }
         }
     }
+}
+
+pub async fn remove_from_db(
+    db: PoolConnection<Sqlite>,
+    id: i32,
+) -> Result<()> {
+    query!("DELETE FROM videos WHERE id = $1", id)
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()
+        .map(|_| ())
 }
 
 pub async fn update_video_in_db(

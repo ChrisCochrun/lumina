@@ -181,7 +181,7 @@ impl TryFrom<PathBuf> for Background {
                 }
             }
             Err(e) => {
-                error!("Couldn't canonicalize: {e} {:?}", path);
+                // error!("Couldn't canonicalize: {e} {:?}", path);
                 Err(ParseError::CannotCanonicalize)
             }
         }

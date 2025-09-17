@@ -1,34 +1,35 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    Element, Task,
     iced::{
-        Background, Border, Color, Length, alignment::Vertical,
-        clipboard::dnd::DndAction, futures::FutureExt,
+        alignment::Vertical, clipboard::dnd::DndAction,
+        futures::FutureExt, Background, Border, Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        Container, DndSource, Space, button, container, context_menu,
+        button, container, context_menu, dnd_destination,
         horizontal_space, icon,
         menu::{self, Action as MenuAction},
         mouse_area, responsive, row, scrollable, text, text_input,
+        Container, DndSource, Space,
     },
+    Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{Sqlite, SqlitePool, pool::PoolConnection};
+use sqlx::{pool::PoolConnection, Sqlite, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{Image, update_image_in_db},
+    images::{self, update_image_in_db, Image},
     model::{LibraryKind, Model},
-    presentations::{Presentation, update_presentation_in_db},
+    presentations::{self, update_presentation_in_db, Presentation},
     service_items::ServiceItem,
-    songs::{Song, update_song_in_db},
-    videos::{Video, update_video_in_db},
+    songs::{self, update_song_in_db, Song},
+    videos::{self, update_video_in_db, Video},
 };
 
 #[derive(Debug, Clone)]
@@ -78,7 +79,7 @@ pub(crate) enum Action {
 
 #[derive(Clone, Debug)]
 pub(crate) enum Message {
-    AddItem,
+    AddItem(LibraryKind),
     DeleteItem((LibraryKind, i32)),
     OpenItem(Option<(LibraryKind, i32)>),
     HoverLibrary(Option<LibraryKind>),
@@ -128,37 +129,171 @@ impl<'a> Library {
 
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
-            Message::AddItem => (),
+            Message::AddItem(kind) => match kind {
+                LibraryKind::Song => todo!(),
+                LibraryKind::Video => {
+                    let future = cosmic::dialog::file_chooser::open::Dialog::new().filter(cosmic::dialog::file_chooser::FileFilter::new("videos").extension("mp4").extension("mkv").extension("webm").extension(".mpeg")).open_file();
+                    let task = Task::future(future).and_then(|r| {
+                        if let Ok(video) = r
+                            .url()
+                            .to_file_path()
+                            .and_then(|path| Ok(Video::from(path)))
+                        {
+                            self.video_library.add_item(video);
+                        };
+                        Task::none()
+                    });
+                }
+                LibraryKind::Image => todo!(),
+                LibraryKind::Presentation => todo!(),
+            },
             Message::None => (),
             Message::DeleteItem((kind, index)) => {
                 match kind {
                     LibraryKind::Song => {
+                        let Some(song) =
+                            self.song_library.get_item(index)
+                        else {
+                            error!(
+                                "There appears to not be a song here"
+                            );
+                            return Action::None;
+                        };
+                        let song = song.clone();
                         if let Err(e) =
                             self.song_library.remove_item(index)
                         {
                             error!(?e);
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            songs::remove_from_db(
+                                                db, song.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            return Action::Task(task);
                         }
                     }
                     LibraryKind::Video => {
+                        let Some(video) =
+                            self.video_library.get_item(index)
+                        else {
+                            error!(
+                                "There appears to not be a video here"
+                            );
+                            return Action::None;
+                        };
+                        let video = video.clone();
                         if let Err(e) =
                             self.video_library.remove_item(index)
                         {
                             error!(?e);
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            videos::remove_from_db(
+                                                db, video.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            return Action::Task(task);
                         }
                     }
                     LibraryKind::Image => {
+                        let Some(image) =
+                            self.image_library.get_item(index)
+                        else {
+                            error!(
+                                "There appears to not be a image here"
+                            );
+                            return Action::None;
+                        };
+                        let image = image.clone();
                         if let Err(e) =
                             self.image_library.remove_item(index)
                         {
                             error!(?e);
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            images::remove_from_db(
+                                                db, image.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            return Action::Task(task);
                         }
                     }
                     LibraryKind::Presentation => {
+                        let Some(presentation) =
+                            self.presentation_library.get_item(index)
+                        else {
+                            error!(
+                                "There appears to not be a presentation here"
+                            );
+                            return Action::None;
+                        };
+                        let presentation = presentation.clone();
                         if let Err(e) = self
                             .presentation_library
                             .remove_item(index)
                         {
                             error!(?e);
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                    presentations::remove_from_db(
+                                        db,
+                                        presentation.id,
+                                    ),
+                                    |r| {
+                                        match r {
+                                            Err(e) => {
+                                                error!(?e)
+                                            }
+                                            _ => (),
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                    });
+                            return Action::Task(task);
                         }
                     }
                 };
@@ -515,11 +650,42 @@ impl<'a> Library {
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
                 button::icon(icon::from_name("add"))
+                    .on_press(Message::AddItem(model.kind))
             );
             let library_column =
                 column![library_toolbar, items].spacing(3);
-
-            Container::new(library_column).padding(5)
+            let library_dnd = dnd_destination(
+                library_column,
+                vec![
+                    "image/png".into(),
+                    "image/jpg".into(),
+                    "image/heif".into(),
+                    "image/gif".into(),
+                    "video/mp4".into(),
+                    "video/AV1".into(),
+                    "video/H264".into(),
+                    "video/H265".into(),
+                    "video/mpeg".into(),
+                    "video/mkv".into(),
+                    "video/webm".into(),
+                    "video/ogg".into(),
+                    "video/vnd.youtube.yt".into(),
+                    "video/x-matroska".into(),
+                    "application/pdf".into(),
+                    "text/html".into(),
+                    "text/md".into(),
+                    "text/org".into(),
+                ],
+            )
+            .on_enter(|x, y, mimes| {
+                warn!(?mimes);
+                Message::None
+            })
+            .on_finish(|mime, data, action, x, y| {
+                warn!(?mime, ?data, ?action);
+                Message::None
+            });
+            Container::new(library_dnd).padding(5)
         } else {
             Container::new(Space::new(0, 0))
         };

@@ -263,6 +263,17 @@ impl Model<Presentation> {
     }
 }
 
+pub async fn remove_from_db(
+    db: PoolConnection<Sqlite>,
+    id: i32,
+) -> Result<()> {
+    query!("DELETE FROM presentations WHERE id = $1", id)
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()
+        .map(|_| ())
+}
+
 pub async fn update_presentation_in_db(
     presentation: Presentation,
     db: PoolConnection<Sqlite>,

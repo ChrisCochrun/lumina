@@ -407,19 +407,17 @@ impl Model<Song> {
             }
         }
     }
+}
 
-    pub async fn remove_from_db(
-        &mut self,
-        db: &mut SqlitePool,
-        id: i32,
-    ) -> Result<()> {
-        let db = db.acquire().await.expect("probs");
-        query!("delete from songs where id = $1", id)
-            .execute(&mut db.detach())
-            .await
-            .into_diagnostic()
-            .map(|_| ())
-    }
+pub async fn remove_from_db(
+    db: PoolConnection<Sqlite>,
+    id: i32,
+) -> Result<()> {
+    query!("DELETE FROM songs WHERE id = $1", id)
+        .execute(&mut db.detach())
+        .await
+        .into_diagnostic()
+        .map(|_| ())
 }
 
 pub async fn update_song_in_db(
