@@ -129,7 +129,6 @@ impl<'a> Library {
 
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
-            Message::AddItem => (),
             Message::None => (),
             Message::DeleteItem((kind, index)) => {
                 match kind {
@@ -163,6 +162,27 @@ impl<'a> Library {
                         }
                     }
                 };
+            }
+            Message::AddItem => {
+                let kind =
+                    self.library_open.unwrap_or(LibraryKind::Song);
+                let item = match kind {
+                    LibraryKind::Song => {
+                        let song = Song::default();
+                        self.song_library
+                            .add_item(song)
+                            .map(|_| {
+                                let index =
+                                    self.song_library.items.len();
+                                (LibraryKind::Song, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Video => todo!(),
+                    LibraryKind::Image => todo!(),
+                    LibraryKind::Presentation => todo!(),
+                };
+                return self.update(Message::OpenItem(item));
             }
             Message::OpenItem(item) => {
                 debug!(?item);
@@ -516,6 +536,7 @@ impl<'a> Library {
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
                 button::icon(icon::from_name("add"))
+                    .on_press(Message::AddItem)
             );
             let library_column =
                 column![library_toolbar, items].spacing(3);

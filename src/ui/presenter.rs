@@ -397,9 +397,8 @@ impl Presenter {
 
     pub fn view(&self) -> Element<Message> {
         slide_view(
-            &self.current_slide,
+            self.current_slide.clone(),
             &self.video,
-            self.current_font,
             false,
             true,
         )
@@ -407,9 +406,8 @@ impl Presenter {
 
     pub fn view_preview(&self) -> Element<Message> {
         slide_view(
-            &self.current_slide,
+            self.current_slide.clone(),
             &self.video,
-            self.current_font,
             false,
             false,
         )
@@ -443,9 +441,8 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            slide,
+                            slide.clone(),
                             &self.video,
-                            font,
                             true,
                             false,
                         );
@@ -705,9 +702,8 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 }
 
 pub(crate) fn slide_view<'a>(
-    slide: &'a Slide,
+    slide: Slide,
     video: &'a Option<Video>,
-    font: Font,
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'a, Message> {
