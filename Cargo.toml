@@ -41,7 +41,7 @@ rapidfuzz = "0.5.0"
 # mupdf = "0.5.0"
 mupdf = { version = "0.5.0", git = "https://github.com/messense/mupdf-rs", rev="2425c1405b326165b06834dcc1ca859015f92787"}
 
-# rfd = { version = "0.12.1", features = ["xdg-portal"], default-features = false }
+# rfd = { version = "0.14.1" }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"

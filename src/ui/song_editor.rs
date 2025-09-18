@@ -1,8 +1,9 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    dialog::file_chooser::open::Dialog,
+    dialog::file_chooser::{open::Dialog, FileFilter},
     iced::{
+        alignment::Vertical,
         font::{Family, Stretch, Style, Weight},
         Font, Length,
     },
@@ -17,11 +18,13 @@ use cosmic::{
 };
 use dirs::font_dir;
 use iced_video_player::Video;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::{
     core::{service_items::ServiceTrait, songs::Song},
-    ui::{presenter::slide_view, slide_editor::SlideEditor},
+    ui::{
+        presenter::slide_view, slide_editor::SlideEditor, text_svg,
+    },
     Background, BackgroundKind,
 };
 
@@ -199,7 +202,14 @@ impl SongEditor {
                 self.current_font = font;
                 // return self.update_song(song);
             }
-            Message::ChangeFontSize(size) => self.font_size = size,
+            Message::ChangeFontSize(size) => {
+                self.font_size = size;
+                if let Some(song) = &mut self.song {
+                    song.font_size = Some(size as i32);
+                    let song = song.to_owned();
+                    return self.update_song(song);
+                }
+            }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
                 if let Some(song) = &mut self.song {
@@ -288,7 +298,11 @@ impl SongEditor {
                 let slides: Vec<Element<Message>> = slides
                     .into_iter()
                     .enumerate()
-                    .map(|(index, slide)| {
+                    .map(|(index, mut slide)| {
+                        text_svg::text_svg_generator(
+                            &mut slide,
+                            Arc::clone(&self.font_db),
+                        );
                         container(
                             slide_view(
                                 slide,
@@ -383,7 +397,7 @@ order",
             Some(selected_font),
             Message::ChangeFont,
         )
-        .width(200);
+        .width(300);
         let font_size = combo_box(
             &self.font_sizes,
             "Font Size",
@@ -405,11 +419,14 @@ order",
         .padding(10);
 
         row![
+            text::body("Font:"),
             font_selector,
+            text::body("Font Size:"),
             font_size,
             horizontal_space(),
             background_selector
         ]
+        .align_y(Vertical::Center)
         .spacing(10)
         .into()
     }
@@ -448,21 +465,38 @@ impl Default for SongEditor {
 
 async fn pick_background() -> Result<PathBuf, SongError> {
     let dialog = Dialog::new().title("Choose a background...");
+    let bg_filter = FileFilter::new("Videos and Images")
+        .extension("png")
+        .extension("jpg")
+        .extension("mp4")
+        .extension("webm")
+        .extension("mkv")
+        .extension("jpeg");
     dialog
+        .filter(bg_filter)
+        .directory(dirs::home_dir().expect("oops"))
         .open_file()
         .await
-        .map_err(|_| SongError::DialogClosed)
+        .map_err(|e| {
+            error!(?e);
+            SongError::BackgroundDialogClosed
+        })
         .map(|file| file.url().to_file_path().unwrap())
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
+    //     .add_filter(
+    //         "Images and Videos",
+    //         &["png", "jpeg", "mp4", "webm", "mkv", "jpg", "mpeg"],
+    //     )
+    //     .set_directory(dirs::home_dir().unwrap())
     //     .pick_file()
     //     .await
-    //     .ok_or(SongError::DialogClosed)
+    //     .ok_or(SongError::BackgroundDialogClosed)
     //     .map(|file| file.path().to_owned())
 }
 
 #[derive(Debug, Clone)]
 pub enum SongError {
-    DialogClosed,
+    BackgroundDialogClosed,
     IOError(io::ErrorKind),
 }

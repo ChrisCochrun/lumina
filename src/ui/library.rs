@@ -178,9 +178,44 @@ impl<'a> Library {
                             })
                             .ok()
                     }
-                    LibraryKind::Video => todo!(),
-                    LibraryKind::Image => todo!(),
-                    LibraryKind::Presentation => todo!(),
+                    LibraryKind::Video => {
+                        let video = Video::default();
+                        self.video_library
+                            .add_item(video)
+                            .map(|_| {
+                                let index =
+                                    self.video_library.items.len();
+                                (LibraryKind::Video, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Image => {
+                        let image = Image::default();
+                        self.image_library
+                            .add_item(image)
+                            .map(|_| {
+                                let index =
+                                    self.image_library.items.len();
+                                (LibraryKind::Image, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Presentation => {
+                        let presentation = Presentation::default();
+                        self.presentation_library
+                            .add_item(presentation)
+                            .map(|_| {
+                                let index = self
+                                    .presentation_library
+                                    .items
+                                    .len();
+                                (
+                                    LibraryKind::Presentation,
+                                    index as i32,
+                                )
+                            })
+                            .ok()
+                    }
                 };
                 return self.update(Message::OpenItem(item));
             }

@@ -775,7 +775,7 @@ pub(crate) fn slide_view<'a>(
                             })
                             .content_fit(ContentFit::Cover),
                     )
-                    .center(Length::Shrink)
+                    .center(Length::Fill)
                     .clip(true)
                     // Container::new(Space::new(0, 0))
                 } else {
