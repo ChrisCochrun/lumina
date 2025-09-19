@@ -19,6 +19,7 @@ use cosmic::{
 };
 use dirs::font_dir;
 use iced_video_player::Video;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, error, warn};
 
 use crate::{
@@ -34,7 +35,6 @@ pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
     font_db: Arc<fontdb::Database>,
-    fonts: Vec<(fontdb::ID, String)>,
     fonts_combo: combo_box::State<String>,
     font_sizes: combo_box::State<String>,
     font: String,
@@ -48,7 +48,7 @@ pub struct SongEditor {
     video: Option<Video>,
     current_font: Font,
     ccli: String,
-    song_as_slide: Option<Vec<Slide>>,
+    song_slides: Option<Vec<Slide>>,
     slide_state: SlideEditor,
 }
 
@@ -79,22 +79,12 @@ impl SongEditor {
     pub fn new(font_db: Arc<fontdb::Database>) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
-        let mut fonts: Vec<(fontdb::ID, String)> = font_db
+        let mut fonts: Vec<String> = font_db
             .faces()
-            .map(|f| {
-                let id = f.id;
-                let font_base_name: String = f.families[0].0.clone();
-                let font_weight = f.weight;
-                let font_style = f.style;
-                let font_stretch = f.stretch;
-                (id, font_base_name)
-            })
+            .map(|f| f.families[0].0.clone())
             .collect();
         fonts.dedup();
-        // let fonts = vec![
-        //     String::from("Quicksand"),
-        //     String::from("Noto Sans"),
-        // ];
+        fonts.sort();
         let font_sizes = vec![
             "5".to_string(),
             "6".to_string(),
@@ -126,15 +116,10 @@ impl SongEditor {
             "160".to_string(),
             "170".to_string(),
         ];
-        let mut font_texts: Vec<String> =
-            fonts.iter().map(|f| f.1.to_string()).collect();
-        font_texts.dedup();
-        font_texts.sort();
         Self {
             song: None,
             font_db,
-            fonts,
-            fonts_combo: combo_box::State::new(font_texts),
+            fonts_combo: combo_box::State::new(fonts),
             title: "Death was Arrested".to_string(),
             font: "Quicksand".to_string(),
             font_size: 16,
@@ -149,13 +134,24 @@ impl SongEditor {
             current_font: cosmic::font::default(),
             ccli: "8".to_string(),
             slide_state: SlideEditor::default(),
-            song_as_slide: None,
+            song_slides: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
                 self.song = Some(song.clone());
+                self.song_slides = song.to_slides().ok().map(|v| {
+                    v.into_par_iter()
+                        .map(|mut s| {
+                            text_svg::text_svg_generator(
+                                &mut s,
+                                Arc::clone(&self.font_db),
+                            );
+                            s
+                        })
+                        .collect::<Vec<Slide>>()
+                });
                 self.title = song.title;
                 if let Some(font) = song.font {
                     self.font = font;
@@ -317,46 +313,38 @@ impl SongEditor {
     }
 
     fn slide_preview(&self) -> Element<Message> {
-        if let Some(song) = &self.song {
-            if let Ok(slides) = song.to_slides() {
-                let slides: Vec<Element<Message>> = slides
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, mut slide)| {
-                        text_svg::text_svg_generator(
-                            &mut slide,
-                            Arc::clone(&self.font_db),
-                        );
-                        container(
-                            slide_view(
-                                slide,
-                                if index == 0 {
-                                    &self.video
-                                } else {
-                                    &None
-                                },
-                                false,
-                                false,
-                            )
-                            .map(|_| Message::None),
+        if let Some(slides) = &self.song_slides {
+            let slides: Vec<Element<Message>> = slides
+                .into_iter()
+                .enumerate()
+                .map(|(index, slide)| {
+                    container(
+                        slide_view(
+                            slide.clone(),
+                            if index == 0 {
+                                &self.video
+                            } else {
+                                &None
+                            },
+                            false,
+                            false,
                         )
-                        .height(250)
-                        .center_x(Length::Fill)
-                        .padding([0, 20])
-                        .clip(true)
-                        .into()
-                    })
-                    .collect();
-                scrollable(
-                    cosmic::widget::column::with_children(slides)
-                        .spacing(theme::active().cosmic().space_l()),
-                )
-                .height(Length::Fill)
-                .width(Length::Fill)
-                .into()
-            } else {
-                horizontal_space().into()
-            }
+                        .map(|_| Message::None),
+                    )
+                    .height(250)
+                    .center_x(Length::Fill)
+                    .padding([0, 20])
+                    .clip(true)
+                    .into()
+                })
+                .collect();
+            scrollable(
+                cosmic::widget::column::with_children(slides)
+                    .spacing(theme::active().cosmic().space_l()),
+            )
+            .height(Length::Fill)
+            .width(Length::Fill)
+            .into()
         } else {
             horizontal_space().into()
         }
@@ -450,6 +438,17 @@ order",
 
     fn update_song(&mut self, song: Song) -> Action {
         self.song = Some(song.clone());
+        self.song_slides = song.to_slides().ok().map(|v| {
+            v.into_par_iter()
+                .map(|mut s| {
+                    text_svg::text_svg_generator(
+                        &mut s,
+                        Arc::clone(&self.font_db),
+                    );
+                    s
+                })
+                .collect::<Vec<Slide>>()
+        });
         Action::UpdateSong(song)
     }
 
