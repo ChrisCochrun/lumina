@@ -8,11 +8,12 @@ use cosmic::{
         Font, Length,
     },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::row,
+    iced_widget::{column, row},
     theme,
     widget::{
-        button, column, combo_box, container, horizontal_space, icon,
-        scrollable, text, text_editor, text_input,
+        button, combo_box, container, horizontal_space, icon,
+        progress_bar, scrollable, text, text_editor, text_input,
+        vertical_space,
     },
     Element, Task,
 };
@@ -21,7 +22,7 @@ use iced_video_player::Video;
 use tracing::{debug, error, warn};
 
 use crate::{
-    core::{service_items::ServiceTrait, songs::Song},
+    core::{service_items::ServiceTrait, slide::Slide, songs::Song},
     ui::{
         presenter::slide_view, slide_editor::SlideEditor, text_svg,
     },
@@ -47,6 +48,7 @@ pub struct SongEditor {
     video: Option<Video>,
     current_font: Font,
     ccli: String,
+    song_as_slide: Option<Vec<Slide>>,
     slide_state: SlideEditor,
 }
 
@@ -70,6 +72,7 @@ pub enum Message {
     Edit(bool),
     None,
     ChangeAuthor(String),
+    PauseVideo,
 }
 
 impl SongEditor {
@@ -80,8 +83,7 @@ impl SongEditor {
             .faces()
             .map(|f| {
                 let id = f.id;
-                let font_base_name: String =
-                    f.families.iter().map(|f| f.0.clone()).collect();
+                let font_base_name: String = f.families[0].0.clone();
                 let font_weight = f.weight;
                 let font_style = f.style;
                 let font_stretch = f.stretch;
@@ -114,18 +116,30 @@ impl SongEditor {
             "65".to_string(),
             "70".to_string(),
             "80".to_string(),
+            "90".to_string(),
+            "100".to_string(),
+            "110".to_string(),
+            "120".to_string(),
+            "130".to_string(),
+            "140".to_string(),
+            "150".to_string(),
+            "160".to_string(),
+            "170".to_string(),
         ];
-        let font_texts = fonts.iter().map(|f| f.1.clone()).collect();
+        let mut font_texts: Vec<String> =
+            fonts.iter().map(|f| f.1.to_string()).collect();
+        font_texts.dedup();
+        font_texts.sort();
         Self {
             song: None,
             font_db,
             fonts,
             fonts_combo: combo_box::State::new(font_texts),
-            title: "Death was Arrested".to_owned(),
-            font: "Quicksand".to_owned(),
+            title: "Death was Arrested".to_string(),
+            font: "Quicksand".to_string(),
             font_size: 16,
             font_sizes: combo_box::State::new(font_sizes),
-            verse_order: "Death was Arrested".to_owned(),
+            verse_order: "Death was Arrested".to_string(),
             lyrics: text_editor::Content::new(),
             editing: false,
             author: "North Point Worship".into(),
@@ -133,8 +147,9 @@ impl SongEditor {
             background: None,
             video: None,
             current_font: cosmic::font::default(),
-            ccli: "8".to_owned(),
+            ccli: "8".to_string(),
             slide_state: SlideEditor::default(),
+            song_as_slide: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -174,33 +189,12 @@ impl SongEditor {
                 self.background = song.background;
             }
             Message::ChangeFont(font) => {
-                let font_id = self
-                    .fonts
-                    .iter()
-                    .filter(|f| f.1 == font)
-                    .map(|f| f.0)
-                    .next();
-                if let Some(id) = font_id
-                    && let Some(face) = self.font_db.face(id)
-                {
-                    self.font = face.post_script_name.clone();
-                    // self.current_font = Font::from(face);
-                }
                 self.font = font.clone();
-
-                let font_name = font.into_boxed_str();
-                let family = Family::Name(Box::leak(font_name));
-                let weight = Weight::Bold;
-                let stretch = Stretch::Normal;
-                let style = Style::Normal;
-                let font = Font {
-                    family,
-                    weight,
-                    stretch,
-                    style,
-                };
-                self.current_font = font;
-                // return self.update_song(song);
+                if let Some(song) = &mut self.song {
+                    song.font = Some(font);
+                    let song = song.to_owned();
+                    return self.update_song(song);
+                }
             }
             Message::ChangeFontSize(size) => {
                 self.font_size = size;
@@ -269,25 +263,55 @@ impl SongEditor {
                     Message::ChangeBackground,
                 ));
             }
+            Message::PauseVideo => {
+                if let Some(video) = &mut self.video {
+                    let paused = video.paused();
+                    video.set_paused(!paused);
+                };
+            }
             _ => (),
         }
         Action::None
     }
 
     pub fn view(&self) -> Element<Message> {
+        let video_elements = if let Some(video) = &self.video {
+            let play_button = button::icon(if video.paused() {
+                icon::from_name("media-playback-start")
+            } else {
+                icon::from_name("media-playback-pause")
+            })
+            .on_press(Message::PauseVideo);
+            let video_track = progress_bar(
+                0.0..=video.duration().as_secs_f32(),
+                video.position().as_secs_f32(),
+            )
+            .height(cosmic::theme::spacing().space_s)
+            .width(Length::Fill);
+            container(
+                row![play_button, video_track]
+                    .align_y(Vertical::Center)
+                    .spacing(cosmic::theme::spacing().space_m),
+            )
+            .padding(cosmic::theme::spacing().space_s)
+            .center_x(Length::FillPortion(2))
+        } else {
+            container(vertical_space())
+        };
         let slide_preview = container(self.slide_preview())
             .width(Length::FillPortion(2));
 
-        let column = column::with_children(vec![
+        let slide_section = column![video_elements, slide_preview]
+            .spacing(cosmic::theme::spacing().space_s);
+        let column = column![
             self.toolbar(),
             row![
                 container(self.left_column())
                     .center_x(Length::FillPortion(2)),
-                container(slide_preview)
-                    .center_x(Length::FillPortion(3))
-            ]
-            .into(),
-        ])
+                container(slide_section)
+                    .center_x(Length::FillPortion(2))
+            ],
+        ]
         .spacing(theme::active().cosmic().space_l());
         column.into()
     }
@@ -324,7 +348,7 @@ impl SongEditor {
                     })
                     .collect();
                 scrollable(
-                    column::with_children(slides)
+                    cosmic::widget::column::with_children(slides)
                         .spacing(theme::active().cosmic().space_l()),
                 )
                 .height(Length::Fill)
@@ -359,37 +383,26 @@ order",
         .on_input(Message::ChangeVerseOrder);
 
         let lyric_title = text("Lyrics");
-        let lyric_input = column::with_children(vec![
-            lyric_title.into(),
+        let lyric_input = column![
+            lyric_title,
             text_editor(&self.lyrics)
                 .on_action(Message::ChangeLyrics)
                 .height(Length::Fill)
-                .into(),
-        ])
+        ]
         .spacing(5);
 
-        column::with_children(vec![
-            title_input.into(),
-            author_input.into(),
-            verse_input.into(),
-            lyric_input.into(),
-        ])
-        .spacing(25)
-        .width(Length::FillPortion(2))
-        .into()
+        column![title_input, author_input, verse_input, lyric_input,]
+            .spacing(25)
+            .width(Length::FillPortion(2))
+            .into()
     }
 
     fn toolbar(&self) -> Element<Message> {
         let selected_font = &self.font;
-        let selected_font_size = {
-            let font_size_position = self
-                .font_sizes
-                .options()
-                .iter()
-                .position(|s| *s == self.font_size.to_string());
-            self.font_sizes
-                .options()
-                .get(font_size_position.unwrap_or_default())
+        let selected_font_size = if self.font_size > 0 {
+            Some(&self.font_size.to_string())
+        } else {
+            None
         };
         let font_selector = combo_box(
             &self.fonts_combo,

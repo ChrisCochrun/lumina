@@ -249,7 +249,7 @@ impl TextSvg {
     }
 
     pub fn build(mut self) -> Self {
-        debug!("starting...");
+        // debug!("starting...");
 
         let mut path = dirs::data_local_dir().unwrap();
         path.push(PathBuf::from("lumina"));
@@ -312,7 +312,7 @@ impl TextSvg {
         path.set_extension("png");
 
         if path.exists() {
-            debug!("cached");
+            // debug!("cached");
             let handle = Handle::from_path(path);
             self.handle = Some(handle);
             return self;
