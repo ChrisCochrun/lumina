@@ -2,11 +2,7 @@ use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
     dialog::file_chooser::{open::Dialog, FileFilter},
-    iced::{
-        alignment::Vertical,
-        font::{Family, Stretch, Style, Weight},
-        Font, Length,
-    },
+    iced::{alignment::Vertical, Font, Length},
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{column, row},
     theme,
@@ -20,7 +16,7 @@ use cosmic::{
 use dirs::font_dir;
 use iced_video_player::Video;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 use crate::{
     core::{service_items::ServiceTrait, slide::Slide, songs::Song},
@@ -46,7 +42,6 @@ pub struct SongEditor {
     editing: bool,
     background: Option<Background>,
     video: Option<Video>,
-    current_font: Font,
     ccli: String,
     song_slides: Option<Vec<Slide>>,
     slide_state: SlideEditor,
@@ -131,7 +126,6 @@ impl SongEditor {
             audio: PathBuf::new(),
             background: None,
             video: None,
-            current_font: cosmic::font::default(),
             ccli: "8".to_string(),
             slide_state: SlideEditor::default(),
             song_slides: None,
