@@ -1,6 +1,9 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO [#A] Add removal and reordering of service_items
+* TODO Add OBS integration
+This will be based on each slide having the ability to activate an OBS scene when it is active.
 * TODO Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
 * TODO Build a video editor
 * TODO Build an image editor
@@ -73,6 +76,7 @@ This needs lots more attention
 This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
 * DONE Check into =mupdf-rs= for loading PDF's.
 
+* DONE Build Menu
 * DONE Find a way for text to pass through a service item to a slide i.e. content piece
 This proved easier by just creating the =Slide= first and inserting it into the =ServiceItem=.
 * DONE [#A] Change return type of all components to an Action enum instead of the Task<Message> type [0%] [0/0]

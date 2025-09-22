@@ -399,21 +399,11 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        slide_view(
-            self.current_slide.clone(),
-            &self.video,
-            false,
-            true,
-        )
+        slide_view(&self.current_slide, &self.video, false, true)
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        slide_view(
-            self.current_slide.clone(),
-            &self.video,
-            false,
-            false,
-        )
+        slide_view(&self.current_slide, &self.video, false, false)
     }
 
     pub fn preview_bar(&self) -> Element<Message> {
@@ -423,19 +413,6 @@ impl Presenter {
                 let mut slides = vec![];
                 item.slides.iter().enumerate().for_each(
                     |(slide_index, slide)| {
-                        let font_name = slide.font().into_boxed_str();
-                        let family =
-                            Family::Name(Box::leak(font_name));
-                        let weight = Weight::Normal;
-                        let stretch = Stretch::Normal;
-                        let style = Style::Normal;
-                        let font = Font {
-                            family,
-                            weight,
-                            stretch,
-                            style,
-                        };
-
                         let is_current_slide =
                             (item_index, slide_index)
                                 == (
@@ -444,7 +421,7 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            slide.clone(),
+                            &slide,
                             &self.video,
                             true,
                             false,
@@ -705,7 +682,7 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 }
 
 pub(crate) fn slide_view<'a>(
-    slide: Slide,
+    slide: &'a Slide,
     video: &'a Option<Video>,
     delegate: bool,
     hide_mouse: bool,

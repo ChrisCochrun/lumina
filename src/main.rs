@@ -9,26 +9,30 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Point};
+use cosmic::iced::{self, event, window, Color, Length, Point};
 use cosmic::iced_futures::Subscription;
+use cosmic::iced_runtime::dnd::DndAction;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
+use cosmic::widget::menu::key_bind::Modifier;
+use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::Container;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, search_input,
-    tooltip, vertical_space, Space,
+    button, dnd_source, horizontal_space, mouse_area, nav_bar,
+    search_input, tooltip, vertical_space, RcElementWrapper, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
+use cosmic::widget::{menu, Container};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
+use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -119,6 +123,7 @@ struct App {
     search_id: cosmic::widget::Id,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
+    menu_keys: HashMap<KeyBind, MenuAction>,
 }
 
 #[derive(Debug, Clone)]
@@ -147,6 +152,35 @@ enum Message {
     CloseSearch,
     UpdateSearchResults(Vec<ServiceItem>),
     OpenEditor(ServiceItem),
+    New,
+    Open,
+    OpenFile(PathBuf),
+    Save(Option<PathBuf>),
+    SaveAs,
+    OpenSettings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    New,
+    Save,
+    SaveAs,
+    Open,
+    OpenSettings,
+}
+
+impl menu::Action for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuAction::New => Message::New,
+            MenuAction::Save => Message::Save(None),
+            MenuAction::SaveAs => Message::SaveAs,
+            MenuAction::Open => Message::Open,
+            MenuAction::OpenSettings => Message::OpenSettings,
+        }
+    }
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -230,6 +264,28 @@ impl cosmic::Application for App {
         //     nav_model.insert().text(item.title()).data(item.clone());
         // }
 
+        let mut menu_keys = HashMap::new();
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("s".into()),
+            },
+            MenuAction::Save,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("o".into()),
+            },
+            MenuAction::Open,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character(".".into()),
+            },
+            MenuAction::OpenSettings,
+        );
         // nav_model.activate_position(0);
         let mut app = Self {
             presenter,
@@ -251,6 +307,7 @@ impl cosmic::Application for App {
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
+            menu_keys,
         };
 
         let mut batch = vec![];
@@ -270,7 +327,46 @@ impl cosmic::Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![]
+        let file_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(menu::root("File")),
+            menu::items(
+                &self.menu_keys,
+                vec![
+                    menu::Item::Button("New", None, MenuAction::New),
+                    menu::Item::Button(
+                        "Open",
+                        None,
+                        MenuAction::Open,
+                    ),
+                    menu::Item::Button(
+                        "Save",
+                        None,
+                        MenuAction::Save,
+                    ),
+                    menu::Item::Button(
+                        "Save As",
+                        None,
+                        MenuAction::SaveAs,
+                    ),
+                ],
+            ),
+        );
+        let settings_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(menu::root("Settings")),
+            menu::items(
+                &self.menu_keys,
+                vec![menu::Item::Button(
+                    "Open Settings",
+                    None,
+                    MenuAction::OpenSettings,
+                )],
+            ),
+        );
+        let menu_bar =
+            menu::bar::<Message>(vec![file_menu, settings_menu])
+                .item_width(ItemWidth::Static(250))
+                .main_offset(10);
+        vec![menu_bar.into()]
     }
 
     fn header_center(&self) -> Vec<Element<Self::Message>> {
@@ -978,6 +1074,34 @@ impl cosmic::Application for App {
                     ServiceItemKind::Content(_slide) => todo!(),
                 }
             }
+            Message::New => {
+                debug!("new file");
+                Task::none()
+            }
+            Message::Open => {
+                debug!("Open file");
+                Task::none()
+            }
+            Message::OpenFile(file) => {
+                debug!(?file, "opening file");
+                Task::none()
+            }
+            Message::Save(file) => {
+                let Some(file) = file else {
+                    debug!("saving current");
+                    return Task::none();
+                };
+                debug!(?file, "saving new file");
+                Task::none()
+            }
+            Message::SaveAs => {
+                debug!("saving as a file");
+                Task::none()
+            }
+            Message::OpenSettings => {
+                debug!("Opening settings");
+                Task::none()
+            }
         }
     }
 
@@ -1237,6 +1361,15 @@ where
             }
         }
         match (key, modifiers) {
+            (Key::Character(k), Modifiers::CTRL) if k == *"s" => {
+                self.update(Message::Save(None))
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"o" => {
+                self.update(Message::Open)
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"." => {
+                self.update(Message::OpenSettings)
+            }
             (Key::Character(k), Modifiers::CTRL)
                 if k == *"k" || k == *"f" =>
             {
@@ -1306,8 +1439,7 @@ where
                     // .icon_size(cosmic::theme::spacing().space_l)
                     .class(cosmic::theme::style::Button::HeaderBar)
                     // .spacing(cosmic::theme::spacing().space_l)
-                    // .padding(cosmic::theme::spacing().space_m)
-                    // .height(cosmic::theme::spacing().space_xxxl)
+                    .height(cosmic::theme::spacing().space_xl)
                     .width(Length::Fill)
                     .on_press(Message::ChangeServiceItem(index));
                 let tooltip = tooltip(button,
