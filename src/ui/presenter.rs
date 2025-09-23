@@ -1,5 +1,10 @@
 use miette::{IntoDiagnostic, Result};
-use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::PathBuf,
+    sync::{Arc, LazyLock},
+};
 
 use cosmic::{
     iced::{
@@ -31,7 +36,8 @@ use crate::{
 };
 
 const REFERENCE_WIDTH: f32 = 1920.0;
-const REFERENCE_HEIGHT: f32 = 1080.0;
+static DEFAULT_SLIDE: LazyLock<Slide> =
+    LazyLock::new(|| Slide::default());
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
@@ -147,14 +153,22 @@ impl Presenter {
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
 
+        let slide =
+            items.get(0).map(|item| item.slides.get(0)).flatten();
+        let audio = items
+            .get(0)
+            .map(|item| item.slides.get(0).map(|slide| slide.audio()))
+            .flatten()
+            .flatten();
+
         Self {
-            current_slide: items[0].slides[0].clone(),
+            current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
             current_item: 0,
             current_slide_index: 0,
             absolute_slide_index: 0,
             total_slides,
             video,
-            audio: items[0].slides[0].audio(),
+            audio,
             service: items,
             video_position: 0.0,
             hovered_slide: None,

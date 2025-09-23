@@ -2,7 +2,7 @@ use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
     dialog::file_chooser::{open::Dialog, FileFilter},
-    iced::{alignment::Vertical, Font, Length},
+    iced::{alignment::Vertical, Length},
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{column, row},
     theme,

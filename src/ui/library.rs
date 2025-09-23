@@ -51,7 +51,6 @@ pub struct Library {
 enum MenuMessage {
     Delete((LibraryKind, i32)),
     Open,
-    None,
 }
 
 impl MenuAction for MenuMessage {
@@ -63,7 +62,6 @@ impl MenuAction for MenuMessage {
                 Message::DeleteItem((*kind, *index))
             }
             MenuMessage::Open => todo!(),
-            MenuMessage::None => todo!(),
         }
     }
 }
@@ -827,7 +825,7 @@ async fn add_db() -> Result<SqlitePool> {
     SqlitePool::connect(&db_url).await.into_diagnostic()
 }
 
-fn elide_text(text: impl AsRef<str>, width: f32) -> String {
+pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     const CHAR_SIZE: f32 = 8.0;
     let text: String = text.as_ref().to_owned();
     let text_length = text.len() as f32 * CHAR_SIZE;

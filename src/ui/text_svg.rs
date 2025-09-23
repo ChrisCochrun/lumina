@@ -354,14 +354,6 @@ impl TextSvg {
             .height(Length::Fill)
             .into()
     }
-
-    fn text_spans(&self) -> Vec<String> {
-        self.text
-            .lines()
-            .enumerate()
-            .map(|(i, t)| format!("<tspan x=\"50%\">{t}</tspan>"))
-            .collect()
-    }
 }
 
 pub fn shadow(
@@ -406,29 +398,5 @@ pub fn text_svg_generator(
             .fontdb(Arc::clone(&fontdb))
             .build();
         slide.text_svg = Some(text_svg);
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use pretty_assertions::assert_eq;
-
-    use super::TextSvg;
-
-    #[test]
-    fn test_text_spans() {
-        let mut text = TextSvg::new("yes");
-        text.text = "This is
-multiline
-text."
-            .into();
-        assert_eq!(
-            vec![
-                String::from("<tspan>This is</tspan>"),
-                String::from("<tspan>multiline</tspan>"),
-                String::from("<tspan>text.</tspan>"),
-            ],
-            text.text_spans()
-        )
     }
 }

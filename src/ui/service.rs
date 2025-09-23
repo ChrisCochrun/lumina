@@ -1,22 +1,19 @@
-use std::any::Any;
+use cosmic::iced::Size;
 
-use cosmic::iced::{self, Size};
-use cosmic::iced_core::window;
-
+use cosmic::iced_core::widget::tree;
 use cosmic::{
     iced::{
-        clipboard::dnd::{DndAction, DndEvent, SourceEvent},
-        event, mouse, overlay, Event, Length, Point, Rectangle,
-        Vector,
+        clipboard::dnd::{DndEvent, SourceEvent},
+        event, mouse, Event, Length, Point, Rectangle, Vector,
     },
     iced_core::{
-        self, layout, renderer,
-        widget::{tree, Tree},
+        self, image::Renderer, layout, renderer, widget::Tree,
         Clipboard, Shell,
     },
-    widget::{container, Id, Widget},
+    widget::Widget,
     Element,
 };
+use tracing::debug;
 
 use crate::core::service_items::ServiceItem;
 
@@ -133,6 +130,10 @@ impl<Message: Clone + 'static>
         layout::atomic(limits, self.width, self.height)
     }
 
+    fn state(&self) -> iced_core::widget::tree::State {
+        tree::State::new(State::new())
+    }
+
     // fn operate(
     //     &self,
     //     tree: &mut Tree,
@@ -231,6 +232,7 @@ impl<Message: Clone + 'static>
                 _ => return event::Status::Ignored,
             },
             Event::Dnd(DndEvent::Source(SourceEvent::Cancelled)) => {
+                debug!("canceled");
                 if state.is_dragging {
                     if let Some(m) = self.on_cancelled.as_ref() {
                         shell.publish(m.clone());
@@ -241,6 +243,7 @@ impl<Message: Clone + 'static>
                 return event::Status::Ignored;
             }
             Event::Dnd(DndEvent::Source(SourceEvent::Finished)) => {
+                debug!("dropped");
                 if state.is_dragging {
                     if let Some(m) = self.on_finish.as_ref() {
                         shell.publish(m.clone());
@@ -250,6 +253,7 @@ impl<Message: Clone + 'static>
                 }
                 return event::Status::Ignored;
             }
+            Event::Dnd(event) => debug!(?event),
             _ => return event::Status::Ignored,
         }
         event::Status::Ignored
@@ -286,10 +290,8 @@ impl<Message: Clone + 'static>
         cursor_position: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        let state = tree.state.downcast_mut::<State>();
-        for item in self.service {
-            todo!()
-        }
+        // let state = tree.state.downcast_mut::<State>();
+        for item in self.service {}
     }
 
     // fn overlay<'b>(

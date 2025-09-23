@@ -9,9 +9,11 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Color, Length, Point};
+use cosmic::iced::{
+    self, event, window, Background as IcedBackground, Border, Length,
+};
+use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_runtime::dnd::DndAction;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
@@ -20,8 +22,8 @@ use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, dnd_source, horizontal_space, mouse_area, nav_bar,
-    search_input, tooltip, vertical_space, RcElementWrapper, Space,
+    button, horizontal_space, mouse_area, nav_bar, responsive,
+    search_input, tooltip, vertical_space, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
@@ -58,7 +60,7 @@ struct Cli {
     watch: bool,
     #[arg(short = 'i', long)]
     ui: bool,
-    file: PathBuf,
+    file: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
@@ -111,6 +113,7 @@ struct App {
     windows: Vec<window::Id>,
     service: Vec<ServiceItem>,
     current_item: (usize, usize),
+    hovered_item: Option<usize>,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -134,7 +137,7 @@ enum Message {
     File(PathBuf),
     OpenWindow,
     CloseWindow(Option<window::Id>),
-    WindowOpened(window::Id, Option<Point>),
+    WindowOpened(window::Id),
     WindowClosed(window::Id),
     AddLibrary(Library),
     LibraryToggle,
@@ -143,10 +146,10 @@ enum Message {
     None,
     EditorToggle(bool),
     ChangeServiceItem(usize),
+    HoveredServiceItem(Option<usize>),
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
-    AddService(Vec<ServiceItem>),
     SearchFocus,
     Search(String),
     CloseSearch,
@@ -213,30 +216,36 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let items = match read_to_string(input.file) {
-            Ok(lisp) => {
-                let mut service_items = vec![];
-                let lisp = crisp::reader::read(&lisp);
-                match lisp {
-                    Value::List(vec) => {
-                        // let items = vec
-                        //     .into_par_iter()
-                        //     .map(|value| parse_lisp(value))
-                        //     .collect();
-                        // slide_vector.append(items);
-                        for value in vec {
-                            let mut inner_vector = parse_lisp(value);
-                            service_items.append(&mut inner_vector);
+        let items = if let Some(file) = input.file {
+            match read_to_string(file) {
+                Ok(lisp) => {
+                    let mut service_items = vec![];
+                    let lisp = crisp::reader::read(&lisp);
+                    match lisp {
+                        Value::List(vec) => {
+                            // let items = vec
+                            //     .into_par_iter()
+                            //     .map(|value| parse_lisp(value))
+                            //     .collect();
+                            // slide_vector.append(items);
+                            for value in vec {
+                                let mut inner_vector =
+                                    parse_lisp(value);
+                                service_items
+                                    .append(&mut inner_vector);
+                            }
                         }
+                        _ => todo!(),
                     }
-                    _ => todo!(),
+                    service_items
                 }
-                service_items
+                Err(e) => {
+                    warn!("Missing file or could not read: {e}");
+                    vec![]
+                }
             }
-            Err(e) => {
-                warn!("Missing file or could not read: {e}");
-                vec![]
-            }
+        } else {
+            vec![]
         };
 
         let items: Vec<ServiceItem> = items
@@ -308,6 +317,7 @@ impl cosmic::Application for App {
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
             menu_keys,
+            hovered_item: None,
         };
 
         let mut batch = vec![];
@@ -530,23 +540,33 @@ impl cosmic::Application for App {
                             debug!("Closing window");
                             Some(Message::CloseWindow(Some(id)))
                         }
-                        window::Event::Opened {
-                            position, ..
-                        } => {
+                        window::Event::Opened { .. } => {
                             debug!(?window_event, ?id);
-                            Some(Message::WindowOpened(id, position))
+                            Some(Message::WindowOpened(id))
                         }
                         window::Event::Closed => {
                             debug!("Closed window");
                             Some(Message::WindowClosed(id))
+                        }
+                        window::Event::FileHovered(file) => {
+                            debug!(?file);
+                            None
+                        }
+                        window::Event::FileDropped(file) => {
+                            debug!(?file);
+                            None
                         }
                         _ => None,
                     }
                 }
                 iced::Event::Touch(_touch) => None,
                 iced::Event::A11y(_id, _action_request) => None,
-                iced::Event::Dnd(_dnd_event) => None,
-                iced::Event::PlatformSpecific(_platform_specific) => {
+                iced::Event::Dnd(_dnd_event) => {
+                    // debug!(?dnd_event);
+                    None
+                }
+                iced::Event::PlatformSpecific(platform_specific) => {
+                    debug!(?platform_specific);
                     None
                 }
             }
@@ -676,7 +696,7 @@ impl cosmic::Application for App {
                         })
                     }
                     song_editor::Action::UpdateSong(song) => {
-                        if let Some(library) = &mut self.library {
+                        if let Some(_) = &mut self.library {
                             self.update(Message::Library(
                                 library::Message::UpdateSong(song),
                             ))
@@ -914,9 +934,7 @@ impl cosmic::Application for App {
                     .set_window_title(format!("window_{count}"), id);
 
                 spawn_window.map(|id| {
-                    cosmic::Action::App(Message::WindowOpened(
-                        id, None,
-                    ))
+                    cosmic::Action::App(Message::WindowOpened(id))
                 })
             }
             Message::CloseWindow(id) => {
@@ -926,7 +944,7 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
-            Message::WindowOpened(id, _) => {
+            Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
                     || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
@@ -969,10 +987,6 @@ impl cosmic::Application for App {
                 self.library = Some(library);
                 Task::none()
             }
-            Message::AddService(service) => {
-                self.service = service;
-                Task::none()
-            }
             Message::None => Task::none(),
             Message::EditorToggle(edit) => {
                 if edit {
@@ -987,6 +1001,10 @@ impl cosmic::Application for App {
                 cosmic::widget::text_input::focus(
                     self.search_id.clone(),
                 )
+            }
+            Message::HoveredServiceItem(index) => {
+                self.hovered_item = index;
+                Task::none()
             }
             Message::ChangeServiceItem(index) => {
                 if let Some((index, item)) = self
@@ -1283,9 +1301,8 @@ where
         });
         self.windows.push(id);
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
-        spawn_window.map(|id| {
-            cosmic::Action::App(Message::WindowOpened(id, None))
-        })
+        spawn_window
+            .map(|id| cosmic::Action::App(Message::WindowOpened(id)))
     }
 
     fn add_library(&self) -> Task<Message> {
@@ -1307,36 +1324,6 @@ where
         } else {
             Task::none()
         }
-    }
-
-    fn add_service(
-        &self,
-        items: Vec<ServiceItem>,
-        fontdb: Arc<fontdb::Database>,
-    ) -> Task<Message> {
-        Task::perform(
-            async move {
-                let items: Vec<ServiceItem> = items
-                    .into_par_iter()
-                    .map(|mut item| {
-                        item.slides = item
-                            .slides
-                            .into_par_iter()
-                            .map(|mut slide| {
-                                text_svg::text_svg_generator(
-                                    &mut slide,
-                                    Arc::clone(&fontdb),
-                                );
-                                slide
-                            })
-                            .collect();
-                        item
-                    })
-                    .collect();
-                items
-            },
-            |x| cosmic::Action::App(Message::AddService(x)),
-        )
     }
 
     fn process_key_press(
@@ -1411,56 +1398,123 @@ where
     }
 
     fn service_list(&self) -> Element<Message> {
-        let list = self
-            .service
-            .iter()
-            .enumerate()
-            .map(|(index, item)| {
-                let button = button::standard(item.title.clone())
-                    .leading_icon({
-                        match item.kind {
-                            core::kinds::ServiceItemKind::Song(_) => {
-                                icon::from_name("folder-music-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Video(_) => {
-                                icon::from_name("folder-videos-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Image(_) => {
-                                icon::from_name("folder-pictures-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Presentation(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Content(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                        }
-                    })
-                    // .icon_size(cosmic::theme::spacing().space_l)
-                    .class(cosmic::theme::style::Button::HeaderBar)
-                    // .spacing(cosmic::theme::spacing().space_l)
-                    .height(cosmic::theme::spacing().space_xl)
-                    .width(Length::Fill)
-                    .on_press(Message::ChangeServiceItem(index));
-                let tooltip = tooltip(button,
-                                      text::body(item.kind.to_string()),
-                                      TPosition::Right);
-                dnd_destination(tooltip, vec!["application/service-item".into()])
-                    .data_received_for::<ServiceItem>( move |item| {
-                        if let Some(item) = item {
-                            Message::AddServiceItem(index, item)
-                        } else {
-                            Message::None
-                        }
-                    }).on_finish(move |mime, data, action, x, y| {
-                        debug!(mime, ?data, ?action, x, y);
-                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
-                            return Message::None;
-                        };
-                        debug!(?item);
-                        Message::AddServiceItem(index, item)
-                    })
+        let list =
+            self.service.iter().enumerate().map(|(index, item)| {
+                let icon = match item.kind {
+                    ServiceItemKind::Song(_) => {
+                        icon::from_name("folder-music-symbolic")
+                    }
+                    ServiceItemKind::Video(_) => {
+                        icon::from_name("folder-videos-symbolic")
+                    }
+                    ServiceItemKind::Image(_) => {
+                        icon::from_name("folder-pictures-symbolic")
+                    }
+                    ServiceItemKind::Presentation(_) => {
+                        icon::from_name(
+                            "x-office-presentation-symbolic",
+                        )
+                    }
+                    ServiceItemKind::Content(_) => icon::from_name(
+                        "x-office-presentation-symbolic",
+                    ),
+                };
+                let title = responsive(|size| {
+                    text::heading(library::elide_text(
+                        &item.title,
+                        size.width,
+                    ))
+                    .wrapping(Wrapping::None)
                     .into()
+                });
+                let container = container(
+                    row![icon, title]
+                        .align_y(Vertical::Center)
+                        .spacing(cosmic::theme::spacing().space_xs),
+                )
+                .padding(cosmic::theme::spacing().space_s)
+                .class(cosmic::theme::style::Container::Secondary)
+                .style(move |t| {
+                    container::Style::default()
+                        .background(IcedBackground::Color(
+                            if self.hovered_item.is_some_and(
+                                |hovered_index| {
+                                    index == hovered_index
+                                },
+                            ) {
+                                t.cosmic().button.hover.into()
+                            } else {
+                                t.cosmic().button.base.into()
+                            },
+                        ))
+                        .border(Border::default().rounded(
+                            t.cosmic().corner_radii.radius_m,
+                        ))
+                })
+                .width(Length::Fill);
+                let mouse_area = mouse_area(container)
+                    .on_enter(Message::HoveredServiceItem(Some(
+                        index,
+                    )))
+                    .on_exit(Message::HoveredServiceItem(None))
+                    .on_press(Message::ChangeServiceItem(index));
+                // let button = button::standard(item.title.clone())
+                //     .leading_icon({
+                //         match item.kind {
+                //             core::kinds::ServiceItemKind::Song(_) => {
+                //                 icon::from_name("folder-music-symbolic")
+                //             },
+                //             core::kinds::ServiceItemKind::Video(_) => {
+                //                 icon::from_name("folder-videos-symbolic")
+                //             },
+                //             core::kinds::ServiceItemKind::Image(_) => {
+                //                 icon::from_name("folder-pictures-symbolic")
+                //             },
+                //             core::kinds::ServiceItemKind::Presentation(_) => {
+                //                 icon::from_name("x-office-presentation-symbolic")
+                //             },
+                //             core::kinds::ServiceItemKind::Content(_) => {
+                //                 icon::from_name("x-office-presentation-symbolic")
+                //             },
+                //         }
+                //     })
+                //     // .icon_size(cosmic::theme::spacing().space_l)
+                //     .class(cosmic::theme::style::Button::HeaderBar)
+                //     // .spacing(cosmic::theme::spacing().space_l)
+                //     .height(cosmic::theme::spacing().space_xl)
+                //     .width(Length::Fill)
+                //     .on_press(Message::ChangeServiceItem(index));
+                let tooltip = tooltip(
+                    mouse_area,
+                    text::body(item.kind.to_string()),
+                    TPosition::Right,
+                )
+                .gap(cosmic::theme::spacing().space_xs);
+                dnd_destination(
+                    tooltip,
+                    vec![
+                        "application/service-item".into(),
+                        "video/mp4".into(),
+                    ],
+                )
+                .data_received_for::<ServiceItem>(move |item| {
+                    if let Some(item) = item {
+                        Message::AddServiceItem(index, item)
+                    } else {
+                        Message::None
+                    }
+                })
+                .on_finish(move |mime, data, action, x, y| {
+                    debug!(mime, ?data, ?action, x, y);
+                    let Ok(item) =
+                        ServiceItem::try_from((data, mime))
+                    else {
+                        return Message::None;
+                    };
+                    debug!(?item);
+                    Message::AddServiceItem(index, item)
+                })
+                .into()
             });
 
         let column = column![
@@ -1469,6 +1523,7 @@ where
                 .width(Length::Fill),
             iced::widget::horizontal_rule(1),
             column(list).spacing(10),
+            // service::service(&self.service),
             dnd_destination(
                 vertical_space().width(Length::Fill),
                 vec!["application/service-item".into()]
@@ -1494,9 +1549,7 @@ where
         ]
         .padding(10)
         .spacing(10);
-        let container = Container::new(column)
-            // .height(Length::Fill)
-            .style(nav_bar_style);
+        let container = Container::new(column).style(nav_bar_style);
 
         container.center(Length::FillPortion(2)).into()
     }

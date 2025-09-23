@@ -8,6 +8,8 @@ build:
 sbuild:
     RUST_LOG=debug sccache cargo build
 run:
+    RUST_LOG=debug cargo run -- {{ui}}
+run-file:
     RUST_LOG=debug cargo run -- {{ui}} {{file}}
 srun:
     RUST_LOG=debug sccache cargo run -- {{ui}} {{file}}
@@ -20,5 +22,6 @@ profile:
 
 alias b := build
 alias r := run
+alias rf := run-file
 alias sr := srun
 alias c := clean
