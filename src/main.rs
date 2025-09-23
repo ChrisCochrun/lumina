@@ -48,6 +48,7 @@ use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::ui::text_svg::{self};
+use crate::ui::widgets::draggable;
 
 pub mod core;
 pub mod lisp;
@@ -112,6 +113,7 @@ struct App {
     presenter: Presenter,
     windows: Vec<window::Id>,
     service: Vec<ServiceItem>,
+    selected_items: Vec<usize>,
     current_item: (usize, usize),
     hovered_item: Option<usize>,
     presentation_open: bool,
@@ -146,6 +148,8 @@ enum Message {
     None,
     EditorToggle(bool),
     ChangeServiceItem(usize),
+    SelectServiceItem(usize),
+    AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
@@ -302,6 +306,7 @@ impl cosmic::Application for App {
             core,
             nav_model,
             service: items,
+            selected_items: vec![],
             file: PathBuf::default(),
             windows,
             presentation_open: false,
@@ -1007,6 +1012,14 @@ impl cosmic::Application for App {
                 self.hovered_item = index;
                 Task::none()
             }
+            Message::SelectServiceItem(index) => {
+                self.selected_items = vec![index];
+                Task::none()
+            }
+            Message::AddSelectServiceItem(index) => {
+                self.selected_items.push(index);
+                Task::none()
+            }
             Message::ChangeServiceItem(index) => {
                 if let Some((index, item)) = self
                     .service
@@ -1448,7 +1461,10 @@ where
                                 |hovered_index| {
                                     index == hovered_index
                                 },
-                            ) {
+                            ) || self
+                                .selected_items
+                                .contains(&index)
+                            {
                                 t.cosmic().button.hover.into()
                             } else {
                                 t.cosmic().button.base.into()
@@ -1464,35 +1480,11 @@ where
                         index,
                     )))
                     .on_exit(Message::HoveredServiceItem(None))
-                    .on_double_press(Message::None)
+                    .on_double_press(Message::ChangeServiceItem(
+                        index,
+                    ))
                     .on_drag(Message::None)
-                    .on_press(Message::ChangeServiceItem(index));
-                // let button = button::standard(item.title.clone())
-                //     .leading_icon({
-                //         match item.kind {
-                //             core::kinds::ServiceItemKind::Song(_) => {
-                //                 icon::from_name("folder-music-symbolic")
-                //             },
-                //             core::kinds::ServiceItemKind::Video(_) => {
-                //                 icon::from_name("folder-videos-symbolic")
-                //             },
-                //             core::kinds::ServiceItemKind::Image(_) => {
-                //                 icon::from_name("folder-pictures-symbolic")
-                //             },
-                //             core::kinds::ServiceItemKind::Presentation(_) => {
-                //                 icon::from_name("x-office-presentation-symbolic")
-                //             },
-                //             core::kinds::ServiceItemKind::Content(_) => {
-                //                 icon::from_name("x-office-presentation-symbolic")
-                //             },
-                //         }
-                //     })
-                //     // .icon_size(cosmic::theme::spacing().space_l)
-                //     .class(cosmic::theme::style::Button::HeaderBar)
-                //     // .spacing(cosmic::theme::spacing().space_l)
-                //     .height(cosmic::theme::spacing().space_xl)
-                //     .width(Length::Fill)
-                //     .on_press(Message::ChangeServiceItem(index));
+                    .on_release(Message::SelectServiceItem(index));
                 let tooltip = tooltip(
                     mouse_area,
                     text::body(item.kind.to_string()),
@@ -1501,10 +1493,7 @@ where
                 .gap(cosmic::theme::spacing().space_xs);
                 dnd_destination(
                     tooltip,
-                    vec![
-                        "application/service-item".into(),
-                        "video/mp4".into(),
-                    ],
+                    vec!["application/service-item".into()],
                 )
                 .data_received_for::<ServiceItem>(move |item| {
                     if let Some(item) = item {
@@ -1531,15 +1520,26 @@ where
                 .center()
                 .width(Length::Fill),
             iced::widget::horizontal_rule(1),
-            ui::widgets::draggable::column::column(list).spacing(10).on_drag(|event| {
-                match event {
-                    ui::widgets::draggable::DragEvent::Picked { index } => Message::None,
-                    ui::widgets::draggable::DragEvent::Dropped { index, target_index, drop_position } => Message::ReorderService(index, target_index),
-                    ui::widgets::draggable::DragEvent::Canceled { index } => Message::None,
+            draggable::column::column(list).spacing(10).on_drag(
+                |event| {
+                    match event {
+                        draggable::DragEvent::Picked { .. } => {
+                            Message::None
+                        }
+                        draggable::DragEvent::Dropped {
+                            index,
+                            target_index,
+                            ..
+                        } => Message::ReorderService(
+                            index,
+                            target_index,
+                        ),
+                        draggable::DragEvent::Canceled { .. } => {
+                            Message::None
+                        }
+                    }
                 }
-            }),
-            // column(list).spacing(10),
-            // service::service(&self.service),
+            ),
             dnd_destination(
                 vertical_space().width(Length::Fill),
                 vec!["application/service-item".into()]
@@ -1569,23 +1569,4 @@ where
 
         container.center(Length::FillPortion(2)).into()
     }
-}
-
-#[cfg(test)]
-mod test {
-
-    fn test_slide() -> String {
-        let slide = r#"(slide (image :source "./somehting.jpg" :fill cover
-              (text "Something cooler" :font-size 50)))"#;
-        String::from(slide)
-    }
-    // #[test]
-    // fn test_lisp() {
-    //     let slide = test_slide();
-    //     if let Ok(data) = lexpr::parse::from_str_elisp(slide.as_str()) {
-    //         assert_eq!(slide, data)
-    //     } else {
-    //         assert!(false)
-    //     }
-    // }
 }
