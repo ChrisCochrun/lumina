@@ -363,7 +363,7 @@ where
     }
 
     fn diff(&mut self, tree: &mut Tree) {
-        tree.diff_children(&mut self.children);
+        tree.diff_children(self.children.as_mut_slice());
     }
 
     fn size(&self) -> Size<Length> {
@@ -410,9 +410,14 @@ where
                     .iter()
                     .zip(&mut tree.children)
                     .zip(layout.children())
-                    .for_each(|((child, state), layout)| {
+                    .for_each(|((child, state), c_layout)| {
                         child.as_widget().operate(
-                            state, layout, renderer, operation,
+                            state,
+                            c_layout.with_virtual_offset(
+                                layout.virtual_offset(),
+                            ),
+                            renderer,
+                            operation,
                         );
                     });
             },
@@ -557,11 +562,12 @@ where
             .iter_mut()
             .zip(&mut tree.children)
             .zip(layout.children())
-            .map(|((child, state), layout)| {
+            .map(|((child, state), c_layout)| {
                 child.as_widget_mut().on_event(
                     state,
                     event.clone(),
-                    layout,
+                    c_layout
+                        .with_virtual_offset(layout.virtual_offset()),
                     cursor,
                     renderer,
                     clipboard,
@@ -592,9 +598,14 @@ where
             .iter()
             .zip(&tree.children)
             .zip(layout.children())
-            .map(|((child, state), layout)| {
+            .map(|((child, state), c_layout)| {
                 child.as_widget().mouse_interaction(
-                    state, layout, cursor, viewport, renderer,
+                    state,
+                    c_layout
+                        .with_virtual_offset(layout.virtual_offset()),
+                    cursor,
+                    viewport,
+                    renderer,
                 )
             })
             .max()
@@ -606,7 +617,7 @@ where
         tree: &Tree,
         renderer: &mut Renderer,
         theme: &Theme,
-        defaults: &renderer::Style,
+        default_style: &renderer::Style,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         viewport: &Rectangle,
@@ -672,7 +683,7 @@ where
                                                         state,
                                                         renderer,
                                                         theme,
-                                                        defaults,
+                                                        default_style,
                                                         child_layout,
                                                         cursor,
                                                         viewport,
@@ -712,7 +723,7 @@ where
                                     state,
                                     renderer,
                                     theme,
-                                    defaults,
+                                    default_style,
                                     child_layout,
                                     cursor,
                                     viewport,
@@ -762,16 +773,35 @@ where
             }
             _ => {
                 // Draw all children normally when not dragging
-                for ((child, state), layout) in self
-                    .children
-                    .iter()
-                    .zip(&tree.children)
-                    .zip(layout.children())
+                if let Some(clipped_viewport) =
+                    layout.bounds().intersection(viewport)
                 {
-                    child.as_widget().draw(
-                        state, renderer, theme, defaults, layout,
-                        cursor, viewport,
-                    );
+                    let viewport = if self.clip {
+                        &clipped_viewport
+                    } else {
+                        viewport
+                    };
+                    for ((child, state), c_layout) in self
+                        .children
+                        .iter()
+                        .zip(&tree.children)
+                        .zip(layout.children())
+                        .filter(|(_, layout)| {
+                            layout.bounds().intersects(viewport)
+                        })
+                    {
+                        child.as_widget().draw(
+                            state,
+                            renderer,
+                            theme,
+                            default_style,
+                            c_layout.with_virtual_offset(
+                                layout.virtual_offset(),
+                            ),
+                            cursor,
+                            viewport,
+                        );
+                    }
                 }
             }
         }
@@ -791,6 +821,28 @@ where
             renderer,
             translation,
         )
+    }
+
+    fn drag_destinations(
+        &self,
+        state: &Tree,
+        layout: Layout<'_>,
+        renderer: &Renderer,
+        dnd_rectangles: &mut cosmic::iced_core::clipboard::DndDestinationRectangles,
+    ) {
+        for ((e, c_layout), state) in self
+            .children
+            .iter()
+            .zip(layout.children())
+            .zip(state.children.iter())
+        {
+            e.as_widget().drag_destinations(
+                state,
+                c_layout.with_virtual_offset(layout.virtual_offset()),
+                renderer,
+                dnd_rectangles,
+            );
+        }
     }
 }
 

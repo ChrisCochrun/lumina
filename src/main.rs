@@ -10,7 +10,8 @@ use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
-    self, event, window, Background as IcedBackground, Border, Length,
+    self, event, window, Background as IcedBackground, Border, Color,
+    Length,
 };
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
@@ -22,8 +23,9 @@ use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, nav_bar_toggle,
-    responsive, search_input, tooltip, vertical_space, Space,
+    button, context_menu, horizontal_space, mouse_area, nav_bar,
+    nav_bar_toggle, responsive, scrollable, search_input, tooltip,
+    vertical_space, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
@@ -129,6 +131,7 @@ struct App {
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
     menu_keys: HashMap<KeyBind, MenuAction>,
+    context_menu: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -152,9 +155,11 @@ enum Message {
     AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
     AddServiceItem(usize, ServiceItem),
+    RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
     ReorderService(usize, usize),
+    ContextMenuItem(usize),
     SearchFocus,
     Search(String),
     CloseSearch,
@@ -175,6 +180,7 @@ enum MenuAction {
     SaveAs,
     Open,
     OpenSettings,
+    DeleteItem(usize),
 }
 
 impl menu::Action for MenuAction {
@@ -187,6 +193,9 @@ impl menu::Action for MenuAction {
             MenuAction::SaveAs => Message::SaveAs,
             MenuAction::Open => Message::Open,
             MenuAction::OpenSettings => Message::OpenSettings,
+            MenuAction::DeleteItem(index) => {
+                Message::RemoveServiceItem(*index)
+            }
         }
     }
 }
@@ -324,6 +333,7 @@ impl cosmic::Application for App {
             fontdb: Arc::clone(&fontdb),
             menu_keys,
             hovered_item: None,
+            context_menu: None,
         };
 
         let mut batch = vec![];
@@ -1093,6 +1103,15 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
+            Message::RemoveServiceItem(index) => {
+                self.service.remove(index);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
+            Message::ContextMenuItem(index) => {
+                self.context_menu = Some(index);
+                Task::none()
+            }
             Message::AddServiceItemDrop(index) => {
                 if let Some(item) = &self.library_dragged_item {
                     self.service.insert(index, item.clone());
@@ -1484,6 +1503,7 @@ where
                         &item.title,
                         size.width,
                     ))
+                    .align_y(Vertical::Center)
                     .wrapping(Wrapping::None)
                     .into()
                 });
@@ -1492,6 +1512,7 @@ where
                         .align_y(Vertical::Center)
                         .spacing(cosmic::theme::spacing().space_xs),
                 )
+                .height(cosmic::theme::spacing().space_xl)
                 .padding(cosmic::theme::spacing().space_s)
                 .class(cosmic::theme::style::Container::Secondary)
                 .style(move |t| {
@@ -1524,9 +1545,44 @@ where
                         index,
                     ))
                     .on_drag(Message::None)
+                    .on_right_press(Message::ContextMenuItem(index))
                     .on_release(Message::SelectServiceItem(index));
+                let single_item = if let Some(context_menu_item) =
+                    self.context_menu
+                {
+                    if context_menu_item == index {
+                        let context_menu = context_menu(
+                            mouse_area,
+                            self.context_menu.map_or_else(
+                                || None,
+                                |i| {
+                                    if i == index {
+                                        let menu =
+                                            vec![menu::Item::Button(
+                                    "Delete",
+                                    None,
+                                    MenuAction::DeleteItem(index),
+                                )];
+                                        Some(menu::items(
+                                            &HashMap::new(),
+                                            menu,
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                },
+                            ),
+                        )
+                        .close_on_escape(true);
+                        Element::from(context_menu)
+                    } else {
+                        Element::from(mouse_area)
+                    }
+                } else {
+                    Element::from(mouse_area)
+                };
                 let tooltip = tooltip(
-                    mouse_area,
+                    single_item,
                     text::body(item.kind.to_string()),
                     TPosition::Right,
                 )
@@ -1555,31 +1611,55 @@ where
                 .into()
             });
 
+        let scrollable = scrollable(
+            draggable::column::column(list)
+                .spacing(10)
+                .on_drag(|event| match event {
+                    draggable::DragEvent::Picked { .. } => {
+                        Message::None
+                    }
+                    draggable::DragEvent::Dropped {
+                        index,
+                        target_index,
+                        ..
+                    } => Message::ReorderService(index, target_index),
+                    draggable::DragEvent::Canceled { .. } => {
+                        Message::None
+                    }
+                })
+                .style(|t| draggable::column::Style {
+                    scale: 1.05,
+                    moved_item_overlay: Color::from(
+                        t.cosmic().primary.base,
+                    )
+                    .scale_alpha(0.2)
+                    .into(),
+                    ghost_border: Border {
+                        width: 1.0,
+                        color: t.cosmic().secondary.base.into(),
+                        radius: t.cosmic().radius_m().into(),
+                    },
+                    ghost_background: Color::from(
+                        t.cosmic().secondary.base,
+                    )
+                    .scale_alpha(0.2)
+                    .into(),
+                })
+                .height(Length::Shrink),
+        )
+        .anchor_top()
+        .height(Length::Fill);
+
         let column = column![
             text::heading("Service List")
                 .center()
                 .width(Length::Fill),
             iced::widget::horizontal_rule(1),
-            draggable::column::column(list).spacing(10).on_drag(
-                |event| {
-                    match event {
-                        draggable::DragEvent::Picked { .. } => {
-                            Message::None
-                        }
-                        draggable::DragEvent::Dropped {
-                            index,
-                            target_index,
-                            ..
-                        } => Message::ReorderService(
-                            index,
-                            target_index,
-                        ),
-                        draggable::DragEvent::Canceled { .. } => {
-                            Message::None
-                        }
-                    }
-                }
-            ),
+            scrollable
+        ]
+        .padding(10)
+        .spacing(10);
+        let container = Container::new(stack![
             dnd_destination(
                 vertical_space().width(Length::Fill),
                 vec!["application/service-item".into()]
@@ -1601,11 +1681,10 @@ where
                     debug!(?item);
                     Message::AppendServiceItem(item)
                 }
-            )
-        ]
-        .padding(10)
-        .spacing(10);
-        let container = Container::new(column).style(nav_bar_style);
+            ),
+            column
+        ])
+        .style(nav_bar_style);
 
         container.center(Length::FillPortion(2)).into()
     }
