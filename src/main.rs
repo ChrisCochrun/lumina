@@ -150,6 +150,7 @@ enum Message {
     AddServiceItem(usize, ServiceItem),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
+    ReorderService(usize, usize),
     SearchFocus,
     Search(String),
     CloseSearch,
@@ -1061,6 +1062,12 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
+            Message::ReorderService(index, target_index) => {
+                let item = self.service.remove(index);
+                self.service.insert(target_index, item);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
             Message::Search(query) => {
                 self.search_query = query.clone();
                 self.search(query)
@@ -1457,6 +1464,8 @@ where
                         index,
                     )))
                     .on_exit(Message::HoveredServiceItem(None))
+                    .on_double_press(Message::None)
+                    .on_drag(Message::None)
                     .on_press(Message::ChangeServiceItem(index));
                 // let button = button::standard(item.title.clone())
                 //     .leading_icon({
@@ -1522,7 +1531,14 @@ where
                 .center()
                 .width(Length::Fill),
             iced::widget::horizontal_rule(1),
-            column(list).spacing(10),
+            ui::widgets::draggable::column::column(list).spacing(10).on_drag(|event| {
+                match event {
+                    ui::widgets::draggable::DragEvent::Picked { index } => Message::None,
+                    ui::widgets::draggable::DragEvent::Dropped { index, target_index, drop_position } => Message::ReorderService(index, target_index),
+                    ui::widgets::draggable::DragEvent::Canceled { index } => Message::None,
+                }
+            }),
+            // column(list).spacing(10),
             // service::service(&self.service),
             dnd_destination(
                 vertical_space().width(Length::Fill),
