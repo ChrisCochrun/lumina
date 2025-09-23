@@ -488,40 +488,43 @@ impl<'a> Library {
                 column({
                     model.items.iter().enumerate().map(
                         |(index, item)| {
+
                             let service_item = item.to_service_item();
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|()| Message::None);
+
                             DndSource::<Message, ServiceItem>::new({
-                                let mouse_area = Element::from(mouse_area(visual_item)
-                                                               .on_drag(Message::DragItem(service_item.clone()))
-                                                               .on_enter(Message::HoverItem(
-                                                                   Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   )),
-                                                               ))
-                                                               .on_double_click(
-                                                                   Message::OpenItem(Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   ))),
-                                                               )
-                                                               .on_right_press(Message::OpenContext(index as i32))
-                                                               .on_exit(Message::HoverItem(None))
-                                                               .on_press(Message::SelectItem(
-                                                                   Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   )),
-                                                               )));
+                                let mouse_area = mouse_area(visual_item);
+                                let mouse_area = mouse_area.on_enter(Message::HoverItem(
+                                    Some((
+                                        model.kind,
+                                        index as i32,
+                                    )),
+                                ))
+                                    .on_double_click(
+                                        Message::OpenItem(Some((
+                                            model.kind,
+                                            index as i32,
+                                        ))),
+                                    )
+                                    .on_right_press(Message::OpenContext(index as i32))
+                                    .on_exit(Message::HoverItem(None))
+                                    .on_press(Message::SelectItem(
+                                        Some((
+                                            model.kind,
+                                            index as i32,
+                                        )),
+                                    ));
+
                                 if let Some(context_id) = self.context_menu {
                                     if index == context_id as usize {
+                                        let menu_items = vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))];
                                         let context_menu = context_menu(
                                             mouse_area,
                                             self.context_menu.map_or_else(|| None, |_| {
                                                 Some(menu::items(&self.menu_keys,
-                                                                 vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))]))
+                                                menu_items))
                                             })
                                         );
                                         Element::from(context_menu)

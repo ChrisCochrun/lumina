@@ -1290,8 +1290,7 @@ impl cosmic::Application for App {
         let song_editor =
             self.song_editor.view().map(Message::SongEditor);
 
-        let row = row![
-            library,
+        let service_row = row![
             service_list,
             Container::new(
                 button::icon(icon_left)
@@ -1325,23 +1324,33 @@ impl cosmic::Application for App {
         .height(Length::Fill)
         .spacing(20);
 
-        let column = column![
-            Container::new(row).center_y(Length::Fill),
+        let preview_bar = if self.editor_mode.is_none() {
             Container::new(
-                self.presenter.preview_bar().map(Message::Present)
+                self.presenter.preview_bar().map(Message::Present),
             )
             .clip(true)
             .width(Length::Fill)
             .center_y(180)
-        ];
+        } else {
+            Container::new(horizontal_space())
+        };
 
-        if let Some(_editor) = &self.editor_mode {
+        let main_area = if let Some(editor) = &self.editor_mode {
             container(song_editor)
                 .padding(cosmic::theme::spacing().space_xxl)
-                .into()
         } else {
-            Element::from(column)
-        }
+            Container::new(service_row).center_y(Length::Fill)
+        };
+
+        let column = column![
+            row![
+                library.width(Length::FillPortion(1)),
+                main_area.width(Length::FillPortion(4))
+            ],
+            preview_bar
+        ];
+
+        column.into()
     }
 
     // View for presentation
