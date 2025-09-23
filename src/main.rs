@@ -22,8 +22,8 @@ use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, responsive,
-    search_input, tooltip, vertical_space, Space,
+    button, horizontal_space, mouse_area, nav_bar, nav_bar_toggle,
+    responsive, search_input, tooltip, vertical_space, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
@@ -348,32 +348,58 @@ impl cosmic::Application for App {
             menu::items(
                 &self.menu_keys,
                 vec![
-                    menu::Item::Button("New", None, MenuAction::New),
+                    menu::Item::Button(
+                        "New",
+                        Some(
+                            icon::from_name("document-new")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::New,
+                    ),
                     menu::Item::Button(
                         "Open",
-                        None,
+                        Some(
+                            icon::from_name("document-open")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::Open,
                     ),
                     menu::Item::Button(
                         "Save",
-                        None,
+                        Some(
+                            icon::from_name("document-save")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::Save,
                     ),
                     menu::Item::Button(
                         "Save As",
-                        None,
+                        Some(
+                            icon::from_name("document-save-as")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::SaveAs,
                     ),
                 ],
             ),
         );
         let settings_menu = menu::Tree::with_children(
-            Into::<Element<Message>>::into(menu::root("Settings")),
+            Into::<Element<Message>>::into(
+                menu::root("Settings").on_press(Message::None),
+            ),
             menu::items(
                 &self.menu_keys,
                 vec![menu::Item::Button(
                     "Open Settings",
-                    None,
+                    Some(
+                        icon::from_name("settings")
+                            .symbolic(true)
+                            .into(),
+                    ),
                     MenuAction::OpenSettings,
                 )],
             ),
@@ -382,7 +408,17 @@ impl cosmic::Application for App {
             menu::bar::<Message>(vec![file_menu, settings_menu])
                 .item_width(ItemWidth::Static(250))
                 .main_offset(10);
-        vec![menu_bar.into()]
+        let library_button = tooltip(
+            nav_bar_toggle().on_toggle(Message::LibraryToggle),
+            if self.library_open {
+                "Hide library"
+            } else {
+                "Show library"
+            },
+            TPosition::Bottom,
+        )
+        .gap(cosmic::theme::spacing().space_xs);
+        vec![library_button.into(), menu_bar.into()]
     }
 
     fn header_center(&self) -> Vec<Element<Self::Message>> {
@@ -421,7 +457,8 @@ impl cosmic::Application for App {
                 .on_press(Message::SearchFocus),
                 "Search Library",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -444,7 +481,8 @@ impl cosmic::Application for App {
                 )),
                 "Enter Edit Mode",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -475,7 +513,8 @@ impl cosmic::Application for App {
                 }),
                 "Start Presentation",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -497,6 +536,7 @@ impl cosmic::Application for App {
                 "Open Library",
                 TPosition::Bottom,
             )
+            .gap(cosmic::theme::spacing().space_xs),
         ]
         .spacing(HEADER_SPACE)
         .into();
