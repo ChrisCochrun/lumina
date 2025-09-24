@@ -784,19 +784,11 @@ impl cosmic::Application for App {
                             self.service.get(item_index)
                         {
                             if item.slides.len() > slide_index + 1 {
-                                // let slide_length = item.slides.len();
-                                // debug!(
-                                //     slide_index,
-                                //     slide_length,
-                                //     ?item,
-                                //     "Slides are longer"
-                                // );
-                                let slide = item.slides
-                                    [slide_index + 1]
-                                    .clone();
+                                let slide_index = slide_index + 1;
                                 let action = self.presenter.update(
-                                    presenter::Message::SlideChange(
-                                        slide,
+                                    presenter::Message::ActivateSlide(
+                                        item_index,
+                                        slide_index,
                                     ),
                                 );
                                 match action {
@@ -816,10 +808,12 @@ impl cosmic::Application for App {
                                 // debug!("Slides are not longer");
                                 self.current_item =
                                     (item_index + 1, 0);
-                                if let Some(item) =
-                                    self.service.get(item_index + 1)
+                                if self
+                                    .service
+                                    .get(item_index + 1)
+                                    .is_some()
                                 {
-                                    let action = self.presenter.update(presenter::Message::SlideChange(item.slides[0].clone()));
+                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     match action {
                                         presenter::Action::Task(
                                             task,
@@ -850,12 +844,11 @@ impl cosmic::Application for App {
                             self.service.get(item_index)
                         {
                             if slide_index != 0 {
-                                let slide = item.slides
-                                    [slide_index - 1]
-                                    .clone();
+                                let slide_index = slide_index - 1;
                                 let action = self.presenter.update(
-                                    presenter::Message::SlideChange(
-                                        slide,
+                                    presenter::Message::ActivateSlide(
+                                        item_index,
+                                        slide_index,
                                     ),
                                 );
                                 match action {
@@ -890,10 +883,12 @@ impl cosmic::Application for App {
                                     item_index - 1,
                                     previous_item_slides_length - 1,
                                 );
-                                if let Some(item) =
-                                    self.service.get(item_index - 1)
+                                if self
+                                    .service
+                                    .get(item_index - 1)
+                                    .is_some()
                                 {
-                                    let action = self.presenter.update(presenter::Message::SlideChange(item.slides[previous_item_slides_length - 1].clone()));
+                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     match action {
                                         presenter::Action::Task(
                                             task,
@@ -1080,8 +1075,9 @@ impl cosmic::Application for App {
                 {
                     self.current_item = (index, 0);
                     self.presenter.update(
-                        presenter::Message::SlideChange(
-                            slide.clone(),
+                        presenter::Message::ActivateSlide(
+                            self.current_item.0,
+                            self.current_item.1,
                         ),
                     );
                 }

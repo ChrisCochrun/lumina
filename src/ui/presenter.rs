@@ -68,6 +68,7 @@ pub(crate) enum Message {
     NextSlide,
     PrevSlide,
     SlideChange(Slide),
+    ActivateSlide(usize, usize),
     EndVideo,
     StartVideo,
     StartAudio,
@@ -214,6 +215,19 @@ impl Presenter {
                 //     self.current_slide_index - 1,
                 // ));
             }
+            Message::ActivateSlide(item_index, slide_index) => {
+                if let Some(slide) = self
+                    .service
+                    .get(item_index)
+                    .map(|item| item.slides.get(slide_index))
+                    .flatten()
+                {
+                    self.current_item = item_index;
+                    self.current_slide_index = slide_index;
+                    return self
+                        .update(Message::SlideChange(slide.clone()));
+                }
+            }
             Message::SlideChange(slide) => {
                 let slide_text = slide.text();
                 debug!(slide_text, "slide changed");
@@ -235,10 +249,34 @@ impl Presenter {
                     self.reset_video();
                 }
 
+                let mut target_item = 0;
+
+                self.service.iter().enumerate().try_for_each(
+                    |(index, item)| {
+                        item.slides.iter().enumerate().try_for_each(
+                            |(slide_index, _)| {
+                                target_item += 1;
+                                if (index, slide_index)
+                                    == (
+                                        self.current_item,
+                                        self.current_slide_index,
+                                    )
+                                {
+                                    None
+                                } else {
+                                    Some(())
+                                }
+                            },
+                        )
+                    },
+                );
+
+                debug!(target_item);
+
                 let offset = AbsoluteOffset {
                     x: {
-                        if self.current_slide_index > 2 {
-                            (self.current_slide_index as f32)
+                        if target_item > 2 {
+                            (target_item as f32)
                                 .mul_add(187.5, -187.5)
                         } else {
                             0.0
@@ -246,7 +284,7 @@ impl Presenter {
                     },
                     y: 0.0,
                 };
-                debug!(?offset);
+
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
@@ -509,8 +547,9 @@ impl Presenter {
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
-                        .on_press(Message::SlideChange(
-                            slide.clone(),
+                        .on_press(Message::ActivateSlide(
+                            item_index,
+                            slide_index,
                         ));
                         slides.push(delegate.into());
                     },
