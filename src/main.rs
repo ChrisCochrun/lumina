@@ -621,8 +621,8 @@ impl cosmic::Application for App {
                     // debug!(?dnd_event);
                     None
                 }
-                iced::Event::PlatformSpecific(platform_specific) => {
-                    debug!(?platform_specific);
+                iced::Event::PlatformSpecific(_platform_specific) => {
+                    // debug!(?platform_specific);
                     None
                 }
             }

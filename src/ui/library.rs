@@ -983,12 +983,18 @@ async fn add_images() -> Option<Vec<Image>> {
 }
 
 async fn add_videos() -> Option<Vec<Video>> {
-    let paths = rfd::AsyncFileDialog::new()
-        .set_title("Pick image")
-        .pick_files()
-        .await?;
-    debug!(?paths);
-    Some(paths.iter().map(|path| Video::from(path.path())).collect())
+    debug!("here man");
+    let paths =
+        Dialog::new().title("pick video").open_files().await.ok()?;
+    Some(
+        paths
+            .urls()
+            .iter()
+            .map(|path| {
+                Video::from(path.to_file_path().expect("oops"))
+            })
+            .collect(),
+    )
 }
 
 fn update_in_db(
