@@ -939,7 +939,6 @@ impl cosmic::Application for App {
                 }
             }
             Message::Library(message) => {
-                let mut song = Song::default();
                 if let Some(library) = &mut self.library {
                     match library.update(message) {
                                 library::Action::OpenItem(None) => {
@@ -959,22 +958,11 @@ impl cosmic::Application for App {
                                 ))) => {
                                     match kind {
                                         core::model::LibraryKind::Song => {
-                                            debug!(
-                                                "Should get song at index: {:?}",
-                                                index
-                                            );
-                                            let Some(lib_song) =
-                                                library.get_song(index)
-                                            else {
+                                            let Some(lib_song) = library.get_song(index) else {
                                                 return Task::none();
                                             };
                                             self.editor_mode = Some(kind.into());
-                                            song = lib_song.to_owned();
-                                            debug!(
-                                                "Should change songs to: {:?}",
-                                                song
-                                            );
-
+                                            let song = lib_song.to_owned();
                                             return self.update(Message::SongEditor(
                                                 song_editor::Message::ChangeSong(song),
                                             ));
@@ -997,10 +985,6 @@ impl cosmic::Application for App {
                                     debug!("hi");
                                     self.library_dragged_item =
                                         Some(service_item);
-                                    // self.nav_model
-                                    //     .insert()
-                                    //     .text(service_item.title.clone())
-                                    //     .data(service_item);
                                 }
                             }
                 }
