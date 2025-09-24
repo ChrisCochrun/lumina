@@ -34,13 +34,13 @@ resvg = "0.45.1"
 image = "0.25.8"
 rapidhash = "4.0.0"
 rapidfuzz = "0.5.0"
-dragking = { git = "https://github.com/airstrike/dragking" }
+# dragking = { git = "https://github.com/airstrike/dragking" }
 # femtovg = { version = "0.16.0", features = ["wgpu"] }
 # wgpu = "26.0.1"
 # mupdf = "0.5.0"
 mupdf = { version = "0.5.0", git = "https://github.com/messense/mupdf-rs", rev="2425c1405b326165b06834dcc1ca859015f92787"}
 
-# rfd = { version = "0.14.1" }
+rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"

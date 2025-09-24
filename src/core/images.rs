@@ -13,7 +13,7 @@ use sqlx::{
     pool::PoolConnection, query, query_as, Sqlite, SqliteConnection,
     SqlitePool,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::error;
 
 #[derive(
@@ -23,6 +23,28 @@ pub struct Image {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
+}
+
+impl From<PathBuf> for Image {
+    fn from(value: PathBuf) -> Self {
+        let title = value
+            .file_name()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+            .to_string();
+        Self {
+            id: 0,
+            title,
+            path: value.canonicalize().unwrap_or(value),
+        }
+    }
+}
+
+impl From<&Path> for Image {
+    fn from(value: &Path) -> Self {
+        Self::from(value.to_owned())
+    }
 }
 
 impl From<&Image> for Value {

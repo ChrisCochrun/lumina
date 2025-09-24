@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use cosmic::{
+    dialog::file_chooser::open::Dialog,
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
         futures::FutureExt, Background, Border, Color, Length,
@@ -75,7 +76,7 @@ pub enum Action {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum Message {
+pub enum Message {
     AddItem,
     DeleteItem((LibraryKind, i32)),
     OpenItem(Option<(LibraryKind, i32)>),
@@ -95,6 +96,8 @@ pub(crate) enum Message {
     Error(String),
     OpenContext(i32),
     None,
+    AddImages(Option<Vec<Image>>),
+    AddVideos(Option<Vec<Video>>),
 }
 
 impl<'a> Library {
@@ -295,26 +298,16 @@ impl<'a> Library {
                             .ok()
                     }
                     LibraryKind::Video => {
-                        let video = Video::default();
-                        self.video_library
-                            .add_item(video)
-                            .map(|_| {
-                                let index =
-                                    self.video_library.items.len();
-                                (LibraryKind::Video, index as i32)
-                            })
-                            .ok()
+                        return Action::Task(Task::perform(
+                            add_videos(),
+                            |videos| Message::AddVideos(videos),
+                        ));
                     }
                     LibraryKind::Image => {
-                        let image = Image::default();
-                        self.image_library
-                            .add_item(image)
-                            .map(|_| {
-                                let index =
-                                    self.image_library.items.len();
-                                (LibraryKind::Image, index as i32)
-                            })
-                            .ok()
+                        return Action::Task(Task::perform(
+                            add_images(),
+                            |images| Message::AddImages(images),
+                        ));
                     }
                     LibraryKind::Presentation => {
                         let presentation = Presentation::default();
@@ -334,6 +327,37 @@ impl<'a> Library {
                     }
                 };
                 return self.update(Message::OpenItem(item));
+            }
+            Message::AddVideos(videos) => {
+                if let Some(videos) = videos {
+                    for video in videos {
+                        if let Err(e) =
+                            self.video_library.add_item(video)
+                        {
+                            error!(?e);
+                        }
+                    }
+                }
+                return self.update(Message::OpenItem(Some((
+                    LibraryKind::Video,
+                    self.video_library.items.len() as i32 - 1,
+                ))));
+            }
+            Message::AddImages(images) => {
+                debug!(?images);
+                if let Some(images) = images {
+                    for image in images {
+                        if let Err(e) =
+                            self.image_library.add_item(image)
+                        {
+                            error!(?e);
+                        }
+                    }
+                }
+                return self.update(Message::OpenItem(Some((
+                    LibraryKind::Image,
+                    self.image_library.items.len() as i32 - 1,
+                ))));
             }
             Message::OpenItem(item) => {
                 debug!(?item);
@@ -941,6 +965,30 @@ impl<'a> Library {
     //         LibraryKind::Presentation => todo!(),
     //     }
     // }
+}
+
+async fn add_images() -> Option<Vec<Image>> {
+    debug!("here man");
+    let paths =
+        Dialog::new().title("pick image").open_files().await.ok()?;
+    Some(
+        paths
+            .urls()
+            .iter()
+            .map(|path| {
+                Image::from(path.to_file_path().expect("oops"))
+            })
+            .collect(),
+    )
+}
+
+async fn add_videos() -> Option<Vec<Video>> {
+    let paths = rfd::AsyncFileDialog::new()
+        .set_title("Pick image")
+        .pick_files()
+        .await?;
+    debug!(?paths);
+    Some(paths.iter().map(|path| Video::from(path.path())).collect())
 }
 
 fn update_in_db(
