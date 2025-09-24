@@ -399,7 +399,9 @@ impl<'a> Library {
                     Ok(()) => {
                         return Action::Task(
                             Task::future(self.db.acquire()).and_then(
-                                move |conn| update_in_db(&song, conn),
+                                move |conn| {
+                                    song_db_update(&song, conn)
+                                },
                             ),
                         );
                     }
@@ -463,13 +465,7 @@ impl<'a> Library {
                         return Action::Task(
                             Task::future(self.db.acquire()).and_then(
                                 move |conn| {
-                                    Task::perform(
-                                        update_video_in_db(
-                                            video.clone(),
-                                            conn,
-                                        ),
-                                        |_| Message::VideoChanged,
-                                    )
+                                    video_db_update(&video, conn)
                                 },
                             ),
                         );
@@ -477,7 +473,7 @@ impl<'a> Library {
                     Err(_) => todo!(),
                 }
             }
-            Message::VideoChanged => (),
+            Message::VideoChanged => debug!("vid shoulda changed"),
             Message::UpdatePresentation(presentation) => {
                 let Some((kind, index)) = self.editing_item else {
                     error!("Not editing an item");
@@ -938,37 +934,12 @@ impl<'a> Library {
         items.into_iter().map(|item| item.1).collect()
     }
 
-    // fn update_item<C: Content>(self, item: C) -> Task<Message> {
-    //     let Some((kind, index)) = self.editing_item else {
-    //         error!("Not editing an item");
-    //         return Task::none();
-    //     };
-
-    //     match kind {
-    //         LibraryKind::Song => todo!(),
-    //         LibraryKind::Video => todo!(),
-    //         LibraryKind::Image => {
-    //             match self
-    //                 .image_library
-    //                 .update_item(item as Image, index)
-    //             {
-    //                 Ok(_) => Task::future(self.db.acquire())
-    //                     .and_then(|conn| {
-    //                         Task::perform(
-    //                             update_image_in_db(item, conn),
-    //                             |_| Message::ImageChanged,
-    //                         )
-    //                     }),
-    //                 Err(_) => todo!(),
-    //             }
-    //         }
-    //         LibraryKind::Presentation => todo!(),
-    //     }
-    // }
+    pub fn get_video(&self, index: i32) -> Option<&Video> {
+        self.video_library.get_item(index)
+    }
 }
 
 async fn add_images() -> Option<Vec<Image>> {
-    debug!("here man");
     let paths =
         Dialog::new().title("pick image").open_files().await.ok()?;
     Some(
@@ -983,7 +954,6 @@ async fn add_images() -> Option<Vec<Image>> {
 }
 
 async fn add_videos() -> Option<Vec<Video>> {
-    debug!("here man");
     let paths =
         Dialog::new().title("pick video").open_files().await.ok()?;
     Some(
@@ -997,7 +967,31 @@ async fn add_videos() -> Option<Vec<Video>> {
     )
 }
 
-fn update_in_db(
+fn video_db_update(
+    video: &Video,
+    conn: PoolConnection<Sqlite>,
+) -> Task<Message> {
+    let video_title = video.title.clone();
+    warn!("Should have updated video: {:?}", video_title);
+    Task::perform(
+        update_video_in_db(video.to_owned(), conn).map(move |r| {
+            match r {
+                Ok(()) => {
+                    warn!(
+                        "Should have updated video: {:?}",
+                        video_title
+                    );
+                }
+                Err(e) => {
+                    error!(?e);
+                }
+            }
+        }),
+        |()| Message::VideoChanged,
+    )
+}
+
+fn song_db_update(
     song: &Song,
     conn: PoolConnection<Sqlite>,
 ) -> Task<Message> {

@@ -50,6 +50,7 @@ use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::ui::text_svg::{self};
+use crate::ui::video_editor::{self, VideoEditor};
 use crate::ui::widgets::draggable;
 
 pub mod core;
@@ -124,6 +125,7 @@ struct App {
     library_open: bool,
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
+    video_editor: VideoEditor,
     searching: bool,
     search_query: String,
     search_results: Vec<ServiceItem>,
@@ -171,6 +173,7 @@ enum Message {
     Save(Option<PathBuf>),
     SaveAs,
     OpenSettings,
+    VideoEditor(video_editor::Message),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -324,6 +327,7 @@ impl cosmic::Application for App {
             library_open: true,
             editor_mode: None,
             song_editor,
+            video_editor: VideoEditor::new(),
             searching: false,
             search_results: vec![],
             search_query: String::new(),
@@ -763,6 +767,27 @@ impl cosmic::Application for App {
                     song_editor::Action::None => Task::none(),
                 }
             }
+            Message::VideoEditor(message) => {
+                match self.video_editor.update(message) {
+                    video_editor::Action::Task(task) => {
+                        task.map(|m| {
+                            cosmic::Action::App(Message::VideoEditor(
+                                m,
+                            ))
+                        })
+                    }
+                    video_editor::Action::UpdateVideo(video) => {
+                        if let Some(_) = &mut self.library {
+                            self.update(Message::Library(
+                                library::Message::UpdateVideo(video),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    video_editor::Action::None => Task::none(),
+                }
+            }
             Message::Present(message) => {
                 // debug!(?message);
                 if self.presentation_open
@@ -917,53 +942,69 @@ impl cosmic::Application for App {
                 let mut song = Song::default();
                 if let Some(library) = &mut self.library {
                     match library.update(message) {
-                        library::Action::OpenItem(None) => {
-                            return Task::none();
-                        }
-                        library::Action::Task(task) => {
-                            return task.map(|message| {
-                                cosmic::Action::App(Message::Library(
-                                    message,
-                                ))
-                            });
-                        }
-                        library::Action::None => return Task::none(),
-                        library::Action::OpenItem(Some((
-                            kind,
-                            index,
-                        ))) => {
-                            debug!(
-                                "Should get song at index: {:?}",
-                                index
-                            );
-                            let Some(lib_song) =
-                                library.get_song(index)
-                            else {
-                                return Task::none();
-                            };
-                            self.editor_mode = Some(kind.into());
-                            song = lib_song.to_owned();
-                            debug!(
-                                "Should change songs to: {:?}",
-                                song
-                            );
-                        }
-                        library::Action::DraggedItem(
-                            service_item,
-                        ) => {
-                            debug!("hi");
-                            self.library_dragged_item =
-                                Some(service_item);
-                            // self.nav_model
-                            //     .insert()
-                            //     .text(service_item.title.clone())
-                            //     .data(service_item);
-                        }
-                    }
+                                library::Action::OpenItem(None) => {
+                                    return Task::none();
+                                }
+                                library::Action::Task(task) => {
+                                    return task.map(|message| {
+                                        cosmic::Action::App(Message::Library(
+                                            message,
+                                        ))
+                                    });
+                                }
+                                library::Action::None => return Task::none(),
+                                library::Action::OpenItem(Some((
+                                    kind,
+                                    index,
+                                ))) => {
+                                    match kind {
+                                        core::model::LibraryKind::Song => {
+                                            debug!(
+                                                "Should get song at index: {:?}",
+                                                index
+                                            );
+                                            let Some(lib_song) =
+                                                library.get_song(index)
+                                            else {
+                                                return Task::none();
+                                            };
+                                            self.editor_mode = Some(kind.into());
+                                            song = lib_song.to_owned();
+                                            debug!(
+                                                "Should change songs to: {:?}",
+                                                song
+                                            );
+
+                                            return self.update(Message::SongEditor(
+                                                song_editor::Message::ChangeSong(song),
+                                            ));
+                                        },
+                                        core::model::LibraryKind::Video => {
+                                            let Some(lib_video) = library.get_video(index) else {
+                                                return Task::none();
+                                            };
+                                            self.editor_mode = Some(kind.into());
+                                            let video = lib_video.to_owned();
+                                            return self.update(Message::VideoEditor(video_editor::Message::ChangeVideo(video)));
+                                        },
+                                        core::model::LibraryKind::Image => todo!(),
+                                        core::model::LibraryKind::Presentation => todo!(),
+                                    }
+                                }
+                                library::Action::DraggedItem(
+                                    service_item,
+                                ) => {
+                                    debug!("hi");
+                                    self.library_dragged_item =
+                                        Some(service_item);
+                                    // self.nav_model
+                                    //     .insert()
+                                    //     .text(service_item.title.clone())
+                                    //     .data(service_item);
+                                }
+                            }
                 }
-                self.update(Message::SongEditor(
-                    song_editor::Message::ChangeSong(song),
-                ))
+                Task::none()
             }
             Message::File(file) => {
                 self.file = file;
@@ -998,16 +1039,16 @@ impl cosmic::Application for App {
             Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
-                    || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                                                {
-                                                    self.presentation_open = true;
-                                                    if let Some(video) = &mut self.presenter.video {
-                                                        video.set_muted(false);
-                                                    }
-                                                    window::change_mode(id, Mode::Fullscreen)
-                                                } else {
-                                                    Task::none()
-                                                }
+                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                                        {
+                                                            self.presentation_open = true;
+                                                            if let Some(video) = &mut self.presenter.video {
+                                                                video.set_muted(false);
+                                                            }
+                                                            window::change_mode(id, Mode::Fullscreen)
+                                                        } else {
+                                                            Task::none()
+                                                        }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -1283,8 +1324,20 @@ impl cosmic::Application for App {
             Container::new(horizontal_space().width(0))
         };
 
-        let song_editor =
-            self.song_editor.view().map(Message::SongEditor);
+        let editor = self.editor_mode.as_ref().map_or_else(
+            || Element::from(Space::new(0, 0)),
+            |mode| match mode {
+                EditorMode::Song => {
+                    self.song_editor.view().map(Message::SongEditor)
+                }
+                EditorMode::Image => todo!(),
+                EditorMode::Video => {
+                    self.video_editor.view().map(Message::VideoEditor)
+                }
+                EditorMode::Presentation => todo!(),
+                EditorMode::Slide => todo!(),
+            },
+        );
 
         let service_row = row![
             service_list,
@@ -1331,12 +1384,13 @@ impl cosmic::Application for App {
             Container::new(horizontal_space())
         };
 
-        let main_area = if let Some(editor) = &self.editor_mode {
-            container(song_editor)
-                .padding(cosmic::theme::spacing().space_xxl)
-        } else {
-            Container::new(service_row).center_y(Length::Fill)
-        };
+        let main_area = self.editor_mode.as_ref().map_or_else(
+            || Container::new(service_row).center_y(Length::Fill),
+            |_| {
+                container(editor)
+                    .padding(cosmic::theme::spacing().space_xxl)
+            },
+        );
 
         let column = column![
             row![

@@ -15,7 +15,7 @@ use sqlx::{
     SqlitePool,
 };
 use std::path::{Path, PathBuf};
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(
     Clone, Debug, Default, PartialEq, Serialize, Deserialize,
