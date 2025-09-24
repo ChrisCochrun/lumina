@@ -37,9 +37,10 @@ impl From<&Video> for Value {
 
 impl From<PathBuf> for Video {
     fn from(value: PathBuf) -> Self {
-        let title: String = value.file_name().map_or_else(|| "Video".into(), |filename| {
-            filename.to_str().unwrap_or("Video").into()
-        });
+        let title: String = value.file_name().map_or_else(
+            || "Video".into(),
+            |filename| filename.to_str().unwrap_or("Video").into(),
+        );
         Self {
             title,
             path: value,

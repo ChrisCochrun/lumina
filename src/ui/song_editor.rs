@@ -286,7 +286,7 @@ impl SongEditor {
             .padding(cosmic::theme::spacing().space_s)
             .center_x(Length::FillPortion(2))
         } else {
-            container(vertical_space())
+            container(horizontal_space())
         };
         let slide_preview = container(self.slide_preview())
             .width(Length::FillPortion(2));
@@ -455,8 +455,10 @@ order",
                     v.set_looping(true);
                     v
                 });
-            debug!(?video);
+            // debug!(?video);
             self.video = video;
+        } else {
+            self.video = None;
         }
     }
 }

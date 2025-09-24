@@ -1340,7 +1340,11 @@ impl cosmic::Application for App {
 
         let column = column![
             row![
-                library.width(Length::FillPortion(1)),
+                if self.library_open {
+                    library.width(Length::FillPortion(1))
+                } else {
+                    container(Space::new(0, 0))
+                },
                 main_area.width(Length::FillPortion(4))
             ],
             preview_bar

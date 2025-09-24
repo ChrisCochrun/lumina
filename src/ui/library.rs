@@ -76,7 +76,7 @@ pub enum Action {
 
 #[derive(Clone, Debug)]
 pub(crate) enum Message {
-    AddItem(LibraryKind),
+    AddItem,
     DeleteItem((LibraryKind, i32)),
     OpenItem(Option<(LibraryKind, i32)>),
     HoverLibrary(Option<LibraryKind>),
@@ -128,24 +128,6 @@ impl<'a> Library {
 
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
-            Message::AddItem(kind) => match kind {
-                LibraryKind::Song => todo!(),
-                LibraryKind::Video => {
-                    let future = cosmic::dialog::file_chooser::open::Dialog::new().filter(cosmic::dialog::file_chooser::FileFilter::new("videos").extension("mp4").extension("mkv").extension("webm").extension(".mpeg")).open_file();
-                    let task = Task::future(future).and_then(|r| {
-                        if let Ok(video) = r
-                            .url()
-                            .to_file_path()
-                            .and_then(|path| Ok(Video::from(path)))
-                        {
-                            self.video_library.add_item(video);
-                        };
-                        Task::none()
-                    });
-                }
-                LibraryKind::Image => todo!(),
-                LibraryKind::Presentation => todo!(),
-            },
             Message::None => (),
             Message::DeleteItem((kind, index)) => {
                 match kind {
@@ -708,7 +690,7 @@ impl<'a> Library {
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
                 button::icon(icon::from_name("add"))
-                    .on_press(Message::AddItem(model.kind))
+                    .on_press(Message::AddItem)
             );
             let library_column =
                 column![library_toolbar, items].spacing(3);
