@@ -1,5 +1,10 @@
 use miette::{IntoDiagnostic, Result};
-use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::PathBuf,
+    sync::{Arc, LazyLock},
+};
 
 use cosmic::{
     iced::{
@@ -31,7 +36,8 @@ use crate::{
 };
 
 const REFERENCE_WIDTH: f32 = 1920.0;
-const REFERENCE_HEIGHT: f32 = 1080.0;
+static DEFAULT_SLIDE: LazyLock<Slide> =
+    LazyLock::new(|| Slide::default());
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
@@ -62,6 +68,7 @@ pub(crate) enum Message {
     NextSlide,
     PrevSlide,
     SlideChange(Slide),
+    ActivateSlide(usize, usize),
     EndVideo,
     StartVideo,
     StartAudio,
@@ -147,14 +154,22 @@ impl Presenter {
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
 
+        let slide =
+            items.get(0).map(|item| item.slides.get(0)).flatten();
+        let audio = items
+            .get(0)
+            .map(|item| item.slides.get(0).map(|slide| slide.audio()))
+            .flatten()
+            .flatten();
+
         Self {
-            current_slide: items[0].slides[0].clone(),
+            current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
             current_item: 0,
             current_slide_index: 0,
             absolute_slide_index: 0,
             total_slides,
             video,
-            audio: items[0].slides[0].audio(),
+            audio,
             service: items,
             video_position: 0.0,
             hovered_slide: None,
@@ -200,6 +215,19 @@ impl Presenter {
                 //     self.current_slide_index - 1,
                 // ));
             }
+            Message::ActivateSlide(item_index, slide_index) => {
+                if let Some(slide) = self
+                    .service
+                    .get(item_index)
+                    .map(|item| item.slides.get(slide_index))
+                    .flatten()
+                {
+                    self.current_item = item_index;
+                    self.current_slide_index = slide_index;
+                    return self
+                        .update(Message::SlideChange(slide.clone()));
+                }
+            }
             Message::SlideChange(slide) => {
                 let slide_text = slide.text();
                 debug!(slide_text, "slide changed");
@@ -221,10 +249,34 @@ impl Presenter {
                     self.reset_video();
                 }
 
+                let mut target_item = 0;
+
+                self.service.iter().enumerate().try_for_each(
+                    |(index, item)| {
+                        item.slides.iter().enumerate().try_for_each(
+                            |(slide_index, _)| {
+                                target_item += 1;
+                                if (index, slide_index)
+                                    == (
+                                        self.current_item,
+                                        self.current_slide_index,
+                                    )
+                                {
+                                    None
+                                } else {
+                                    Some(())
+                                }
+                            },
+                        )
+                    },
+                );
+
+                debug!(target_item);
+
                 let offset = AbsoluteOffset {
                     x: {
-                        if self.current_slide_index > 2 {
-                            (self.current_slide_index as f32)
+                        if target_item > 2 {
+                            (target_item as f32)
                                 .mul_add(187.5, -187.5)
                         } else {
                             0.0
@@ -232,7 +284,7 @@ impl Presenter {
                     },
                     y: 0.0,
                 };
-                debug!(?offset);
+
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
@@ -399,21 +451,11 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        slide_view(
-            self.current_slide.clone(),
-            &self.video,
-            false,
-            true,
-        )
+        slide_view(&self.current_slide, &self.video, false, true)
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        slide_view(
-            self.current_slide.clone(),
-            &self.video,
-            false,
-            false,
-        )
+        slide_view(&self.current_slide, &self.video, false, false)
     }
 
     pub fn preview_bar(&self) -> Element<Message> {
@@ -423,19 +465,6 @@ impl Presenter {
                 let mut slides = vec![];
                 item.slides.iter().enumerate().for_each(
                     |(slide_index, slide)| {
-                        let font_name = slide.font().into_boxed_str();
-                        let family =
-                            Family::Name(Box::leak(font_name));
-                        let weight = Weight::Normal;
-                        let stretch = Stretch::Normal;
-                        let style = Style::Normal;
-                        let font = Font {
-                            family,
-                            weight,
-                            stretch,
-                            style,
-                        };
-
                         let is_current_slide =
                             (item_index, slide_index)
                                 == (
@@ -444,7 +473,7 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            slide.clone(),
+                            &slide,
                             &self.video,
                             true,
                             false,
@@ -518,8 +547,9 @@ impl Presenter {
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
-                        .on_press(Message::SlideChange(
-                            slide.clone(),
+                        .on_press(Message::ActivateSlide(
+                            item_index,
+                            slide_index,
                         ));
                         slides.push(delegate.into());
                     },
@@ -705,7 +735,7 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 }
 
 pub(crate) fn slide_view<'a>(
-    slide: Slide,
+    slide: &'a Slide,
     video: &'a Option<Video>,
     delegate: bool,
     hide_mouse: bool,
@@ -775,7 +805,7 @@ pub(crate) fn slide_view<'a>(
                             })
                             .content_fit(ContentFit::Cover),
                     )
-                    .center(Length::Shrink)
+                    .center(Length::Fill)
                     .clip(true)
                     // Container::new(Space::new(0, 0))
                 } else {

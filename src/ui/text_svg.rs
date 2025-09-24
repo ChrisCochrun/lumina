@@ -249,18 +249,20 @@ impl TextSvg {
     }
 
     pub fn build(mut self) -> Self {
-        debug!("starting...");
+        // debug!("starting...");
 
         let mut path = dirs::data_local_dir().unwrap();
         path.push(PathBuf::from("lumina"));
         path.push(PathBuf::from("temp"));
 
         let shadow = if let Some(shadow) = &self.shadow {
-            format!("<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
+            format!(
+                "<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
                 shadow.offset_x,
                 shadow.offset_y,
                 shadow.spread,
-                shadow.color)
+                shadow.color
+            )
         } else {
             String::new()
         };
@@ -299,20 +301,24 @@ impl TextSvg {
             .collect();
         let text: String = text_pieces.join("\n");
 
-        let final_svg = format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
-                                        size.width,
-                                        size.height,
-                                        shadow,
-                                        self.font.name,
-                                        font_size,
-                                        self.fill, stroke, text);
+        let final_svg = format!(
+            "<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
+            size.width,
+            size.height,
+            shadow,
+            self.font.name,
+            font_size,
+            self.fill,
+            stroke,
+            text
+        );
 
         let hashed_title = rapidhash_v3(final_svg.as_bytes());
         path.push(PathBuf::from(hashed_title.to_string()));
         path.set_extension("png");
 
         if path.exists() {
-            debug!("cached");
+            // debug!("cached");
             let handle = Handle::from_path(path);
             self.handle = Some(handle);
             return self;
@@ -353,14 +359,6 @@ impl TextSvg {
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
-    }
-
-    fn text_spans(&self) -> Vec<String> {
-        self.text
-            .lines()
-            .enumerate()
-            .map(|(i, t)| format!("<tspan x=\"50%\">{t}</tspan>"))
-            .collect()
     }
 }
 
@@ -406,29 +404,5 @@ pub fn text_svg_generator(
             .fontdb(Arc::clone(&fontdb))
             .build();
         slide.text_svg = Some(text_svg);
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use pretty_assertions::assert_eq;
-
-    use super::TextSvg;
-
-    #[test]
-    fn test_text_spans() {
-        let mut text = TextSvg::new("yes");
-        text.text = "This is
-multiline
-text."
-            .into();
-        assert_eq!(
-            vec![
-                String::from("<tspan>This is</tspan>"),
-                String::from("<tspan>multiline</tspan>"),
-                String::from("<tspan>text.</tspan>"),
-            ],
-            text.text_spans()
-        )
     }
 }

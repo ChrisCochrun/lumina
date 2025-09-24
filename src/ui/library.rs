@@ -52,7 +52,6 @@ pub struct Library {
 enum MenuMessage {
     Delete((LibraryKind, i32)),
     Open,
-    None,
 }
 
 impl MenuAction for MenuMessage {
@@ -64,7 +63,6 @@ impl MenuAction for MenuMessage {
                 Message::DeleteItem((*kind, *index))
             }
             MenuMessage::Open => todo!(),
-            MenuMessage::None => todo!(),
         }
     }
 }
@@ -314,9 +312,44 @@ impl<'a> Library {
                             })
                             .ok()
                     }
-                    LibraryKind::Video => todo!(),
-                    LibraryKind::Image => todo!(),
-                    LibraryKind::Presentation => todo!(),
+                    LibraryKind::Video => {
+                        let video = Video::default();
+                        self.video_library
+                            .add_item(video)
+                            .map(|_| {
+                                let index =
+                                    self.video_library.items.len();
+                                (LibraryKind::Video, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Image => {
+                        let image = Image::default();
+                        self.image_library
+                            .add_item(image)
+                            .map(|_| {
+                                let index =
+                                    self.image_library.items.len();
+                                (LibraryKind::Image, index as i32)
+                            })
+                            .ok()
+                    }
+                    LibraryKind::Presentation => {
+                        let presentation = Presentation::default();
+                        self.presentation_library
+                            .add_item(presentation)
+                            .map(|_| {
+                                let index = self
+                                    .presentation_library
+                                    .items
+                                    .len();
+                                (
+                                    LibraryKind::Presentation,
+                                    index as i32,
+                                )
+                            })
+                            .ok()
+                    }
                 };
                 return self.update(Message::OpenItem(item));
             }
@@ -591,40 +624,43 @@ impl<'a> Library {
                 column({
                     model.items.iter().enumerate().map(
                         |(index, item)| {
+
                             let service_item = item.to_service_item();
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|()| Message::None);
+
                             DndSource::<Message, ServiceItem>::new({
-                                let mouse_area = Element::from(mouse_area(visual_item)
-                                                               .on_drag(Message::DragItem(service_item.clone()))
-                                                               .on_enter(Message::HoverItem(
-                                                                   Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   )),
-                                                               ))
-                                                               .on_double_click(
-                                                                   Message::OpenItem(Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   ))),
-                                                               )
-                                                               .on_right_press(Message::OpenContext(index as i32))
-                                                               .on_exit(Message::HoverItem(None))
-                                                               .on_press(Message::SelectItem(
-                                                                   Some((
-                                                                       model.kind,
-                                                                       index as i32,
-                                                                   )),
-                                                               )));
+                                let mouse_area = mouse_area(visual_item);
+                                let mouse_area = mouse_area.on_enter(Message::HoverItem(
+                                    Some((
+                                        model.kind,
+                                        index as i32,
+                                    )),
+                                ))
+                                    .on_double_click(
+                                        Message::OpenItem(Some((
+                                            model.kind,
+                                            index as i32,
+                                        ))),
+                                    )
+                                    .on_right_press(Message::OpenContext(index as i32))
+                                    .on_exit(Message::HoverItem(None))
+                                    .on_press(Message::SelectItem(
+                                        Some((
+                                            model.kind,
+                                            index as i32,
+                                        )),
+                                    ));
+
                                 if let Some(context_id) = self.context_menu {
                                     if index == context_id as usize {
+                                        let menu_items = vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))];
                                         let context_menu = context_menu(
                                             mouse_area,
                                             self.context_menu.map_or_else(|| None, |_| {
                                                 Some(menu::items(&self.menu_keys,
-                                                                 vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))]))
+                                                menu_items))
                                             })
                                         );
                                         Element::from(context_menu)
@@ -958,7 +994,7 @@ async fn add_db() -> Result<SqlitePool> {
     SqlitePool::connect(&db_url).await.into_diagnostic()
 }
 
-fn elide_text(text: impl AsRef<str>, width: f32) -> String {
+pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     const CHAR_SIZE: f32 = 8.0;
     let text: String = text.as_ref().to_owned();
     let text_length = text.len() as f32 * CHAR_SIZE;

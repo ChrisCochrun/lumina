@@ -9,26 +9,34 @@ use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
-use cosmic::iced::{self, event, window, Length, Point};
+use cosmic::iced::{
+    self, event, window, Background as IcedBackground, Border, Color,
+    Length,
+};
+use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
+use cosmic::widget::menu::key_bind::Modifier;
+use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::Container;
 use cosmic::widget::{
-    button, horizontal_space, mouse_area, nav_bar, search_input,
-    tooltip, vertical_space, Space,
+    button, context_menu, horizontal_space, mouse_area, nav_bar,
+    nav_bar_toggle, responsive, scrollable, search_input, tooltip,
+    vertical_space, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
+use cosmic::widget::{menu, Container};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{miette, Result};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
+use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -42,6 +50,7 @@ use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::ui::text_svg::{self};
+use crate::ui::widgets::draggable;
 
 pub mod core;
 pub mod lisp;
@@ -54,7 +63,7 @@ struct Cli {
     watch: bool,
     #[arg(short = 'i', long)]
     ui: bool,
-    file: PathBuf,
+    file: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
@@ -106,7 +115,9 @@ struct App {
     presenter: Presenter,
     windows: Vec<window::Id>,
     service: Vec<ServiceItem>,
+    selected_items: Vec<usize>,
     current_item: (usize, usize),
+    hovered_item: Option<usize>,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -119,6 +130,8 @@ struct App {
     search_id: cosmic::widget::Id,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
+    menu_keys: HashMap<KeyBind, MenuAction>,
+    context_menu: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -129,7 +142,7 @@ enum Message {
     File(PathBuf),
     OpenWindow,
     CloseWindow(Option<window::Id>),
-    WindowOpened(window::Id, Option<Point>),
+    WindowOpened(window::Id),
     WindowClosed(window::Id),
     AddLibrary(Library),
     LibraryToggle,
@@ -138,15 +151,53 @@ enum Message {
     None,
     EditorToggle(bool),
     ChangeServiceItem(usize),
+    SelectServiceItem(usize),
+    AddSelectServiceItem(usize),
+    HoveredServiceItem(Option<usize>),
     AddServiceItem(usize, ServiceItem),
+    RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
-    AddService(Vec<ServiceItem>),
+    ReorderService(usize, usize),
+    ContextMenuItem(usize),
     SearchFocus,
     Search(String),
     CloseSearch,
     UpdateSearchResults(Vec<ServiceItem>),
     OpenEditor(ServiceItem),
+    New,
+    Open,
+    OpenFile(PathBuf),
+    Save(Option<PathBuf>),
+    SaveAs,
+    OpenSettings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    New,
+    Save,
+    SaveAs,
+    Open,
+    OpenSettings,
+    DeleteItem(usize),
+}
+
+impl menu::Action for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuAction::New => Message::New,
+            MenuAction::Save => Message::Save(None),
+            MenuAction::SaveAs => Message::SaveAs,
+            MenuAction::Open => Message::Open,
+            MenuAction::OpenSettings => Message::OpenSettings,
+            MenuAction::DeleteItem(index) => {
+                Message::RemoveServiceItem(*index)
+            }
+        }
+    }
 }
 
 const HEADER_SPACE: u16 = 6;
@@ -179,30 +230,36 @@ impl cosmic::Application for App {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let items = match read_to_string(input.file) {
-            Ok(lisp) => {
-                let mut service_items = vec![];
-                let lisp = crisp::reader::read(&lisp);
-                match lisp {
-                    Value::List(vec) => {
-                        // let items = vec
-                        //     .into_par_iter()
-                        //     .map(|value| parse_lisp(value))
-                        //     .collect();
-                        // slide_vector.append(items);
-                        for value in vec {
-                            let mut inner_vector = parse_lisp(value);
-                            service_items.append(&mut inner_vector);
+        let items = if let Some(file) = input.file {
+            match read_to_string(file) {
+                Ok(lisp) => {
+                    let mut service_items = vec![];
+                    let lisp = crisp::reader::read(&lisp);
+                    match lisp {
+                        Value::List(vec) => {
+                            // let items = vec
+                            //     .into_par_iter()
+                            //     .map(|value| parse_lisp(value))
+                            //     .collect();
+                            // slide_vector.append(items);
+                            for value in vec {
+                                let mut inner_vector =
+                                    parse_lisp(value);
+                                service_items
+                                    .append(&mut inner_vector);
+                            }
                         }
+                        _ => todo!(),
                     }
-                    _ => todo!(),
+                    service_items
                 }
-                service_items
+                Err(e) => {
+                    warn!("Missing file or could not read: {e}");
+                    vec![]
+                }
             }
-            Err(e) => {
-                warn!("Missing file or could not read: {e}");
-                vec![]
-            }
+        } else {
+            vec![]
         };
 
         let items: Vec<ServiceItem> = items
@@ -230,12 +287,35 @@ impl cosmic::Application for App {
         //     nav_model.insert().text(item.title()).data(item.clone());
         // }
 
+        let mut menu_keys = HashMap::new();
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("s".into()),
+            },
+            MenuAction::Save,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("o".into()),
+            },
+            MenuAction::Open,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character(".".into()),
+            },
+            MenuAction::OpenSettings,
+        );
         // nav_model.activate_position(0);
         let mut app = Self {
             presenter,
             core,
             nav_model,
             service: items,
+            selected_items: vec![],
             file: PathBuf::default(),
             windows,
             presentation_open: false,
@@ -251,6 +331,9 @@ impl cosmic::Application for App {
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
+            menu_keys,
+            hovered_item: None,
+            context_menu: None,
         };
 
         let mut batch = vec![];
@@ -270,7 +353,82 @@ impl cosmic::Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<Self::Message>> {
-        vec![]
+        let file_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(menu::root("File")),
+            menu::items(
+                &self.menu_keys,
+                vec![
+                    menu::Item::Button(
+                        "New",
+                        Some(
+                            icon::from_name("document-new")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::New,
+                    ),
+                    menu::Item::Button(
+                        "Open",
+                        Some(
+                            icon::from_name("document-open")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::Open,
+                    ),
+                    menu::Item::Button(
+                        "Save",
+                        Some(
+                            icon::from_name("document-save")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::Save,
+                    ),
+                    menu::Item::Button(
+                        "Save As",
+                        Some(
+                            icon::from_name("document-save-as")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::SaveAs,
+                    ),
+                ],
+            ),
+        );
+        let settings_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(
+                menu::root("Settings").on_press(Message::None),
+            ),
+            menu::items(
+                &self.menu_keys,
+                vec![menu::Item::Button(
+                    "Open Settings",
+                    Some(
+                        icon::from_name("settings")
+                            .symbolic(true)
+                            .into(),
+                    ),
+                    MenuAction::OpenSettings,
+                )],
+            ),
+        );
+        let menu_bar =
+            menu::bar::<Message>(vec![file_menu, settings_menu])
+                .item_width(ItemWidth::Static(250))
+                .main_offset(10);
+        let library_button = tooltip(
+            nav_bar_toggle().on_toggle(Message::LibraryToggle),
+            if self.library_open {
+                "Hide library"
+            } else {
+                "Show library"
+            },
+            TPosition::Bottom,
+        )
+        .gap(cosmic::theme::spacing().space_xs);
+        vec![library_button.into(), menu_bar.into()]
     }
 
     fn header_center(&self) -> Vec<Element<Self::Message>> {
@@ -309,7 +467,8 @@ impl cosmic::Application for App {
                 .on_press(Message::SearchFocus),
                 "Search Library",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -332,7 +491,8 @@ impl cosmic::Application for App {
                 )),
                 "Enter Edit Mode",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -363,7 +523,8 @@ impl cosmic::Application for App {
                 }),
                 "Start Presentation",
                 TPosition::Bottom,
-            ),
+            )
+            .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
                     row!(
@@ -385,6 +546,7 @@ impl cosmic::Application for App {
                 "Open Library",
                 TPosition::Bottom,
             )
+            .gap(cosmic::theme::spacing().space_xs),
         ]
         .spacing(HEADER_SPACE)
         .into();
@@ -434,23 +596,33 @@ impl cosmic::Application for App {
                             debug!("Closing window");
                             Some(Message::CloseWindow(Some(id)))
                         }
-                        window::Event::Opened {
-                            position, ..
-                        } => {
+                        window::Event::Opened { .. } => {
                             debug!(?window_event, ?id);
-                            Some(Message::WindowOpened(id, position))
+                            Some(Message::WindowOpened(id))
                         }
                         window::Event::Closed => {
                             debug!("Closed window");
                             Some(Message::WindowClosed(id))
+                        }
+                        window::Event::FileHovered(file) => {
+                            debug!(?file);
+                            None
+                        }
+                        window::Event::FileDropped(file) => {
+                            debug!(?file);
+                            None
                         }
                         _ => None,
                     }
                 }
                 iced::Event::Touch(_touch) => None,
                 iced::Event::A11y(_id, _action_request) => None,
-                iced::Event::Dnd(_dnd_event) => None,
-                iced::Event::PlatformSpecific(_platform_specific) => {
+                iced::Event::Dnd(_dnd_event) => {
+                    // debug!(?dnd_event);
+                    None
+                }
+                iced::Event::PlatformSpecific(platform_specific) => {
+                    debug!(?platform_specific);
                     None
                 }
             }
@@ -580,7 +752,7 @@ impl cosmic::Application for App {
                         })
                     }
                     song_editor::Action::UpdateSong(song) => {
-                        if let Some(library) = &mut self.library {
+                        if let Some(_) = &mut self.library {
                             self.update(Message::Library(
                                 library::Message::UpdateSong(song),
                             ))
@@ -612,19 +784,11 @@ impl cosmic::Application for App {
                             self.service.get(item_index)
                         {
                             if item.slides.len() > slide_index + 1 {
-                                // let slide_length = item.slides.len();
-                                // debug!(
-                                //     slide_index,
-                                //     slide_length,
-                                //     ?item,
-                                //     "Slides are longer"
-                                // );
-                                let slide = item.slides
-                                    [slide_index + 1]
-                                    .clone();
+                                let slide_index = slide_index + 1;
                                 let action = self.presenter.update(
-                                    presenter::Message::SlideChange(
-                                        slide,
+                                    presenter::Message::ActivateSlide(
+                                        item_index,
+                                        slide_index,
                                     ),
                                 );
                                 match action {
@@ -644,10 +808,12 @@ impl cosmic::Application for App {
                                 // debug!("Slides are not longer");
                                 self.current_item =
                                     (item_index + 1, 0);
-                                if let Some(item) =
-                                    self.service.get(item_index + 1)
+                                if self
+                                    .service
+                                    .get(item_index + 1)
+                                    .is_some()
                                 {
-                                    let action = self.presenter.update(presenter::Message::SlideChange(item.slides[0].clone()));
+                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     match action {
                                         presenter::Action::Task(
                                             task,
@@ -678,12 +844,11 @@ impl cosmic::Application for App {
                             self.service.get(item_index)
                         {
                             if slide_index != 0 {
-                                let slide = item.slides
-                                    [slide_index - 1]
-                                    .clone();
+                                let slide_index = slide_index - 1;
                                 let action = self.presenter.update(
-                                    presenter::Message::SlideChange(
-                                        slide,
+                                    presenter::Message::ActivateSlide(
+                                        item_index,
+                                        slide_index,
                                     ),
                                 );
                                 match action {
@@ -718,10 +883,12 @@ impl cosmic::Application for App {
                                     item_index - 1,
                                     previous_item_slides_length - 1,
                                 );
-                                if let Some(item) =
-                                    self.service.get(item_index - 1)
+                                if self
+                                    .service
+                                    .get(item_index - 1)
+                                    .is_some()
                                 {
-                                    let action = self.presenter.update(presenter::Message::SlideChange(item.slides[previous_item_slides_length - 1].clone()));
+                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     match action {
                                         presenter::Action::Task(
                                             task,
@@ -818,9 +985,7 @@ impl cosmic::Application for App {
                     .set_window_title(format!("window_{count}"), id);
 
                 spawn_window.map(|id| {
-                    cosmic::Action::App(Message::WindowOpened(
-                        id, None,
-                    ))
+                    cosmic::Action::App(Message::WindowOpened(id))
                 })
             }
             Message::CloseWindow(id) => {
@@ -830,7 +995,7 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
-            Message::WindowOpened(id, _) => {
+            Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
                 if self.cli_mode
                     || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
@@ -873,10 +1038,6 @@ impl cosmic::Application for App {
                 self.library = Some(library);
                 Task::none()
             }
-            Message::AddService(service) => {
-                self.service = service;
-                Task::none()
-            }
             Message::None => Task::none(),
             Message::EditorToggle(edit) => {
                 if edit {
@@ -892,6 +1053,18 @@ impl cosmic::Application for App {
                     self.search_id.clone(),
                 )
             }
+            Message::HoveredServiceItem(index) => {
+                self.hovered_item = index;
+                Task::none()
+            }
+            Message::SelectServiceItem(index) => {
+                self.selected_items = vec![index];
+                Task::none()
+            }
+            Message::AddSelectServiceItem(index) => {
+                self.selected_items.push(index);
+                Task::none()
+            }
             Message::ChangeServiceItem(index) => {
                 if let Some((index, item)) = self
                     .service
@@ -902,8 +1075,9 @@ impl cosmic::Application for App {
                 {
                     self.current_item = (index, 0);
                     self.presenter.update(
-                        presenter::Message::SlideChange(
-                            slide.clone(),
+                        presenter::Message::ActivateSlide(
+                            self.current_item.0,
+                            self.current_item.1,
                         ),
                     );
                 }
@@ -925,6 +1099,15 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
+            Message::RemoveServiceItem(index) => {
+                self.service.remove(index);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
+            Message::ContextMenuItem(index) => {
+                self.context_menu = Some(index);
+                Task::none()
+            }
             Message::AddServiceItemDrop(index) => {
                 if let Some(item) = &self.library_dragged_item {
                     self.service.insert(index, item.clone());
@@ -944,6 +1127,12 @@ impl cosmic::Application for App {
                     })
                     .collect();
                 self.service.push(item);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
+            Message::ReorderService(index, target_index) => {
+                let item = self.service.remove(index);
+                self.service.insert(target_index, item);
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
@@ -977,6 +1166,34 @@ impl cosmic::Application for App {
                     }
                     ServiceItemKind::Content(_slide) => todo!(),
                 }
+            }
+            Message::New => {
+                debug!("new file");
+                Task::none()
+            }
+            Message::Open => {
+                debug!("Open file");
+                Task::none()
+            }
+            Message::OpenFile(file) => {
+                debug!(?file, "opening file");
+                Task::none()
+            }
+            Message::Save(file) => {
+                let Some(file) = file else {
+                    debug!("saving current");
+                    return Task::none();
+                };
+                debug!(?file, "saving new file");
+                Task::none()
+            }
+            Message::SaveAs => {
+                debug!("saving as a file");
+                Task::none()
+            }
+            Message::OpenSettings => {
+                debug!("Opening settings");
+                Task::none()
             }
         }
     }
@@ -1069,8 +1286,7 @@ impl cosmic::Application for App {
         let song_editor =
             self.song_editor.view().map(Message::SongEditor);
 
-        let row = row![
-            library,
+        let service_row = row![
             service_list,
             Container::new(
                 button::icon(icon_left)
@@ -1104,23 +1320,33 @@ impl cosmic::Application for App {
         .height(Length::Fill)
         .spacing(20);
 
-        let column = column![
-            Container::new(row).center_y(Length::Fill),
+        let preview_bar = if self.editor_mode.is_none() {
             Container::new(
-                self.presenter.preview_bar().map(Message::Present)
+                self.presenter.preview_bar().map(Message::Present),
             )
             .clip(true)
             .width(Length::Fill)
             .center_y(180)
-        ];
+        } else {
+            Container::new(horizontal_space())
+        };
 
-        if let Some(_editor) = &self.editor_mode {
+        let main_area = if let Some(editor) = &self.editor_mode {
             container(song_editor)
                 .padding(cosmic::theme::spacing().space_xxl)
-                .into()
         } else {
-            Element::from(column)
-        }
+            Container::new(service_row).center_y(Length::Fill)
+        };
+
+        let column = column![
+            row![
+                library.width(Length::FillPortion(1)),
+                main_area.width(Length::FillPortion(4))
+            ],
+            preview_bar
+        ];
+
+        column.into()
     }
 
     // View for presentation
@@ -1159,9 +1385,8 @@ where
         });
         self.windows.push(id);
         _ = self.set_window_title("Lumina Presenter".to_owned(), id);
-        spawn_window.map(|id| {
-            cosmic::Action::App(Message::WindowOpened(id, None))
-        })
+        spawn_window
+            .map(|id| cosmic::Action::App(Message::WindowOpened(id)))
     }
 
     fn add_library(&self) -> Task<Message> {
@@ -1183,36 +1408,6 @@ where
         } else {
             Task::none()
         }
-    }
-
-    fn add_service(
-        &self,
-        items: Vec<ServiceItem>,
-        fontdb: Arc<fontdb::Database>,
-    ) -> Task<Message> {
-        Task::perform(
-            async move {
-                let items: Vec<ServiceItem> = items
-                    .into_par_iter()
-                    .map(|mut item| {
-                        item.slides = item
-                            .slides
-                            .into_par_iter()
-                            .map(|mut slide| {
-                                text_svg::text_svg_generator(
-                                    &mut slide,
-                                    Arc::clone(&fontdb),
-                                );
-                                slide
-                            })
-                            .collect();
-                        item
-                    })
-                    .collect();
-                items
-            },
-            |x| cosmic::Action::App(Message::AddService(x)),
-        )
     }
 
     fn process_key_press(
@@ -1237,6 +1432,15 @@ where
             }
         }
         match (key, modifiers) {
+            (Key::Character(k), Modifiers::CTRL) if k == *"s" => {
+                self.update(Message::Save(None))
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"o" => {
+                self.update(Message::Open)
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"." => {
+                self.update(Message::OpenSettings)
+            }
             (Key::Character(k), Modifiers::CTRL)
                 if k == *"k" || k == *"f" =>
             {
@@ -1278,65 +1482,189 @@ where
     }
 
     fn service_list(&self) -> Element<Message> {
-        let list = self
-            .service
-            .iter()
-            .enumerate()
-            .map(|(index, item)| {
-                let button = button::standard(item.title.clone())
-                    .leading_icon({
-                        match item.kind {
-                            core::kinds::ServiceItemKind::Song(_) => {
-                                icon::from_name("folder-music-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Video(_) => {
-                                icon::from_name("folder-videos-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Image(_) => {
-                                icon::from_name("folder-pictures-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Presentation(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                            core::kinds::ServiceItemKind::Content(_) => {
-                                icon::from_name("x-office-presentation-symbolic")
-                            },
-                        }
-                    })
-                    // .icon_size(cosmic::theme::spacing().space_l)
-                    .class(cosmic::theme::style::Button::HeaderBar)
-                    // .spacing(cosmic::theme::spacing().space_l)
-                    // .padding(cosmic::theme::spacing().space_m)
-                    // .height(cosmic::theme::spacing().space_xxxl)
-                    .width(Length::Fill)
-                    .on_press(Message::ChangeServiceItem(index));
-                let tooltip = tooltip(button,
-                                      text::body(item.kind.to_string()),
-                                      TPosition::Right);
-                dnd_destination(tooltip, vec!["application/service-item".into()])
-                    .data_received_for::<ServiceItem>( move |item| {
-                        if let Some(item) = item {
-                            Message::AddServiceItem(index, item)
-                        } else {
-                            Message::None
-                        }
-                    }).on_finish(move |mime, data, action, x, y| {
-                        debug!(mime, ?data, ?action, x, y);
-                        let Ok(item) = ServiceItem::try_from((data, mime)) else {
-                            return Message::None;
-                        };
-                        debug!(?item);
-                        Message::AddServiceItem(index, item)
-                    })
+        let list =
+            self.service.iter().enumerate().map(|(index, item)| {
+                let icon = match item.kind {
+                    ServiceItemKind::Song(_) => {
+                        icon::from_name("folder-music-symbolic")
+                    }
+                    ServiceItemKind::Video(_) => {
+                        icon::from_name("folder-videos-symbolic")
+                    }
+                    ServiceItemKind::Image(_) => {
+                        icon::from_name("folder-pictures-symbolic")
+                    }
+                    ServiceItemKind::Presentation(_) => {
+                        icon::from_name(
+                            "x-office-presentation-symbolic",
+                        )
+                    }
+                    ServiceItemKind::Content(_) => icon::from_name(
+                        "x-office-presentation-symbolic",
+                    ),
+                };
+                let title = responsive(|size| {
+                    text::heading(library::elide_text(
+                        &item.title,
+                        size.width,
+                    ))
+                    .align_y(Vertical::Center)
+                    .wrapping(Wrapping::None)
                     .into()
+                });
+                let container = container(
+                    row![icon, title]
+                        .align_y(Vertical::Center)
+                        .spacing(cosmic::theme::spacing().space_xs),
+                )
+                .height(cosmic::theme::spacing().space_xl)
+                .padding(cosmic::theme::spacing().space_s)
+                .class(cosmic::theme::style::Container::Secondary)
+                .style(move |t| {
+                    container::Style::default()
+                        .background(IcedBackground::Color(
+                            if self.hovered_item.is_some_and(
+                                |hovered_index| {
+                                    index == hovered_index
+                                },
+                            ) || self
+                                .selected_items
+                                .contains(&index)
+                            {
+                                t.cosmic().button.hover.into()
+                            } else {
+                                t.cosmic().button.base.into()
+                            },
+                        ))
+                        .border(Border::default().rounded(
+                            t.cosmic().corner_radii.radius_m,
+                        ))
+                })
+                .width(Length::Fill);
+                let mouse_area = mouse_area(container)
+                    .on_enter(Message::HoveredServiceItem(Some(
+                        index,
+                    )))
+                    .on_exit(Message::HoveredServiceItem(None))
+                    .on_double_press(Message::ChangeServiceItem(
+                        index,
+                    ))
+                    .on_drag(Message::None)
+                    .on_right_press(Message::ContextMenuItem(index))
+                    .on_release(Message::SelectServiceItem(index));
+                let single_item = if let Some(context_menu_item) =
+                    self.context_menu
+                {
+                    if context_menu_item == index {
+                        let context_menu = context_menu(
+                            mouse_area,
+                            self.context_menu.map_or_else(
+                                || None,
+                                |i| {
+                                    if i == index {
+                                        let menu =
+                                            vec![menu::Item::Button(
+                                    "Delete",
+                                    None,
+                                    MenuAction::DeleteItem(index),
+                                )];
+                                        Some(menu::items(
+                                            &HashMap::new(),
+                                            menu,
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                },
+                            ),
+                        )
+                        .close_on_escape(true);
+                        Element::from(context_menu)
+                    } else {
+                        Element::from(mouse_area)
+                    }
+                } else {
+                    Element::from(mouse_area)
+                };
+                let tooltip = tooltip(
+                    single_item,
+                    text::body(item.kind.to_string()),
+                    TPosition::Right,
+                )
+                .gap(cosmic::theme::spacing().space_xs);
+                dnd_destination(
+                    tooltip,
+                    vec!["application/service-item".into()],
+                )
+                .data_received_for::<ServiceItem>(move |item| {
+                    if let Some(item) = item {
+                        Message::AddServiceItem(index, item)
+                    } else {
+                        Message::None
+                    }
+                })
+                .on_finish(move |mime, data, action, x, y| {
+                    debug!(mime, ?data, ?action, x, y);
+                    let Ok(item) =
+                        ServiceItem::try_from((data, mime))
+                    else {
+                        return Message::None;
+                    };
+                    debug!(?item);
+                    Message::AddServiceItem(index, item)
+                })
+                .into()
             });
+
+        let scrollable = scrollable(
+            draggable::column::column(list)
+                .spacing(10)
+                .on_drag(|event| match event {
+                    draggable::DragEvent::Picked { .. } => {
+                        Message::None
+                    }
+                    draggable::DragEvent::Dropped {
+                        index,
+                        target_index,
+                        ..
+                    } => Message::ReorderService(index, target_index),
+                    draggable::DragEvent::Canceled { .. } => {
+                        Message::None
+                    }
+                })
+                .style(|t| draggable::column::Style {
+                    scale: 1.05,
+                    moved_item_overlay: Color::from(
+                        t.cosmic().primary.base,
+                    )
+                    .scale_alpha(0.2)
+                    .into(),
+                    ghost_border: Border {
+                        width: 1.0,
+                        color: t.cosmic().secondary.base.into(),
+                        radius: t.cosmic().radius_m().into(),
+                    },
+                    ghost_background: Color::from(
+                        t.cosmic().secondary.base,
+                    )
+                    .scale_alpha(0.2)
+                    .into(),
+                })
+                .height(Length::Shrink),
+        )
+        .anchor_top()
+        .height(Length::Fill);
 
         let column = column![
             text::heading("Service List")
                 .center()
                 .width(Length::Fill),
             iced::widget::horizontal_rule(1),
-            column(list).spacing(10),
+            scrollable
+        ]
+        .padding(10)
+        .spacing(10);
+        let container = Container::new(stack![
             dnd_destination(
                 vertical_space().width(Length::Fill),
                 vec!["application/service-item".into()]
@@ -1358,33 +1686,11 @@ where
                     debug!(?item);
                     Message::AppendServiceItem(item)
                 }
-            )
-        ]
-        .padding(10)
-        .spacing(10);
-        let container = Container::new(column)
-            // .height(Length::Fill)
-            .style(nav_bar_style);
+            ),
+            column
+        ])
+        .style(nav_bar_style);
 
         container.center(Length::FillPortion(2)).into()
     }
-}
-
-#[cfg(test)]
-mod test {
-
-    fn test_slide() -> String {
-        let slide = r#"(slide (image :source "./somehting.jpg" :fill cover
-              (text "Something cooler" :font-size 50)))"#;
-        String::from(slide)
-    }
-    // #[test]
-    // fn test_lisp() {
-    //     let slide = test_slide();
-    //     if let Ok(data) = lexpr::parse::from_str_elisp(slide.as_str()) {
-    //         assert_eq!(slide, data)
-    //     } else {
-    //         assert!(false)
-    //     }
-    // }
 }

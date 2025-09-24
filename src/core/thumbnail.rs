@@ -95,7 +95,10 @@ mod test {
         let screenshot = bg_path_from_video(video);
         let screenshot_string =
             screenshot.to_str().expect("Should be thing");
-        assert_eq!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/moms-funeral.png");
+        assert_eq!(
+            screenshot_string,
+            "/home/chris/.local/share/lumina/thumbnails/moms-funeral.png"
+        );
 
         // let runtime = tokio::runtime::Runtime::new().unwrap();
         let result = bg_from_video(video, &screenshot);
@@ -118,6 +121,9 @@ mod test {
         let screenshot = bg_path_from_video(video);
         let screenshot_string =
             screenshot.to_str().expect("Should be thing");
-        assert_ne!(screenshot_string, "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.webm");
+        assert_ne!(
+            screenshot_string,
+            "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.webm"
+        );
     }
 }
