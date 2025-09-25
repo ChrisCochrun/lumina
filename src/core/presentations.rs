@@ -7,7 +7,7 @@ use sqlx::{
     pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
     Row, Sqlite, SqliteConnection, SqlitePool,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, error};
 
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
@@ -45,6 +45,39 @@ impl PartialEq for Presentation {
             && self.title == other.title
             && self.path == other.path
             && self.kind == other.kind
+    }
+}
+
+impl From<PathBuf> for Presentation {
+    fn from(value: PathBuf) -> Self {
+        let kind = match value
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+        {
+            "pdf" => PresKind::Pdf,
+            "html" => PresKind::Html,
+            _ => PresKind::Generic,
+        };
+        let title = value
+            .file_name()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+            .to_string();
+        Self {
+            id: 0,
+            title,
+            path: value.canonicalize().unwrap_or(value),
+            kind,
+        }
+    }
+}
+
+impl From<&Path> for Presentation {
+    fn from(value: &Path) -> Self {
+        Self::from(value.to_owned())
     }
 }
 
@@ -284,18 +317,69 @@ pub async fn update_presentation_in_db(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
-    query!(
+    let mut db = db.detach();
+    let id = presentation.id.clone();
+    if let Err(e) =
+        query!("SELECT id FROM presentations where id = $1", id)
+            .fetch_one(&mut db)
+            .await
+    {
+        if let Ok(ids) = query!("SELECT id FROM presentations")
+            .fetch_all(&mut db)
+            .await
+        {
+            let Some(mut max) = ids.iter().map(|r| r.id).max() else {
+                return Err(miette::miette!("cannot find max id"));
+            };
+            debug!(?e, "Presentation not found");
+            max += 1;
+            let result = query!(
+                r#"INSERT into presentations VALUES($1, $2, $3, $4)"#,
+                max,
+                presentation.title,
+                path,
+                html,
+            )
+            .execute(&mut db)
+            .await
+            .into_diagnostic();
+
+            return match result {
+                Ok(_) => {
+                    debug!("should have been updated");
+                    Ok(())
+                }
+                Err(e) => {
+                    error! {?e};
+                    Err(e)
+                }
+            };
+        } else {
+            return Err(miette::miette!("cannot find ids"));
+        }
+    };
+
+    debug!(?presentation, "should be been updated");
+    let result = query!(
         r#"UPDATE presentations SET title = $2, file_path = $3, html = $4 WHERE id = $1"#,
         presentation.id,
         presentation.title,
         path,
         html
     )
-        .execute(&mut db.detach())
-        .await
-        .into_diagnostic()?;
+        .execute(&mut db)
+        .await.into_diagnostic();
 
-    Ok(())
+    match result {
+        Ok(_) => {
+            debug!("should have been updated");
+            Ok(())
+        }
+        Err(e) => {
+            error! {?e};
+            Err(e)
+        }
+    }
 }
 
 pub async fn get_presentation_from_db(
