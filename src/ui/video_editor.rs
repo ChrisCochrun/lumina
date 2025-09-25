@@ -1,31 +1,19 @@
-use std::{io, path::PathBuf, sync::Arc};
+use std::{io, path::PathBuf};
 
 use cosmic::{
     dialog::file_chooser::{open::Dialog, FileFilter},
     iced::{alignment::Vertical, Length},
-    iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{column, row},
     theme,
     widget::{
-        button, combo_box, container, horizontal_space, icon,
-        progress_bar, scrollable, text, text_editor, text_input,
-        vertical_space, Space,
+        button, container, horizontal_space, icon, progress_bar,
+        text, text_input, Space,
     },
     Element, Task,
 };
-use dirs::font_dir;
 use iced_video_player::{Video, VideoPlayer};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use url::Url;
-
-use crate::{
-    core::{service_items::ServiceTrait, slide::Slide, songs::Song},
-    ui::{
-        presenter::slide_view, slide_editor::SlideEditor, text_svg,
-    },
-    Background, BackgroundKind,
-};
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -98,6 +86,7 @@ impl VideoEditor {
                 };
             }
             Message::Update(video) => {
+                warn!(?video);
                 return Action::UpdateVideo(video);
             }
             Message::PickVideo => {
@@ -115,7 +104,7 @@ impl VideoEditor {
                     });
                 return Action::Task(task);
             }
-            _ => (),
+            Message::None => (),
         }
         Action::None
     }

@@ -9,7 +9,6 @@ use cosmic::{
     widget::{
         button, combo_box, container, horizontal_space, icon,
         progress_bar, scrollable, text, text_editor, text_input,
-        vertical_space,
     },
     Element, Task,
 };

@@ -245,7 +245,7 @@ pub async fn update_video_in_db(
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
-    query!(
+    let result = query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,
         video.id,
         video.title,
@@ -255,10 +255,15 @@ pub async fn update_video_in_db(
         video.looping,
     )
         .execute(&mut db.detach())
-        .await
-        .into_diagnostic()?;
+        .await.into_diagnostic();
 
-    Ok(())
+    match result {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            error! {?e};
+            Err(e)
+        }
+    }
 }
 
 pub async fn get_video_from_db(

@@ -141,6 +141,7 @@ enum Message {
     Present(presenter::Message),
     Library(library::Message),
     SongEditor(song_editor::Message),
+    VideoEditor(video_editor::Message),
     File(PathBuf),
     OpenWindow,
     CloseWindow(Option<window::Id>),
@@ -173,7 +174,6 @@ enum Message {
     Save(Option<PathBuf>),
     SaveAs,
     OpenSettings,
-    VideoEditor(video_editor::Message),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -392,21 +392,28 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                match self
+                if self
                     .song_library
                     .update_item(song.clone(), index)
+                    .is_err()
                 {
-                    Ok(()) => {
-                        return Action::Task(
-                            Task::future(self.db.acquire()).and_then(
-                                move |conn| {
-                                    song_db_update(&song, conn)
-                                },
-                            ),
-                        );
-                    }
-                    Err(_) => todo!(),
-                }
+                    error!("Couldn't update song in model");
+                    return Action::None;
+                };
+
+                return Action::Task(
+                    Task::future(self.db.acquire()).and_then(
+                        move |conn| {
+                            Task::perform(
+                                update_song_in_db(
+                                    song.to_owned(),
+                                    conn,
+                                ),
+                                |_| Message::SongChanged,
+                            )
+                        },
+                    ),
+                );
             }
             Message::SongChanged => {
                 // self.song_library.update_item(song, index);
@@ -422,6 +429,15 @@ impl<'a> Library {
                     error!("Not editing a image item");
                     return Action::None;
                 }
+
+                if self
+                    .image_library
+                    .update_item(image.clone(), index)
+                    .is_err()
+                {
+                    error!("Couldn't update image in model");
+                    return Action::None;
+                };
 
                 match self
                     .image_library
@@ -457,21 +473,28 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                match self
+                if self
                     .video_library
                     .update_item(video.clone(), index)
+                    .is_err()
                 {
-                    Ok(()) => {
-                        return Action::Task(
-                            Task::future(self.db.acquire()).and_then(
-                                move |conn| {
-                                    video_db_update(&video, conn)
-                                },
-                            ),
-                        );
-                    }
-                    Err(_) => todo!(),
-                }
+                    error!("Couldn't update video in model");
+                    return Action::None;
+                };
+
+                return Action::Task(
+                    Task::future(self.db.acquire()).and_then(
+                        move |conn| {
+                            Task::perform(
+                                update_video_in_db(
+                                    video.to_owned(),
+                                    conn,
+                                ),
+                                |_| Message::VideoChanged,
+                            )
+                        },
+                    ),
+                );
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
             Message::UpdatePresentation(presentation) => {
@@ -964,54 +987,6 @@ async fn add_videos() -> Option<Vec<Video>> {
                 Video::from(path.to_file_path().expect("oops"))
             })
             .collect(),
-    )
-}
-
-fn video_db_update(
-    video: &Video,
-    conn: PoolConnection<Sqlite>,
-) -> Task<Message> {
-    let video_title = video.title.clone();
-    warn!("Should have updated video: {:?}", video_title);
-    Task::perform(
-        update_video_in_db(video.to_owned(), conn).map(move |r| {
-            match r {
-                Ok(()) => {
-                    warn!(
-                        "Should have updated video: {:?}",
-                        video_title
-                    );
-                }
-                Err(e) => {
-                    error!(?e);
-                }
-            }
-        }),
-        |()| Message::VideoChanged,
-    )
-}
-
-fn song_db_update(
-    song: &Song,
-    conn: PoolConnection<Sqlite>,
-) -> Task<Message> {
-    let song_title = song.title.clone();
-    warn!("Should have updated song: {:?}", song_title);
-    Task::perform(
-        update_song_in_db(song.to_owned(), conn).map(
-            move |r| match r {
-                Ok(()) => {
-                    warn!(
-                        "Should have updated song: {:?}",
-                        song_title
-                    );
-                }
-                Err(e) => {
-                    error!(?e);
-                }
-            },
-        ),
-        |()| Message::SongChanged,
     )
 }
 
