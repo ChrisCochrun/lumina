@@ -14,7 +14,7 @@ use sqlx::{
     SqlitePool,
 };
 use std::path::{Path, PathBuf};
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(
     Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
@@ -210,17 +210,65 @@ pub async fn update_image_in_db(
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
-    query!(
+    let mut db = db.detach();
+    let id = image.id.clone();
+    if let Err(e) = query!("SELECT id FROM images where id = $1", id)
+        .fetch_one(&mut db)
+        .await
+    {
+        if let Ok(ids) =
+            query!("SELECT id FROM images").fetch_all(&mut db).await
+        {
+            let Some(mut max) = ids.iter().map(|r| r.id).max() else {
+                return Err(miette::miette!("cannot find max id"));
+            };
+            debug!(?e, "Image not found");
+            max += 1;
+            let result = query!(
+                r#"INSERT into images VALUES($1, $2, $3)"#,
+                max,
+                image.title,
+                path,
+            )
+            .execute(&mut db)
+            .await
+            .into_diagnostic();
+
+            return match result {
+                Ok(_) => {
+                    debug!("should have been updated");
+                    Ok(())
+                }
+                Err(e) => {
+                    error! {?e};
+                    Err(e)
+                }
+            };
+        } else {
+            return Err(miette::miette!("cannot find ids"));
+        }
+    };
+
+    debug!(?image, "should be been updated");
+    let result = query!(
         r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
         image.id,
         image.title,
         path,
     )
-        .execute(&mut db.detach())
-        .await
-        .into_diagnostic()?;
+        .execute(&mut db)
+        .await.into_diagnostic();
 
-    Ok(())
+    match result {
+        Ok(_) => {
+            debug!("should have been updated");
+            Ok(())
+        }
+        Err(e) => {
+            error! {?e};
+            Err(e)
+        }
+    }
 }
 
 pub async fn get_image_from_db(

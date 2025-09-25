@@ -439,27 +439,28 @@ impl<'a> Library {
                     return Action::None;
                 };
 
-                match self
+                if self
                     .image_library
                     .update_item(image.clone(), index)
+                    .is_err()
                 {
-                    Ok(()) => {
-                        return Action::Task(
-                            Task::future(self.db.acquire()).and_then(
-                                move |conn| {
-                                    Task::perform(
-                                        update_image_in_db(
-                                            image.clone(),
-                                            conn,
-                                        ),
-                                        |_| Message::ImageChanged,
-                                    )
-                                },
-                            ),
-                        );
-                    }
-                    Err(_) => todo!(),
-                }
+                    error!("Couldn't update image in model");
+                    return Action::None;
+                };
+
+                return Action::Task(
+                    Task::future(self.db.acquire()).and_then(
+                        move |conn| {
+                            Task::perform(
+                                update_image_in_db(
+                                    image.to_owned(),
+                                    conn,
+                                ),
+                                |_| Message::ImageChanged,
+                            )
+                        },
+                    ),
+                );
             }
             Message::ImageChanged => (),
             Message::UpdateVideo(video) => {
@@ -959,6 +960,10 @@ impl<'a> Library {
 
     pub fn get_video(&self, index: i32) -> Option<&Video> {
         self.video_library.get_item(index)
+    }
+
+    pub fn get_image(&self, index: i32) -> Option<&Image> {
+        self.image_library.get_item(index)
     }
 }
 

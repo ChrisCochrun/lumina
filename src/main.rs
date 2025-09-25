@@ -3,7 +3,6 @@ use core::service_items::ServiceItem;
 use core::slide::{
     Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
 };
-use core::songs::Song;
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::iced::alignment::Vertical;
@@ -49,6 +48,7 @@ use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
+use crate::ui::image_editor::{self, ImageEditor};
 use crate::ui::text_svg::{self};
 use crate::ui::video_editor::{self, VideoEditor};
 use crate::ui::widgets::draggable;
@@ -126,6 +126,7 @@ struct App {
     editor_mode: Option<EditorMode>,
     song_editor: SongEditor,
     video_editor: VideoEditor,
+    image_editor: ImageEditor,
     searching: bool,
     search_query: String,
     search_results: Vec<ServiceItem>,
@@ -142,6 +143,7 @@ enum Message {
     Library(library::Message),
     SongEditor(song_editor::Message),
     VideoEditor(video_editor::Message),
+    ImageEditor(image_editor::Message),
     File(PathBuf),
     OpenWindow,
     CloseWindow(Option<window::Id>),
@@ -328,6 +330,7 @@ impl cosmic::Application for App {
             editor_mode: None,
             song_editor,
             video_editor: VideoEditor::new(),
+            image_editor: ImageEditor::new(),
             searching: false,
             search_results: vec![],
             search_query: String::new(),
@@ -767,6 +770,27 @@ impl cosmic::Application for App {
                     song_editor::Action::None => Task::none(),
                 }
             }
+            Message::ImageEditor(message) => {
+                match self.image_editor.update(message) {
+                    image_editor::Action::Task(task) => {
+                        task.map(|m| {
+                            cosmic::Action::App(Message::ImageEditor(
+                                m,
+                            ))
+                        })
+                    }
+                    image_editor::Action::UpdateImage(image) => {
+                        if let Some(_) = &mut self.library {
+                            self.update(Message::Library(
+                                library::Message::UpdateImage(image),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    image_editor::Action::None => Task::none(),
+                }
+            }
             Message::VideoEditor(message) => {
                 match self.video_editor.update(message) {
                     video_editor::Action::Task(task) => {
@@ -975,7 +999,14 @@ impl cosmic::Application for App {
                                             let video = lib_video.to_owned();
                                             return self.update(Message::VideoEditor(video_editor::Message::ChangeVideo(video)));
                                         },
-                                        core::model::LibraryKind::Image => todo!(),
+                                        core::model::LibraryKind::Image => {
+                                            let Some(lib_image) = library.get_image(index) else {
+                                                return Task::none();
+                                            };
+                                            self.editor_mode = Some(kind.into());
+                                            let image = lib_image.to_owned();
+                                            return self.update(Message::ImageEditor(image_editor::Message::ChangeImage(image)));
+                                        },
                                         core::model::LibraryKind::Presentation => todo!(),
                                     }
                                 }
@@ -1314,7 +1345,9 @@ impl cosmic::Application for App {
                 EditorMode::Song => {
                     self.song_editor.view().map(Message::SongEditor)
                 }
-                EditorMode::Image => todo!(),
+                EditorMode::Image => {
+                    self.image_editor.view().map(Message::ImageEditor)
+                }
                 EditorMode::Video => {
                     self.video_editor.view().map(Message::VideoEditor)
                 }
