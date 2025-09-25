@@ -90,18 +90,27 @@ impl VideoEditor {
                 return Action::UpdateVideo(video);
             }
             Message::PickVideo => {
-                let task =
-                    Task::perform(pick_video(), |video_result| {
+                let video_id = self
+                    .core_video
+                    .as_ref()
+                    .map(|v| v.id)
+                    .unwrap_or_default()
+                    .clone();
+                let task = Task::perform(
+                    pick_video(),
+                    move |video_result| {
                         if let Ok(video) = video_result {
-                            let video =
+                            let mut video =
                                 crate::core::videos::Video::from(
                                     video,
                                 );
+                            video.id = video_id;
                             Message::ChangeVideo(video)
                         } else {
                             Message::None
                         }
-                    });
+                    },
+                );
                 return Action::Task(task);
             }
             Message::None => (),

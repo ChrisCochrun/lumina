@@ -245,6 +245,49 @@ pub async fn update_video_in_db(
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
+    let mut db = db.detach();
+    let id = video.id.clone();
+    if let Err(e) = query!("SELECT id FROM videos where id = $1", id)
+        .fetch_one(&mut db)
+        .await
+    {
+        if let Ok(ids) =
+            query!("SELECT id FROM videos").fetch_all(&mut db).await
+        {
+            let Some(mut max) = ids.iter().map(|r| r.id).max() else {
+                return Err(miette::miette!("cannot find max id"));
+            };
+            debug!(?e, "Video not found");
+            max += 1;
+            let result = query!(
+                r#"INSERT into videos VALUES($1, $2, $3, $4, $5, $6)"#,
+                max,
+                video.title,
+                path,
+                video.start_time,
+                video.end_time,
+                video.looping,
+            )
+            .execute(&mut db)
+            .await
+            .into_diagnostic();
+
+            return match result {
+                Ok(_) => {
+                    debug!("should have been updated");
+                    Ok(())
+                }
+                Err(e) => {
+                    error! {?e};
+                    Err(e)
+                }
+            };
+        } else {
+            return Err(miette::miette!("cannot find ids"));
+        }
+    };
+
+    debug!(?video, "should be been updated");
     let result = query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,
         video.id,
@@ -254,11 +297,14 @@ pub async fn update_video_in_db(
         video.end_time,
         video.looping,
     )
-        .execute(&mut db.detach())
+        .execute(&mut db)
         .await.into_diagnostic();
 
     match result {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            debug!("should have been updated");
+            Ok(())
+        }
         Err(e) => {
             error! {?e};
             Err(e)
