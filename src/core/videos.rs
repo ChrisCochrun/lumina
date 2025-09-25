@@ -30,7 +30,7 @@ pub struct Video {
 }
 
 impl From<&Video> for Value {
-    fn from(value: &Video) -> Self {
+    fn from(_value: &Video) -> Self {
         Self::List(vec![Self::Symbol(Symbol("video".into()))])
     }
 }
