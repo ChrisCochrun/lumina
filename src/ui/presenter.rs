@@ -37,7 +37,7 @@ use crate::{
 
 const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> =
-    LazyLock::new(|| Slide::default());
+    LazyLock::new(Slide::default);
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
@@ -155,11 +155,9 @@ impl Presenter {
             items.iter().fold(0, |a, item| a + item.slides.len());
 
         let slide =
-            items.get(0).map(|item| item.slides.get(0)).flatten();
-        let audio = items
-            .get(0)
-            .map(|item| item.slides.get(0).map(|slide| slide.audio()))
-            .flatten()
+            items.first().and_then(|item| item.slides.first());
+        let audio = items.first()
+            .and_then(|item| item.slides.first().map(|slide| slide.audio()))
             .flatten();
 
         Self {
@@ -179,7 +177,7 @@ impl Presenter {
                         .expect("Can't open default rodio stream");
                 (
                     Arc::new(Sink::connect_new(
-                        &stream_handle.mixer(),
+                        stream_handle.mixer(),
                     )),
                     stream_handle,
                 )
@@ -219,8 +217,7 @@ impl Presenter {
                 if let Some(slide) = self
                     .service
                     .get(item_index)
-                    .map(|item| item.slides.get(slide_index))
-                    .flatten()
+                    .and_then(|item| item.slides.get(slide_index))
                 {
                     self.current_item = item_index;
                     self.current_slide_index = slide_index;
@@ -473,7 +470,7 @@ impl Presenter {
                                 );
 
                         let container = slide_view(
-                            &slide,
+                            slide,
                             &self.video,
                             true,
                             false,

@@ -454,8 +454,7 @@ where
                     Action::Picking { index, origin } => {
                         if let Some(cursor_position) =
                             cursor.position()
-                        {
-                            if cursor_position.distance(origin)
+                            && cursor_position.distance(origin)
                                 > self.deadband_zone
                             {
                                 // Start dragging
@@ -474,7 +473,6 @@ where
                                 event_status =
                                     event::Status::Captured;
                             }
-                        }
                     }
                     Action::Dragging { origin, index, .. } => {
                         if let Some(cursor_position) =

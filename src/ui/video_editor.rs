@@ -94,8 +94,7 @@ impl VideoEditor {
                     .core_video
                     .as_ref()
                     .map(|v| v.id)
-                    .unwrap_or_default()
-                    .clone();
+                    .unwrap_or_default();
                 let task = Task::perform(
                     pick_video(),
                     move |video_result| {

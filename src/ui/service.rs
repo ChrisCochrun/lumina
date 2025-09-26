@@ -7,7 +7,7 @@ use cosmic::{
         event, mouse, Event, Length, Point, Rectangle, Vector,
     },
     iced_core::{
-        self, image::Renderer, layout, renderer, widget::Tree,
+        self, layout, renderer, widget::Tree,
         Clipboard, Shell,
     },
     widget::Widget,
@@ -196,8 +196,7 @@ impl<Message: Clone + 'static>
                             // We ignore motion if we do not possess drag content by now.
                             if let Some(left_pressed_position) =
                                 state.left_pressed_position
-                            {
-                                if position
+                                && position
                                     .distance(left_pressed_position)
                                     > self.drag_threshold
                                 {
@@ -217,7 +216,6 @@ impl<Message: Clone + 'static>
                                     state.left_pressed_position =
                                         None;
                                 }
-                            }
                             if !cursor.is_over(layout.bounds()) {
                                 state.hovered = false;
 

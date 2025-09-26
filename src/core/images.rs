@@ -211,7 +211,7 @@ pub async fn update_image_in_db(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let mut db = db.detach();
-    let id = image.id.clone();
+    let id = image.id;
     if let Err(e) = query!("SELECT id FROM images where id = $1", id)
         .fetch_one(&mut db)
         .await

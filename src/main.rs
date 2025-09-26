@@ -765,7 +765,7 @@ impl cosmic::Application for App {
                         })
                     }
                     song_editor::Action::UpdateSong(song) => {
-                        if let Some(_) = &mut self.library {
+                        if self.library.is_some() {
                             self.update(Message::Library(
                                 library::Message::UpdateSong(song),
                             ))
@@ -786,7 +786,7 @@ impl cosmic::Application for App {
                         })
                     }
                     image_editor::Action::UpdateImage(image) => {
-                        if let Some(_) = &mut self.library {
+                        if self.library.is_some() {
                             self.update(Message::Library(
                                 library::Message::UpdateImage(image),
                             ))
@@ -807,7 +807,7 @@ impl cosmic::Application for App {
                         })
                     }
                     video_editor::Action::UpdateVideo(video) => {
-                        if let Some(_) = &mut self.library {
+                        if self.library.is_some() {
                             self.update(Message::Library(
                                 library::Message::UpdateVideo(video),
                             ))
@@ -1732,8 +1732,7 @@ where
                     moved_item_overlay: Color::from(
                         t.cosmic().primary.base,
                     )
-                    .scale_alpha(0.2)
-                    .into(),
+                    .scale_alpha(0.2),
                     ghost_border: Border {
                         width: 1.0,
                         color: t.cosmic().secondary.base.into(),

@@ -468,8 +468,7 @@ where
                     Action::Picking { index, origin } => {
                         if let Some(cursor_position) =
                             cursor.position()
-                        {
-                            if cursor_position.distance(origin)
+                            && cursor_position.distance(origin)
                                 > self.deadband_zone
                             {
                                 // Start dragging
@@ -488,7 +487,6 @@ where
                                 event_status =
                                     event::Status::Captured;
                             }
-                        }
                     }
                     Action::Dragging { origin, index, .. } => {
                         if let Some(cursor_position) =
@@ -903,8 +901,7 @@ pub fn default(theme: &Theme) -> Style {
     Style {
         scale: 1.05,
         moved_item_overlay: Color::from(theme.cosmic().primary.base)
-            .scale_alpha(0.2)
-            .into(),
+            .scale_alpha(0.2),
         ghost_border: Border {
             width: 1.0,
             color: theme.cosmic().secondary.base.into(),

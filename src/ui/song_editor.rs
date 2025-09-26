@@ -308,12 +308,12 @@ impl SongEditor {
     fn slide_preview(&self) -> Element<Message> {
         if let Some(slides) = &self.song_slides {
             let slides: Vec<Element<Message>> = slides
-                .into_iter()
+                .iter()
                 .enumerate()
                 .map(|(index, slide)| {
                     container(
                         slide_view(
-                            &slide,
+                            slide,
                             if index == 0 {
                                 &self.video
                             } else {

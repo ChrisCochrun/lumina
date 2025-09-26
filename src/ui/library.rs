@@ -19,7 +19,7 @@ use cosmic::{
     },
     Element, Task,
 };
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
 use sqlx::{migrate, SqlitePool};
 use tracing::{debug, error, warn};
@@ -156,13 +156,13 @@ impl<'a> Library {
                     LibraryKind::Video => {
                         return Action::Task(Task::perform(
                             add_videos(),
-                            |videos| Message::AddVideos(videos),
+                            Message::AddVideos,
                         ));
                     }
                     LibraryKind::Image => {
                         return Action::Task(Task::perform(
                             add_images(),
-                            |images| Message::AddImages(images),
+                            Message::AddImages,
                         ));
                     }
                     LibraryKind::Presentation => {
@@ -248,13 +248,12 @@ impl<'a> Library {
                     let Some(first_item) = self
                         .selected_items
                         .as_ref()
-                        .map(|items| {
+                        .and_then(|items| {
                             items
                                 .iter()
                                 .next()
                                 .map(|(_, index)| index)
                         })
-                        .flatten()
                     else {
                         let Some(item) = item else {
                             return Action::None;
@@ -270,9 +269,9 @@ impl<'a> Library {
                             self.selected_items = self
                                 .selected_items
                                 .clone()
-                                .and_then(|mut items| {
+                                .map(|mut items| {
                                     items.push((kind, id));
-                                    Some(items)
+                                    items
                                 });
                         }
                     } else if first_item > &index {
@@ -280,9 +279,9 @@ impl<'a> Library {
                             self.selected_items = self
                                 .selected_items
                                 .clone()
-                                .and_then(|mut items| {
+                                .map(|mut items| {
                                     items.push((kind, id));
-                                    Some(items)
+                                    items
                                 });
                         }
                     }
@@ -908,25 +907,21 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            let task =
-                                Task::future(self.db.acquire())
+                            
+                            Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             songs::remove_from_db(
                                                 db, song.id,
                                             ),
                                             |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
+                                                if let Err(e) = r {
+                                                    error!(?e)
                                                 }
                                                 Message::None
                                             },
                                         )
-                                    });
-                            task
+                                    })
                         }
                     } else {
                         Task::none()
@@ -943,25 +938,21 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            let task =
-                                Task::future(self.db.acquire())
+                            
+                            Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             videos::remove_from_db(
                                                 db, video.id,
                                             ),
                                             |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
+                                                if let Err(e) = r {
+                                                    error!(?e)
                                                 }
                                                 Message::None
                                             },
                                         )
-                                    });
-                            task
+                                    })
                         }
                     } else {
                         Task::none()
@@ -978,25 +969,21 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            let task =
-                                Task::future(self.db.acquire())
+                            
+                            Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             images::remove_from_db(
                                                 db, image.id,
                                             ),
                                             |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
+                                                if let Err(e) = r {
+                                                    error!(?e)
                                                 }
                                                 Message::None
                                             },
                                         )
-                                    });
-                            task
+                                    })
                         }
                     } else {
                         Task::none()
@@ -1014,8 +1001,8 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            let task =
-                                Task::future(self.db.acquire())
+                            
+                            Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                     presentations::remove_from_db(
@@ -1023,17 +1010,13 @@ impl<'a> Library {
                                         presentation.id,
                                     ),
                                     |r| {
-                                        match r {
-                                            Err(e) => {
-                                                error!(?e)
-                                            }
-                                            _ => (),
+                                        if let Err(e) = r {
+                                            error!(?e)
                                         }
                                         Message::None
                                     },
                                 )
-                                    });
-                            task
+                                    })
                         }
                     } else {
                         Task::none()
@@ -1041,7 +1024,7 @@ impl<'a> Library {
                 }
             })
             .collect();
-        if tasks.len() > 0 {
+        if !tasks.is_empty() {
             self.selected_items = None;
         }
         Action::Task(Task::batch(tasks))

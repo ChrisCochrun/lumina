@@ -73,8 +73,7 @@ impl ImageEditor {
                     .image
                     .as_ref()
                     .map(|v| v.id)
-                    .unwrap_or_default()
-                    .clone();
+                    .unwrap_or_default();
                 let task = Task::perform(
                     pick_image(),
                     move |image_result| {

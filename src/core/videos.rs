@@ -246,7 +246,7 @@ pub async fn update_video_in_db(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let mut db = db.detach();
-    let id = video.id.clone();
+    let id = video.id;
     if let Err(e) = query!("SELECT id FROM videos where id = $1", id)
         .fetch_one(&mut db)
         .await

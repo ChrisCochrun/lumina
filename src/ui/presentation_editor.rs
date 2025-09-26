@@ -10,7 +10,7 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        self, button, container, horizontal_space, icon, text,
+        button, container, horizontal_space, icon, text,
         text_input, Space,
     },
     Element, Task,
@@ -83,8 +83,7 @@ impl PresentationEditor {
                     .presentation
                     .as_ref()
                     .map(|v| v.id)
-                    .unwrap_or_default()
-                    .clone();
+                    .unwrap_or_default();
                 let task = Task::perform(
                     pick_presentation(),
                     move |presentation_result| {

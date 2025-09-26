@@ -318,7 +318,7 @@ pub async fn update_presentation_in_db(
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     let mut db = db.detach();
-    let id = presentation.id.clone();
+    let id = presentation.id;
     if let Err(e) =
         query!("SELECT id FROM presentations where id = $1", id)
             .fetch_one(&mut db)
