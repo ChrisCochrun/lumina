@@ -7,37 +7,36 @@ use std::{
 };
 
 use cosmic::{
+    Task,
     iced::{
-        font::{Family, Stretch, Style, Weight},
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
+        font::{Family, Stretch, Style, Weight},
     },
     iced_widget::{
         scrollable::{
-            scroll_to, AbsoluteOffset, Direction, Scrollbar,
+            AbsoluteOffset, Direction, Scrollbar, scroll_to,
         },
         stack, vertical_rule,
     },
     prelude::*,
     widget::{
-        container, image, mouse_area, responsive, scrollable, text,
-        Container, Id, Row, Space,
+        Container, Id, Row, Space, container, image, mouse_area,
+        responsive, scrollable, text,
     },
-    Task,
 };
-use iced_video_player::{gst_pbutils, Position, Video, VideoPlayer};
+use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::{
-    core::{service_items::ServiceItem, slide::Slide},
     BackgroundKind,
+    core::{service_items::ServiceItem, slide::Slide},
 };
 
 const REFERENCE_WIDTH: f32 = 1920.0;
-static DEFAULT_SLIDE: LazyLock<Slide> =
-    LazyLock::new(Slide::default);
+static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
@@ -156,8 +155,11 @@ impl Presenter {
 
         let slide =
             items.first().and_then(|item| item.slides.first());
-        let audio = items.first()
-            .and_then(|item| item.slides.first().map(|slide| slide.audio()))
+        let audio = items
+            .first()
+            .and_then(|item| {
+                item.slides.first().map(|slide| slide.audio())
+            })
             .flatten();
 
         Self {

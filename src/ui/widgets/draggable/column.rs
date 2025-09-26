@@ -22,17 +22,17 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use cosmic::Theme;
 use cosmic::iced::advanced::layout::{self, Layout};
-use cosmic::iced::advanced::widget::{tree, Operation, Tree, Widget};
-use cosmic::iced::advanced::{overlay, renderer, Clipboard, Shell};
+use cosmic::iced::advanced::widget::{Operation, Tree, Widget, tree};
+use cosmic::iced::advanced::{Clipboard, Shell, overlay, renderer};
 use cosmic::iced::alignment::{self, Alignment};
 use cosmic::iced::event::{self, Event};
-use cosmic::iced::{self, mouse, Transformation};
+use cosmic::iced::{self, Transformation, mouse};
 use cosmic::iced::{
     Background, Border, Color, Element, Length, Padding, Pixels,
     Point, Rectangle, Size, Vector,
 };
-use cosmic::Theme;
 
 use super::{Action, DragEvent, DropPosition};
 
@@ -470,23 +470,20 @@ where
                             cursor.position()
                             && cursor_position.distance(origin)
                                 > self.deadband_zone
-                            {
-                                // Start dragging
-                                *action = Action::Dragging {
-                                    index,
-                                    origin,
-                                    last_cursor: cursor_position,
-                                };
-                                if let Some(on_reorder) =
-                                    &self.on_drag
-                                {
-                                    shell.publish(on_reorder(
-                                        DragEvent::Picked { index },
-                                    ));
-                                }
-                                event_status =
-                                    event::Status::Captured;
+                        {
+                            // Start dragging
+                            *action = Action::Dragging {
+                                index,
+                                origin,
+                                last_cursor: cursor_position,
+                            };
+                            if let Some(on_reorder) = &self.on_drag {
+                                shell.publish(on_reorder(
+                                    DragEvent::Picked { index },
+                                ));
                             }
+                            event_status = event::Status::Captured;
+                        }
                     }
                     Action::Dragging { origin, index, .. } => {
                         if let Some(cursor_position) =

@@ -1,13 +1,13 @@
 use std::{io, path::PathBuf};
 
 use cosmic::{
+    Renderer,
     iced::{Color, Font, Length, Size},
     widget::{
         self,
         canvas::{self, Program, Stroke},
         container,
     },
-    Renderer,
 };
 use tracing::debug;
 

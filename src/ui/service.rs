@@ -2,16 +2,16 @@ use cosmic::iced::Size;
 
 use cosmic::iced_core::widget::tree;
 use cosmic::{
+    Element,
     iced::{
+        Event, Length, Point, Rectangle, Vector,
         clipboard::dnd::{DndEvent, SourceEvent},
-        event, mouse, Event, Length, Point, Rectangle, Vector,
+        event, mouse,
     },
     iced_core::{
-        self, layout, renderer, widget::Tree,
-        Clipboard, Shell,
+        self, Clipboard, Shell, layout, renderer, widget::Tree,
     },
     widget::Widget,
-    Element,
 };
 use tracing::debug;
 
@@ -199,23 +199,21 @@ impl<Message: Clone + 'static>
                                 && position
                                     .distance(left_pressed_position)
                                     > self.drag_threshold
+                            {
+                                if let Some(on_start) =
+                                    self.on_start.as_ref()
                                 {
-                                    if let Some(on_start) =
-                                        self.on_start.as_ref()
-                                    {
-                                        shell
-                                            .publish(on_start.clone())
-                                    }
-                                    let offset = Vector::new(
-                                        left_pressed_position.x
-                                            - layout.bounds().x,
-                                        left_pressed_position.y
-                                            - layout.bounds().y,
-                                    );
-                                    state.is_dragging = true;
-                                    state.left_pressed_position =
-                                        None;
+                                    shell.publish(on_start.clone())
                                 }
+                                let offset = Vector::new(
+                                    left_pressed_position.x
+                                        - layout.bounds().x,
+                                    left_pressed_position.y
+                                        - layout.bounds().y,
+                                );
+                                state.is_dragging = true;
+                                state.left_pressed_position = None;
+                            }
                             if !cursor.is_over(layout.bounds()) {
                                 state.hovered = false;
 

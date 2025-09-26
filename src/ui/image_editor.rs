@@ -2,15 +2,15 @@ use std::{io, path::PathBuf};
 
 use crate::core::images::Image;
 use cosmic::{
-    dialog::file_chooser::{open::Dialog, FileFilter},
-    iced::{alignment::Vertical, Length},
+    Element, Task,
+    dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::{Length, alignment::Vertical},
     iced_widget::{column, row},
     theme,
     widget::{
-        self, button, container, horizontal_space, icon, text,
-        text_input, Space,
+        self, Space, button, container, horizontal_space, icon, text,
+        text_input,
     },
-    Element, Task,
 };
 use tracing::{debug, error, warn};
 

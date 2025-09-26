@@ -4,8 +4,7 @@ use cosmic::{
     dialog::file_chooser::open::Dialog,
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
-        futures::FutureExt, keyboard::Modifiers, Background, Border,
-        Color, Length,
+        keyboard::Modifiers, Background, Border, Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
@@ -53,8 +52,8 @@ pub struct Library {
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 enum MenuMessage {
-    Delete((LibraryKind, i32)),
-    Open,
+    Delete,
+    Open((LibraryKind, i32)),
 }
 
 impl MenuAction for MenuMessage {
@@ -62,10 +61,10 @@ impl MenuAction for MenuMessage {
 
     fn message(&self) -> Self::Message {
         match self {
-            MenuMessage::Delete((kind, index)) => {
-                Message::DeleteItem((*kind, *index))
+            MenuMessage::Delete => Message::DeleteItem,
+            MenuMessage::Open((kind, index)) => {
+                Message::OpenItem(Some((*kind, *index)))
             }
-            MenuMessage::Open => todo!(),
         }
     }
 }
@@ -80,7 +79,7 @@ pub enum Action {
 #[derive(Clone, Debug)]
 pub enum Message {
     AddItem,
-    DeleteItem((LibraryKind, i32)),
+    DeleteItem,
     OpenItem(Option<(LibraryKind, i32)>),
     HoverLibrary(Option<LibraryKind>),
     OpenLibrary(Option<LibraryKind>),
@@ -135,7 +134,7 @@ impl<'a> Library {
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
             Message::None => (),
-            Message::DeleteItem((kind, index)) => {
+            Message::DeleteItem => {
                 return self.delete_items();
             }
             Message::AddItem => {
@@ -185,6 +184,7 @@ impl<'a> Library {
                 return self.update(Message::OpenItem(item));
             }
             Message::AddVideos(videos) => {
+                debug!(?videos);
                 if let Some(videos) = videos {
                     for video in videos {
                         if let Err(e) =
@@ -604,7 +604,10 @@ impl<'a> Library {
 
                                 if let Some(context_id) = self.context_menu {
                                     if index == context_id as usize {
-                                        let menu_items = vec![menu::Item::Button("Delete", None, MenuMessage::Delete((model.kind, index as i32)))];
+                                        let menu_items = vec![
+                                            menu::Item::Button("Open", None, MenuMessage::Open((model.kind, index as i32))),
+                                            menu::Item::Button("Delete", None, MenuMessage::Delete)
+                                        ];
                                         let context_menu = context_menu(
                                             mouse_area,
                                             self.context_menu.map_or_else(|| None, |_| {
@@ -684,11 +687,11 @@ impl<'a> Library {
                     "text/org".into(),
                 ],
             )
-            .on_enter(|x, y, mimes| {
+            .on_enter(|_, _, mimes| {
                 warn!(?mimes);
                 Message::None
             })
-            .on_finish(|mime, data, action, x, y| {
+            .on_finish(|mime, data, action, _, _| {
                 warn!(?mime, ?data, ?action);
                 Message::None
             });
@@ -892,23 +895,23 @@ impl<'a> Library {
             return Action::None;
         };
         items.sort_by(|(_, index), (_, other)| index.cmp(other));
-        let tasks: Vec<Task<Message>> = items
-            .iter()
-            .rev()
-            .map(|(kind, index)| match kind {
-                LibraryKind::Song => {
-                    if let Some(song) =
-                        self.song_library.get_item(*index)
-                    {
-                        let song = song.clone();
-                        if let Err(e) =
-                            self.song_library.remove_item(*index)
+        let tasks: Vec<Task<Message>> =
+            items
+                .iter()
+                .rev()
+                .map(|(kind, index)| match kind {
+                    LibraryKind::Song => {
+                        if let Some(song) =
+                            self.song_library.get_item(*index)
                         {
-                            error!(?e);
-                            Task::none()
-                        } else {
-                            
-                            Task::future(self.db.acquire())
+                            let song = song.clone();
+                            if let Err(e) =
+                                self.song_library.remove_item(*index)
+                            {
+                                error!(?e);
+                                Task::none()
+                            } else {
+                                Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             songs::remove_from_db(
@@ -922,24 +925,23 @@ impl<'a> Library {
                                             },
                                         )
                                     })
-                        }
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Video => {
-                    if let Some(video) =
-                        self.video_library.get_item(*index)
-                    {
-                        let video = video.clone();
-                        if let Err(e) =
-                            self.video_library.remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
+                            }
                         } else {
-                            
-                            Task::future(self.db.acquire())
+                            Task::none()
+                        }
+                    }
+                    LibraryKind::Video => {
+                        if let Some(video) =
+                            self.video_library.get_item(*index)
+                        {
+                            let video = video.clone();
+                            if let Err(e) =
+                                self.video_library.remove_item(*index)
+                            {
+                                error!(?e);
+                                Task::none()
+                            } else {
+                                Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             videos::remove_from_db(
@@ -953,24 +955,23 @@ impl<'a> Library {
                                             },
                                         )
                                     })
-                        }
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Image => {
-                    if let Some(image) =
-                        self.image_library.get_item(*index)
-                    {
-                        let image = image.clone();
-                        if let Err(e) =
-                            self.image_library.remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
+                            }
                         } else {
-                            
-                            Task::future(self.db.acquire())
+                            Task::none()
+                        }
+                    }
+                    LibraryKind::Image => {
+                        if let Some(image) =
+                            self.image_library.get_item(*index)
+                        {
+                            let image = image.clone();
+                            if let Err(e) =
+                                self.image_library.remove_item(*index)
+                            {
+                                error!(?e);
+                                Task::none()
+                            } else {
+                                Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                             images::remove_from_db(
@@ -984,25 +985,24 @@ impl<'a> Library {
                                             },
                                         )
                                     })
-                        }
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Presentation => {
-                    if let Some(presentation) =
-                        self.presentation_library.get_item(*index)
-                    {
-                        let presentation = presentation.clone();
-                        if let Err(e) = self
-                            .presentation_library
-                            .remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
+                            }
                         } else {
-                            
-                            Task::future(self.db.acquire())
+                            Task::none()
+                        }
+                    }
+                    LibraryKind::Presentation => {
+                        if let Some(presentation) =
+                            self.presentation_library.get_item(*index)
+                        {
+                            let presentation = presentation.clone();
+                            if let Err(e) = self
+                                .presentation_library
+                                .remove_item(*index)
+                            {
+                                error!(?e);
+                                Task::none()
+                            } else {
+                                Task::future(self.db.acquire())
                                     .and_then(move |db| {
                                         Task::perform(
                                     presentations::remove_from_db(
@@ -1017,13 +1017,13 @@ impl<'a> Library {
                                     },
                                 )
                                     })
+                            }
+                        } else {
+                            Task::none()
                         }
-                    } else {
-                        Task::none()
                     }
-                }
-            })
-            .collect();
+                })
+                .collect();
         if !tasks.is_empty() {
             self.selected_items = None;
         }
