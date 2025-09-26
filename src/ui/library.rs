@@ -287,6 +287,18 @@ impl<'a> Library {
                         }
                     }
                 }
+                if modifiers.control() {
+                    let Some(item) = item else {
+                        return Action::None;
+                    };
+                    let Some(items) = self.selected_items.as_mut()
+                    else {
+                        self.selected_items = Some(vec![item]);
+                        return Action::None;
+                    };
+                    items.push(item);
+                    self.selected_items = Some(items.to_vec());
+                }
             }
             Message::DragItem(item) => {
                 debug!(?item);
@@ -877,11 +889,13 @@ impl<'a> Library {
     fn delete_items(&mut self) -> Action {
         // Need to make this function collect tasks to be run off of
         // who should be deleted
-        let Some(ref items) = self.selected_items else {
+        let Some(items) = self.selected_items.as_mut() else {
             return Action::None;
         };
+        items.sort_by(|(_, index), (_, other)| index.cmp(other));
         let tasks: Vec<Task<Message>> = items
             .iter()
+            .rev()
             .map(|(kind, index)| match kind {
                 LibraryKind::Song => {
                     if let Some(song) =
