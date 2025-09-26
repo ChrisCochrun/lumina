@@ -1,13 +1,9 @@
 #+TITLE: The Task list for Lumina
 
 
-* DONE [#A] Add removal and reordering of service_items
-Reordering is finished
 * TODO Add OBS integration
 This will be based on each slide having the ability to activate an OBS scene when it is active.
 * TODO Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
-* TODO Build a video editor
-* TODO Build an image editor
 * TODO Build a presentation editor
 
 * TODO [#A] Need to fix tests now that the basic app is working
@@ -29,7 +25,7 @@ I tried out a way of generating the svg and rasterizing it ahead of time and the
 
 The problem with this approach is that every change to a song's text or font metrics means we need to rebuild all the text items for that song. I need to think of a way for the text generation to be done asynchronously so that the ui isn't locked up.
 
-* TODO [#C] Make the presenter more modular so things are easier to change.
+* TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
 * TODO Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
@@ -68,6 +64,7 @@ This code creates a font by leaking the Box to a ='static &str=. I just am not s
 
 Krimzin on Discord told me that maybe the =update= method is a better place for this Box to be created or updated and then maybe I could generate the view from there.
 
+* DONE Build an image editor
 * DONE [#A] Develop DnD for library items
 This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
 
@@ -75,6 +72,9 @@ This needs lots more attention
 
 * DONE Use Rich Text instead of normal text for slides
 This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
+* DONE [#A] Add removal and reordering of service_items
+Reordering is finished
+* DONE Build a video editor
 * DONE Check into =mupdf-rs= for loading PDF's.
 
 * DONE Build Menu

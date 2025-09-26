@@ -3,3 +3,7 @@
 .sqlx
 .env
 data.db
+/flamegraph.svg
+/.zed/
+/perf.data
+/perf.data.old
