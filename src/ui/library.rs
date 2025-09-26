@@ -4,7 +4,8 @@ use cosmic::{
     dialog::file_chooser::open::Dialog,
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
-        futures::FutureExt, Background, Border, Color, Length,
+        futures::FutureExt, keyboard::Modifiers, Background, Border,
+        Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
@@ -18,9 +19,9 @@ use cosmic::{
     },
     Element, Task,
 };
-use miette::{IntoDiagnostic, Result};
+use miette::{miette, IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{migrate, pool::PoolConnection, Sqlite, SqlitePool};
+use sqlx::{migrate, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{
@@ -41,12 +42,13 @@ pub struct Library {
     presentation_library: Model<Presentation>,
     library_open: Option<LibraryKind>,
     library_hovered: Option<LibraryKind>,
-    selected_item: Option<(LibraryKind, i32)>,
+    selected_items: Option<Vec<(LibraryKind, i32)>>,
     hovered_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: SqlitePool,
     menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
     context_menu: Option<i32>,
+    modifiers_pressed: Option<Modifiers>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -116,12 +118,13 @@ impl<'a> Library {
             .await,
             library_open: None,
             library_hovered: None,
-            selected_item: None,
+            selected_items: None,
             hovered_item: None,
             editing_item: None,
             db,
             menu_keys: HashMap::new(),
             context_menu: None,
+            modifiers_pressed: None,
         }
     }
 
@@ -133,154 +136,7 @@ impl<'a> Library {
         match message {
             Message::None => (),
             Message::DeleteItem((kind, index)) => {
-                match kind {
-                    LibraryKind::Song => {
-                        let Some(song) =
-                            self.song_library.get_item(index)
-                        else {
-                            error!(
-                                "There appears to not be a song here"
-                            );
-                            return Action::None;
-                        };
-                        let song = song.clone();
-                        if let Err(e) =
-                            self.song_library.remove_item(index)
-                        {
-                            error!(?e);
-                        } else {
-                            let task =
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            songs::remove_from_db(
-                                                db, song.id,
-                                            ),
-                                            |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    });
-                            return Action::Task(task);
-                        }
-                    }
-                    LibraryKind::Video => {
-                        let Some(video) =
-                            self.video_library.get_item(index)
-                        else {
-                            error!(
-                                "There appears to not be a video here"
-                            );
-                            return Action::None;
-                        };
-                        let video = video.clone();
-                        if let Err(e) =
-                            self.video_library.remove_item(index)
-                        {
-                            error!(?e);
-                        } else {
-                            let task =
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            videos::remove_from_db(
-                                                db, video.id,
-                                            ),
-                                            |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    });
-                            return Action::Task(task);
-                        }
-                    }
-                    LibraryKind::Image => {
-                        let Some(image) =
-                            self.image_library.get_item(index)
-                        else {
-                            error!(
-                                "There appears to not be a image here"
-                            );
-                            return Action::None;
-                        };
-                        let image = image.clone();
-                        if let Err(e) =
-                            self.image_library.remove_item(index)
-                        {
-                            error!(?e);
-                        } else {
-                            let task =
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            images::remove_from_db(
-                                                db, image.id,
-                                            ),
-                                            |r| {
-                                                match r {
-                                                    Err(e) => {
-                                                        error!(?e)
-                                                    }
-                                                    _ => (),
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    });
-                            return Action::Task(task);
-                        }
-                    }
-                    LibraryKind::Presentation => {
-                        let Some(presentation) =
-                            self.presentation_library.get_item(index)
-                        else {
-                            error!(
-                                "There appears to not be a presentation here"
-                            );
-                            return Action::None;
-                        };
-                        let presentation = presentation.clone();
-                        if let Err(e) = self
-                            .presentation_library
-                            .remove_item(index)
-                        {
-                            error!(?e);
-                        } else {
-                            let task =
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                    presentations::remove_from_db(
-                                        db,
-                                        presentation.id,
-                                    ),
-                                    |r| {
-                                        match r {
-                                            Err(e) => {
-                                                error!(?e)
-                                            }
-                                            _ => (),
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                    });
-                            return Action::Task(task);
-                        }
-                    }
-                };
+                return self.delete_items();
             }
             Message::AddItem => {
                 let kind =
@@ -374,7 +230,63 @@ impl<'a> Library {
                 self.hovered_item = item;
             }
             Message::SelectItem(item) => {
-                self.selected_item = item;
+                let Some(modifiers) = self.modifiers_pressed else {
+                    let Some(item) = item else {
+                        return Action::None;
+                    };
+                    self.selected_items = Some(vec![item]);
+                    return Action::None;
+                };
+                if modifiers.is_empty() {
+                    let Some(item) = item else {
+                        return Action::None;
+                    };
+                    self.selected_items = Some(vec![item]);
+                    return Action::None;
+                }
+                if modifiers.shift() {
+                    let Some(first_item) = self
+                        .selected_items
+                        .as_ref()
+                        .map(|items| {
+                            items
+                                .iter()
+                                .next()
+                                .map(|(_, index)| index)
+                        })
+                        .flatten()
+                    else {
+                        let Some(item) = item else {
+                            return Action::None;
+                        };
+                        self.selected_items = Some(vec![item]);
+                        return Action::None;
+                    };
+                    let Some((kind, index)) = item else {
+                        return Action::None;
+                    };
+                    if first_item < &index {
+                        for id in *first_item..=index {
+                            self.selected_items = self
+                                .selected_items
+                                .clone()
+                                .and_then(|mut items| {
+                                    items.push((kind, id));
+                                    Some(items)
+                                });
+                        }
+                    } else if first_item > &index {
+                        for id in index..*first_item {
+                            self.selected_items = self
+                                .selected_items
+                                .clone()
+                                .and_then(|mut items| {
+                                    items.push((kind, id));
+                                    Some(items)
+                                });
+                        }
+                    }
+                }
             }
             Message::DragItem(item) => {
                 debug!(?item);
@@ -795,11 +707,8 @@ impl<'a> Library {
         .center_x(Length::Fill);
         let subtext = container(responsive(move |size| {
             let color: Color = if item.background().is_some() {
-                if let Some((library, selected)) = self.selected_item
-                {
-                    if model.kind == library
-                        && selected == index as i32
-                    {
+                if let Some(items) = &self.selected_items {
+                    if items.contains(&(model.kind, index as i32)) {
                         theme::active().cosmic().control_0().into()
                     } else {
                         theme::active()
@@ -813,10 +722,8 @@ impl<'a> Library {
                         .accent_text_color()
                         .into()
                 }
-            } else if let Some((library, selected)) =
-                self.selected_item
-            {
-                if model.kind == library && selected == index as i32 {
+            } else if let Some(items) = &self.selected_items {
+                if items.contains(&(model.kind, index as i32)) {
                     theme::active().cosmic().control_0().into()
                 } else {
                     theme::active()
@@ -851,11 +758,8 @@ impl<'a> Library {
         .style(move |t| {
             container::Style::default()
                 .background(Background::Color(
-                    if let Some((library, selected)) =
-                        self.selected_item
-                    {
-                        if model.kind == library
-                            && selected == index as i32
+                    if let Some(items) = &self.selected_items {
+                        if items.contains(&(model.kind, index as i32))
                         {
                             t.cosmic().accent.selected.into()
                         } else if let Some((library, hovered)) =
@@ -964,6 +868,169 @@ impl<'a> Library {
 
     pub fn get_image(&self, index: i32) -> Option<&Image> {
         self.image_library.get_item(index)
+    }
+
+    pub fn set_modifiers(&mut self, modifiers: Option<Modifiers>) {
+        self.modifiers_pressed = modifiers;
+    }
+
+    fn delete_items(&mut self) -> Action {
+        // Need to make this function collect tasks to be run off of
+        // who should be deleted
+        let Some(ref items) = self.selected_items else {
+            return Action::None;
+        };
+        let tasks: Vec<Task<Message>> = items
+            .iter()
+            .map(|(kind, index)| match kind {
+                LibraryKind::Song => {
+                    if let Some(song) =
+                        self.song_library.get_item(*index)
+                    {
+                        let song = song.clone();
+                        if let Err(e) =
+                            self.song_library.remove_item(*index)
+                        {
+                            error!(?e);
+                            Task::none()
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            songs::remove_from_db(
+                                                db, song.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            task
+                        }
+                    } else {
+                        Task::none()
+                    }
+                }
+                LibraryKind::Video => {
+                    if let Some(video) =
+                        self.video_library.get_item(*index)
+                    {
+                        let video = video.clone();
+                        if let Err(e) =
+                            self.video_library.remove_item(*index)
+                        {
+                            error!(?e);
+                            Task::none()
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            videos::remove_from_db(
+                                                db, video.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            task
+                        }
+                    } else {
+                        Task::none()
+                    }
+                }
+                LibraryKind::Image => {
+                    if let Some(image) =
+                        self.image_library.get_item(*index)
+                    {
+                        let image = image.clone();
+                        if let Err(e) =
+                            self.image_library.remove_item(*index)
+                        {
+                            error!(?e);
+                            Task::none()
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            images::remove_from_db(
+                                                db, image.id,
+                                            ),
+                                            |r| {
+                                                match r {
+                                                    Err(e) => {
+                                                        error!(?e)
+                                                    }
+                                                    _ => (),
+                                                }
+                                                Message::None
+                                            },
+                                        )
+                                    });
+                            task
+                        }
+                    } else {
+                        Task::none()
+                    }
+                }
+                LibraryKind::Presentation => {
+                    if let Some(presentation) =
+                        self.presentation_library.get_item(*index)
+                    {
+                        let presentation = presentation.clone();
+                        if let Err(e) = self
+                            .presentation_library
+                            .remove_item(*index)
+                        {
+                            error!(?e);
+                            Task::none()
+                        } else {
+                            let task =
+                                Task::future(self.db.acquire())
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                    presentations::remove_from_db(
+                                        db,
+                                        presentation.id,
+                                    ),
+                                    |r| {
+                                        match r {
+                                            Err(e) => {
+                                                error!(?e)
+                                            }
+                                            _ => (),
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                    });
+                            task
+                        }
+                    } else {
+                        Task::none()
+                    }
+                }
+            })
+            .collect();
+        if tasks.len() > 0 {
+            self.selected_items = None;
+        }
+        Action::Task(Task::batch(tasks))
     }
 }
 

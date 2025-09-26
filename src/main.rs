@@ -135,6 +135,7 @@ struct App {
     fontdb: Arc<fontdb::Database>,
     menu_keys: HashMap<KeyBind, MenuAction>,
     context_menu: Option<usize>,
+    modifiers_pressed: Option<Modifiers>,
 }
 
 #[derive(Debug, Clone)]
@@ -176,6 +177,7 @@ enum Message {
     Save(Option<PathBuf>),
     SaveAs,
     OpenSettings,
+    ModifiersPressed(Modifiers),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -341,6 +343,7 @@ impl cosmic::Application for App {
             menu_keys,
             hovered_item: None,
             context_menu: None,
+            modifiers_pressed: None,
         };
 
         let mut batch = vec![];
@@ -594,6 +597,9 @@ impl cosmic::Application for App {
                         modifiers,
                         ..
                     } => Some(Message::Key(key, modifiers)),
+                    iced::keyboard::Event::ModifiersChanged(
+                        modifiers,
+                    ) => Some(Message::ModifiersPressed(modifiers)),
                     _ => None,
                 },
                 iced::Event::Mouse(_event) => None,
@@ -1249,6 +1255,20 @@ impl cosmic::Application for App {
             }
             Message::OpenSettings => {
                 debug!("Opening settings");
+                Task::none()
+            }
+            Message::ModifiersPressed(modifiers) => {
+                if modifiers.is_empty() {
+                    self.modifiers_pressed = None;
+                    if let Some(library) = self.library.as_mut() {
+                        library.set_modifiers(None);
+                    }
+                    return Task::none();
+                }
+                if let Some(library) = self.library.as_mut() {
+                    library.set_modifiers(Some(modifiers));
+                }
+                self.modifiers_pressed = Some(modifiers);
                 Task::none()
             }
         }
