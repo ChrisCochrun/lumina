@@ -332,7 +332,13 @@ impl<'a> Library {
                                     song.to_owned(),
                                     conn,
                                 ),
-                                |_| Message::SongChanged,
+                                |r| match r {
+                                    Ok(_) => Message::SongChanged,
+                                    Err(e) => {
+                                        error!(?e);
+                                        Message::None
+                                    }
+                                },
                             )
                         },
                     ),
@@ -379,7 +385,13 @@ impl<'a> Library {
                                     image.to_owned(),
                                     conn,
                                 ),
-                                |_| Message::ImageChanged,
+                                |r| match r {
+                                    Ok(_) => Message::ImageChanged,
+                                    Err(e) => {
+                                        error!(?e);
+                                        Message::None
+                                    }
+                                },
                             )
                         },
                     ),
@@ -414,7 +426,13 @@ impl<'a> Library {
                                     video.to_owned(),
                                     conn,
                                 ),
-                                |_| Message::VideoChanged,
+                                |r| match r {
+                                    Ok(_) => Message::VideoChanged,
+                                    Err(e) => {
+                                        error!(?e);
+                                        Message::None
+                                    }
+                                },
                             )
                         },
                     ),
@@ -444,7 +462,13 @@ impl<'a> Library {
                                         presentation.clone(),
                                         conn,
                                     ),
-                                    |_| Message::PresentationChanged,
+                                    |r| match r {
+                                        Ok(_) => Message::PresentationChanged,
+                                        Err(e) => {
+                                            error!(?e);
+                                            Message::None
+                                        }
+                                    },
                                 )
                             },
                         ),
