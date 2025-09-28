@@ -2,15 +2,16 @@ use cosmic::iced::Size;
 
 use cosmic::iced_core::widget::tree;
 use cosmic::{
+    Element,
     iced::{
+        Event, Length, Point, Rectangle, Vector,
         clipboard::dnd::{DndEvent, SourceEvent},
-        event, mouse, Event, Length, Point, Rectangle, Vector,
+        event, mouse,
     },
     iced_core::{
-        self, layout, renderer, widget::Tree, Clipboard, Shell,
+        self, Clipboard, Shell, layout, renderer, widget::Tree,
     },
     widget::Widget,
-    Element,
 };
 use tracing::debug;
 

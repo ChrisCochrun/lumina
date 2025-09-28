@@ -12,7 +12,7 @@ use crate::Slide;
 
 use super::images::Image;
 use super::presentations::Presentation;
-use super::songs::{lisp_to_song, Song};
+use super::songs::{Song, lisp_to_song};
 use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
