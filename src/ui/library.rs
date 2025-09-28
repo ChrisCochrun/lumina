@@ -1,35 +1,36 @@
 use std::collections::HashMap;
 
 use cosmic::{
-    Element, Task,
     dialog::file_chooser::open::Dialog,
     iced::{
-        Background, Border, Color, Length, alignment::Vertical,
-        clipboard::dnd::DndAction, keyboard::Modifiers,
+        alignment::Vertical, clipboard::dnd::DndAction,
+        keyboard::Modifiers, Background, Border, Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        Container, DndSource, Space, button, container, context_menu,
-        dnd_destination, horizontal_space, icon,
+        button, container, context_menu, dnd_destination,
+        horizontal_space, icon,
         menu::{self, Action as MenuAction},
         mouse_area, responsive, row, scrollable, text, text_input,
+        Container, DndSource, Space,
     },
+    Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{SqlitePool, migrate};
+use sqlx::{migrate, SqlitePool};
 use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{self, Image, update_image_in_db},
+    images::{self, update_image_in_db, Image},
     model::{LibraryKind, Model},
-    presentations::{self, Presentation, update_presentation_in_db},
+    presentations::{self, update_presentation_in_db, Presentation},
     service_items::ServiceItem,
-    songs::{self, Song, update_song_in_db},
-    videos::{self, Video, update_video_in_db},
+    songs::{self, update_song_in_db, Song},
+    videos::{self, update_video_in_db, Video},
 };
 
 #[derive(Debug, Clone)]

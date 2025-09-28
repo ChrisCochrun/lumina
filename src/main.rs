@@ -1,4 +1,4 @@
-use clap::{Parser, command};
+use clap::{command, Parser};
 use core::service_items::ServiceItem;
 use core::slide::{
     Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
@@ -9,8 +9,8 @@ use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
-    self, Background as IcedBackground, Border, Color, Length, event,
-    window,
+    self, event, window, Background as IcedBackground, Border, Color,
+    Length,
 };
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
@@ -21,18 +21,18 @@ use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{Container, menu};
 use cosmic::widget::{
-    Space, button, context_menu, horizontal_space, mouse_area,
-    nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
-    tooltip, vertical_space,
+    button, context_menu, horizontal_space, mouse_area, nav_bar,
+    nav_bar_toggle, responsive, scrollable, search_input, tooltip,
+    vertical_space, Space,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::{Application, ApplicationExt, Element, executor};
+use cosmic::widget::{menu, Container};
+use cosmic::{executor, Application, ApplicationExt, Element};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{Result, miette};
+use miette::{miette, Result};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
@@ -42,10 +42,10 @@ use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
-use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
+use ui::EditorMode;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::ui::image_editor::{self, ImageEditor};
@@ -1690,22 +1690,14 @@ where
                     tooltip,
                     vec!["application/service-item".into()],
                 )
-                .data_received_for::<ServiceItem>(move |item| {
-                    if let Some(item) = item {
-                        Message::AddServiceItem(index, item)
-                    } else {
-                        Message::None
-                    }
-                })
-                .forward_drag_as_cursor(true)
-                .on_finish(move |mime, data, action, x, y| {
-                    debug!(mime, ?data, ?action, x, y);
+                .on_finish(move |mime, data, _, _, _| {
                     let Ok(item) =
                         ServiceItem::try_from((data, mime))
                     else {
+                        error!("couldn't drag in Service item");
                         return Message::None;
                     };
-                    debug!(?item);
+                    debug!(?item, index, "adding Service item");
                     Message::AddServiceItem(index, item)
                 })
                 .into()
@@ -1763,24 +1755,15 @@ where
                 column,
                 vec!["application/service-item".into()],
             )
-            .data_received_for::<ServiceItem>(|item| {
-                item.map_or_else(
-                    || Message::None,
-                    Message::AppendServiceItem,
-                )
-            })
-            .on_finish(
-                move |mime, data, action, x, y| {
-                    debug!(mime, ?data, ?action, x, y);
-                    let Ok(item) =
-                        ServiceItem::try_from((data, mime))
-                    else {
-                        return Message::None;
-                    };
-                    debug!(?item);
-                    Message::AppendServiceItem(item)
-                },
-            ),
+            .on_finish(move |mime, data, _, _, _| {
+                let Ok(item) = ServiceItem::try_from((data, mime))
+                else {
+                    error!("couldn't drag in Service item");
+                    return Message::None;
+                };
+                debug!(?item, "adding Service item");
+                Message::AppendServiceItem(item)
+            }),
         )
         .style(nav_bar_style);
 

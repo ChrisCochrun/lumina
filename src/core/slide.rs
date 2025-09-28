@@ -2,7 +2,7 @@ use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
-use miette::{Result, miette};
+use miette::{miette, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,

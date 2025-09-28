@@ -1,9 +1,8 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::{Length, alignment::Vertical},
+    dialog::file_chooser::{open::Dialog, FileFilter},
+    iced::{alignment::Vertical, Length},
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{column, row},
     theme,
@@ -11,6 +10,7 @@ use cosmic::{
         button, combo_box, container, horizontal_space, icon,
         progress_bar, scrollable, text, text_editor, text_input,
     },
+    Element, Task,
 };
 use dirs::font_dir;
 use iced_video_player::Video;
@@ -18,11 +18,11 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, error};
 
 use crate::{
-    Background, BackgroundKind,
     core::{service_items::ServiceTrait, slide::Slide, songs::Song},
     ui::{
         presenter::slide_view, slide_editor::SlideEditor, text_svg,
     },
+    Background, BackgroundKind,
 };
 
 #[derive(Debug)]

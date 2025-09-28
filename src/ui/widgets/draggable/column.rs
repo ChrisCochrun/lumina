@@ -22,17 +22,17 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use cosmic::Theme;
 use cosmic::iced::advanced::layout::{self, Layout};
-use cosmic::iced::advanced::widget::{Operation, Tree, Widget, tree};
-use cosmic::iced::advanced::{Clipboard, Shell, overlay, renderer};
+use cosmic::iced::advanced::widget::{tree, Operation, Tree, Widget};
+use cosmic::iced::advanced::{overlay, renderer, Clipboard, Shell};
 use cosmic::iced::alignment::{self, Alignment};
 use cosmic::iced::event::{self, Event};
-use cosmic::iced::{self, Transformation, mouse};
+use cosmic::iced::{self, mouse, Transformation};
 use cosmic::iced::{
     Background, Border, Color, Element, Length, Padding, Pixels,
     Point, Rectangle, Size, Vector,
 };
+use cosmic::Theme;
 use tracing::debug;
 
 use super::{Action, DragEvent, DropPosition};
