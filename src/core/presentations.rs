@@ -4,8 +4,8 @@ use miette::{IntoDiagnostic, Result};
 use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    Row, Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    prelude::FromRow, query, sqlite::SqliteRow,
+    pool::PoolConnection, prelude::FromRow, query, sqlite::SqliteRow,
+    Row, Sqlite, SqliteConnection, SqlitePool,
 };
 use std::path::{Path, PathBuf};
 use tracing::{debug, error};

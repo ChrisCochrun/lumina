@@ -8,16 +8,16 @@ use std::{
 use colors_transform::Rgb;
 use cosmic::{
     iced::{
-        ContentFit, Length, Size,
         font::{Style, Weight},
+        ContentFit, Length, Size,
     },
     prelude::*,
-    widget::{Image, image::Handle},
+    widget::{image::Handle, Image},
 };
 use rapidhash::v3::rapidhash_v3;
 use resvg::{
     tiny_skia::{self, Pixmap},
-    usvg::{Tree, fontdb},
+    usvg::{fontdb, Tree},
 };
 use tracing::{debug, error};
 

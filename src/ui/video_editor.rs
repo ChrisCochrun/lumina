@@ -1,15 +1,15 @@
 use std::{io, path::PathBuf};
 
 use cosmic::{
-    Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::{Length, alignment::Vertical},
+    dialog::file_chooser::{open::Dialog, FileFilter},
+    iced::{alignment::Vertical, Length},
     iced_widget::{column, row},
     theme,
     widget::{
-        Space, button, container, horizontal_space, icon,
-        progress_bar, text, text_input,
+        button, container, horizontal_space, icon, progress_bar,
+        text, text_input, Space,
     },
+    Element, Task,
 };
 use iced_video_player::{Video, VideoPlayer};
 use tracing::{debug, error, warn};

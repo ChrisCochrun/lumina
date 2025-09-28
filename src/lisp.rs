@@ -40,11 +40,11 @@ mod test {
     use std::{fs::read_to_string, path::PathBuf};
 
     use crate::{
-        Background, TextAlignment,
         core::{
             images::Image, kinds::ServiceItemKind,
             service_items::ServiceTrait, songs::Song, videos::Video,
         },
+        Background, TextAlignment,
     };
 
     use super::*;
