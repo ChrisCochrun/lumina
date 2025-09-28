@@ -1644,7 +1644,6 @@ where
                     .on_double_press(Message::ChangeServiceItem(
                         index,
                     ))
-                    .on_drag(Message::None)
                     .on_right_press(Message::ContextMenuItem(index))
                     .on_release(Message::SelectServiceItem(index));
                 let single_item = if let Some(context_menu_item) =
@@ -1698,6 +1697,7 @@ where
                         Message::None
                     }
                 })
+                .forward_drag_as_cursor(true)
                 .on_finish(move |mime, data, action, x, y| {
                     debug!(mime, ?data, ?action, x, y);
                     let Ok(item) =
@@ -1758,10 +1758,10 @@ where
         ]
         .padding(10)
         .spacing(10);
-        let container = Container::new(stack![
+        let container = Container::new(
             dnd_destination(
-                vertical_space().width(Length::Fill),
-                vec!["application/service-item".into()]
+                column,
+                vec!["application/service-item".into()],
             )
             .data_received_for::<ServiceItem>(|item| {
                 item.map_or_else(
@@ -1779,10 +1779,9 @@ where
                     };
                     debug!(?item);
                     Message::AppendServiceItem(item)
-                }
+                },
             ),
-            column
-        ])
+        )
         .style(nav_bar_style);
 
         container.center(Length::FillPortion(2)).into()
