@@ -1,7 +1,10 @@
-use std::mem::replace;
+use std::{borrow::Cow, mem::replace};
 
-use miette::{miette, Result};
+use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
+use miette::{miette, IntoDiagnostic, Result};
+use serde::{Deserialize, Serialize};
 use sqlx::{Connection, SqliteConnection};
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct Model<T> {
@@ -9,12 +12,54 @@ pub struct Model<T> {
     pub kind: LibraryKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize,
+)]
 pub enum LibraryKind {
     Song,
     Video,
     Image,
     Presentation,
+}
+
+#[derive(
+    Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize,
+)]
+pub struct KindWrapper(pub (LibraryKind, i32));
+
+impl TryFrom<(Vec<u8>, String)> for KindWrapper {
+    type Error = miette::Error;
+
+    fn try_from(
+        value: (Vec<u8>, String),
+    ) -> std::result::Result<Self, Self::Error> {
+        debug!(?value);
+        ron::de::from_bytes(&value.0).into_diagnostic()
+    }
+}
+
+impl AllowedMimeTypes for KindWrapper {
+    fn allowed() -> Cow<'static, [String]> {
+        Cow::from(vec!["application/service-item".to_string()])
+    }
+}
+
+impl AsMimeTypes for KindWrapper {
+    fn available(&self) -> Cow<'static, [String]> {
+        debug!(?self);
+        Cow::from(vec!["application/service-item".to_string()])
+    }
+
+    fn as_bytes(
+        &self,
+        mime_type: &str,
+    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+        debug!(?self);
+        debug!(mime_type);
+        let ron = ron::ser::to_string(self).ok()?;
+        debug!(ron);
+        Some(Cow::from(ron.into_bytes()))
+    }
 }
 
 impl<T> Model<T> {

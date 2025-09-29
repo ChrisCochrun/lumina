@@ -26,8 +26,11 @@ use tracing::{debug, error, warn};
 use crate::core::{
     content::Content,
     images::{self, update_image_in_db, Image},
-    model::{LibraryKind, Model},
-    presentations::{self, update_presentation_in_db, Presentation},
+    model::{KindWrapper, LibraryKind, Model},
+    presentations::{
+        self, add_presentation_to_db, update_presentation_in_db,
+        Presentation,
+    },
     service_items::ServiceItem,
     songs::{self, update_song_in_db, Song},
     videos::{self, update_video_in_db, Video},
@@ -99,6 +102,7 @@ pub enum Message {
     None,
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
+    AddPresentations(Option<Vec<Presentation>>),
 }
 
 impl<'a> Library {
@@ -143,11 +147,10 @@ impl<'a> Library {
                 let item = match kind {
                     LibraryKind::Song => {
                         let song = Song::default();
+                        let index = self.song_library.items.len();
                         self.song_library
                             .add_item(song)
                             .map(|_| {
-                                let index =
-                                    self.song_library.items.len();
                                 (LibraryKind::Song, index as i32)
                             })
                             .ok()
@@ -165,26 +168,17 @@ impl<'a> Library {
                         ));
                     }
                     LibraryKind::Presentation => {
-                        let presentation = Presentation::default();
-                        self.presentation_library
-                            .add_item(presentation)
-                            .map(|_| {
-                                let index = self
-                                    .presentation_library
-                                    .items
-                                    .len();
-                                (
-                                    LibraryKind::Presentation,
-                                    index as i32,
-                                )
-                            })
-                            .ok()
+                        return Action::Task(Task::perform(
+                            add_presentations(),
+                            Message::AddPresentations,
+                        ));
                     }
                 };
                 return self.update(Message::OpenItem(item));
             }
             Message::AddVideos(videos) => {
                 debug!(?videos);
+                let mut index = self.video_library.items.len();
                 if let Some(videos) = videos {
                     for video in videos {
                         if let Err(e) =
@@ -192,6 +186,7 @@ impl<'a> Library {
                         {
                             error!(?e);
                         }
+                        index += 1;
                     }
                 }
                 return self.update(Message::OpenItem(Some((
@@ -199,8 +194,78 @@ impl<'a> Library {
                     self.video_library.items.len() as i32 - 1,
                 ))));
             }
+            Message::AddPresentations(presentations) => {
+                debug!(?presentations);
+                let mut index = self.presentation_library.items.len();
+                // Check if empty
+                let mut tasks = Vec::new();
+                if index == 0 {
+                    if let Some(presentations) = presentations {
+                        let len = presentations.len();
+                        for presentation in presentations {
+                            if let Err(e) = self
+                                .presentation_library
+                                .add_item(presentation.clone())
+                            {
+                                error!(?e);
+                            }
+                            let task = Task::future(
+                                self.db.acquire(),
+                            )
+                            .and_then(move |db| {
+                                Task::perform(
+                                    add_presentation_to_db(
+                                        presentation.to_owned(),
+                                        db,
+                                        index as i32,
+                                    ),
+                                    move |res| {
+                                        debug!(
+                                            len,
+                                            index, "added to db"
+                                        );
+                                        if let Err(e) = res {
+                                            error!(?e);
+                                        }
+                                        if len == index {
+                                            debug!("open the pres");
+                                            Message::OpenItem(Some((
+                                            LibraryKind::Presentation,
+                                            index as i32,
+                                        )))
+                                        } else {
+                                            Message::None
+                                        }
+                                    },
+                                )
+                            });
+                            tasks.push(task);
+                            index += 1;
+                        }
+                    }
+                    return Action::Task(Task::batch(tasks));
+                } else {
+                    if let Some(presentations) = presentations {
+                        for presentation in presentations {
+                            if let Err(e) = self
+                                .presentation_library
+                                .add_item(presentation)
+                            {
+                                error!(?e);
+                            }
+                            index += 1;
+                        }
+                    }
+                    return self.update(Message::OpenItem(Some((
+                        LibraryKind::Presentation,
+                        self.presentation_library.items.len() as i32
+                            - 1,
+                    ))));
+                }
+            }
             Message::AddImages(images) => {
                 debug!(?images);
+                let mut index = self.image_library.items.len();
                 if let Some(images) = images {
                     for image in images {
                         if let Err(e) =
@@ -208,6 +273,7 @@ impl<'a> Library {
                         {
                             error!(?e);
                         }
+                        index += 1;
                     }
                 }
                 return self.update(Message::OpenItem(Some((
@@ -479,6 +545,21 @@ impl<'a> Library {
             Message::PresentationChanged => (),
             Message::Error(_) => (),
             Message::OpenContext(index) => {
+                let Some(kind) = self.library_open else {
+                    return Action::None;
+                };
+                let Some(items) = self.selected_items.as_mut() else {
+                    self.selected_items = vec![(kind, index)].into();
+                    self.context_menu = Some(index);
+                    return Action::None;
+                };
+
+                if items.contains(&(kind, index)) {
+                    ()
+                } else {
+                    items.push((kind, index));
+                }
+                self.selected_items = Some(items.to_vec());
                 self.context_menu = Some(index);
             }
         }
@@ -597,13 +678,12 @@ impl<'a> Library {
                 column({
                     model.items.iter().enumerate().map(
                         |(index, item)| {
-
-                            let service_item = item.to_service_item();
+                            let kind = model.kind;
                             let visual_item = self
                                 .single_item(index, item, model)
                                 .map(|()| Message::None);
 
-                            DndSource::<Message, ServiceItem>::new({
+                            DndSource::<Message, KindWrapper>::new({
                                 let mouse_area = mouse_area(visual_item);
                                 let mouse_area = mouse_area.on_enter(Message::HoverItem(
                                     Some((
@@ -669,7 +749,7 @@ impl<'a> Library {
                                             )
                             }})
                             .drag_content(move || {
-                                service_item.clone()
+                                KindWrapper((kind, index as i32))
                             })
                             .into()
                         },
@@ -908,6 +988,13 @@ impl<'a> Library {
         self.image_library.get_item(index)
     }
 
+    pub fn get_presentation(
+        &self,
+        index: i32,
+    ) -> Option<&Presentation> {
+        self.presentation_library.get_item(index)
+    }
+
     pub fn set_modifiers(&mut self, modifiers: Option<Modifiers>) {
         self.modifiers_pressed = modifiers;
     }
@@ -1078,6 +1165,23 @@ async fn add_videos() -> Option<Vec<Video>> {
             .iter()
             .map(|path| {
                 Video::from(path.to_file_path().expect("oops"))
+            })
+            .collect(),
+    )
+}
+
+async fn add_presentations() -> Option<Vec<Presentation>> {
+    let paths = Dialog::new()
+        .title("pick presentation")
+        .open_files()
+        .await
+        .ok()?;
+    Some(
+        paths
+            .urls()
+            .iter()
+            .map(|path| {
+                Presentation::from(path.to_file_path().expect("oops"))
             })
             .collect(),
     )

@@ -47,8 +47,11 @@ use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
 use ui::EditorMode;
 
+use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
+use crate::core::model::KindWrapper;
 use crate::ui::image_editor::{self, ImageEditor};
+use crate::ui::presentation_editor::{self, PresentationEditor};
 use crate::ui::text_svg::{self};
 use crate::ui::video_editor::{self, VideoEditor};
 use crate::ui::widgets::draggable;
@@ -127,6 +130,7 @@ struct App {
     song_editor: SongEditor,
     video_editor: VideoEditor,
     image_editor: ImageEditor,
+    presentation_editor: PresentationEditor,
     searching: bool,
     search_query: String,
     search_results: Vec<ServiceItem>,
@@ -145,6 +149,7 @@ enum Message {
     SongEditor(song_editor::Message),
     VideoEditor(video_editor::Message),
     ImageEditor(image_editor::Message),
+    PresentationEditor(presentation_editor::Message),
     File(PathBuf),
     OpenWindow,
     CloseWindow(Option<window::Id>),
@@ -160,7 +165,7 @@ enum Message {
     SelectServiceItem(usize),
     AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
-    AddServiceItem(usize, ServiceItem),
+    AddServiceItem(usize, KindWrapper),
     RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
@@ -333,6 +338,7 @@ impl cosmic::Application for App {
             song_editor,
             video_editor: VideoEditor::new(),
             image_editor: ImageEditor::new(),
+            presentation_editor: PresentationEditor::new(),
             searching: false,
             search_results: vec![],
             search_query: String::new(),
@@ -818,6 +824,27 @@ impl cosmic::Application for App {
                     video_editor::Action::None => Task::none(),
                 }
             }
+            Message::PresentationEditor(message) => {
+                match self.presentation_editor.update(message) {
+                    presentation_editor::Action::Task(task) => {
+                        task.map(|m| {
+                            cosmic::Action::App(Message::PresentationEditor(
+                                m,
+                            ))
+                        })
+                    }
+                    presentation_editor::Action::UpdatePresentation(presentation) => {
+                        if self.library.is_some() {
+                            self.update(Message::Library(
+                                library::Message::UpdatePresentation(presentation),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presentation_editor::Action::None => Task::none(),
+                }
+            }
             Message::Present(message) => {
                 // debug!(?message);
                 if self.presentation_open
@@ -854,7 +881,7 @@ impl cosmic::Application for App {
                                             )
                                         }));
                                     }
-                                    _ => todo!(),
+                                    _ => (),
                                 }
                                 self.current_item =
                                     (item_index, slide_index + 1);
@@ -882,7 +909,7 @@ impl cosmic::Application for App {
                                                 )
                                             }));
                                         }
-                                        _ => todo!(),
+                                        _ => (),
                                     }
                                 }
                                 Task::batch(tasks)
@@ -914,7 +941,7 @@ impl cosmic::Application for App {
                                             )
                                         }));
                                     }
-                                    _ => todo!(),
+                                    _ => (),
                                 }
                                 self.current_item =
                                     (item_index, slide_index - 1);
@@ -957,7 +984,7 @@ impl cosmic::Application for App {
                                                 )
                                             }));
                                         }
-                                        _ => todo!(),
+                                        _ => (),
                                     }
                                 }
                                 Task::batch(tasks)
@@ -1013,7 +1040,14 @@ impl cosmic::Application for App {
                                             let image = lib_image.to_owned();
                                             return self.update(Message::ImageEditor(image_editor::Message::ChangeImage(image)));
                                         },
-                                        core::model::LibraryKind::Presentation => todo!(),
+                                        core::model::LibraryKind::Presentation => {
+                                            let Some(lib_presentation) = library.get_presentation(index) else {
+                                                return Task::none();
+                                            };
+                                            self.editor_mode = Some(kind.into());
+                                            let presentation = lib_presentation.to_owned();
+                                            return self.update(Message::PresentationEditor(presentation_editor::Message::ChangePresentation(presentation)));
+                                        },
                                     }
                                 }
                                 library::Action::DraggedItem(
@@ -1145,20 +1179,40 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
-            Message::AddServiceItem(index, mut item) => {
-                item.slides = item
-                    .slides
-                    .into_par_iter()
-                    .map(|mut slide| {
-                        let fontdb = Arc::clone(&self.fontdb);
-                        text_svg::text_svg_generator(
-                            &mut slide, fontdb,
-                        );
-                        slide
-                    })
-                    .collect();
-                self.service.insert(index, item);
-                self.presenter.update_items(self.service.clone());
+            Message::AddServiceItem(index, item) => {
+                let item_index = item.0 .1;
+                let kind = item.0 .0;
+                match kind {
+                    core::model::LibraryKind::Song => todo!(),
+                    core::model::LibraryKind::Video => todo!(),
+                    core::model::LibraryKind::Image => todo!(),
+                    core::model::LibraryKind::Presentation => {
+                        let Some(library) = self.library.as_mut()
+                        else {
+                            return Task::none();
+                        };
+                        let Some(presentation) =
+                            library.get_presentation(item_index)
+                        else {
+                            return Task::none();
+                        };
+                        let mut item = presentation.to_service_item();
+                        item.slides = item
+                            .slides
+                            .into_par_iter()
+                            .map(|mut slide| {
+                                let fontdb = Arc::clone(&self.fontdb);
+                                text_svg::text_svg_generator(
+                                    &mut slide, fontdb,
+                                );
+                                slide
+                            })
+                            .collect();
+                        self.service.insert(index, item);
+                        self.presenter
+                            .update_items(self.service.clone());
+                    }
+                }
                 Task::none()
             }
             Message::RemoveServiceItem(index) => {
@@ -1221,10 +1275,24 @@ impl cosmic::Application for App {
                             song_editor::Message::ChangeSong(song),
                         ))
                     }
-                    ServiceItemKind::Video(_video) => todo!(),
-                    ServiceItemKind::Image(_image) => todo!(),
-                    ServiceItemKind::Presentation(_presentation) => {
-                        todo!()
+                    ServiceItemKind::Video(video) => {
+                        self.editor_mode = Some(EditorMode::Video);
+                        self.update(Message::VideoEditor(
+                            video_editor::Message::ChangeVideo(video),
+                        ))
+                    }
+                    ServiceItemKind::Image(image) => {
+                        self.editor_mode = Some(EditorMode::Image);
+                        self.update(Message::ImageEditor(
+                            image_editor::Message::ChangeImage(image),
+                        ))
+                    }
+                    ServiceItemKind::Presentation(presentation) => {
+                        self.editor_mode =
+                            Some(EditorMode::Presentation);
+                        self.update(Message::PresentationEditor(
+                            presentation_editor::Message::ChangePresentation(presentation),
+                        ))
                     }
                     ServiceItemKind::Content(_slide) => todo!(),
                 }
@@ -1371,7 +1439,10 @@ impl cosmic::Application for App {
                 EditorMode::Video => {
                     self.video_editor.view().map(Message::VideoEditor)
                 }
-                EditorMode::Presentation => todo!(),
+                EditorMode::Presentation => self
+                    .presentation_editor
+                    .view()
+                    .map(Message::PresentationEditor),
                 EditorMode::Slide => todo!(),
             },
         );
@@ -1692,7 +1763,7 @@ where
                 )
                 .on_finish(move |mime, data, _, _, _| {
                     let Ok(item) =
-                        ServiceItem::try_from((data, mime))
+                        KindWrapper::try_from((data, mime))
                     else {
                         error!("couldn't drag in Service item");
                         return Message::None;

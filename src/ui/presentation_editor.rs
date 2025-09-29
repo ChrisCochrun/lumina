@@ -6,12 +6,12 @@ use crate::core::{
 };
 use cosmic::{
     dialog::file_chooser::{open::Dialog, FileFilter},
-    iced::{alignment::Vertical, Length},
+    iced::{alignment::Vertical, ContentFit, Length},
     iced_widget::{column, row},
     theme,
     widget::{
-        button, container, horizontal_space, icon, text, text_input,
-        Space,
+        button, container, horizontal_space, icon, image, text,
+        text_input, Space,
     },
     Element, Task,
 };
@@ -23,6 +23,7 @@ pub struct PresentationEditor {
     slides: Option<Vec<Slide>>,
     title: String,
     editing: bool,
+    current_slide: i16,
 }
 
 pub enum Action {
@@ -48,6 +49,7 @@ impl PresentationEditor {
             slides: None,
             title: "Death was Arrested".to_string(),
             editing: false,
+            current_slide: 0,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -55,10 +57,12 @@ impl PresentationEditor {
             Message::ChangePresentation(presentation) => {
                 self.presentation = Some(presentation.clone());
                 self.title = presentation.title.clone();
+                warn!("changing presentation");
                 let Ok(slides) = presentation.to_slides() else {
                     return Action::None;
                 };
                 self.slides = Some(slides);
+                self.current_slide = 0;
                 return self.update(Message::Update(presentation));
             }
             Message::ChangeTitle(title) => {
@@ -107,8 +111,18 @@ impl PresentationEditor {
 
     pub fn view(&self) -> Element<Message> {
         let container = if let Some(slides) = &self.slides {
-            todo!();
-            // container(presentation)
+            if let Some(slide) =
+                slides.get(self.current_slide as usize)
+            {
+                container(
+                    image(slide.pdf_page().unwrap_or(
+                        image::Handle::from_path("res/chad.png"),
+                    ))
+                    .content_fit(ContentFit::Cover),
+                )
+            } else {
+                container(Space::new(0, 0))
+            }
         } else {
             container(Space::new(0, 0))
         };

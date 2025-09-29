@@ -82,7 +82,7 @@ impl From<&Path> for Presentation {
 }
 
 impl From<&Presentation> for Value {
-    fn from(value: &Presentation) -> Self {
+    fn from(_value: &Presentation) -> Self {
         Self::List(vec![Self::Symbol(Symbol("presentation".into()))])
     }
 }
@@ -305,6 +305,38 @@ pub async fn remove_from_db(
         .await
         .into_diagnostic()
         .map(|_| ())
+}
+
+pub async fn add_presentation_to_db(
+    presentation: Presentation,
+    db: PoolConnection<Sqlite>,
+    id: i32,
+) -> Result<()> {
+    let path = presentation
+        .path
+        .to_str()
+        .map(std::string::ToString::to_string)
+        .unwrap_or_default();
+    let html = presentation.kind == PresKind::Html;
+    let mut db = db.detach();
+    let result = query!(
+        r#"INSERT into presentations VALUES($1, $2, $3, $4)"#,
+        id,
+        presentation.title,
+        path,
+        html,
+    )
+    .execute(&mut db)
+    .await
+    .into_diagnostic()?;
+    if result.last_insert_rowid() != id as i64 {
+        let rowid = result.last_insert_rowid();
+        error!(
+            rowid,
+            id, "It appears that rowid and id aren't the same"
+        );
+    }
+    Ok(())
 }
 
 pub async fn update_presentation_in_db(
