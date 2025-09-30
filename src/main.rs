@@ -602,54 +602,54 @@ impl cosmic::Application for App {
             match status {
                 event::Status::Ignored => {
                     match event {
-                iced::Event::Keyboard(event) => match event {
-                    iced::keyboard::Event::KeyReleased {
-                        key,
-                        modifiers,
-                        ..
-                    } => Some(Message::Key(key, modifiers)),
-                    iced::keyboard::Event::ModifiersChanged(
-                        modifiers,
-                    ) => Some(Message::ModifiersPressed(modifiers)),
-                    _ => None,
-                },
-                iced::Event::Mouse(_event) => None,
-                iced::Event::Window(window_event) => {
-                    match window_event {
-                        window::Event::CloseRequested => {
-                            debug!("Closing window");
-                            Some(Message::CloseWindow(Some(id)))
+                        iced::Event::Keyboard(event) => match event {
+                            iced::keyboard::Event::KeyReleased {
+                                key,
+                                modifiers,
+                                ..
+                            } => Some(Message::Key(key, modifiers)),
+                            iced::keyboard::Event::ModifiersChanged(
+                                modifiers,
+                            ) => Some(Message::ModifiersPressed(modifiers)),
+                            _ => None,
+                        },
+                        iced::Event::Mouse(_event) => None,
+                        iced::Event::Window(window_event) => {
+                            match window_event {
+                                window::Event::CloseRequested => {
+                                    debug!("Closing window");
+                                    Some(Message::CloseWindow(Some(id)))
+                                }
+                                window::Event::Opened { .. } => {
+                                    debug!(?window_event, ?id);
+                                    Some(Message::WindowOpened(id))
+                                }
+                                window::Event::Closed => {
+                                    debug!("Closed window");
+                                    Some(Message::WindowClosed(id))
+                                }
+                                window::Event::FileHovered(file) => {
+                                    debug!(?file);
+                                    None
+                                }
+                                window::Event::FileDropped(file) => {
+                                    debug!(?file);
+                                    None
+                                }
+                                _ => None,
+                            }
                         }
-                        window::Event::Opened { .. } => {
-                            debug!(?window_event, ?id);
-                            Some(Message::WindowOpened(id))
-                        }
-                        window::Event::Closed => {
-                            debug!("Closed window");
-                            Some(Message::WindowClosed(id))
-                        }
-                        window::Event::FileHovered(file) => {
-                            debug!(?file);
+                        iced::Event::Touch(_touch) => None,
+                        iced::Event::A11y(_id, _action_request) => None,
+                        iced::Event::Dnd(dnd_event) => {
+                            debug!(?dnd_event);
                             None
                         }
-                        window::Event::FileDropped(file) => {
-                            debug!(?file);
+                        iced::Event::PlatformSpecific(_platform_specific) => {
+                            // debug!(?platform_specific);
                             None
                         }
-                        _ => None,
                     }
-                }
-                iced::Event::Touch(_touch) => None,
-                iced::Event::A11y(_id, _action_request) => None,
-                iced::Event::Dnd(dnd_event) => {
-                    debug!(?dnd_event);
-                    None
-                }
-                iced::Event::PlatformSpecific(_platform_specific) => {
-                    // debug!(?platform_specific);
-                    None
-                }
-            }
                 }
                 event::Status::Captured => None,
             }
@@ -1631,9 +1631,9 @@ where
         modifiers: Modifiers,
     ) -> Task<Message> {
         // debug!(?key, ?modifiers);
-        if self.editor_mode.is_some() {
-            return Task::none();
-        }
+        // if self.editor_mode.is_some() {
+        //     return Task::none();
+        // }
         if self.song_editor.editing() {
             return Task::none();
         }
