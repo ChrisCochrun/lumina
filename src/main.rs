@@ -1182,10 +1182,43 @@ impl cosmic::Application for App {
             Message::AddServiceItem(index, item) => {
                 let item_index = item.0 .1;
                 let kind = item.0 .0;
+                let mut item;
                 match kind {
-                    core::model::LibraryKind::Song => todo!(),
-                    core::model::LibraryKind::Video => todo!(),
-                    core::model::LibraryKind::Image => todo!(),
+                    core::model::LibraryKind::Song => {
+                        let Some(library) = self.library.as_mut()
+                        else {
+                            return Task::none();
+                        };
+                        let Some(song) = library.get_song(item_index)
+                        else {
+                            return Task::none();
+                        };
+                        item = song.to_service_item();
+                    }
+                    core::model::LibraryKind::Video => {
+                        let Some(library) = self.library.as_mut()
+                        else {
+                            return Task::none();
+                        };
+                        let Some(video) =
+                            library.get_video(item_index)
+                        else {
+                            return Task::none();
+                        };
+                        item = video.to_service_item();
+                    }
+                    core::model::LibraryKind::Image => {
+                        let Some(library) = self.library.as_mut()
+                        else {
+                            return Task::none();
+                        };
+                        let Some(image) =
+                            library.get_image(item_index)
+                        else {
+                            return Task::none();
+                        };
+                        item = image.to_service_item();
+                    }
                     core::model::LibraryKind::Presentation => {
                         let Some(library) = self.library.as_mut()
                         else {
@@ -1196,23 +1229,22 @@ impl cosmic::Application for App {
                         else {
                             return Task::none();
                         };
-                        let mut item = presentation.to_service_item();
-                        item.slides = item
-                            .slides
-                            .into_par_iter()
-                            .map(|mut slide| {
-                                let fontdb = Arc::clone(&self.fontdb);
-                                text_svg::text_svg_generator(
-                                    &mut slide, fontdb,
-                                );
-                                slide
-                            })
-                            .collect();
-                        self.service.insert(index, item);
-                        self.presenter
-                            .update_items(self.service.clone());
+                        item = presentation.to_service_item();
                     }
                 }
+                item.slides = item
+                    .slides
+                    .into_par_iter()
+                    .map(|mut slide| {
+                        let fontdb = Arc::clone(&self.fontdb);
+                        text_svg::text_svg_generator(
+                            &mut slide, fontdb,
+                        );
+                        slide
+                    })
+                    .collect();
+                self.service.insert(index, item);
+                self.presenter.update_items(self.service.clone());
                 Task::none()
             }
             Message::RemoveServiceItem(index) => {
