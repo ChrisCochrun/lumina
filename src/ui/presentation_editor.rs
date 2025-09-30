@@ -44,6 +44,8 @@ pub enum Message {
     ChangeTitle(String),
     PickPresentation,
     Edit(bool),
+    NextPage,
+    PrevPage,
     None,
 }
 
@@ -140,6 +142,75 @@ impl PresentationEditor {
                 return Action::Task(task);
             }
             Message::None => (),
+            Message::NextPage => {
+                let next_index =
+                    self.current_slide_index.unwrap_or_default() + 1;
+                if next_index > self.page_count.unwrap_or_default() {
+                    return Action::None;
+                }
+                self.current_slide =
+                    self.document.as_ref().and_then(|doc| {
+                        let page = doc.load_page(next_index).ok()?;
+                        let matrix = Matrix::IDENTITY;
+                        let colorspace = Colorspace::device_rgb();
+                        let Ok(pixmap) = page
+                            .to_pixmap(
+                                &matrix,
+                                &colorspace,
+                                true,
+                                true,
+                            )
+                            .into_diagnostic()
+                        else {
+                            error!(
+                                "Can't turn this page into pixmap"
+                            );
+                            return None;
+                        };
+                        debug!(?pixmap);
+                        Some(Handle::from_rgba(
+                            pixmap.width(),
+                            pixmap.height(),
+                            pixmap.samples().to_vec(),
+                        ))
+                    });
+                self.current_slide_index = Some(next_index);
+            }
+            Message::PrevPage => {
+                let previous_index =
+                    self.current_slide_index.unwrap_or_default() - 1;
+                if previous_index < 0 {
+                    return Action::None;
+                }
+                self.current_slide =
+                    self.document.as_ref().and_then(|doc| {
+                        let page =
+                            doc.load_page(previous_index).ok()?;
+                        let matrix = Matrix::IDENTITY;
+                        let colorspace = Colorspace::device_rgb();
+                        let Ok(pixmap) = page
+                            .to_pixmap(
+                                &matrix,
+                                &colorspace,
+                                true,
+                                true,
+                            )
+                            .into_diagnostic()
+                        else {
+                            error!(
+                                "Can't turn this page into pixmap"
+                            );
+                            return None;
+                        };
+                        debug!(?pixmap);
+                        Some(Handle::from_rgba(
+                            pixmap.width(),
+                            pixmap.height(),
+                            pixmap.samples().to_vec(),
+                        ))
+                    });
+                self.current_slide_index = Some(previous_index);
+            }
         }
         Action::None
     }
@@ -147,14 +218,22 @@ impl PresentationEditor {
     pub fn view(&self) -> Element<Message> {
         let container = if let Some(slide) = &self.current_slide {
             container(
-                widget::image(slide).content_fit(ContentFit::Cover),
+                widget::image(slide)
+                    .content_fit(ContentFit::ScaleDown),
             )
         } else {
             container(Space::new(0, 0))
         };
+        let control_buttons = row![
+            button::standard("Previous Page")
+                .on_press(Message::PrevPage),
+            horizontal_space(),
+            button::standard("Next Page").on_press(Message::NextPage),
+        ];
         let column = column![
             self.toolbar(),
-            container.center_x(Length::FillPortion(2))
+            container.center(Length::Fill),
+            control_buttons
         ]
         .spacing(theme::active().cosmic().space_l());
         column.into()
