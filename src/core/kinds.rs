@@ -2,7 +2,10 @@ use std::{error::Error, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::Slide;
+use crate::{
+    core::{content::Content, service_items::ServiceItem},
+    Slide,
+};
 
 use super::{
     images::Image, presentations::Presentation, songs::Song,
@@ -28,6 +31,20 @@ impl ServiceItemKind {
                 presentation.title.to_string()
             }
             ServiceItemKind::Content(slide) => todo!(),
+        }
+    }
+
+    pub fn to_service_item(&self) -> ServiceItem {
+        match self {
+            ServiceItemKind::Song(song) => song.to_service_item(),
+            ServiceItemKind::Video(video) => video.to_service_item(),
+            ServiceItemKind::Image(image) => image.to_service_item(),
+            ServiceItemKind::Presentation(presentation) => {
+                presentation.to_service_item()
+            }
+            ServiceItemKind::Content(slide) => {
+                todo!()
+            }
         }
     }
 }

@@ -134,7 +134,7 @@ struct App {
     presentation_editor: PresentationEditor,
     searching: bool,
     search_query: String,
-    search_results: Vec<ServiceItem>,
+    search_results: Vec<ServiceItemKind>,
     search_id: cosmic::widget::Id,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
@@ -170,13 +170,15 @@ enum Message {
     RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
+    AppendServiceItemKind(ServiceItemKind),
     ReorderService(usize, usize),
     ContextMenuItem(usize),
     SearchFocus,
     Search(String),
     CloseSearch,
-    UpdateSearchResults(Vec<ServiceItem>),
+    UpdateSearchResults(Vec<ServiceItemKind>),
     OpenEditor(ServiceItem),
+    OpenEditorKind(ServiceItemKind),
     New,
     Open,
     OpenFile(PathBuf),
@@ -671,8 +673,8 @@ impl cosmic::Application for App {
                 .search_results
                 .iter()
                 .map(|item| {
-                    let title = text::title4(item.title.clone());
-                    let subtitle = text::body(item.kind.to_string());
+                    let title = text::title4(item.title().clone());
+                    let subtitle = text::body(item.to_string());
                     Element::from(Container::new(
                         row![
                             column![title, subtitle].spacing(
@@ -692,7 +694,7 @@ impl cosmic::Application for App {
                                         .space_l()
                                 )
                                 .on_press(
-                                    Message::AppendServiceItem(
+                                    Message::AppendServiceItemKind(
                                         item.clone()
                                     )
                                 ),
@@ -709,7 +711,7 @@ impl cosmic::Application for App {
                                         .cosmic()
                                         .space_l()
                                 )
-                                .on_press(Message::OpenEditor(
+                                .on_press(Message::OpenEditorKind(
                                     item.clone()
                                 )),
                                 "Edit Item",
@@ -1289,6 +1291,10 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
+            Message::AppendServiceItemKind(item) => {
+                let item = item.to_service_item();
+                return self.update(Message::AppendServiceItem(item));
+            }
             Message::ReorderService(index, target_index) => {
                 let item = self.service.remove(index);
                 self.service.insert(target_index, item);
@@ -1339,6 +1345,10 @@ impl cosmic::Application for App {
                     }
                     ServiceItemKind::Content(_slide) => todo!(),
                 }
+            }
+            Message::OpenEditorKind(item) => {
+                let item = item.to_service_item();
+                return self.update(Message::OpenEditor(item));
             }
             Message::New => {
                 debug!("new file");
