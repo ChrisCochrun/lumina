@@ -1,15 +1,15 @@
 use std::{collections::HashMap, option::Option, path::PathBuf};
 
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    pool::PoolConnection, query, sqlite::SqliteRow, Acquire, FromRow,
-    Row, Sqlite, SqliteConnection, SqlitePool,
+    Acquire, FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
+    pool::PoolConnection, query, sqlite::SqliteRow,
 };
 use tracing::error;
 
-use crate::{core::slide, Slide, SlideBuilder};
+use crate::{Slide, SlideBuilder, core::slide};
 
 use super::{
     content::Content,

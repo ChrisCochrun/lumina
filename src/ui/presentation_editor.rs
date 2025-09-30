@@ -2,15 +2,15 @@ use std::{io, path::PathBuf};
 
 use crate::core::presentations::Presentation;
 use cosmic::{
-    dialog::file_chooser::{open::Dialog, FileFilter},
-    iced::{alignment::Vertical, ContentFit, Length},
+    Element, Task,
+    dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::{ContentFit, Length, alignment::Vertical},
     iced_widget::{column, row},
     theme,
     widget::{
-        self, button, container, horizontal_space, icon,
-        image::Handle, text, text_input, Space,
+        self, Space, button, container, horizontal_space, icon,
+        image::Handle, text, text_input,
     },
-    Element, Task,
 };
 use miette::IntoDiagnostic;
 use mupdf::{Colorspace, Document, Matrix};

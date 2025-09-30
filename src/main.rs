@@ -1,4 +1,4 @@
-use clap::{command, Parser};
+use clap::{Parser, command};
 use core::service_items::ServiceItem;
 use core::slide::{
     Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
@@ -9,8 +9,8 @@ use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
 use cosmic::iced::{
-    self, event, window, Background as IcedBackground, Border, Color,
-    Length,
+    self, Background as IcedBackground, Border, Color, Length, event,
+    window,
 };
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
@@ -22,18 +22,18 @@ use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
+use cosmic::widget::{Container, menu};
 use cosmic::widget::{
-    button, context_menu, horizontal_space, mouse_area, nav_bar,
-    nav_bar_toggle, responsive, scrollable, search_input, tooltip,
-    vertical_space, Space,
+    Space, button, context_menu, horizontal_space, mouse_area,
+    nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
+    tooltip,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::widget::{menu, Container};
-use cosmic::{executor, Application, ApplicationExt, Element};
+use cosmic::{Application, ApplicationExt, Element, executor};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{miette, Result};
+use miette::{Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
@@ -43,10 +43,10 @@ use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};
 use tracing::{error, warn};
 use tracing_subscriber::EnvFilter;
+use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
-use ui::EditorMode;
 
 use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
@@ -597,9 +597,11 @@ impl cosmic::Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        event::listen_with(|event, _, id| {
+        event::listen_with(|event, status, id| {
             // debug!(?event);
-            match event {
+            match status {
+                event::Status::Ignored => {
+                    match event {
                 iced::Event::Keyboard(event) => match event {
                     iced::keyboard::Event::KeyReleased {
                         key,
@@ -639,14 +641,17 @@ impl cosmic::Application for App {
                 }
                 iced::Event::Touch(_touch) => None,
                 iced::Event::A11y(_id, _action_request) => None,
-                iced::Event::Dnd(_dnd_event) => {
-                    // debug!(?dnd_event);
+                iced::Event::Dnd(dnd_event) => {
+                    debug!(?dnd_event);
                     None
                 }
                 iced::Event::PlatformSpecific(_platform_specific) => {
                     // debug!(?platform_specific);
                     None
                 }
+            }
+                }
+                event::Status::Captured => None,
             }
         })
     }
@@ -886,15 +891,12 @@ impl cosmic::Application for App {
                                         slide_index,
                                     ),
                                 );
-                                match action {
-                                    presenter::Action::Task(task) => {
-                                        tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
-                                                Message::Present(m),
-                                            )
-                                        }));
-                                    }
-                                    _ => (),
+                                if let presenter::Action::Task(task) = action {
+                                    tasks.push(task.map(|m| {
+                                        cosmic::Action::App(
+                                            Message::Present(m),
+                                        )
+                                    }));
                                 }
                                 self.current_item =
                                     (item_index, slide_index + 1);
@@ -909,20 +911,17 @@ impl cosmic::Application for App {
                                     .is_some()
                                 {
                                     let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
-                                    match action {
-                                        presenter::Action::Task(
+                                    if let presenter::Action::Task(
                                             task,
-                                        ) => {
-                                            tasks
-                                                .push(task.map(|m| {
-                                                cosmic::Action::App(
-                                                    Message::Present(
-                                                        m,
-                                                    ),
-                                                )
-                                            }));
-                                        }
-                                        _ => (),
+                                        ) = action {
+                                        tasks
+                                            .push(task.map(|m| {
+                                            cosmic::Action::App(
+                                                Message::Present(
+                                                    m,
+                                                ),
+                                            )
+                                        }));
                                     }
                                 }
                                 Task::batch(tasks)
@@ -946,15 +945,12 @@ impl cosmic::Application for App {
                                         slide_index,
                                     ),
                                 );
-                                match action {
-                                    presenter::Action::Task(task) => {
-                                        tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
-                                                Message::Present(m),
-                                            )
-                                        }));
-                                    }
-                                    _ => (),
+                                if let presenter::Action::Task(task) = action {
+                                    tasks.push(task.map(|m| {
+                                        cosmic::Action::App(
+                                            Message::Present(m),
+                                        )
+                                    }));
                                 }
                                 self.current_item =
                                     (item_index, slide_index - 1);
@@ -984,20 +980,17 @@ impl cosmic::Application for App {
                                     .is_some()
                                 {
                                     let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
-                                    match action {
-                                        presenter::Action::Task(
+                                    if let presenter::Action::Task(
                                             task,
-                                        ) => {
-                                            tasks
-                                                .push(task.map(|m| {
-                                                cosmic::Action::App(
-                                                    Message::Present(
-                                                        m,
-                                                    ),
-                                                )
-                                            }));
-                                        }
-                                        _ => (),
+                                        ) = action {
+                                        tasks
+                                            .push(task.map(|m| {
+                                            cosmic::Action::App(
+                                                Message::Present(
+                                                    m,
+                                                ),
+                                            )
+                                        }));
                                     }
                                 }
                                 Task::batch(tasks)
@@ -1084,7 +1077,7 @@ impl cosmic::Application for App {
                 let (id, spawn_window) =
                     window::open(window::Settings {
                         position: Position::Centered,
-                        exit_on_close_request: count % 2 == 0,
+                        exit_on_close_request: count.is_multiple_of(2),
                         decorations: false,
                         ..Default::default()
                     });
@@ -1193,8 +1186,8 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AddServiceItem(index, item) => {
-                let item_index = item.0 .1;
-                let kind = item.0 .0;
+                let item_index = item.0.1;
+                let kind = item.0.0;
                 let mut item;
                 match kind {
                     core::model::LibraryKind::Song => {
@@ -1293,7 +1286,7 @@ impl cosmic::Application for App {
             }
             Message::AppendServiceItemKind(item) => {
                 let item = item.to_service_item();
-                return self.update(Message::AppendServiceItem(item));
+                self.update(Message::AppendServiceItem(item))
             }
             Message::ReorderService(index, target_index) => {
                 let item = self.service.remove(index);
@@ -1317,6 +1310,9 @@ impl cosmic::Application for App {
             }
             Message::OpenEditor(item) => {
                 let kind = item.kind;
+                self.search_query = String::new();
+                self.search_results = vec![];
+                self.searching = false;
                 match kind {
                     ServiceItemKind::Song(song) => {
                         self.editor_mode = Some(EditorMode::Song);
@@ -1348,7 +1344,7 @@ impl cosmic::Application for App {
             }
             Message::OpenEditorKind(item) => {
                 let item = item.to_service_item();
-                return self.update(Message::OpenEditor(item));
+                self.update(Message::OpenEditor(item))
             }
             Message::New => {
                 debug!("new file");

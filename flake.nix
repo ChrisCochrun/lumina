@@ -67,8 +67,6 @@
           gst_all_1.gst-plugins-rs
           gst_all_1.gst-vaapi
           gst_all_1.gstreamer
-          # podofo
-          # mpv
           ffmpeg-full
           mupdf
           # yt-dlp
@@ -90,6 +88,17 @@
               LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
                 with pkgs;
                 pkgs.lib.makeLibraryPath [
+                  pkgs.alsa-lib
+                  pkgs.gst_all_1.gst-libav
+                  pkgs.gst_all_1.gstreamer
+                  pkgs.gst_all_1.gst-plugins-bad
+                  pkgs.gst_all_1.gst-plugins-good
+                  pkgs.gst_all_1.gst-plugins-ugly
+                  pkgs.gst_all_1.gst-plugins-base
+                  pkgs.gst_all_1.gst-plugins-rs
+                  pkgs.gst_all_1.gst-vaapi
+                  pkgs.glib
+                  pkgs.fontconfig
                   pkgs.vulkan-loader
                   pkgs.wayland
                   pkgs.wayland-protocols

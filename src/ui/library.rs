@@ -1,41 +1,39 @@
 use std::collections::HashMap;
 
 use cosmic::{
+    Element, Task,
     dialog::file_chooser::open::Dialog,
     iced::{
-        alignment::Vertical, clipboard::dnd::DndAction,
-        keyboard::Modifiers, wgpu::core::command::DynComputePass,
-        Background, Border, Color, Length,
+        Background, Border, Color, Length, alignment::Vertical,
+        clipboard::dnd::DndAction, keyboard::Modifiers,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
-        button, container, context_menu, dnd_destination,
-        horizontal_space, icon,
+        Container, DndSource, Space, button, container, context_menu,
+        dnd_destination, horizontal_space, icon,
         menu::{self, Action as MenuAction},
         mouse_area, responsive, row, scrollable, text, text_input,
-        Container, DndSource, Space,
     },
-    Element, Task,
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{migrate, SqlitePool};
+use sqlx::{SqlitePool, migrate};
 use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{self, update_image_in_db, Image},
+    images::{self, Image, update_image_in_db},
     kinds::ServiceItemKind,
     model::{KindWrapper, LibraryKind, Model},
     presentations::{
-        self, add_presentation_to_db, update_presentation_in_db,
-        Presentation,
+        self, Presentation, add_presentation_to_db,
+        update_presentation_in_db,
     },
     service_items::{ServiceItem, ServiceTrait},
-    songs::{self, update_song_in_db, Song},
-    videos::{self, update_video_in_db, Video},
+    songs::{self, Song, update_song_in_db},
+    videos::{self, Video, update_video_in_db},
 };
 
 #[derive(Debug, Clone)]
@@ -557,7 +555,7 @@ impl<'a> Library {
                 };
 
                 if items.contains(&(kind, index)) {
-                    ()
+                    
                 } else {
                     items.push((kind, index));
                 }
@@ -930,7 +928,7 @@ impl<'a> Library {
             .clone()
             .into_iter()
             .filter(|song| song.title.to_lowercase().contains(&query))
-            .map(|song| ServiceItemKind::Song(song))
+            .map(ServiceItemKind::Song)
             .collect();
         let videos: Vec<ServiceItemKind> = self
             .video_library
@@ -938,7 +936,7 @@ impl<'a> Library {
             .clone()
             .into_iter()
             .filter(|vid| vid.title.to_lowercase().contains(&query))
-            .map(|video| ServiceItemKind::Video(video))
+            .map(ServiceItemKind::Video)
             .collect();
         let images: Vec<ServiceItemKind> = self
             .image_library
@@ -948,7 +946,7 @@ impl<'a> Library {
             .filter(|image| {
                 image.title.to_lowercase().contains(&query)
             })
-            .map(|image| ServiceItemKind::Image(image))
+            .map(ServiceItemKind::Image)
             .collect();
         let presentations: Vec<ServiceItemKind> = self
             .presentation_library
@@ -956,7 +954,7 @@ impl<'a> Library {
             .clone()
             .into_iter()
             .filter(|pres| pres.title.to_lowercase().contains(&query))
-            .map(|pres| ServiceItemKind::Presentation(pres))
+            .map(ServiceItemKind::Presentation)
             .collect();
         items.extend(videos);
         items.extend(images);

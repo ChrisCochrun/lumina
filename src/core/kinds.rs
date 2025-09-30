@@ -3,8 +3,8 @@ use std::{error::Error, fmt::Display};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{content::Content, service_items::ServiceItem},
     Slide,
+    core::{content::Content, service_items::ServiceItem},
 };
 
 use super::{

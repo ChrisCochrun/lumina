@@ -1,7 +1,7 @@
 use std::{borrow::Cow, mem::replace};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
-use miette::{miette, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{Connection, SqliteConnection};
 use tracing::debug;
