@@ -4,7 +4,7 @@
 * TODO Add OBS integration
 This will be based on each slide having the ability to activate an OBS scene when it is active.
 * TODO Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
-* TODO Build a presentation editor
+* DONE Build a presentation editor
 
 * TODO [#A] Need to fix tests now that the basic app is working
 
@@ -27,13 +27,13 @@ The problem with this approach is that every change to a song's text or font met
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
-* TODO Build library to see all available songs, images, videos, presentations, and slides
+* DONE Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
 I've got the library basic layer done, I need to develop a way to open the libraries accordion button and then show the list of items in the library
-** TODO Need to do search and creation systems yet
+** DONE Need to do search and creation systems yet
 
-* TODO [#B] Build editors for each possible item
-** TODO Develop ui for editors
+* DONE [#B] Build editors for each possible item
+** DONE Develop ui for editors
 
 * TODO [#B] Develop ui for settings
 
