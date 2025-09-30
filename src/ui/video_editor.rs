@@ -52,7 +52,7 @@ impl VideoEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeVideo(video) => {
-                let Ok(player_video) = Url::from_file_path(
+                let Ok(mut player_video) = Url::from_file_path(
                     video.path.clone(),
                 )
                 .map(|url| Video::new(&url).expect("Should be here")) else {
@@ -61,7 +61,7 @@ impl VideoEditor {
                     self.core_video = Some(video);
                     return Action::None;
                 };
-
+                player_video.set_paused(true);
                 self.video = Some(player_video);
                 self.title = video.title.clone();
                 self.core_video = Some(video.clone());
