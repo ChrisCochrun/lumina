@@ -1,9 +1,6 @@
 use std::{io, path::PathBuf};
 
-use crate::core::{
-    presentations::Presentation, service_items::ServiceTrait,
-    slide::Slide,
-};
+use crate::core::presentations::Presentation;
 use cosmic::{
     dialog::file_chooser::{open::Dialog, FileFilter},
     iced::{alignment::Vertical, ContentFit, Length},
@@ -11,8 +8,7 @@ use cosmic::{
     theme,
     widget::{
         self, button, container, horizontal_space, icon,
-        image::{self, Handle},
-        text, text_input, Space,
+        image::Handle, text, text_input, Space,
     },
     Element, Task,
 };
