@@ -4,7 +4,8 @@ use cosmic::{
     dialog::file_chooser::open::Dialog,
     iced::{
         alignment::Vertical, clipboard::dnd::DndAction,
-        keyboard::Modifiers, Background, Border, Color, Length,
+        keyboard::Modifiers, wgpu::core::command::DynComputePass,
+        Background, Border, Color, Length,
     },
     iced_core::widget::tree::State,
     iced_widget::{column, row as rowm, text as textm},
@@ -26,12 +27,13 @@ use tracing::{debug, error, warn};
 use crate::core::{
     content::Content,
     images::{self, update_image_in_db, Image},
+    kinds::ServiceItemKind,
     model::{KindWrapper, LibraryKind, Model},
     presentations::{
         self, add_presentation_to_db, update_presentation_in_db,
         Presentation,
     },
-    service_items::ServiceItem,
+    service_items::{ServiceItem, ServiceTrait},
     songs::{self, update_song_in_db, Song},
     videos::{self, update_video_in_db, Video},
 };
@@ -920,56 +922,52 @@ impl<'a> Library {
     pub async fn search_items(
         &self,
         query: String,
-    ) -> Vec<ServiceItem> {
+    ) -> Vec<ServiceItemKind> {
         let query = query.to_lowercase();
-        let mut items: Vec<ServiceItem> = self
+        let mut items: Vec<ServiceItemKind> = self
             .song_library
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter(|song| song.title.to_lowercase().contains(&query))
-            .map(
-                super::super::core::content::Content::to_service_item,
-            )
+            .map(|song| ServiceItemKind::Song(song))
             .collect();
-        let videos: Vec<ServiceItem> = self
+        let videos: Vec<ServiceItemKind> = self
             .video_library
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter(|vid| vid.title.to_lowercase().contains(&query))
-            .map(
-                super::super::core::content::Content::to_service_item,
-            )
+            .map(|video| ServiceItemKind::Video(video))
             .collect();
-        let images: Vec<ServiceItem> = self
+        let images: Vec<ServiceItemKind> = self
             .image_library
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter(|image| {
                 image.title.to_lowercase().contains(&query)
             })
-            .map(
-                super::super::core::content::Content::to_service_item,
-            )
+            .map(|image| ServiceItemKind::Image(image))
             .collect();
-        let presentations: Vec<ServiceItem> = self
+        let presentations: Vec<ServiceItemKind> = self
             .presentation_library
             .items
-            .iter()
+            .clone()
+            .into_iter()
             .filter(|pres| pres.title.to_lowercase().contains(&query))
-            .map(
-                super::super::core::content::Content::to_service_item,
-            )
+            .map(|pres| ServiceItemKind::Presentation(pres))
             .collect();
         items.extend(videos);
         items.extend(images);
         items.extend(presentations);
-        let mut items: Vec<(usize, ServiceItem)> = items
+        let mut items: Vec<(usize, ServiceItemKind)> = items
             .into_iter()
             .map(|item| {
                 (
                     levenshtein::distance(
                         query.bytes(),
-                        item.title.bytes(),
+                        item.title().bytes(),
                     ),
                     item,
                 )

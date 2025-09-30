@@ -16,6 +16,7 @@ use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
 use cosmic::theme;
+use cosmic::widget::button::Catalog;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
@@ -735,7 +736,7 @@ impl cosmic::Application for App {
                 ]
                 .spacing(cosmic::theme::active().cosmic().space_s()),
             )
-            .padding(cosmic::theme::active().cosmic().space_xxxl())
+            .padding(cosmic::theme::active().cosmic().space_xl())
             .style(nav_bar_style);
             let modal = Container::new(modal)
                 .padding([
@@ -745,8 +746,18 @@ impl cosmic::Application for App {
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
             let mouse_stack = stack!(
-                mouse_area(Space::new(Length::Fill, Length::Fill))
-                    .on_press(Message::CloseSearch),
+                mouse_area(
+                    container(Space::new(Length::Fill, Length::Fill))
+                        .style(|_| {
+                            container::background(
+                                cosmic::iced::Background::Color(
+                                    Color::BLACK,
+                                )
+                                .scale_alpha(0.3),
+                            )
+                        })
+                )
+                .on_press(Message::CloseSearch),
                 modal
             );
             Some(mouse_stack.into())
@@ -1167,7 +1178,7 @@ impl cosmic::Application for App {
                     .iter()
                     .enumerate()
                     .find(|(id, _)| index == *id)
-                    && let Some(slide) = item.slides.first()
+                    && let Some(_slide) = item.slides.first()
                 {
                     self.current_item = (index, 0);
                     self.presenter.update(

@@ -18,6 +18,20 @@ pub enum ServiceItemKind {
     Content(Slide),
 }
 
+impl ServiceItemKind {
+    pub fn title(&self) -> String {
+        match self {
+            ServiceItemKind::Song(song) => song.title.to_string(),
+            ServiceItemKind::Video(video) => video.title.to_string(),
+            ServiceItemKind::Image(image) => image.title.to_string(),
+            ServiceItemKind::Presentation(presentation) => {
+                presentation.title.to_string()
+            }
+            ServiceItemKind::Content(slide) => todo!(),
+        }
+    }
+}
+
 impl std::fmt::Display for ServiceItemKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = match self {
