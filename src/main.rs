@@ -544,28 +544,6 @@ impl cosmic::Application for App {
                 TPosition::Bottom,
             )
             .gap(cosmic::theme::spacing().space_xs),
-            tooltip(
-                button::custom(
-                    row!(
-                        Container::new(
-                            icon::from_name("view-list-symbolic")
-                                .scale(3)
-                        )
-                        .center_y(Length::Fill),
-                        text::body(if self.library_open {
-                            "Close Library"
-                        } else {
-                            "Open Library"
-                        })
-                    )
-                    .spacing(5),
-                )
-                .class(cosmic::theme::style::Button::HeaderBar)
-                .on_press(Message::LibraryToggle),
-                "Open Library",
-                TPosition::Bottom,
-            )
-            .gap(cosmic::theme::spacing().space_xs),
         ]
         .spacing(HEADER_SPACE)
         .into();
