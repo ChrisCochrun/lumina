@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ops::Deref;
+use std::path::PathBuf;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
@@ -48,13 +49,8 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
         value: (Vec<u8>, String),
     ) -> std::result::Result<Self, Self::Error> {
         let (data, mime) = value;
-        match mime.as_str() {
-            "application/service_item" => {}
-            "text/uri-list" => {}
-            "x-special/gnome-copied-files" => {}
-        }
-        debug!(?value);
-        ron::de::from_bytes(&value.0).into_diagnostic()
+        debug!(?mime);
+        ron::de::from_bytes(&data).into_diagnostic()
     }
 }
 
@@ -83,6 +79,29 @@ impl AsMimeTypes for ServiceItem {
         let ron = ron::ser::to_string(self).ok()?;
         debug!(ron);
         Some(Cow::from(ron.into_bytes()))
+    }
+}
+
+impl TryFrom<PathBuf> for ServiceItem {
+    type Error = miette::Error;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let ext = path
+            .extension()
+            .map(|ext| ext.to_str())
+            .flatten()
+            .ok_or(miette::miette!(
+                "There isn't an extension on this file"
+            ))?;
+        match ext {
+            "png" | "jpg" | "jpeg" => {
+                Ok(Self::from(&Image::from(path)))
+            }
+            "mp4" | "mkv" | "webm" => {
+                Ok(Self::from(&Video::from(path)))
+            }
+            _ => Err(miette!("Unkown service item")),
+        }
     }
 }
 

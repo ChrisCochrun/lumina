@@ -1,4 +1,4 @@
-use std::{borrow::Cow, mem::replace};
+use std::{borrow::Cow, mem::replace, path::{Path, PathBuf}};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::{IntoDiagnostic, Result, miette};
@@ -23,9 +23,15 @@ pub enum LibraryKind {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize,
+    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize,
 )]
 pub struct KindWrapper(pub (LibraryKind, i32));
+
+impl From<PathBuf> for LibraryKind {
+    fn from(value: PathBuf) -> Self {
+        todo!()
+    }
+}
 
 impl TryFrom<(Vec<u8>, String)> for KindWrapper {
     type Error = miette::Error;
@@ -33,8 +39,13 @@ impl TryFrom<(Vec<u8>, String)> for KindWrapper {
     fn try_from(
         value: (Vec<u8>, String),
     ) -> std::result::Result<Self, Self::Error> {
-        debug!(?value);
-        ron::de::from_bytes(&value.0).into_diagnostic()
+        let (data, mime) = value;
+        match mime.as_str() {
+            "application/service-item" => {
+                ron::de::from_bytes(&data).into_diagnostic()
+            }
+            _ => Err(miette!("Wrong mime type: {mime}"))
+        }
     }
 }
 

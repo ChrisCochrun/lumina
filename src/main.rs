@@ -167,6 +167,7 @@ enum Message {
     AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
     AddServiceItem(usize, KindWrapper),
+    AddServiceItemsFiles(usize, Vec<ServiceItem>),
     RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
     AppendServiceItem(ServiceItem),
@@ -1231,6 +1232,13 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
+            Message::AddServiceItemsFiles(index, items) => {
+                for item in items {
+                    self.service.insert(index, item);
+                }
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
             Message::RemoveServiceItem(index) => {
                 self.service.remove(index);
                 self.presenter.update_items(self.service.clone());
@@ -1786,17 +1794,44 @@ where
                 .gap(cosmic::theme::spacing().space_xs);
                 dnd_destination(
                     tooltip,
-                    vec!["application/service-item".into()],
+                    vec!["application/service-item".into(), "text/uri-list".into(), "x-special/gnome-copied-files".into()],
                 )
                 .on_finish(move |mime, data, _, _, _| {
-                    let Ok(item) =
-                        KindWrapper::try_from((data, mime))
-                    else {
-                        error!("couldn't drag in Service item");
-                        return Message::None;
-                    };
-                    debug!(?item, index, "adding Service item");
-                    Message::AddServiceItem(index, item)
+                    match mime.as_str() {
+                        "application/service-item" => {
+                            let Ok(item) =
+                                KindWrapper::try_from((data, mime))
+                            else {
+                                error!("couldn't drag in Service item");
+                                return Message::None;
+                            };
+                            debug!(?item, index, "adding Service item");
+                            Message::AddServiceItem(index, item)
+                        } 
+                        "text/uri-list" => {
+                            let Ok(text) = str::from_utf8(&data) else {
+                                return Message::None;
+                            };
+                            let mut items = Vec::new();
+                            for line in text.lines() {
+                                let Ok(url) = url::Url::parse(line) else {
+                                    error!(?line, "problem parsing this file url");
+                                    continue;
+                                };
+                                let Ok(path) = url.to_file_path() else {
+                                    error!(?url, "invalid file URL");
+                                    continue;
+                                };
+                                let item = ServiceItem::try_from(path);
+                                match item {
+                                    Ok(item) => items.push(item),
+                                    Err(e) => error!(?e),
+                                }
+                            }
+                            Message::AddServiceItemsFiles(index, items)
+                        }
+                        _ => Message::None
+                    }
                 })
                 .into()
             });
