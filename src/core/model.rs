@@ -1,4 +1,8 @@
-use std::{borrow::Cow, mem::replace, path::{Path, PathBuf}};
+use std::{
+    borrow::Cow,
+    mem::replace,
+    path::{Path, PathBuf},
+};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::{IntoDiagnostic, Result, miette};
@@ -44,7 +48,7 @@ impl TryFrom<(Vec<u8>, String)> for KindWrapper {
             "application/service-item" => {
                 ron::de::from_bytes(&data).into_diagnostic()
             }
-            _ => Err(miette!("Wrong mime type: {mime}"))
+            _ => Err(miette!("Wrong mime type: {mime}")),
         }
     }
 }

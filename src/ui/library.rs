@@ -555,7 +555,6 @@ impl<'a> Library {
                 };
 
                 if items.contains(&(kind, index)) {
-                    
                 } else {
                     items.push((kind, index));
                 }

@@ -870,7 +870,9 @@ impl cosmic::Application for App {
                                         slide_index,
                                     ),
                                 );
-                                if let presenter::Action::Task(task) = action {
+                                if let presenter::Action::Task(task) =
+                                    action
+                                {
                                     tasks.push(task.map(|m| {
                                         cosmic::Action::App(
                                             Message::Present(m),
@@ -891,14 +893,12 @@ impl cosmic::Application for App {
                                 {
                                     let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     if let presenter::Action::Task(
-                                            task,
-                                        ) = action {
-                                        tasks
-                                            .push(task.map(|m| {
+                                        task,
+                                    ) = action
+                                    {
+                                        tasks.push(task.map(|m| {
                                             cosmic::Action::App(
-                                                Message::Present(
-                                                    m,
-                                                ),
+                                                Message::Present(m),
                                             )
                                         }));
                                     }
@@ -924,7 +924,9 @@ impl cosmic::Application for App {
                                         slide_index,
                                     ),
                                 );
-                                if let presenter::Action::Task(task) = action {
+                                if let presenter::Action::Task(task) =
+                                    action
+                                {
                                     tasks.push(task.map(|m| {
                                         cosmic::Action::App(
                                             Message::Present(m),
@@ -960,14 +962,12 @@ impl cosmic::Application for App {
                                 {
                                     let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
                                     if let presenter::Action::Task(
-                                            task,
-                                        ) = action {
-                                        tasks
-                                            .push(task.map(|m| {
+                                        task,
+                                    ) = action
+                                    {
+                                        tasks.push(task.map(|m| {
                                             cosmic::Action::App(
-                                                Message::Present(
-                                                    m,
-                                                ),
+                                                Message::Present(m),
                                             )
                                         }));
                                     }
@@ -1056,7 +1056,8 @@ impl cosmic::Application for App {
                 let (id, spawn_window) =
                     window::open(window::Settings {
                         position: Position::Centered,
-                        exit_on_close_request: count.is_multiple_of(2),
+                        exit_on_close_request: count
+                            .is_multiple_of(2),
                         decorations: false,
                         ..Default::default()
                     });
@@ -1797,6 +1798,7 @@ where
                     vec!["application/service-item".into(), "text/uri-list".into(), "x-special/gnome-copied-files".into()],
                 )
                 .on_finish(move |mime, data, _, _, _| {
+
                     match mime.as_str() {
                         "application/service-item" => {
                             let Ok(item) =
@@ -1807,7 +1809,7 @@ where
                             };
                             debug!(?item, index, "adding Service item");
                             Message::AddServiceItem(index, item)
-                        } 
+                        }
                         "text/uri-list" => {
                             let Ok(text) = str::from_utf8(&data) else {
                                 return Message::None;
