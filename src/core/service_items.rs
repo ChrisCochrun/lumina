@@ -47,6 +47,12 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
     fn try_from(
         value: (Vec<u8>, String),
     ) -> std::result::Result<Self, Self::Error> {
+        let (data, mime) = value;
+        match mime.as_str() {
+            "application/service_item" => {}
+            "text/uri-list" => {}
+            "x-special/gnome-copied-files" => {}
+        }
         debug!(?value);
         ron::de::from_bytes(&value.0).into_diagnostic()
     }
@@ -54,7 +60,11 @@ impl TryFrom<(Vec<u8>, String)> for ServiceItem {
 
 impl AllowedMimeTypes for ServiceItem {
     fn allowed() -> Cow<'static, [String]> {
-        Cow::from(vec!["application/service-item".to_string()])
+        Cow::from(vec![
+            "application/service-item".to_string(),
+            "text/uri-list".to_string(),
+            "x-special/gnome-copied-files".to_string(),
+        ])
     }
 }
 

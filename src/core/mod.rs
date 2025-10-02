@@ -1,4 +1,5 @@
 pub mod content;
+pub mod file;
 pub mod images;
 pub mod kinds;
 pub mod model;
