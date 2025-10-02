@@ -31,7 +31,7 @@ use crate::core::{
         self, Presentation, add_presentation_to_db,
         update_presentation_in_db,
     },
-    service_items::{ServiceItem, ServiceTrait},
+    service_items::ServiceItem,
     songs::{self, Song, update_song_in_db},
     videos::{self, Video, update_video_in_db},
 };
@@ -100,6 +100,7 @@ pub enum Message {
     Error(String),
     OpenContext(i32),
     None,
+    AddFiles(Vec<ServiceItemKind>),
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
@@ -210,35 +211,35 @@ impl<'a> Library {
                                 error!(?e);
                             }
                             let task = Task::future(
-                                self.db.acquire(),
-                            )
-                            .and_then(move |db| {
-                                Task::perform(
-                                    add_presentation_to_db(
-                                        presentation.to_owned(),
-                                        db,
-                                        index as i32,
-                                    ),
-                                    move |res| {
-                                        debug!(
-                                            len,
-                                            index, "added to db"
-                                        );
-                                        if let Err(e) = res {
-                                            error!(?e);
-                                        }
-                                        if len == index {
-                                            debug!("open the pres");
-                                            Message::OpenItem(Some((
-                                            LibraryKind::Presentation,
-                                            index as i32,
-                                        )))
-                                        } else {
-                                            Message::None
-                                        }
-                                    },
-                                )
-                            });
+                                        self.db.acquire(),
+                                    )
+                                    .and_then(move |db| {
+                                        Task::perform(
+                                            add_presentation_to_db(
+                                                presentation.to_owned(),
+                                                db,
+                                                index as i32,
+                                            ),
+                                            move |res| {
+                                                debug!(
+                                                    len,
+                                                    index, "added to db"
+                                                );
+                                                if let Err(e) = res {
+                                                    error!(?e);
+                                                }
+                                                if len == index {
+                                                    debug!("open the pres");
+                                                    Message::OpenItem(Some((
+                                                    LibraryKind::Presentation,
+                                                    index as i32,
+                                                )))
+                                                } else {
+                                                    Message::None
+                                                }
+                                            },
+                                        )
+                                    });
                             tasks.push(task);
                             index += 1;
                         }
@@ -517,30 +518,30 @@ impl<'a> Library {
                 }
 
                 match self
-                    .presentation_library
-                    .update_item(presentation.clone(), index)
-                {
-                    Ok(()) => return Action::Task(
-                        Task::future(self.db.acquire()).and_then(
-                            move |conn| {
-                                Task::perform(
-                                    update_presentation_in_db(
-                                        presentation.clone(),
-                                        conn,
-                                    ),
-                                    |r| match r {
-                                        Ok(_) => Message::PresentationChanged,
-                                        Err(e) => {
-                                            error!(?e);
-                                            Message::None
-                                        }
+                            .presentation_library
+                            .update_item(presentation.clone(), index)
+                        {
+                            Ok(()) => return Action::Task(
+                                Task::future(self.db.acquire()).and_then(
+                                    move |conn| {
+                                        Task::perform(
+                                            update_presentation_in_db(
+                                                presentation.clone(),
+                                                conn,
+                                            ),
+                                            |r| match r {
+                                                Ok(_) => Message::PresentationChanged,
+                                                Err(e) => {
+                                                    error!(?e);
+                                                    Message::None
+                                                }
+                                            },
+                                        )
                                     },
-                                )
-                            },
-                        ),
-                    ),
-                    Err(_) => todo!(),
-                }
+                                ),
+                            ),
+                            Err(_) => todo!(),
+                        }
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
@@ -561,6 +562,55 @@ impl<'a> Library {
                 self.selected_items = Some(items.to_vec());
                 self.context_menu = Some(index);
             }
+            Message::AddFiles(items) => {
+                for item in items {
+                    match item {
+                        ServiceItemKind::Song(song) => {
+                            let Some(e) = self
+                                .song_library
+                                .add_item(song)
+                                .err()
+                            else {
+                                continue;
+                            };
+                            error!(?e);
+                        }
+                        ServiceItemKind::Video(video) => {
+                            let Some(e) = self
+                                .video_library
+                                .add_item(video)
+                                .err()
+                            else {
+                                continue;
+                            };
+                            error!(?e);
+                        }
+                        ServiceItemKind::Image(image) => {
+                            let Some(e) = self
+                                .image_library
+                                .add_item(image)
+                                .err()
+                            else {
+                                continue;
+                            };
+                            error!(?e);
+                        }
+                        ServiceItemKind::Presentation(
+                            presentation,
+                        ) => {
+                            let Some(e) = self
+                                .presentation_library
+                                .add_item(presentation)
+                                .err()
+                            else {
+                                continue;
+                            };
+                            error!(?e);
+                        }
+                        ServiceItemKind::Content(slide) => todo!(),
+                    }
+                }
+            }
         }
         Action::None
     }
@@ -572,7 +622,7 @@ impl<'a> Library {
         let presentation_library =
             self.library_item(&self.presentation_library);
 
-        column![
+        let library_column = column![
             text::heading("Library").center().width(Length::Fill),
             cosmic::iced::widget::horizontal_rule(1),
             song_library,
@@ -582,8 +632,67 @@ impl<'a> Library {
         ]
         .height(Length::Fill)
         .padding(10)
-        .spacing(10)
-        .into()
+        .spacing(10);
+        let library_dnd = dnd_destination(
+            library_column,
+            vec![
+                "image/png".into(),
+                "image/jpg".into(),
+                "image/heif".into(),
+                "image/gif".into(),
+                "video/mp4".into(),
+                "video/AV1".into(),
+                "video/H264".into(),
+                "video/H265".into(),
+                "video/mpeg".into(),
+                "video/mkv".into(),
+                "video/webm".into(),
+                "video/ogg".into(),
+                "video/vnd.youtube.yt".into(),
+                "video/x-matroska".into(),
+                "application/pdf".into(),
+                "text/html".into(),
+                "text/md".into(),
+                "text/org".into(),
+                "text/uri-list".into(),
+            ],
+        )
+        .on_enter(|_, _, mimes| {
+            warn!(?mimes);
+            Message::None
+        })
+        .on_finish(|mime, data, action, _, _| {
+            // warn!(?mime, ?data, ?action);
+            match mime.as_str() {
+                "text/uri-list" => {
+                    let Ok(text) = str::from_utf8(&data) else {
+                        return Message::None;
+                    };
+                    let mut items = Vec::new();
+                    for line in text.lines() {
+                        let Ok(url) = url::Url::parse(line) else {
+                            error!(
+                                ?line,
+                                "problem parsing this file url"
+                            );
+                            continue;
+                        };
+                        let Ok(path) = url.to_file_path() else {
+                            error!(?url, "invalid file URL");
+                            continue;
+                        };
+                        let item = ServiceItemKind::try_from(path);
+                        match item {
+                            Ok(item) => items.push(item),
+                            Err(e) => error!(?e),
+                        }
+                    }
+                    Message::AddFiles(items)
+                }
+                _ => Message::None,
+            }
+        });
+        container(library_dnd).padding(2).into()
     }
 
     pub fn library_item<T>(
@@ -767,38 +876,7 @@ impl<'a> Library {
             );
             let library_column =
                 column![library_toolbar, items].spacing(3);
-            let library_dnd = dnd_destination(
-                library_column,
-                vec![
-                    "image/png".into(),
-                    "image/jpg".into(),
-                    "image/heif".into(),
-                    "image/gif".into(),
-                    "video/mp4".into(),
-                    "video/AV1".into(),
-                    "video/H264".into(),
-                    "video/H265".into(),
-                    "video/mpeg".into(),
-                    "video/mkv".into(),
-                    "video/webm".into(),
-                    "video/ogg".into(),
-                    "video/vnd.youtube.yt".into(),
-                    "video/x-matroska".into(),
-                    "application/pdf".into(),
-                    "text/html".into(),
-                    "text/md".into(),
-                    "text/org".into(),
-                ],
-            )
-            .on_enter(|_, _, mimes| {
-                warn!(?mimes);
-                Message::None
-            })
-            .on_finish(|mime, data, action, _, _| {
-                warn!(?mime, ?data, ?action);
-                Message::None
-            });
-            Container::new(library_dnd).padding(5)
+            Container::new(library_column).padding(5)
         } else {
             Container::new(Space::new(0, 0))
         };

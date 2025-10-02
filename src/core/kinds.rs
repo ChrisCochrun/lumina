@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +19,29 @@ pub enum ServiceItemKind {
     Image(Image),
     Presentation(Presentation),
     Content(Slide),
+}
+
+impl TryFrom<PathBuf> for ServiceItemKind {
+    type Error = miette::Error;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let ext = path
+            .extension()
+            .map(|ext| ext.to_str())
+            .flatten()
+            .ok_or(miette::miette!(
+                "There isn't an extension on this file"
+            ))?;
+        match ext {
+            "png" | "jpg" | "jpeg" => {
+                Ok(Self::Image(Image::from(path)))
+            }
+            "mp4" | "mkv" | "webm" => {
+                Ok(Self::Video(Video::from(path)))
+            }
+            _ => Err(miette::miette!("Unknown item")),
+        }
+    }
 }
 
 impl ServiceItemKind {
