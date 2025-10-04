@@ -5,6 +5,7 @@ use core::slide::{
 };
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::dialog::file_chooser::{self, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
@@ -14,15 +15,14 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row, stack};
-use cosmic::theme;
+use cosmic::iced_widget::{column, horizontal_rule, row, stack};
 use cosmic::widget::button::Catalog;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{Container, menu};
+use cosmic::widget::{Container, divider, menu};
 use cosmic::widget::{
     Space, button, context_menu, horizontal_space, mouse_area,
     nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
@@ -30,10 +30,13 @@ use cosmic::widget::{
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::{Application, ApplicationExt, Element, executor};
+use cosmic::{
+    Application, ApplicationExt, Element, dialog, executor,
+};
+use cosmic::{theme, widget};
 use crisp::types::Value;
 use lisp::parse_lisp;
-use miette::{Result, miette};
+use miette::{IntoDiagnostic, Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
@@ -49,6 +52,7 @@ use ui::presenter::{self, Presenter};
 use ui::song_editor::{self, SongEditor};
 
 use crate::core::content::Content;
+use crate::core::file;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::KindWrapper;
 use crate::ui::image_editor::{self, ImageEditor};
@@ -123,6 +127,7 @@ struct App {
     selected_items: Vec<usize>,
     current_item: (usize, usize),
     hovered_item: Option<usize>,
+    hovered_dnd: Option<usize>,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -166,6 +171,7 @@ enum Message {
     SelectServiceItem(usize),
     AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
+    HoveredServiceDrop(Option<usize>),
     AddServiceItem(usize, KindWrapper),
     AddServiceItemsFiles(usize, Vec<ServiceItem>),
     RemoveServiceItem(usize),
@@ -183,8 +189,9 @@ enum Message {
     New,
     Open,
     OpenFile(PathBuf),
-    Save(Option<PathBuf>),
-    SaveAs,
+    Save,
+    SaveAsDialog,
+    SaveAs(PathBuf),
     OpenSettings,
     ModifiersPressed(Modifiers),
 }
@@ -205,8 +212,8 @@ impl menu::Action for MenuAction {
     fn message(&self) -> Self::Message {
         match self {
             MenuAction::New => Message::New,
-            MenuAction::Save => Message::Save(None),
-            MenuAction::SaveAs => Message::SaveAs,
+            MenuAction::Save => Message::Save,
+            MenuAction::SaveAs => Message::SaveAsDialog,
             MenuAction::Open => Message::Open,
             MenuAction::OpenSettings => Message::OpenSettings,
             MenuAction::DeleteItem(index) => {
@@ -352,6 +359,7 @@ impl cosmic::Application for App {
             fontdb: Arc::clone(&fontdb),
             menu_keys,
             hovered_item: None,
+            hovered_dnd: None,
             context_menu: None,
             modifiers_pressed: None,
         };
@@ -620,8 +628,8 @@ impl cosmic::Application for App {
                         }
                         iced::Event::Touch(_touch) => None,
                         iced::Event::A11y(_id, _action_request) => None,
-                        iced::Event::Dnd(dnd_event) => {
-                            debug!(?dnd_event);
+                        iced::Event::Dnd(_dnd_event) => {
+                            // debug!(?dnd_event);
                             None
                         }
                         iced::Event::PlatformSpecific(_platform_specific) => {
@@ -1139,6 +1147,10 @@ impl cosmic::Application for App {
                 self.hovered_item = index;
                 Task::none()
             }
+            Message::HoveredServiceDrop(index) => {
+                self.hovered_dnd = index;
+                Task::none()
+            }
             Message::SelectServiceItem(index) => {
                 self.selected_items = vec![index];
                 Task::none()
@@ -1234,6 +1246,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AddServiceItemsFiles(index, items) => {
+                self.hovered_dnd = None;
                 for item in items {
                     self.service.insert(index, item);
                 }
@@ -1345,17 +1358,44 @@ impl cosmic::Application for App {
                 debug!(?file, "opening file");
                 Task::none()
             }
-            Message::Save(file) => {
-                let Some(file) = file else {
-                    debug!("saving current");
-                    return Task::none();
-                };
-                debug!(?file, "saving new file");
-                Task::none()
+            Message::Save => {
+                let service = self.service.clone();
+                let file = self.file.clone();
+                Task::perform(
+                    file::save(service, file.clone()),
+                    move |res| match res {
+                        Ok(_) => {
+                            tracing::info!(
+                                "saving file to: {:?}",
+                                file
+                            );
+                            cosmic::Action::None
+                        }
+                        Err(e) => {
+                            error!(?e, "There was a problem saving");
+                            cosmic::Action::None
+                        }
+                    },
+                )
             }
-            Message::SaveAs => {
-                debug!("saving as a file");
-                Task::none()
+            Message::SaveAs(file) => {
+                debug!(?file, "saving as a file");
+                self.file = file;
+                return self.update(Message::Save);
+            }
+            Message::SaveAsDialog => {
+                Task::perform(save_as_dialog(), |file| match file {
+                    Ok(file) => {
+                        cosmic::Action::App(Message::SaveAs(file))
+                    }
+                    Err(e) => {
+                        error!(
+                            ?e,
+                            "There was an error during saving"
+                        );
+                        cosmic::Action::None
+                    }
+                })
             }
             Message::OpenSettings => {
                 debug!("Opening settings");
@@ -1635,7 +1675,7 @@ where
         }
         match (key, modifiers) {
             (Key::Character(k), Modifiers::CTRL) if k == *"s" => {
-                self.update(Message::Save(None))
+                self.update(Message::Save)
             }
             (Key::Character(k), Modifiers::CTRL) if k == *"o" => {
                 self.update(Message::Open)
@@ -1743,7 +1783,20 @@ where
                         ))
                 })
                 .width(Length::Fill);
-                let mouse_area = mouse_area(container)
+                let visual_item = if self.hovered_dnd.is_some_and(|h| h == index) {
+                    let divider = divider::horizontal::default().class(theme::Rule::custom(|t| {
+                        let color = t.cosmic().accent_color();
+                        let style = cosmic::iced_widget::rule::Style {
+                            color: color.into(),
+                            width: 2,
+                            radius: t.cosmic().corner_radii.radius_xs.into(),
+                            fill_mode: cosmic::iced_widget::rule::FillMode::Full,
+                        };
+                        style
+                    } ));
+                    Container::new(column![divider, container].spacing(theme::spacing().space_s))
+                } else { container };
+                let mouse_area = mouse_area(visual_item)
                     .on_enter(Message::HoveredServiceItem(Some(
                         index,
                     )))
@@ -1797,6 +1850,8 @@ where
                     tooltip,
                     vec!["application/service-item".into(), "text/uri-list".into(), "x-special/gnome-copied-files".into()],
                 )
+                .on_enter(move |_, _, _| Message::HoveredServiceDrop(Some(index)))
+                .on_leave(move || Message::HoveredServiceDrop(None))
                 .on_finish(move |mime, data, _, _, _| {
 
                     match mime.as_str() {
@@ -1904,4 +1959,16 @@ where
 
         container.center(Length::FillPortion(2)).into()
     }
+}
+
+async fn save_as_dialog() -> Result<PathBuf> {
+    let dialog = save::Dialog::new();
+    save::file(dialog).await.into_diagnostic().map(|response| {
+        match response.url() {
+            Some(url) => Ok(url.to_file_path().unwrap()),
+            None => {
+                Err(miette!("Can't convert url of file to a path"))
+            }
+        }
+    })?
 }

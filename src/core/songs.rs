@@ -420,6 +420,51 @@ pub async fn remove_from_db(
         .map(|_| ())
 }
 
+pub async fn add_song_to_db(
+    song: Song,
+    db: PoolConnection<Sqlite>,
+) -> Result<()> {
+    let mut db = db.detach();
+
+    let verse_order = {
+        if let Some(vo) = song.verse_order {
+            vo.into_iter()
+                .map(|mut s| {
+                    s.push(' ');
+                    s
+                })
+                .collect::<String>()
+        } else {
+            String::new()
+        }
+    };
+
+    let audio = song
+        .audio
+        .map(|a| a.to_str().unwrap_or_default().to_string());
+
+    let background = song
+        .background
+        .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+    query!(
+        r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+        song.title,
+        song.lyrics,
+        song.author,
+        song.ccli,
+        verse_order,
+        audio,
+        song.font,
+        song.font_size,
+        background
+    )
+    .execute(&mut db)
+    .await
+    .into_diagnostic()?;
+    Ok(())
+}
+
 pub async fn update_song_in_db(
     item: Song,
     db: PoolConnection<Sqlite>,

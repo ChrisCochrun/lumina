@@ -15,29 +15,32 @@ use iced_video_player::{Video, VideoPlayer};
 use tracing::{debug, error, warn};
 use url::Url;
 
+use crate::core::videos;
+
 #[derive(Debug)]
 pub struct VideoEditor {
     pub video: Option<Video>,
-    core_video: Option<crate::core::videos::Video>,
+    core_video: Option<videos::Video>,
     title: String,
     editing: bool,
 }
 
 pub enum Action {
     Task(Task<Message>),
-    UpdateVideo(crate::core::videos::Video),
+    UpdateVideo(videos::Video),
     None,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ChangeVideo(crate::core::videos::Video),
-    Update(crate::core::videos::Video),
+    ChangeVideo(videos::Video),
+    Update(videos::Video),
     ChangeTitle(String),
     PickVideo,
     Edit(bool),
     None,
     PauseVideo,
+    UpdateVideoFile(videos::Video),
 }
 
 impl VideoEditor {
@@ -52,20 +55,7 @@ impl VideoEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeVideo(video) => {
-                let Ok(mut player_video) = Url::from_file_path(
-                    video.path.clone(),
-                )
-                .map(|url| Video::new(&url).expect("Should be here")) else {
-                    self.video = None;
-                    self.title = video.title.clone();
-                    self.core_video = Some(video);
-                    return Action::None;
-                };
-                player_video.set_paused(true);
-                self.video = Some(player_video);
-                self.title = video.title.clone();
-                self.core_video = Some(video.clone());
-                return self.update(Message::Update(video));
+                self.update_entire_video(&video);
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
@@ -100,17 +90,19 @@ impl VideoEditor {
                     move |video_result| {
                         if let Ok(video) = video_result {
                             let mut video =
-                                crate::core::videos::Video::from(
-                                    video,
-                                );
+                                videos::Video::from(video);
                             video.id = video_id;
-                            Message::ChangeVideo(video)
+                            Message::UpdateVideoFile(video)
                         } else {
                             Message::None
                         }
                     },
                 );
                 return Action::Task(task);
+            }
+            Message::UpdateVideoFile(video) => {
+                self.update_entire_video(&video);
+                return Action::UpdateVideo(video);
             }
             Message::None => (),
         }
@@ -184,6 +176,22 @@ impl VideoEditor {
 
     pub const fn editing(&self) -> bool {
         self.editing
+    }
+
+    fn update_entire_video(&mut self, video: &videos::Video) {
+        let Ok(mut player_video) =
+            Url::from_file_path(video.path.clone())
+                .map(|url| Video::new(&url).expect("Should be here"))
+        else {
+            self.video = None;
+            self.title = video.title.clone();
+            self.core_video = Some(video.clone());
+            return;
+        };
+        player_video.set_paused(true);
+        self.video = Some(player_video);
+        self.title = video.title.clone();
+        self.core_video = Some(video.clone());
     }
 }
 

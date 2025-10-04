@@ -201,6 +201,27 @@ pub async fn remove_from_db(
         .map(|_| ())
 }
 
+pub async fn add_image_to_db(
+    image: Image,
+    db: PoolConnection<Sqlite>,
+) -> Result<()> {
+    let path = image
+        .path
+        .to_str()
+        .map(std::string::ToString::to_string)
+        .unwrap_or_default();
+    let mut db = db.detach();
+    query!(
+        r#"INSERT INTO images (title, file_path) VALUES ($1, $2)"#,
+        image.title,
+        path,
+    )
+    .execute(&mut db)
+    .await
+    .into_diagnostic()?;
+    Ok(())
+}
+
 pub async fn update_image_in_db(
     image: Image,
     db: PoolConnection<Sqlite>,
@@ -211,44 +232,6 @@ pub async fn update_image_in_db(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let mut db = db.detach();
-    let id = image.id;
-    if let Err(e) = query!("SELECT id FROM images where id = $1", id)
-        .fetch_one(&mut db)
-        .await
-    {
-        if let Ok(ids) =
-            query!("SELECT id FROM images").fetch_all(&mut db).await
-        {
-            let Some(mut max) = ids.iter().map(|r| r.id).max() else {
-                return Err(miette::miette!("cannot find max id"));
-            };
-            debug!(?e, "Image not found");
-            max += 1;
-            let result = query!(
-                r#"INSERT into images VALUES($1, $2, $3)"#,
-                max,
-                image.title,
-                path,
-            )
-            .execute(&mut db)
-            .await
-            .into_diagnostic();
-
-            return match result {
-                Ok(_) => {
-                    debug!("should have been updated");
-                    Ok(())
-                }
-                Err(e) => {
-                    error! {?e};
-                    Err(e)
-                }
-            };
-        } else {
-            return Err(miette::miette!("cannot find ids"));
-        }
-    };
-
     debug!(?image, "should be been updated");
     let result = query!(
         r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,

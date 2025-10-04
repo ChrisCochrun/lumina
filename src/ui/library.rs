@@ -24,7 +24,7 @@ use tracing::{debug, error, warn};
 
 use crate::core::{
     content::Content,
-    images::{self, Image, update_image_in_db},
+    images::{self, Image, add_image_to_db, update_image_in_db},
     kinds::ServiceItemKind,
     model::{KindWrapper, LibraryKind, Model},
     presentations::{
@@ -32,8 +32,8 @@ use crate::core::{
         update_presentation_in_db,
     },
     service_items::ServiceItem,
-    songs::{self, Song, update_song_in_db},
-    videos::{self, Video, update_video_in_db},
+    songs::{self, Song, add_song_to_db, update_song_in_db},
+    videos::{self, Video, add_video_to_db, update_video_in_db},
 };
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ pub struct Library {
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 enum MenuMessage {
     Delete,
-    Open((LibraryKind, i32)),
+    Open,
 }
 
 impl MenuAction for MenuMessage {
@@ -65,9 +65,7 @@ impl MenuAction for MenuMessage {
     fn message(&self) -> Self::Message {
         match self {
             MenuMessage::Delete => Message::DeleteItem,
-            MenuMessage::Open((kind, index)) => {
-                Message::OpenItem(Some((*kind, *index)))
-            }
+            MenuMessage::Open => Message::OpenContextItem,
         }
     }
 }
@@ -84,6 +82,7 @@ pub enum Message {
     AddItem,
     DeleteItem,
     OpenItem(Option<(LibraryKind, i32)>),
+    OpenContextItem,
     HoverLibrary(Option<LibraryKind>),
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
@@ -180,37 +179,71 @@ impl<'a> Library {
             Message::AddVideos(videos) => {
                 debug!(?videos);
                 let mut index = self.video_library.items.len();
+                // Check if empty
+                let mut tasks = Vec::new();
                 if let Some(videos) = videos {
+                    let len = videos.len();
                     for video in videos {
                         if let Err(e) =
-                            self.video_library.add_item(video)
+                            self.video_library.add_item(video.clone())
                         {
                             error!(?e);
                         }
+                        let task = Task::future(self.db.acquire())
+                            .and_then(move |db| {
+                                Task::perform(
+                                    add_video_to_db(
+                                        video.to_owned(),
+                                        db,
+                                    ),
+                                    move |res| {
+                                        debug!(
+                                            len,
+                                            index, "added to db"
+                                        );
+                                        if let Err(e) = res {
+                                            error!(?e);
+                                        }
+                                        if len == index {
+                                            debug!("open the pres");
+                                            Message::OpenItem(Some((
+                                                LibraryKind::Video,
+                                                index as i32,
+                                            )))
+                                        } else {
+                                            Message::None
+                                        }
+                                    },
+                                )
+                            });
+                        tasks.push(task);
                         index += 1;
                     }
                 }
-                return self.update(Message::OpenItem(Some((
-                    LibraryKind::Video,
-                    self.video_library.items.len() as i32 - 1,
-                ))));
+                let after_task =
+                    Task::done(Message::OpenItem(Some((
+                        LibraryKind::Video,
+                        self.video_library.items.len() as i32 - 1,
+                    ))));
+                return Action::Task(
+                    Task::batch(tasks).chain(after_task),
+                );
             }
             Message::AddPresentations(presentations) => {
                 debug!(?presentations);
                 let mut index = self.presentation_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
-                if index == 0 {
-                    if let Some(presentations) = presentations {
-                        let len = presentations.len();
-                        for presentation in presentations {
-                            if let Err(e) = self
-                                .presentation_library
-                                .add_item(presentation.clone())
-                            {
-                                error!(?e);
-                            }
-                            let task = Task::future(
+                if let Some(presentations) = presentations {
+                    let len = presentations.len();
+                    for presentation in presentations {
+                        if let Err(e) = self
+                            .presentation_library
+                            .add_item(presentation.clone())
+                        {
+                            error!(?e);
+                        }
+                        let task = Task::future(
                                         self.db.acquire(),
                                     )
                                     .and_then(move |db| {
@@ -218,7 +251,6 @@ impl<'a> Library {
                                             add_presentation_to_db(
                                                 presentation.to_owned(),
                                                 db,
-                                                index as i32,
                                             ),
                                             move |res| {
                                                 debug!(
@@ -240,57 +272,93 @@ impl<'a> Library {
                                             },
                                         )
                                     });
-                            tasks.push(task);
-                            index += 1;
-                        }
+                        tasks.push(task);
+                        index += 1;
                     }
-                    return Action::Task(Task::batch(tasks));
-                } else {
-                    if let Some(presentations) = presentations {
-                        for presentation in presentations {
-                            if let Err(e) = self
-                                .presentation_library
-                                .add_item(presentation)
-                            {
-                                error!(?e);
-                            }
-                            index += 1;
-                        }
-                    }
-                    return self.update(Message::OpenItem(Some((
+                }
+                let after_task =
+                    Task::done(Message::OpenItem(Some((
                         LibraryKind::Presentation,
                         self.presentation_library.items.len() as i32
                             - 1,
                     ))));
-                }
+                return Action::Task(
+                    Task::batch(tasks).chain(after_task),
+                );
             }
             Message::AddImages(images) => {
                 debug!(?images);
                 let mut index = self.image_library.items.len();
+                // Check if empty
+                let mut tasks = Vec::new();
                 if let Some(images) = images {
+                    let len = images.len();
                     for image in images {
                         if let Err(e) =
-                            self.image_library.add_item(image)
+                            self.image_library.add_item(image.clone())
                         {
                             error!(?e);
                         }
+                        let task = Task::future(self.db.acquire())
+                            .and_then(move |db| {
+                                Task::perform(
+                                    add_image_to_db(
+                                        image.to_owned(),
+                                        db,
+                                    ),
+                                    move |res| {
+                                        debug!(
+                                            len,
+                                            index, "added to db"
+                                        );
+                                        if let Err(e) = res {
+                                            error!(?e);
+                                        }
+                                        if len == index {
+                                            debug!("open the pres");
+                                            Message::OpenItem(Some((
+                                                LibraryKind::Image,
+                                                index as i32,
+                                            )))
+                                        } else {
+                                            Message::None
+                                        }
+                                    },
+                                )
+                            });
+                        tasks.push(task);
                         index += 1;
                     }
                 }
-                return self.update(Message::OpenItem(Some((
-                    LibraryKind::Image,
-                    self.image_library.items.len() as i32 - 1,
-                ))));
+                let after_task =
+                    Task::done(Message::OpenItem(Some((
+                        LibraryKind::Image,
+                        self.image_library.items.len() as i32 - 1,
+                    ))));
+                return Action::Task(
+                    Task::batch(tasks).chain(after_task),
+                );
             }
             Message::OpenItem(item) => {
                 debug!(?item);
                 self.editing_item = item;
                 return Action::OpenItem(item);
             }
+            Message::OpenContextItem => {
+                let Some(kind) = self.library_open else {
+                    return Action::None;
+                };
+                let Some(index) = self.context_menu else {
+                    return Action::None;
+                };
+                return self
+                    .update(Message::OpenItem(Some((kind, index))));
+            }
             Message::HoverLibrary(library_kind) => {
                 self.library_hovered = library_kind;
             }
             Message::OpenLibrary(library_kind) => {
+                self.selected_items = None;
                 self.library_open = library_kind;
             }
             Message::HoverItem(item) => {
@@ -549,6 +617,7 @@ impl<'a> Library {
                 let Some(kind) = self.library_open else {
                     return Action::None;
                 };
+                debug!(index, "should context");
                 let Some(items) = self.selected_items.as_mut() else {
                     self.selected_items = vec![(kind, index)].into();
                     self.context_menu = Some(index);
@@ -556,21 +625,59 @@ impl<'a> Library {
                 };
 
                 if items.contains(&(kind, index)) {
+                    debug!(index, "should context contained");
+                    self.selected_items = Some(items.to_vec());
                 } else {
-                    items.push((kind, index));
+                    debug!(index, "should context not contained");
+                    self.selected_items = vec![(kind, index)].into();
                 }
-                self.selected_items = Some(items.to_vec());
                 self.context_menu = Some(index);
             }
             Message::AddFiles(items) => {
+                let mut tasks = Vec::new();
+                let last_item = &items.last();
+                let after_task = match last_item {
+                    Some(ServiceItemKind::Image(image)) => {
+                        Task::done(Message::OpenItem(Some((
+                            LibraryKind::Image,
+                            self.image_library.items.len() as i32 - 1,
+                        ))))
+                    }
+                    _ => Task::none(),
+                };
                 for item in items {
                     match item {
                         ServiceItemKind::Song(song) => {
                             let Some(e) = self
                                 .song_library
-                                .add_item(song)
+                                .add_item(song.clone())
                                 .err()
                             else {
+                                let task = Task::future(
+                                    self.db.acquire(),
+                                )
+                                .and_then(move |db| {
+                                    Task::perform(
+                                        add_song_to_db(
+                                            song.clone(),
+                                            db,
+                                        ),
+                                        {
+                                            let song = song.clone();
+                                            move |res| {
+                                                debug!(
+                                                    ?song,
+                                                    "added to db"
+                                                );
+                                                if let Err(e) = res {
+                                                    error!(?e);
+                                                }
+                                                Message::None
+                                            }
+                                        },
+                                    )
+                                });
+                                tasks.push(task);
                                 continue;
                             };
                             error!(?e);
@@ -578,9 +685,34 @@ impl<'a> Library {
                         ServiceItemKind::Video(video) => {
                             let Some(e) = self
                                 .video_library
-                                .add_item(video)
+                                .add_item(video.clone())
                                 .err()
                             else {
+                                let task = Task::future(
+                                    self.db.acquire(),
+                                )
+                                .and_then(move |db| {
+                                    Task::perform(
+                                        add_video_to_db(
+                                            video.clone(),
+                                            db,
+                                        ),
+                                        {
+                                            let video = video.clone();
+                                            move |res| {
+                                                debug!(
+                                                    ?video,
+                                                    "added to db"
+                                                );
+                                                if let Err(e) = res {
+                                                    error!(?e);
+                                                }
+                                                Message::None
+                                            }
+                                        },
+                                    )
+                                });
+                                tasks.push(task);
                                 continue;
                             };
                             error!(?e);
@@ -588,9 +720,34 @@ impl<'a> Library {
                         ServiceItemKind::Image(image) => {
                             let Some(e) = self
                                 .image_library
-                                .add_item(image)
+                                .add_item(image.clone())
                                 .err()
                             else {
+                                let task = Task::future(
+                                    self.db.acquire(),
+                                )
+                                .and_then(move |db| {
+                                    Task::perform(
+                                        add_image_to_db(
+                                            image.clone(),
+                                            db,
+                                        ),
+                                        {
+                                            let image = image.clone();
+                                            move |res| {
+                                                debug!(
+                                                    ?image,
+                                                    "added to db"
+                                                );
+                                                if let Err(e) = res {
+                                                    error!(?e);
+                                                }
+                                                Message::None
+                                            }
+                                        },
+                                    )
+                                });
+                                tasks.push(task);
                                 continue;
                             };
                             error!(?e);
@@ -600,9 +757,35 @@ impl<'a> Library {
                         ) => {
                             let Some(e) = self
                                 .presentation_library
-                                .add_item(presentation)
+                                .add_item(presentation.clone())
                                 .err()
                             else {
+                                let task =
+                                    Task::future(self.db.acquire())
+                                        .and_then(move |db| {
+                                            Task::perform(
+                                        add_presentation_to_db(
+                                            presentation.clone(),
+                                            db,
+                                        ),
+                                        {
+                                            let presentation =
+                                                presentation.clone();
+                                            move |res| {
+                                                debug!(
+                                                    ?presentation,
+                                                    "added to db"
+                                                );
+                                                if let Err(e) = res {
+                                                    error!(?e);
+                                                }
+                                                Message::None
+                                            }
+                                        },
+                                    )
+                                        });
+                                tasks.push(task);
+
                                 continue;
                             };
                             error!(?e);
@@ -610,6 +793,9 @@ impl<'a> Library {
                         ServiceItemKind::Content(slide) => todo!(),
                     }
                 }
+                return Action::Task(
+                    Task::batch(tasks).chain(after_task),
+                );
             }
         }
         Action::None
@@ -814,28 +1000,8 @@ impl<'a> Library {
                                         )),
                                     ));
 
-                                if let Some(context_id) = self.context_menu {
-                                    if index == context_id as usize {
-                                        let menu_items = vec![
-                                            menu::Item::Button("Open", None, MenuMessage::Open((model.kind, index as i32))),
-                                            menu::Item::Button("Delete", None, MenuMessage::Delete)
-                                        ];
-                                        let context_menu = context_menu(
-                                            mouse_area,
-                                            self.context_menu.map_or_else(|| None, |_| {
-                                                Some(menu::items(&self.menu_keys,
-                                                menu_items))
-                                            })
-                                        );
-                                        Element::from(context_menu)
-                                    } else {
-                                        Element::from(mouse_area)
-                                    }
-                                } else {
-                                    Element::from(mouse_area)
-                                }
-                            }
-                            )
+                                Element::from(mouse_area)
+                            })
                                 .action(DndAction::Copy)
                                 .drag_icon({
                                     let model = model.kind;
@@ -874,8 +1040,9 @@ impl<'a> Library {
                 button::icon(icon::from_name("add"))
                     .on_press(Message::AddItem)
             );
+            let context_menu = self.context_menu(items.into());
             let library_column =
-                column![library_toolbar, items].spacing(3);
+                column![library_toolbar, context_menu].spacing(3);
             Container::new(library_column).padding(5)
         } else {
             Container::new(Space::new(0, 0))
@@ -993,6 +1160,34 @@ impl<'a> Library {
         .into()
     }
 
+    fn context_menu<'b>(
+        &self,
+        items: Element<'b, Message>,
+    ) -> Element<'b, Message> {
+        if self.context_menu.is_some() {
+            let menu_items = vec![
+                menu::Item::Button("Open", None, MenuMessage::Open),
+                menu::Item::Button(
+                    "Delete",
+                    None,
+                    MenuMessage::Delete,
+                ),
+            ];
+            let context_menu = context_menu(
+                items,
+                self.context_menu.map_or_else(
+                    || None,
+                    |_| {
+                        Some(menu::items(&self.menu_keys, menu_items))
+                    },
+                ),
+            );
+            Element::from(context_menu)
+        } else {
+            items
+        }
+    }
+
     #[allow(clippy::unused_async)]
     pub async fn search_items(
         &self,
@@ -1079,135 +1274,140 @@ impl<'a> Library {
             return Action::None;
         };
         items.sort_by(|(_, index), (_, other)| index.cmp(other));
-        let tasks: Vec<Task<Message>> =
-            items
-                .iter()
-                .rev()
-                .map(|(kind, index)| match kind {
-                    LibraryKind::Song => {
-                        if let Some(song) =
-                            self.song_library.get_item(*index)
+        let tasks: Vec<Task<Message>> = items
+            .iter()
+            .rev()
+            .map(|(kind, index)| match kind {
+                LibraryKind::Song => {
+                    if let Some(song) =
+                        self.song_library.get_item(*index)
+                    {
+                        let song = song.clone();
+                        if let Err(e) =
+                            self.song_library.remove_item(*index)
                         {
-                            let song = song.clone();
-                            if let Err(e) =
-                                self.song_library.remove_item(*index)
-                            {
-                                error!(?e);
-                                Task::none()
-                            } else {
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            songs::remove_from_db(
-                                                db, song.id,
-                                            ),
-                                            |r| {
-                                                if let Err(e) = r {
-                                                    error!(?e)
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    })
-                            }
-                        } else {
+                            error!(?e);
                             Task::none()
+                        } else {
+                            Task::future(self.db.acquire()).and_then(
+                                move |db| {
+                                    Task::perform(
+                                        songs::remove_from_db(
+                                            db, song.id,
+                                        ),
+                                        |r| {
+                                            if let Err(e) = r {
+                                                error!(?e)
+                                            }
+                                            Message::None
+                                        },
+                                    )
+                                },
+                            )
                         }
+                    } else {
+                        Task::none()
                     }
-                    LibraryKind::Video => {
-                        if let Some(video) =
-                            self.video_library.get_item(*index)
+                }
+                LibraryKind::Video => {
+                    if let Some(video) =
+                        self.video_library.get_item(*index)
+                    {
+                        let video = video.clone();
+                        if let Err(e) =
+                            self.video_library.remove_item(*index)
                         {
-                            let video = video.clone();
-                            if let Err(e) =
-                                self.video_library.remove_item(*index)
-                            {
-                                error!(?e);
-                                Task::none()
-                            } else {
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            videos::remove_from_db(
-                                                db, video.id,
-                                            ),
-                                            |r| {
-                                                if let Err(e) = r {
-                                                    error!(?e)
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    })
-                            }
-                        } else {
+                            error!(?e);
                             Task::none()
+                        } else {
+                            Task::future(self.db.acquire()).and_then(
+                                move |db| {
+                                    Task::perform(
+                                        videos::remove_from_db(
+                                            db, video.id,
+                                        ),
+                                        |r| {
+                                            if let Err(e) = r {
+                                                error!(?e)
+                                            }
+                                            Message::None
+                                        },
+                                    )
+                                },
+                            )
                         }
+                    } else {
+                        Task::none()
                     }
-                    LibraryKind::Image => {
-                        if let Some(image) =
-                            self.image_library.get_item(*index)
+                }
+                LibraryKind::Image => {
+                    if let Some(image) =
+                        self.image_library.get_item(*index)
+                    {
+                        let image = image.clone();
+                        if let Err(e) =
+                            self.image_library.remove_item(*index)
                         {
-                            let image = image.clone();
-                            if let Err(e) =
-                                self.image_library.remove_item(*index)
-                            {
-                                error!(?e);
-                                Task::none()
-                            } else {
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                            images::remove_from_db(
-                                                db, image.id,
-                                            ),
-                                            |r| {
-                                                if let Err(e) = r {
-                                                    error!(?e)
-                                                }
-                                                Message::None
-                                            },
-                                        )
-                                    })
-                            }
-                        } else {
+                            error!(?e);
                             Task::none()
+                        } else {
+                            debug!("let's remove {0}", image.id);
+                            debug!("let's remove {0}", image.title);
+                            Task::future(self.db.acquire()).and_then(
+                                move |db| {
+                                    Task::perform(
+                                        images::remove_from_db(
+                                            db, image.id,
+                                        ),
+                                        |r| {
+                                            if let Err(e) = r {
+                                                error!(?e)
+                                            }
+                                            Message::None
+                                        },
+                                    )
+                                },
+                            )
                         }
+                    } else {
+                        Task::none()
                     }
-                    LibraryKind::Presentation => {
-                        if let Some(presentation) =
-                            self.presentation_library.get_item(*index)
+                }
+                LibraryKind::Presentation => {
+                    if let Some(presentation) =
+                        self.presentation_library.get_item(*index)
+                    {
+                        let presentation = presentation.clone();
+                        if let Err(e) = self
+                            .presentation_library
+                            .remove_item(*index)
                         {
-                            let presentation = presentation.clone();
-                            if let Err(e) = self
-                                .presentation_library
-                                .remove_item(*index)
-                            {
-                                error!(?e);
-                                Task::none()
-                            } else {
-                                Task::future(self.db.acquire())
-                                    .and_then(move |db| {
-                                        Task::perform(
-                                    presentations::remove_from_db(
-                                        db,
-                                        presentation.id,
-                                    ),
-                                    |r| {
-                                        if let Err(e) = r {
-                                            error!(?e)
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                    })
-                            }
-                        } else {
+                            error!(?e);
                             Task::none()
+                        } else {
+                            Task::future(self.db.acquire()).and_then(
+                                move |db| {
+                                    Task::perform(
+                                        presentations::remove_from_db(
+                                            db,
+                                            presentation.id,
+                                        ),
+                                        |r| {
+                                            if let Err(e) = r {
+                                                error!(?e)
+                                            }
+                                            Message::None
+                                        },
+                                    )
+                                },
+                            )
                         }
+                    } else {
+                        Task::none()
                     }
-                })
-                .collect();
+                }
+            })
+            .collect();
         if !tasks.is_empty() {
             self.selected_items = None;
         }

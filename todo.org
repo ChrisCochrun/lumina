@@ -3,7 +3,7 @@
 
 * TODO Add OBS integration
 This will be based on each slide having the ability to activate an OBS scene when it is active.
-* TODO Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
+* DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
 * DONE Build a presentation editor
 
 * TODO [#A] Need to fix tests now that the basic app is working

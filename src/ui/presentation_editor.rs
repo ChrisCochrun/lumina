@@ -43,6 +43,7 @@ pub enum Message {
     NextPage,
     PrevPage,
     None,
+    ChangePresentationFile(Presentation),
 }
 
 impl PresentationEditor {
@@ -60,43 +61,7 @@ impl PresentationEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangePresentation(presentation) => {
-                self.presentation = Some(presentation.clone());
-                self.title = presentation.title.clone();
-                self.document =
-                    Document::open(&presentation.path.as_path()).ok();
-                self.page_count = self
-                    .document
-                    .as_ref()
-                    .and_then(|doc| doc.page_count().ok());
-                warn!("changing presentation");
-                self.current_slide =
-                    self.document.as_ref().and_then(|doc| {
-                        let page = doc.load_page(0).ok()?;
-                        let matrix = Matrix::IDENTITY;
-                        let colorspace = Colorspace::device_rgb();
-                        let Ok(pixmap) = page
-                            .to_pixmap(
-                                &matrix,
-                                &colorspace,
-                                true,
-                                true,
-                            )
-                            .into_diagnostic()
-                        else {
-                            error!(
-                                "Can't turn this page into pixmap"
-                            );
-                            return None;
-                        };
-                        debug!(?pixmap);
-                        Some(Handle::from_rgba(
-                            pixmap.width(),
-                            pixmap.height(),
-                            pixmap.samples().to_vec(),
-                        ))
-                    });
-                self.current_slide_index = Some(0);
-                return self.update(Message::Update(presentation));
+                self.update_entire_presentation(&presentation);
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
@@ -112,7 +77,7 @@ impl PresentationEditor {
                 self.editing = edit;
             }
             Message::Update(presentation) => {
-                warn!(?presentation);
+                warn!(?presentation, "about to update");
                 return Action::UpdatePresentation(presentation);
             }
             Message::PickPresentation => {
@@ -129,13 +94,19 @@ impl PresentationEditor {
                             let mut presentation =
                                 Presentation::from(presentation);
                             presentation.id = presentation_id;
-                            Message::ChangePresentation(presentation)
+                            Message::ChangePresentationFile(
+                                presentation,
+                            )
                         } else {
                             Message::None
                         }
                     },
                 );
                 return Action::Task(task);
+            }
+            Message::ChangePresentationFile(presentation) => {
+                self.update_entire_presentation(&presentation);
+                return self.update(Message::Update(presentation));
             }
             Message::None => (),
             Message::NextPage => {
@@ -260,6 +231,40 @@ impl PresentationEditor {
 
     pub const fn editing(&self) -> bool {
         self.editing
+    }
+
+    fn update_entire_presentation(
+        &mut self,
+        presentation: &Presentation,
+    ) {
+        self.presentation = Some(presentation.clone());
+        self.title = presentation.title.clone();
+        self.document =
+            Document::open(&presentation.path.as_path()).ok();
+        self.page_count = self
+            .document
+            .as_ref()
+            .and_then(|doc| doc.page_count().ok());
+        warn!("changing presentation");
+        self.current_slide = self.document.as_ref().and_then(|doc| {
+            let page = doc.load_page(0).ok()?;
+            let matrix = Matrix::IDENTITY;
+            let colorspace = Colorspace::device_rgb();
+            let Ok(pixmap) = page
+                .to_pixmap(&matrix, &colorspace, true, true)
+                .into_diagnostic()
+            else {
+                error!("Can't turn this page into pixmap");
+                return None;
+            };
+            debug!(?pixmap);
+            Some(Handle::from_rgba(
+                pixmap.width(),
+                pixmap.height(),
+                pixmap.samples().to_vec(),
+            ))
+        });
+        self.current_slide_index = Some(0);
     }
 }
 

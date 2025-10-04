@@ -310,7 +310,6 @@ pub async fn remove_from_db(
 pub async fn add_presentation_to_db(
     presentation: Presentation,
     db: PoolConnection<Sqlite>,
-    id: i32,
 ) -> Result<()> {
     let path = presentation
         .path
@@ -319,9 +318,8 @@ pub async fn add_presentation_to_db(
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     let mut db = db.detach();
-    let result = query!(
-        r#"INSERT into presentations VALUES($1, $2, $3, $4)"#,
-        id,
+    query!(
+        r#"INSERT INTO presentations (title, file_path, html) VALUES ($1, $2, $3)"#,
         presentation.title,
         path,
         html,
@@ -329,13 +327,6 @@ pub async fn add_presentation_to_db(
     .execute(&mut db)
     .await
     .into_diagnostic()?;
-    if result.last_insert_rowid() != id as i64 {
-        let rowid = result.last_insert_rowid();
-        error!(
-            rowid,
-            id, "It appears that rowid and id aren't the same"
-        );
-    }
     Ok(())
 }
 

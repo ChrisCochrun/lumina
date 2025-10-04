@@ -62,6 +62,7 @@ pub enum Message {
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
     ChangeBackground(Result<PathBuf, SongError>),
+    UpdateSlides(Vec<Slide>),
     PickBackground,
     Edit(bool),
     None,
@@ -134,17 +135,7 @@ impl SongEditor {
         match message {
             Message::ChangeSong(song) => {
                 self.song = Some(song.clone());
-                self.song_slides = song.to_slides().ok().map(|v| {
-                    v.into_par_iter()
-                        .map(|mut s| {
-                            text_svg::text_svg_generator(
-                                &mut s,
-                                Arc::clone(&self.font_db),
-                            );
-                            s
-                        })
-                        .collect::<Vec<Slide>>()
-                });
+                let song_slides = song.clone().to_slides();
                 self.title = song.title;
                 if let Some(font) = song.font {
                     self.font = font;
@@ -175,7 +166,28 @@ impl SongEditor {
                         text_editor::Content::with_text(&lyrics);
                 }
                 self.background_video(&song.background);
-                self.background = song.background;
+                self.background = song.background.clone();
+                let font_db = Arc::clone(&self.font_db);
+                let task = Task::perform(
+                    async move {
+                        song_slides
+                            .ok()
+                            .map(move |v| {
+                                v.into_par_iter()
+                                    .map(move |mut s| {
+                                        text_svg::text_svg_generator(
+                                            &mut s,
+                                            Arc::clone(&font_db),
+                                        );
+                                        s
+                                    })
+                                    .collect::<Vec<Slide>>()
+                            })
+                            .unwrap_or_default()
+                    },
+                    |slides| Message::UpdateSlides(slides),
+                );
+                return Action::Task(task);
             }
             Message::ChangeFont(font) => {
                 self.font = font.clone();
@@ -257,6 +269,13 @@ impl SongEditor {
                     let paused = video.paused();
                     video.set_paused(!paused);
                 };
+            }
+            Message::UpdateSlides(slides) => {
+                self.song_slides = Some(slides);
+            }
+            Message::UpdateSong(song) => {
+                self.song = Some(song.clone());
+                return Action::UpdateSong(song);
             }
             _ => (),
         }
@@ -431,18 +450,30 @@ order",
 
     fn update_song(&mut self, song: Song) -> Action {
         self.song = Some(song.clone());
-        self.song_slides = song.to_slides().ok().map(|v| {
-            v.into_par_iter()
-                .map(|mut s| {
-                    text_svg::text_svg_generator(
-                        &mut s,
-                        Arc::clone(&self.font_db),
-                    );
-                    s
-                })
-                .collect::<Vec<Slide>>()
-        });
-        Action::UpdateSong(song)
+
+        let font_db = Arc::clone(&self.font_db);
+        let update_task =
+            Task::done(Message::UpdateSong(song.clone()));
+        let task = Task::perform(
+            async move {
+                song.to_slides()
+                    .ok()
+                    .map(move |v| {
+                        v.into_par_iter()
+                            .map(move |mut s| {
+                                text_svg::text_svg_generator(
+                                    &mut s,
+                                    Arc::clone(&font_db),
+                                );
+                                s
+                            })
+                            .collect::<Vec<Slide>>()
+                    })
+                    .unwrap_or_default()
+            },
+            |slides| Message::UpdateSlides(slides),
+        );
+        Action::Task(task.chain(update_task))
     }
 
     fn background_video(&mut self, background: &Option<Background>) {

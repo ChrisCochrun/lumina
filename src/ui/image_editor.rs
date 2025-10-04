@@ -48,9 +48,7 @@ impl ImageEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeImage(image) => {
-                self.image = Some(image.clone());
-                self.title = image.title.clone();
-                return self.update(Message::Update(image));
+                self.update_entire_image(&image);
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
@@ -66,6 +64,7 @@ impl ImageEditor {
             }
             Message::Update(image) => {
                 warn!(?image);
+                self.update_entire_image(&image);
                 return Action::UpdateImage(image);
             }
             Message::PickImage => {
@@ -80,7 +79,7 @@ impl ImageEditor {
                         if let Ok(image) = image_result {
                             let mut image = Image::from(image);
                             image.id = image_id;
-                            Message::ChangeImage(image)
+                            Message::Update(image)
                         } else {
                             Message::None
                         }
@@ -133,6 +132,11 @@ impl ImageEditor {
 
     pub const fn editing(&self) -> bool {
         self.editing
+    }
+
+    fn update_entire_image(&mut self, image: &Image) {
+        self.image = Some(image.clone());
+        self.title = image.title.clone();
     }
 }
 
