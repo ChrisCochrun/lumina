@@ -44,6 +44,13 @@ pub async fn save(
             error!("There were problems making a file i guess: {e}")
         }
     };
+    // let list list.iter_mut().map(|item| {
+    //     match item.kind {
+    //         ServiceItemKind::Song(mut song) => {
+    //             song.background
+    //         }
+    //     }
+    // }).collect();
     for item in list {
         let background;
         let audio: Option<PathBuf>;
