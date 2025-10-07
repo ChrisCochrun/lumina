@@ -5,7 +5,7 @@ use core::slide::{
 };
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
-use cosmic::dialog::file_chooser::{self, save};
+use cosmic::dialog::file_chooser::save;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
@@ -15,8 +15,8 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, horizontal_rule, row, stack};
-use cosmic::widget::button::Catalog;
+use cosmic::iced_widget::{column, row, stack};
+use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
@@ -30,10 +30,7 @@ use cosmic::widget::{
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::{
-    Application, ApplicationExt, Element, dialog, executor,
-};
-use cosmic::{theme, widget};
+use cosmic::{Application, ApplicationExt, Element, executor};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};

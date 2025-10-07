@@ -7,3 +7,4 @@ data.db
 /.zed/
 /perf.data
 /perf.data.old
+.aider*
