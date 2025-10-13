@@ -22,7 +22,7 @@ use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{Container, divider, menu};
+use cosmic::widget::{Container, divider, menu, responsive_menu_bar};
 use cosmic::widget::{
     Space, button, context_menu, horizontal_space, mouse_area,
     nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
@@ -441,7 +441,8 @@ impl cosmic::Application for App {
         );
         let menu_bar =
             menu::bar::<Message>(vec![file_menu, settings_menu])
-                .item_width(ItemWidth::Static(250))
+                .item_width(ItemWidth::Uniform(250))
+                .path_highlight(Some(menu::PathHighlight::Full))
                 .main_offset(10);
         let library_button = tooltip(
             nav_bar_toggle().on_toggle(Message::LibraryToggle),
@@ -1084,6 +1085,13 @@ impl cosmic::Application for App {
             }
             Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
+                let radii =
+                    self.core.sync_window_border_radii_to_theme();
+                self.core.set_sync_window_border_radii_to_theme(true);
+                debug!(radii);
+                let radii = self.core.window.sharp_corners;
+                debug!(radii);
+                self.core.window.sharp_corners = true;
                 if self.cli_mode
                             || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
                                                         {
@@ -1937,19 +1945,57 @@ where
         ]
         .padding(10)
         .spacing(10);
+        let last_index = self.service.len();
         let container = Container::new(
             dnd_destination(
                 column,
-                vec!["application/service-item".into()],
+                vec![
+                    "application/service-item".into(),
+                    "text/uri-list".into(),
+                ],
             )
             .on_finish(move |mime, data, _, _, _| {
-                let Ok(item) = ServiceItem::try_from((data, mime))
-                else {
-                    error!("couldn't drag in Service item");
-                    return Message::None;
-                };
-                debug!(?item, "adding Service item");
-                Message::AppendServiceItem(item)
+                match mime.as_str() {
+                    "application/service-item" => {
+                        let Ok(item) =
+                            KindWrapper::try_from((data, mime))
+                        else {
+                            error!("couldn't drag in Service item");
+                            return Message::None;
+                        };
+                        debug!(?item, "adding Service item");
+                        Message::AddServiceItem(last_index, item)
+                    }
+                    "text/uri-list" => {
+                        let Ok(text) = str::from_utf8(&data) else {
+                            return Message::None;
+                        };
+                        let mut items = Vec::new();
+                        for line in text.lines() {
+                            let Ok(url) = url::Url::parse(line)
+                            else {
+                                error!(
+                                    ?line,
+                                    "problem parsing this file url"
+                                );
+                                continue;
+                            };
+                            let Ok(path) = url.to_file_path() else {
+                                error!(?url, "invalid file URL");
+                                continue;
+                            };
+                            let item = ServiceItem::try_from(path);
+                            match item {
+                                Ok(item) => items.push(item),
+                                Err(e) => error!(?e),
+                            }
+                        }
+                        Message::AddServiceItemsFiles(
+                            last_index, items,
+                        )
+                    }
+                    _ => Message::None,
+                }
             }),
         )
         .style(nav_bar_style);
