@@ -1248,6 +1248,7 @@ impl cosmic::Application for App {
                     .collect();
                 self.service.insert(index, item);
                 self.presenter.update_items(self.service.clone());
+                self.hovered_dnd = None;
                 Task::none()
             }
             Message::AddServiceItemsFiles(index, items) => {
