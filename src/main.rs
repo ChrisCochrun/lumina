@@ -22,7 +22,7 @@ use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{Container, divider, menu, responsive_menu_bar};
+use cosmic::widget::{Container, divider, menu};
 use cosmic::widget::{
     Space, button, context_menu, horizontal_space, mouse_area,
     nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
@@ -1564,12 +1564,18 @@ impl cosmic::Application for App {
         .spacing(20);
 
         let preview_bar = if self.editor_mode.is_none() {
-            Container::new(
-                self.presenter.preview_bar().map(Message::Present),
-            )
-            .clip(true)
-            .width(Length::Fill)
-            .center_y(180)
+            if self.service.len() == 0 {
+                Container::new(horizontal_space())
+            } else {
+                Container::new(
+                    self.presenter
+                        .preview_bar()
+                        .map(Message::Present),
+                )
+                .clip(true)
+                .width(Length::Fill)
+                .center_y(180)
+            }
         } else {
             Container::new(horizontal_space())
         };
