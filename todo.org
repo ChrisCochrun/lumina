@@ -1,11 +1,6 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO Add OBS integration
-This will be based on each slide having the ability to activate an OBS scene when it is active.
-* DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
-* DONE Build a presentation editor
-
 * TODO [#A] Need to fix tests now that the basic app is working
 
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
@@ -25,7 +20,33 @@ I tried out a way of generating the svg and rasterizing it ahead of time and the
 
 The problem with this approach is that every change to a song's text or font metrics means we need to rebuild all the text items for that song. I need to think of a way for the text generation to be done asynchronously so that the ui isn't locked up.
 
+* TODO Add OBS integration
+This will be based on each slide having the ability to activate an OBS scene when it is active.
+* TODO [#B] Develop ui for settings
+
+* TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO [#B] Functions for text alignments
+This will need to be matched on for the =TextAlignment= from the user
+
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
+
+* TODO [#C] Figure out why the Video element seems to have problems when moving the mouse around
+
+* DONE [#A] Develop DnD for library items
+This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
+
+This needs lots more attention
+
+* DONE [#A] Add removal and reordering of service_items
+Reordering is finished
+* DONE [#A] Change return type of all components to an Action enum instead of the Task<Message> type [0%] [0/0]
+** DONE Library
+** DONE SongEditor
+** DONE Presenter
+
+* DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
+* DONE Build a presentation editor
 
 * DONE Build library to see all available songs, images, videos, presentations, and slides
 ** DONE Develop ui for libraries
@@ -34,15 +55,6 @@ I've got the library basic layer done, I need to develop a way to open the libra
 
 * DONE [#B] Build editors for each possible item
 ** DONE Develop ui for editors
-
-* TODO [#B] Develop ui for settings
-
-* TODO [#B] Develop library system for slides that are more than images or video i.e. content
-
-* TODO [#B] Functions for text alignments
-This will need to be matched on for the =TextAlignment= from the user
-
-* TODO [#C] Figure out why the Video element seems to have problems when moving the mouse around
 
 * DONE [#B] Find a way to load and discover every font on the system for slide building
 This may not be necessary since it is possible to create a font using =Box::leak()=.
@@ -65,23 +77,11 @@ This code creates a font by leaking the Box to a ='static &str=. I just am not s
 Krimzin on Discord told me that maybe the =update= method is a better place for this Box to be created or updated and then maybe I could generate the view from there.
 
 * DONE Build an image editor
-* DONE [#A] Develop DnD for library items
-This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
-
-This needs lots more attention
-
 * DONE Use Rich Text instead of normal text for slides
 This will make it so that we can add styling to the text like borders and backgrounds or highlights. Maybe in the future it'll add shadows too.
-* DONE [#A] Add removal and reordering of service_items
-Reordering is finished
 * DONE Build a video editor
 * DONE Check into =mupdf-rs= for loading PDF's.
 
 * DONE Build Menu
 * DONE Find a way for text to pass through a service item to a slide i.e. content piece
 This proved easier by just creating the =Slide= first and inserting it into the =ServiceItem=.
-* DONE [#A] Change return type of all components to an Action enum instead of the Task<Message> type [0%] [0/0]
-** DONE Library
-** DONE SongEditor
-** DONE Presenter
-
