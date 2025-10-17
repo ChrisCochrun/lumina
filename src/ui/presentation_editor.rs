@@ -21,6 +21,7 @@ pub struct PresentationEditor {
     pub presentation: Option<Presentation>,
     document: Option<Document>,
     current_slide: Option<Handle>,
+    slides: Option<Vec<Handle>>,
     page_count: Option<i32>,
     current_slide_index: Option<i32>,
     title: String,
@@ -56,6 +57,7 @@ impl PresentationEditor {
             current_slide: None,
             current_slide_index: None,
             page_count: None,
+            slides: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -191,18 +193,39 @@ impl PresentationEditor {
         } else {
             container(Space::new(0, 0))
         };
+        let pdf_pages: Vec<Element<Message>> =
+            if let Some(pages) = &self.slides {
+                pages
+                    .iter()
+                    .map(|page| {
+                        let image = widget::image(page)
+                            .content_fit(ContentFit::ScaleDown);
+                        container(image).into()
+                    })
+                    .collect()
+            } else {
+                vec![horizontal_space().into()]
+            };
+        let pages_column = container(
+            column(pdf_pages)
+                .spacing(theme::active().cosmic().space_xs())
+                .padding(theme::spacing().space_l),
+        )
+        .class(theme::Container::Card);
+        let main_row = row![
+            pages_column.width(Length::FillPortion(1)),
+            presentation.center(Length::FillPortion(2))
+        ]
+        .spacing(theme::spacing().space_xxl);
         let control_buttons = row![
             button::standard("Previous Page")
                 .on_press(Message::PrevPage),
             horizontal_space(),
             button::standard("Next Page").on_press(Message::NextPage),
         ];
-        let column = column![
-            self.toolbar(),
-            presentation.center(Length::Fill),
-            control_buttons
-        ]
-        .spacing(theme::active().cosmic().space_l());
+        let column =
+            column![self.toolbar(), main_row, control_buttons]
+                .spacing(theme::active().cosmic().space_l());
         column.into()
     }
 
