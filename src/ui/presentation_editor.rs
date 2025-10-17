@@ -1,4 +1,4 @@
-use std::{io, path::PathBuf};
+use std::{io, path::Path, path::PathBuf};
 
 use crate::core::presentations::Presentation;
 use cosmic::{
@@ -9,7 +9,7 @@ use cosmic::{
     theme,
     widget::{
         self, Space, button, container, horizontal_space, icon,
-        image::Handle, text, text_input,
+        image::Handle, scrollable, text, text_input,
     },
 };
 use miette::IntoDiagnostic;
@@ -45,6 +45,7 @@ pub enum Message {
     PrevPage,
     None,
     ChangePresentationFile(Presentation),
+    AddSlides(Option<Vec<Handle>>),
 }
 
 impl PresentationEditor {
@@ -64,6 +65,14 @@ impl PresentationEditor {
         match message {
             Message::ChangePresentation(presentation) => {
                 self.update_entire_presentation(&presentation);
+                if let Some(presentation) = self.presentation.clone()
+                {
+                    let task = Task::perform(
+                        get_all_pages(presentation.path.clone()),
+                        |pages| Message::AddSlides(pages),
+                    );
+                    return Action::Task(task);
+                }
             }
             Message::ChangeTitle(title) => {
                 self.title = title.clone();
@@ -108,7 +117,20 @@ impl PresentationEditor {
             }
             Message::ChangePresentationFile(presentation) => {
                 self.update_entire_presentation(&presentation);
-                return self.update(Message::Update(presentation));
+                if let Some(presentation) = self.presentation.clone()
+                {
+                    let task = Task::perform(
+                        get_all_pages(presentation.path.clone()),
+                        |pages| Message::AddSlides(pages),
+                    )
+                    .chain(Task::done(Message::Update(
+                        presentation.clone(),
+                    )));
+                    return Action::Task(task);
+                }
+            }
+            Message::AddSlides(slides) => {
+                self.slides = slides;
             }
             Message::None => (),
             Message::NextPage => {
@@ -199,6 +221,7 @@ impl PresentationEditor {
                     .iter()
                     .map(|page| {
                         let image = widget::image(page)
+                            .height(theme::spacing().space_xxxl * 3)
                             .content_fit(ContentFit::ScaleDown);
                         container(image).into()
                     })
@@ -206,14 +229,14 @@ impl PresentationEditor {
             } else {
                 vec![horizontal_space().into()]
             };
-        let pages_column = container(
+        let pages_column = container(scrollable(
             column(pdf_pages)
                 .spacing(theme::active().cosmic().space_xs())
                 .padding(theme::spacing().space_l),
-        )
+        ))
         .class(theme::Container::Card);
         let main_row = row![
-            pages_column.width(Length::FillPortion(1)),
+            pages_column,
             presentation.center(Length::FillPortion(2))
         ]
         .spacing(theme::spacing().space_xxl);
@@ -282,8 +305,8 @@ impl PresentationEditor {
             };
             debug!(?pixmap);
             Some(Handle::from_rgba(
-                pixmap.width(),
-                pixmap.height(),
+                pixmap.width() / 3,
+                pixmap.height() / 3,
                 pixmap.samples().to_vec(),
             ))
         });
@@ -295,6 +318,35 @@ impl Default for PresentationEditor {
     fn default() -> Self {
         Self::new()
     }
+}
+
+async fn get_all_pages(
+    presentation_path: impl AsRef<Path>,
+) -> Option<Vec<Handle>> {
+    let document = Document::open(presentation_path.as_ref()).ok()?;
+    let pages = document.pages().ok()?;
+    Some(
+        pages
+            .filter_map(|page| {
+                let page = page.ok()?;
+
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let Ok(pixmap) = page
+                    .to_pixmap(&matrix, &colorspace, true, true)
+                    .into_diagnostic()
+                else {
+                    error!("Can't turn this page into pixmap");
+                    return None;
+                };
+                Some(Handle::from_rgba(
+                    pixmap.width(),
+                    pixmap.height(),
+                    pixmap.samples().to_vec(),
+                ))
+            })
+            .collect(),
+    )
 }
 
 async fn pick_presentation() -> Result<PathBuf, PresentationError> {
