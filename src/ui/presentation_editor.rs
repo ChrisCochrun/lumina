@@ -4,12 +4,12 @@ use crate::core::presentations::Presentation;
 use cosmic::{
     Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::{ContentFit, Length, alignment::Vertical},
+    iced::{Background, ContentFit, Length, alignment::Vertical},
     iced_widget::{column, row},
     theme,
     widget::{
         self, Space, button, container, horizontal_space, icon,
-        image::Handle, scrollable, text, text_input,
+        image::Handle, mouse_area, scrollable, text, text_input,
     },
 };
 use miette::IntoDiagnostic;
@@ -26,6 +26,7 @@ pub struct PresentationEditor {
     current_slide_index: Option<i32>,
     title: String,
     editing: bool,
+    hovered_slide: Option<i32>,
 }
 
 pub enum Action {
@@ -46,6 +47,8 @@ pub enum Message {
     None,
     ChangePresentationFile(Presentation),
     AddSlides(Option<Vec<Handle>>),
+    ChangeSlide(usize),
+    HoverSlide(Option<i32>),
 }
 
 impl PresentationEditor {
@@ -59,6 +62,7 @@ impl PresentationEditor {
             current_slide_index: None,
             page_count: None,
             slides: None,
+            hovered_slide: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -179,21 +183,15 @@ impl PresentationEditor {
                             doc.load_page(previous_index).ok()?;
                         let matrix = Matrix::IDENTITY;
                         let colorspace = Colorspace::device_rgb();
-                        let Ok(pixmap) = page
+                        let pixmap = page
                             .to_pixmap(
                                 &matrix,
                                 &colorspace,
                                 true,
                                 true,
                             )
-                            .into_diagnostic()
-                        else {
-                            error!(
-                                "Can't turn this page into pixmap"
-                            );
-                            return None;
-                        };
-                        debug!(?pixmap);
+                            .ok()?;
+
                         Some(Handle::from_rgba(
                             pixmap.width(),
                             pixmap.height(),
@@ -201,6 +199,33 @@ impl PresentationEditor {
                         ))
                     });
                 self.current_slide_index = Some(previous_index);
+            }
+            Message::ChangeSlide(index) => {
+                self.current_slide =
+                    self.document.as_ref().and_then(|doc| {
+                        let page =
+                            doc.load_page(index as i32).ok()?;
+                        let matrix = Matrix::IDENTITY;
+                        let colorspace = Colorspace::device_rgb();
+                        let pixmap = page
+                            .to_pixmap(
+                                &matrix,
+                                &colorspace,
+                                true,
+                                true,
+                            )
+                            .ok()?;
+
+                        Some(Handle::from_rgba(
+                            pixmap.width(),
+                            pixmap.height(),
+                            pixmap.samples().to_vec(),
+                        ))
+                    });
+                self.current_slide_index = Some(index as i32);
+            }
+            Message::HoverSlide(slide) => {
+                self.hovered_slide = slide;
             }
         }
         Action::None
@@ -212,32 +237,67 @@ impl PresentationEditor {
                 widget::image(slide)
                     .content_fit(ContentFit::ScaleDown),
             )
+            .style(|_| {
+                container::background(Background::Color(
+                    cosmic::iced::Color::WHITE,
+                ))
+            })
         } else {
             container(Space::new(0, 0))
         };
-        let pdf_pages: Vec<Element<Message>> =
-            if let Some(pages) = &self.slides {
-                pages
-                    .iter()
-                    .map(|page| {
-                        let image = widget::image(page)
-                            .height(theme::spacing().space_xxxl * 3)
-                            .content_fit(ContentFit::ScaleDown);
-                        container(image).into()
-                    })
-                    .collect()
-            } else {
-                vec![horizontal_space().into()]
-            };
+        let pdf_pages: Vec<Element<Message>> = if let Some(pages) =
+            &self.slides
+        {
+            pages
+                .iter()
+                .enumerate()
+                .map(|(index, page)| {
+                    let image = widget::image(page)
+                        .height(theme::spacing().space_xxxl * 3)
+                        .content_fit(ContentFit::ScaleDown);
+                    let slide = container(image).style(|_| {
+                        container::background(Background::Color(
+                            cosmic::iced::Color::WHITE,
+                        ))
+                    });
+                    container(
+                        mouse_area(slide)
+                            .on_enter(Message::HoverSlide(Some(
+                                index as i32,
+                            )))
+                            .on_exit(Message::HoverSlide(None))
+                            .on_press(Message::ChangeSlide(index)),
+                    )
+                    .padding(theme::spacing().space_m)
+                    .clip(true)
+                    .class(
+                        if let Some(hovered_index) =
+                            self.hovered_slide
+                        {
+                            if index as i32 == hovered_index {
+                                theme::Container::Primary
+                            } else {
+                                theme::Container::Card
+                            }
+                        } else {
+                            theme::Container::Card
+                        },
+                    )
+                    .into()
+                })
+                .collect()
+        } else {
+            vec![horizontal_space().into()]
+        };
         let pages_column = container(scrollable(
             column(pdf_pages)
                 .spacing(theme::active().cosmic().space_xs())
-                .padding(theme::spacing().space_l),
+                .padding(theme::spacing().space_xs),
         ))
         .class(theme::Container::Card);
         let main_row = row![
             pages_column,
-            presentation.center(Length::FillPortion(2))
+            container(presentation).center(Length::FillPortion(2))
         ]
         .spacing(theme::spacing().space_xxl);
         let control_buttons = row![
@@ -296,17 +356,13 @@ impl PresentationEditor {
             let page = doc.load_page(0).ok()?;
             let matrix = Matrix::IDENTITY;
             let colorspace = Colorspace::device_rgb();
-            let Ok(pixmap) = page
+            let pixmap = page
                 .to_pixmap(&matrix, &colorspace, true, true)
-                .into_diagnostic()
-            else {
-                error!("Can't turn this page into pixmap");
-                return None;
-            };
-            debug!(?pixmap);
+                .ok()?;
+
             Some(Handle::from_rgba(
-                pixmap.width() / 3,
-                pixmap.height() / 3,
+                pixmap.width(),
+                pixmap.height(),
                 pixmap.samples().to_vec(),
             ))
         });
@@ -329,16 +385,12 @@ async fn get_all_pages(
         pages
             .filter_map(|page| {
                 let page = page.ok()?;
-
                 let matrix = Matrix::IDENTITY;
                 let colorspace = Colorspace::device_rgb();
-                let Ok(pixmap) = page
+                let pixmap = page
                     .to_pixmap(&matrix, &colorspace, true, true)
-                    .into_diagnostic()
-                else {
-                    error!("Can't turn this page into pixmap");
-                    return None;
-                };
+                    .ok()?;
+
                 Some(Handle::from_rgba(
                     pixmap.width(),
                     pixmap.height(),
