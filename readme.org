@@ -11,7 +11,7 @@ Primarily, I don't think there is a good tool for this kind of thing on Linux. O
 ** Features (planned are in parentheses)
 - Presents songs lyrics with image and video backgrounds
 - Simple song creation with a powerful text parser
-- Present Slides (PDF, PowerPoint, and Impress are in not implemented yet)
+- Present Slides. PDF works. (PowerPoint, and Impress are in not implemented yet)
 - (Present Reveal.js slides)
 - (Custom slide builder)
 - (an intuitive UI) - Still needs A LOT of polish
