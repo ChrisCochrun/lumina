@@ -100,6 +100,7 @@ pub enum Message {
     OpenContext(i32),
     None,
     AddFiles(Vec<ServiceItemKind>),
+    AddSong(Song),
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
@@ -141,19 +142,37 @@ impl<'a> Library {
             Message::DeleteItem => {
                 return self.delete_items();
             }
+            Message::AddSong(song) => {
+                if let Err(e) = self.song_library.add_item(song) {
+                    error!(?e, "couldn't add song to model");
+                } else {
+                    let index =
+                        (self.song_library.items.len() - 1) as i32;
+                    return Action::Task(Task::done(
+                        Message::OpenItem(Some((
+                            LibraryKind::Song,
+                            index,
+                        ))),
+                    ));
+                }
+            }
             Message::AddItem => {
                 let kind =
                     self.library_open.unwrap_or(LibraryKind::Song);
-                let item = match kind {
+                match kind {
                     LibraryKind::Song => {
                         let song = Song::default();
-                        let index = self.song_library.items.len();
-                        self.song_library
-                            .add_item(song)
-                            .map(|_| {
-                                (LibraryKind::Song, index as i32)
+                        let task = Task::future(self.db.acquire()).and_then(move |db| {
+                            Task::perform(add_song_to_db(db), move |res| {
+                                match res {
+                                    Ok(song) => {
+                                        Message::AddSong(song)
+                                    },
+                                    Err(e) => {error!(?e, "couldn't add song to db"); Message::None}
+                                }
                             })
-                            .ok()
+                        });
+                        return Action::Task(task);
                     }
                     LibraryKind::Video => {
                         return Action::Task(Task::perform(
@@ -174,7 +193,6 @@ impl<'a> Library {
                         ));
                     }
                 };
-                return self.update(Message::OpenItem(item));
             }
             Message::AddVideos(videos) => {
                 debug!(?videos);
@@ -653,30 +671,26 @@ impl<'a> Library {
                                 .add_item(song.clone())
                                 .err()
                             else {
-                                let task = Task::future(
-                                    self.db.acquire(),
-                                )
-                                .and_then(move |db| {
-                                    Task::perform(
-                                        add_song_to_db(
-                                            song.clone(),
-                                            db,
-                                        ),
-                                        {
-                                            let song = song.clone();
-                                            move |res| {
-                                                debug!(
-                                                    ?song,
-                                                    "added to db"
-                                                );
-                                                if let Err(e) = res {
-                                                    error!(?e);
-                                                }
-                                                Message::None
-                                            }
-                                        },
-                                    )
-                                });
+                                let task =
+                                    Task::future(self.db.acquire())
+                                        .and_then(move |db| {
+                                            Task::perform(
+                                                add_song_to_db(db),
+                                                {
+                                                    move |res| {
+                                                        if let Err(
+                                                            e,
+                                                        ) = res
+                                                        {
+                                                            error!(
+                                                                ?e
+                                                            );
+                                                        }
+                                                        Message::None
+                                                    }
+                                                },
+                                            )
+                                        });
                                 tasks.push(task);
                                 continue;
                             };

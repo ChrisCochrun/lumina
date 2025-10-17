@@ -51,7 +51,7 @@ impl PresentationEditor {
         Self {
             presentation: None,
             document: None,
-            title: "Death was Arrested".to_string(),
+            title: "".to_string(),
             editing: false,
             current_slide: None,
             current_slide_index: None,
@@ -183,7 +183,7 @@ impl PresentationEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let container = if let Some(slide) = &self.current_slide {
+        let presentation = if let Some(slide) = &self.current_slide {
             container(
                 widget::image(slide)
                     .content_fit(ContentFit::ScaleDown),
@@ -199,7 +199,7 @@ impl PresentationEditor {
         ];
         let column = column![
             self.toolbar(),
-            container.center(Length::Fill),
+            presentation.center(Length::Fill),
             control_buttons
         ]
         .spacing(theme::active().cosmic().space_l());

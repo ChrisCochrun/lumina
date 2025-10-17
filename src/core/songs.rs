@@ -421,13 +421,13 @@ pub async fn remove_from_db(
 }
 
 pub async fn add_song_to_db(
-    song: Song,
     db: PoolConnection<Sqlite>,
-) -> Result<()> {
+) -> Result<Song> {
     let mut db = db.detach();
+    let mut song = Song::default();
 
     let verse_order = {
-        if let Some(vo) = song.verse_order {
+        if let Some(vo) = song.verse_order.clone() {
             vo.into_iter()
                 .map(|mut s| {
                     s.push(' ');
@@ -441,13 +441,15 @@ pub async fn add_song_to_db(
 
     let audio = song
         .audio
+        .clone()
         .map(|a| a.to_str().unwrap_or_default().to_string());
 
     let background = song
         .background
+        .clone()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
-    query!(
+    let res = query!(
         r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
         song.title,
         song.lyrics,
@@ -462,7 +464,8 @@ pub async fn add_song_to_db(
     .execute(&mut db)
     .await
     .into_diagnostic()?;
-    Ok(())
+    song.id = res.last_insert_rowid() as i32;
+    Ok(song)
 }
 
 pub async fn update_song_in_db(
