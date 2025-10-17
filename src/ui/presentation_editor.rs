@@ -1,4 +1,8 @@
-use std::{io, path::Path, path::PathBuf};
+use std::{
+    collections::HashMap,
+    io,
+    path::{Path, PathBuf},
+};
 
 use crate::core::presentations::Presentation;
 use cosmic::{
@@ -8,8 +12,9 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        self, Space, button, container, horizontal_space, icon,
-        image::Handle, mouse_area, scrollable, text, text_input,
+        self, Space, button, container, context_menu,
+        horizontal_space, icon, image::Handle, menu, mouse_area,
+        scrollable, text, text_input,
     },
 };
 use miette::IntoDiagnostic;
@@ -27,6 +32,7 @@ pub struct PresentationEditor {
     title: String,
     editing: bool,
     hovered_slide: Option<i32>,
+    context_menu_id: Option<i32>,
 }
 
 pub enum Action {
@@ -49,8 +55,27 @@ pub enum Message {
     AddSlides(Option<Vec<Handle>>),
     ChangeSlide(usize),
     HoverSlide(Option<i32>),
+    ContextMenu(usize),
+    SplitBefore,
+    SplitAfter,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    SplitBefore,
+    SplitAfter,
+}
+
+impl menu::Action for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuAction::SplitBefore => Message::SplitBefore,
+            MenuAction::SplitAfter => Message::SplitAfter,
+        }
+    }
+}
 impl PresentationEditor {
     pub fn new() -> Self {
         Self {
@@ -63,6 +88,7 @@ impl PresentationEditor {
             page_count: None,
             slides: None,
             hovered_slide: None,
+            context_menu_id: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -227,6 +253,23 @@ impl PresentationEditor {
             Message::HoverSlide(slide) => {
                 self.hovered_slide = slide;
             }
+            Message::ContextMenu(index) => {
+                self.context_menu_id = Some(index as i32);
+            }
+            Message::SplitBefore => {
+                if let Some(index) = self.context_menu_id {
+                    debug!("split before {index}");
+                } else {
+                    error!("split before no index");
+                }
+            }
+            Message::SplitAfter => {
+                if let Some(index) = self.context_menu_id {
+                    debug!("split after {index}");
+                } else {
+                    error!("split after no index");
+                }
+            }
         }
         Action::None
     }
@@ -260,12 +303,15 @@ impl PresentationEditor {
                             cosmic::iced::Color::WHITE,
                         ))
                     });
-                    container(
+                    let clickable_slide = container(
                         mouse_area(slide)
                             .on_enter(Message::HoverSlide(Some(
                                 index as i32,
                             )))
                             .on_exit(Message::HoverSlide(None))
+                            .on_right_press(Message::ContextMenu(
+                                index,
+                            ))
                             .on_press(Message::ChangeSlide(index)),
                     )
                     .padding(theme::spacing().space_m)
@@ -282,18 +328,23 @@ impl PresentationEditor {
                         } else {
                             theme::Container::Card
                         },
-                    )
-                    .into()
+                    );
+                    clickable_slide.into()
                 })
                 .collect()
         } else {
             vec![horizontal_space().into()]
         };
-        let pages_column = container(scrollable(
-            column(pdf_pages)
-                .spacing(theme::active().cosmic().space_xs())
-                .padding(theme::spacing().space_xs),
-        ))
+        let pages_column = container(
+            self.context_menu(
+                scrollable(
+                    column(pdf_pages)
+                        .spacing(theme::active().cosmic().space_xs())
+                        .padding(theme::spacing().space_xs),
+                )
+                .into(),
+            ),
+        )
         .class(theme::Container::Card);
         let main_row = row![
             pages_column,
@@ -337,6 +388,38 @@ impl PresentationEditor {
 
     pub const fn editing(&self) -> bool {
         self.editing
+    }
+
+    fn context_menu<'b>(
+        &self,
+        items: Element<'b, Message>,
+    ) -> Element<'b, Message> {
+        if self.context_menu_id.is_some() {
+            let menu_items = vec![
+                menu::Item::Button(
+                    "Spit Before",
+                    None,
+                    MenuAction::SplitBefore,
+                ),
+                menu::Item::Button(
+                    "Split After",
+                    None,
+                    MenuAction::SplitAfter,
+                ),
+            ];
+            let context_menu = context_menu(
+                items,
+                self.context_menu_id.map_or_else(
+                    || None,
+                    |_| {
+                        Some(menu::items(&HashMap::new(), menu_items))
+                    },
+                ),
+            );
+            Element::from(context_menu)
+        } else {
+            items
+        }
     }
 
     fn update_entire_presentation(
