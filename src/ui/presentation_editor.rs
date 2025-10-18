@@ -76,6 +76,7 @@ impl menu::Action for MenuAction {
         }
     }
 }
+
 impl PresentationEditor {
     pub fn new() -> Self {
         Self {
@@ -395,15 +396,21 @@ impl PresentationEditor {
         items: Element<'b, Message>,
     ) -> Element<'b, Message> {
         if self.context_menu_id.is_some() {
+            let before_icon =
+                icon::from_path("./res/split-above.svg".into())
+                    .symbolic(true);
+            let after_icon =
+                icon::from_path("./res/split-below.svg".into())
+                    .symbolic(true);
             let menu_items = vec![
                 menu::Item::Button(
                     "Spit Before",
-                    None,
+                    Some(before_icon),
                     MenuAction::SplitBefore,
                 ),
                 menu::Item::Button(
                     "Split After",
-                    None,
+                    Some(after_icon),
                     MenuAction::SplitAfter,
                 ),
             ];
