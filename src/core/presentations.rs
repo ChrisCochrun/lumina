@@ -204,7 +204,14 @@ impl ServiceTrait for Presentation {
         let pages = document.pages().into_diagnostic()?;
         debug!(?pages);
         let pages: Vec<Handle> = pages
-            .filter_map(|page| {
+            .enumerate()
+            .filter_map(|(index, page)| {
+                if (index as i32) < starting_index {
+                    return None;
+                } else if (index as i32) > ending_index {
+                    return None;
+                };
+
                 let Some(page) = page.ok() else {
                     return None;
                 };
@@ -227,13 +234,7 @@ impl ServiceTrait for Presentation {
             .collect();
 
         let mut slides: Vec<Slide> = vec![];
-        for (index, page) in pages.into_iter().enumerate() {
-            if (index as i32) < starting_index {
-                continue;
-            } else if (index as i32) > ending_index {
-                continue;
-            };
-
+        for (index, page) in pages.into_iter() {
             let slide = SlideBuilder::new()
                 .background(
                     Background::try_from(self.path.clone())
