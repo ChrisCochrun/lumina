@@ -24,8 +24,11 @@ use super::{
 )]
 pub enum PresKind {
     Html,
+    Pdf {
+        starting_index: i32,
+        ending_index: i32,
+    },
     #[default]
-    Pdf,
     Generic,
 }
 
@@ -50,22 +53,42 @@ impl PartialEq for Presentation {
 
 impl From<PathBuf> for Presentation {
     fn from(value: PathBuf) -> Self {
-        let kind = match value
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap_or_default()
-        {
-            "pdf" => PresKind::Pdf,
-            "html" => PresKind::Html,
-            _ => PresKind::Generic,
-        };
         let title = value
             .file_name()
             .unwrap_or_default()
             .to_str()
             .unwrap_or_default()
             .to_string();
+        let kind = match value
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default()
+        {
+            "pdf" => {
+                if let Ok(document) = Document::open(&value.as_path())
+                {
+                    if let Ok(count) = document.page_count() {
+                        PresKind::Pdf {
+                            starting_index: 0,
+                            ending_index: count - 1,
+                        }
+                    } else {
+                        PresKind::Pdf {
+                            starting_index: 0,
+                            ending_index: 0,
+                        }
+                    }
+                } else {
+                    PresKind::Pdf {
+                        starting_index: 0,
+                        ending_index: 0,
+                    }
+                }
+            }
+            "html" => PresKind::Html,
+            _ => PresKind::Generic,
+        };
         Self {
             id: 0,
             title,
@@ -250,7 +273,10 @@ impl FromRow<'_, SqliteRow> for Presentation {
             kind: if row.try_get(3)? {
                 PresKind::Html
             } else {
-                PresKind::Pdf
+                PresKind::Pdf {
+                    starting_index: row.try_get(4)?,
+                    ending_index: row.try_get(5)?,
+                }
             },
         })
     }
@@ -270,10 +296,11 @@ impl Model<Presentation> {
 
     pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
         let result = query!(
-            r#"SELECT id as "id: i32", title, file_path as "path", html from presentations"#
+            r#"SELECT id as "id: i32", title, file_path as "path", html, starting_index, ending_index from presentations"#
         )
             .fetch_all(db)
             .await;
+
         match result {
             Ok(v) => {
                 for presentation in v {
@@ -284,7 +311,21 @@ impl Model<Presentation> {
                         kind: if presentation.html {
                             PresKind::Html
                         } else {
-                            PresKind::Pdf
+                            if let (
+                                Some(starting_index),
+                                Some(ending_index),
+                            ) = (
+                                presentation.starting_index,
+                                presentation.ending_index,
+                            ) {
+                                PresKind::Pdf {
+                                    starting_index: starting_index
+                                        as i32,
+                                    ending_index: ending_index as i32,
+                                }
+                            } else {
+                                PresKind::Generic
+                            }
                         },
                     });
                 }
@@ -341,6 +382,16 @@ pub async fn update_presentation_in_db(
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     let mut db = db.detach();
+    let mut starting_index = 0;
+    let mut ending_index = 0;
+    if let PresKind::Pdf {
+        starting_index: s_index,
+        ending_index: e_index,
+    } = presentation.get_kind()
+    {
+        starting_index = *s_index;
+        ending_index = *e_index;
+    };
     let id = presentation.id;
     if let Err(e) =
         query!("SELECT id FROM presentations where id = $1", id)
@@ -357,11 +408,13 @@ pub async fn update_presentation_in_db(
             debug!(?e, "Presentation not found");
             max += 1;
             let result = query!(
-                r#"INSERT into presentations VALUES($1, $2, $3, $4)"#,
+                r#"INSERT into presentations VALUES($1, $2, $3, $4, $5, $6)"#,
                 max,
                 presentation.title,
                 path,
                 html,
+                starting_index,
+                ending_index,
             )
             .execute(&mut db)
             .await
