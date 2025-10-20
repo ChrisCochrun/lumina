@@ -186,6 +186,15 @@ impl ServiceTrait for Presentation {
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
         debug!(?self);
+        let PresKind::Pdf {
+            starting_index,
+            ending_index,
+        } = self.kind
+        else {
+            return Err(miette::miette!(
+                "This is not a pdf presentation"
+            ));
+        };
         let background = Background::try_from(self.path.clone())
             .into_diagnostic()?;
         debug!(?background);
@@ -219,6 +228,12 @@ impl ServiceTrait for Presentation {
 
         let mut slides: Vec<Slide> = vec![];
         for (index, page) in pages.into_iter().enumerate() {
+            if (index as i32) < starting_index {
+                continue;
+            } else if (index as i32) > ending_index {
+                continue;
+            };
+
             let slide = SlideBuilder::new()
                 .background(
                     Background::try_from(self.path.clone())
@@ -307,7 +322,7 @@ impl Model<Presentation> {
                     let _ = self.add_item(Presentation {
                         id: presentation.id,
                         title: presentation.title,
-                        path: presentation.path.into(),
+                        path: presentation.path.clone().into(),
                         kind: if presentation.html {
                             PresKind::Html
                         } else {
@@ -324,7 +339,28 @@ impl Model<Presentation> {
                                     ending_index: ending_index as i32,
                                 }
                             } else {
-                                PresKind::Generic
+                                let path =
+                                    PathBuf::from(presentation.path);
+                                if let Ok(document) =
+                                    Document::open(path.as_path())
+                                {
+                                    if let Ok(count) =
+                                        document.page_count()
+                                    {
+                                        let ending_index = count - 1;
+                                        PresKind::Pdf {
+                                            starting_index: 0,
+                                            ending_index,
+                                        }
+                                    } else {
+                                        PresKind::Pdf {
+                                            starting_index: 0,
+                                            ending_index: 0,
+                                        }
+                                    }
+                                } else {
+                                    PresKind::Generic
+                                }
                             }
                         },
                     });
@@ -485,7 +521,13 @@ mod test {
     #[test]
     pub fn test_pres() {
         let pres = Presentation::new();
-        assert_eq!(pres.get_kind(), &PresKind::Pdf)
+        assert_eq!(
+            pres.get_kind(),
+            &PresKind::Pdf {
+                starting_index: 0,
+                ending_index: 0,
+            }
+        )
     }
 
     #[tokio::test]
