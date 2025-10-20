@@ -814,13 +814,9 @@ pub(crate) fn slide_view<'a>(
             BackgroundKind::Pdf => {
                 if let Some(pdf) = slide.pdf_page() {
                     Container::new(
-                        image(pdf)
-                            .content_fit(ContentFit::Cover)
-                            .width(width)
-                            .height(size.height),
+                        image(pdf).content_fit(ContentFit::Contain),
                     )
-                    .center_x(width)
-                    .center_y(size.height)
+                    .center(Length::Fill)
                     .clip(true)
                 } else {
                     Container::new(Space::new(0.0, 0.0))
