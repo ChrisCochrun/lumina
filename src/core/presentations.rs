@@ -234,7 +234,7 @@ impl ServiceTrait for Presentation {
             .collect();
 
         let mut slides: Vec<Slide> = vec![];
-        for (index, page) in pages.into_iter() {
+        for (index, page) in pages.into_iter().enumerate() {
             let slide = SlideBuilder::new()
                 .background(
                     Background::try_from(self.path.clone())
