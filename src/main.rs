@@ -94,13 +94,32 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
 
+    let (config_handler, config) = match cosmic_config::Config::new(
+        App::APP_ID,
+        core::settings::SETTINGS_VERSION,
+    ) {
+        Ok(config_handler) => {
+            let config = match core::settings::Settings::get_entry(
+                &config_handler,
+            ) {
+                Ok(ok) => ok,
+                Err((errs, config)) => {
+                    error!("errors loading settings: {:?}", errs);
+                    config
+                }
+            };
+            (Some(config_handler), config)
+        }
+        Err(err) => {
+            error!("failed to create settings handler: {}", err);
+            (None, core::settings::Settings::default())
+        }
+    };
+
     let settings;
     if args.ui {
         debug!("main view");
-        settings = Settings::default()
-            .debug(false)
-            .is_daemon(true)
-            .transparent(true);
+        settings = Settings::default().debug(false).is_daemon(true);
     } else {
         debug!("window view");
         settings = Settings::default()
@@ -109,7 +128,7 @@ fn main() -> Result<()> {
             .is_daemon(true);
     }
 
-    cosmic::app::run::<App>(settings, args)
+    cosmic::app::run::<App>(settings, (args, config_handler, config))
         .map_err(|e| miette!("Invalid things... {}", e))
 }
 
@@ -235,7 +254,11 @@ const HEADER_SPACE: u16 = 6;
 
 impl cosmic::Application for App {
     type Executor = executor::Default;
-    type Flags = Cli;
+    type Flags = (
+        Cli,
+        Option<cosmic_config::Config>,
+        core::settings::Settings,
+    );
     type Message = Message;
     const APP_ID: &'static str = "lumina";
     fn core(&self) -> &Core {
@@ -257,41 +280,13 @@ impl cosmic::Application for App {
 
         let mut windows = vec![];
 
-        if input.ui {
+        if input.0.ui {
             windows.push(core.main_window_id().unwrap());
         }
 
-        let (config_handler, settings) =
-            match cosmic_config::Config::new(
-                Self::APP_ID,
-                core::settings::SETTINGS_VERSION,
-            ) {
-                Ok(config_handler) => {
-                    let config =
-                        match core::settings::Settings::get_entry(
-                            &config_handler,
-                        ) {
-                            Ok(ok) => ok,
-                            Err((errs, config)) => {
-                                error!(
-                                    "errors loading settings: {:?}",
-                                    errs
-                                );
-                                config
-                            }
-                        };
-                    (Some(config_handler), config)
-                }
-                Err(err) => {
-                    error!(
-                        "failed to create settings handler: {}",
-                        err
-                    );
-                    (None, core::settings::Settings::default())
-                }
-            };
+        let (config_handler, settings) = (input.1, input.2);
 
-        let items = if let Some(file) = input.file {
+        let items = if let Some(file) = input.0.file {
             match read_to_string(file) {
                 Ok(lisp) => {
                     let mut service_items = vec![];
@@ -366,7 +361,7 @@ impl cosmic::Application for App {
         menu_keys.insert(
             KeyBind {
                 modifiers: vec![Modifier::Ctrl],
-                key: Key::Character(".".into()),
+                key: Key::Character(",".into()),
             },
             MenuAction::OpenSettings,
         );
@@ -380,7 +375,7 @@ impl cosmic::Application for App {
             file: PathBuf::default(),
             windows,
             presentation_open: false,
-            cli_mode: !input.ui,
+            cli_mode: !input.0.ui,
             library: None,
             library_open: true,
             editor_mode: None,
@@ -409,7 +404,7 @@ impl cosmic::Application for App {
 
         let mut batch = vec![];
 
-        if input.ui {
+        if input.0.ui {
             debug!("main view");
             batch.push(app.update_title());
         } else {
@@ -793,12 +788,6 @@ impl cosmic::Application for App {
             );
             Some(mouse_stack.into())
         } else if self.settings_open {
-            let obs_url =
-                if let Some(url) = self.settings.obs_url.clone() {
-                    url.to_string()
-                } else {
-                    "".to_string()
-                };
             let obs_socket = settings::item(
                 "Obs Connection",
                 text_input("127.0.0.1", &self.obs_connection)
@@ -811,17 +800,39 @@ impl cosmic::Application for App {
                     Message::SetObsUrl(self.obs_connection.clone()),
                 ),
             );
-            let settings_column = settings::section()
-                .title("Obs Settings")
-                .add(obs_socket)
-                .add(apply_button);
+            let settings_column = column![
+                Container::new(
+                    button::icon(
+                        icon::from_name("dialog-close")
+                            .symbolic(true)
+                    )
+                    .class(theme::Button::Icon)
+                    .on_press(Message::CloseSettings)
+                )
+                .padding(space_s)
+                .align_right(Length::Fill)
+                .align_top(60),
+                horizontal_space().height(space_xxl),
+                Container::new(
+                    settings::section()
+                        .title("Obs Settings")
+                        .add(obs_socket)
+                        .add(apply_button)
+                )
+                .center_x(Length::Fill)
+                .align_top(Length::Fill)
+                .padding([0, space_xxxl * 2])
+            ]
+            .height(Length::Fill);
             let settings_container = Container::new(settings_column)
-                .padding([space_xxl, space_xxxl * 2])
                 .style(nav_bar_style)
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
-            let modal = Container::new(settings_container)
-                .padding([space_xxl, space_xxxl * 2]);
+            let modal = Container::new(
+                mouse_area(settings_container)
+                    .on_press(Message::None),
+            )
+            .padding([space_xxl, space_xxxl * 2]);
             let mouse_stack = stack!(
                 mouse_area(
                     container(Space::new(Length::Fill, Length::Fill))
@@ -1796,7 +1807,7 @@ where
             (Key::Character(k), Modifiers::CTRL) if k == *"o" => {
                 self.update(Message::Open)
             }
-            (Key::Character(k), Modifiers::CTRL) if k == *"." => {
+            (Key::Character(k), Modifiers::CTRL) if k == *"," => {
                 self.update(Message::OpenSettings)
             }
             (Key::Character(k), Modifiers::CTRL)
