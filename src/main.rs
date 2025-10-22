@@ -168,7 +168,6 @@ struct App {
     settings_open: bool,
     settings: core::settings::Settings,
     config_handler: Option<Config>,
-    obs_url_id: cosmic::widget::Id,
     obs_connection: String,
 }
 
@@ -398,7 +397,6 @@ impl cosmic::Application for App {
             settings_open: false,
             settings,
             config_handler,
-            obs_url_id: cosmic::widget::Id::unique(),
             obs_connection: "".into(),
         };
 
