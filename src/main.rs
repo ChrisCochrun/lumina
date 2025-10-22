@@ -32,7 +32,7 @@ use cosmic::widget::{
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
-use cosmic::{Application, ApplicationExt, Element, executor};
+use cosmic::{Application, ApplicationExt, Apply, Element, executor};
 use cosmic::{cosmic_config, theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
@@ -718,72 +718,70 @@ impl cosmic::Application for App {
                 .map(|item| {
                     let title = text::title4(item.title().clone());
                     let subtitle = text::body(item.to_string());
-                    Element::from(Container::new(
+                    Element::from(
                         row![
                             column![title, subtitle]
                                 .spacing(space_xxs),
                             horizontal_space(),
                             tooltip(
-                                button::icon(
-                                    icon::from_name("add")
-                                        .symbolic(true)
-                                )
-                                .icon_size(space_l)
-                                .on_press(
-                                    Message::AppendServiceItemKind(
-                                        item.clone()
-                                    )
-                                ),
+                                icon::from_name("add")
+                                    .symbolic(true).apply(button::icon)
+                                    .icon_size(space_l)
+                                    .on_press(
+                                        Message::AppendServiceItemKind(
+                                            item.clone()
+                                        )
+                                    ),
                                 "Add to service",
                                 TPosition::FollowCursor
                             ),
                             tooltip(
-                                button::icon(
-                                    icon::from_name("edit")
-                                        .symbolic(true)
-                                )
-                                .icon_size(space_l)
-                                .on_press(Message::OpenEditorKind(
-                                    item.clone()
-                                )),
+                                icon::from_name("edit")
+                                    .symbolic(true).apply(button::icon)
+                                    .icon_size(space_l)
+                                    .on_press(Message::OpenEditorKind(
+                                        item.clone()
+                                    )),
                                 "Edit Item",
                                 TPosition::FollowCursor
                             ),
                         ]
-                        .align_y(Vertical::Center),
-                    ))
+                        .align_y(Vertical::Center)
+                        .apply(container),
+                    )
                 })
                 .collect();
-            let modal = Container::new(
-                column![
-                    search_input("Amazing Grace", &self.search_query)
-                        .id(self.search_id.clone())
-                        .select_on_focus(true)
-                        .on_input(Message::Search)
-                        .on_submit(Message::Search),
-                    column(items).spacing(space_xxs)
-                ]
-                .spacing(space_s),
-            )
+            let modal = column![
+                search_input("Amazing Grace", &self.search_query)
+                    .id(self.search_id.clone())
+                    .select_on_focus(true)
+                    .on_input(Message::Search)
+                    .on_submit(Message::Search),
+                column(items).spacing(space_xxs)
+            ]
+            .spacing(space_s)
+            .apply(container)
             .padding(space_xl)
             .style(nav_bar_style);
-            let modal = Container::new(modal)
+            let modal = mouse_area(modal)
+                .on_press(Message::None)
+                .apply(container)
                 .padding([space_xxl, space_xxxl * 2])
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
             let mouse_stack = stack!(
-                mouse_area(
-                    container(Space::new(Length::Fill, Length::Fill))
-                        .style(|_| {
-                            container::background(
-                                cosmic::iced::Background::Color(
-                                    Color::BLACK,
-                                )
-                                .scale_alpha(0.3),
+                Space::new(Length::Fill, Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(
+                                Color::BLACK,
                             )
-                        })
-                )
-                .on_press(Message::CloseSearch),
+                            .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::CloseSearch),
                 modal
             );
             Some(mouse_stack.into())
@@ -801,51 +799,49 @@ impl cosmic::Application for App {
                 ),
             );
             let settings_column = column![
-                Container::new(
-                    button::icon(
-                        icon::from_name("dialog-close")
-                            .symbolic(true)
-                    )
+                icon::from_name("dialog-close")
+                    .symbolic(true)
+                    .prefer_svg(true)
+                    .apply(button::icon)
                     .class(theme::Button::Icon)
                     .on_press(Message::CloseSettings)
-                )
-                .padding(space_s)
-                .align_right(Length::Fill)
-                .align_top(60),
+                    .apply(container)
+                    .padding(space_s)
+                    .align_right(Length::Fill)
+                    .align_top(60),
                 horizontal_space().height(space_xxl),
-                Container::new(
-                    settings::section()
-                        .title("Obs Settings")
-                        .add(obs_socket)
-                        .add(apply_button)
-                )
-                .center_x(Length::Fill)
-                .align_top(Length::Fill)
-                .padding([0, space_xxxl * 2])
+                settings::section()
+                    .title("Obs Settings")
+                    .add(obs_socket)
+                    .add(apply_button)
+                    .apply(container)
+                    .center_x(Length::Fill)
+                    .align_top(Length::Fill)
+                    .padding([0, space_xxxl * 2])
             ]
             .height(Length::Fill);
-            let settings_container = Container::new(settings_column)
+            let settings_container = settings_column
+                .apply(container)
                 .style(nav_bar_style)
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
-            let modal = Container::new(
-                mouse_area(settings_container)
-                    .on_press(Message::None),
-            )
-            .padding([space_xxl, space_xxxl * 2]);
+            let modal = mouse_area(settings_container)
+                .on_press(Message::None)
+                .apply(container)
+                .padding([space_xxl, space_xxxl * 2]);
             let mouse_stack = stack!(
-                mouse_area(
-                    container(Space::new(Length::Fill, Length::Fill))
-                        .style(|_| {
-                            container::background(
-                                cosmic::iced::Background::Color(
-                                    Color::BLACK,
-                                )
-                                .scale_alpha(0.3),
+                Space::new(Length::Fill, Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(
+                                Color::BLACK,
                             )
-                        })
-                )
-                .on_press(Message::CloseSettings),
+                            .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::CloseSettings),
                 modal
             );
             Some(mouse_stack.into())
@@ -1239,6 +1235,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::SearchFocus => {
+                self.settings_open = false;
                 self.searching = true;
                 cosmic::widget::text_input::focus(
                     self.search_id.clone(),
@@ -1500,6 +1497,7 @@ impl cosmic::Application for App {
                 })
             }
             Message::OpenSettings => {
+                self.searching = false;
                 self.settings_open = true;
                 Task::none()
             }
