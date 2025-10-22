@@ -5,6 +5,7 @@ use core::slide::{
 };
 use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
+use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::save;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
@@ -16,13 +17,14 @@ use cosmic::iced::{
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
-use cosmic::theme;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::tooltip::Position as TPosition;
-use cosmic::widget::{Container, divider, menu};
+use cosmic::widget::{
+    Container, divider, menu, settings, text_input,
+};
 use cosmic::widget::{
     Space, button, context_menu, horizontal_space, mouse_area,
     nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
@@ -31,6 +33,7 @@ use cosmic::widget::{
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
 use cosmic::{Application, ApplicationExt, Element, executor};
+use cosmic::{cosmic_config, theme};
 use crisp::types::Value;
 use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};
@@ -143,6 +146,11 @@ struct App {
     menu_keys: HashMap<KeyBind, MenuAction>,
     context_menu: Option<usize>,
     modifiers_pressed: Option<Modifiers>,
+    settings_open: bool,
+    settings: core::settings::Settings,
+    config_handler: Option<Config>,
+    obs_url_id: cosmic::widget::Id,
+    obs_connection: String,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +198,9 @@ enum Message {
     SaveAsDialog,
     SaveAs(PathBuf),
     OpenSettings,
+    CloseSettings,
+    SetObsUrl(String),
+    SetObsConnection(String),
     ModifiersPressed(Modifiers),
 }
 
@@ -249,6 +260,36 @@ impl cosmic::Application for App {
         if input.ui {
             windows.push(core.main_window_id().unwrap());
         }
+
+        let (config_handler, settings) =
+            match cosmic_config::Config::new(
+                Self::APP_ID,
+                core::settings::SETTINGS_VERSION,
+            ) {
+                Ok(config_handler) => {
+                    let config =
+                        match core::settings::Settings::get_entry(
+                            &config_handler,
+                        ) {
+                            Ok(ok) => ok,
+                            Err((errs, config)) => {
+                                error!(
+                                    "errors loading settings: {:?}",
+                                    errs
+                                );
+                                config
+                            }
+                        };
+                    (Some(config_handler), config)
+                }
+                Err(err) => {
+                    error!(
+                        "failed to create settings handler: {}",
+                        err
+                    );
+                    (None, core::settings::Settings::default())
+                }
+            };
 
         let items = if let Some(file) = input.file {
             match read_to_string(file) {
@@ -359,6 +400,11 @@ impl cosmic::Application for App {
             hovered_dnd: None,
             context_menu: None,
             modifiers_pressed: None,
+            settings_open: false,
+            settings,
+            config_handler,
+            obs_url_id: cosmic::widget::Id::unique(),
+            obs_connection: "".into(),
         };
 
         let mut batch = vec![];
@@ -658,6 +704,18 @@ impl cosmic::Application for App {
     }
 
     fn dialog(&self) -> Option<Element<'_, Self::Message>> {
+        let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_xxxs,
+            space_xxs,
+            space_xs,
+            space_s,
+            space_m,
+            space_l,
+            space_xl,
+            space_xxl,
+            space_xxxl,
+        } = cosmic::theme::spacing();
         if self.searching {
             let items: Vec<Element<Message>> = self
                 .search_results
@@ -667,22 +725,15 @@ impl cosmic::Application for App {
                     let subtitle = text::body(item.to_string());
                     Element::from(Container::new(
                         row![
-                            column![title, subtitle].spacing(
-                                cosmic::theme::active()
-                                    .cosmic()
-                                    .space_xxs(),
-                            ),
+                            column![title, subtitle]
+                                .spacing(space_xxs),
                             horizontal_space(),
                             tooltip(
                                 button::icon(
                                     icon::from_name("add")
                                         .symbolic(true)
                                 )
-                                .icon_size(
-                                    cosmic::theme::active()
-                                        .cosmic()
-                                        .space_l()
-                                )
+                                .icon_size(space_l)
                                 .on_press(
                                     Message::AppendServiceItemKind(
                                         item.clone()
@@ -696,11 +747,7 @@ impl cosmic::Application for App {
                                     icon::from_name("edit")
                                         .symbolic(true)
                                 )
-                                .icon_size(
-                                    cosmic::theme::active()
-                                        .cosmic()
-                                        .space_l()
-                                )
+                                .icon_size(space_l)
                                 .on_press(Message::OpenEditorKind(
                                     item.clone()
                                 )),
@@ -714,27 +761,19 @@ impl cosmic::Application for App {
                 .collect();
             let modal = Container::new(
                 column![
-                    search_input(
-                        "Amazing Grace",
-                        self.search_query.clone()
-                    )
-                    .id(self.search_id.clone())
-                    .select_on_focus(true)
-                    .on_input(Message::Search)
-                    .on_submit(Message::Search),
-                    column(items).spacing(
-                        cosmic::theme::active().cosmic().space_xxs()
-                    )
+                    search_input("Amazing Grace", &self.search_query)
+                        .id(self.search_id.clone())
+                        .select_on_focus(true)
+                        .on_input(Message::Search)
+                        .on_submit(Message::Search),
+                    column(items).spacing(space_xxs)
                 ]
-                .spacing(cosmic::theme::active().cosmic().space_s()),
+                .spacing(space_s),
             )
-            .padding(cosmic::theme::active().cosmic().space_xl())
+            .padding(space_xl)
             .style(nav_bar_style);
             let modal = Container::new(modal)
-                .padding([
-                    cosmic::theme::active().cosmic().space_xxl(),
-                    cosmic::theme::active().cosmic().space_xxxl() * 2,
-                ])
+                .padding([space_xxl, space_xxxl * 2])
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
             let mouse_stack = stack!(
@@ -750,6 +789,52 @@ impl cosmic::Application for App {
                         })
                 )
                 .on_press(Message::CloseSearch),
+                modal
+            );
+            Some(mouse_stack.into())
+        } else if self.settings_open {
+            let obs_url =
+                if let Some(url) = self.settings.obs_url.clone() {
+                    url.to_string()
+                } else {
+                    "".to_string()
+                };
+            let obs_socket = settings::item(
+                "Obs Connection",
+                text_input("127.0.0.1", &self.obs_connection)
+                    .select_on_focus(true)
+                    .on_input(Message::SetObsConnection)
+                    .on_submit(Message::SetObsConnection),
+            );
+            let apply_button = settings::item::builder("").control(
+                button::standard("Connect").on_press(
+                    Message::SetObsUrl(self.obs_connection.clone()),
+                ),
+            );
+            let settings_column = settings::section()
+                .title("Obs Settings")
+                .add(obs_socket)
+                .add(apply_button);
+            let settings_container = Container::new(settings_column)
+                .padding([space_xxl, space_xxxl * 2])
+                .style(nav_bar_style)
+                .center_x(Length::Fill)
+                .align_top(Length::Fill);
+            let modal = Container::new(settings_container)
+                .padding([space_xxl, space_xxxl * 2]);
+            let mouse_stack = stack!(
+                mouse_area(
+                    container(Space::new(Length::Fill, Length::Fill))
+                        .style(|_| {
+                            container::background(
+                                cosmic::iced::Background::Color(
+                                    Color::BLACK,
+                                )
+                                .scale_alpha(0.3),
+                            )
+                        })
+                )
+                .on_press(Message::CloseSettings),
                 modal
             );
             Some(mouse_stack.into())
@@ -1404,7 +1489,26 @@ impl cosmic::Application for App {
                 })
             }
             Message::OpenSettings => {
-                debug!("Opening settings");
+                self.settings_open = true;
+                Task::none()
+            }
+            Message::CloseSettings => {
+                self.settings_open = false;
+                Task::none()
+            }
+            Message::SetObsUrl(url) => {
+                if let Some(config) = &self.config_handler {
+                    if let Err(e) = self.settings.set_obs_url(
+                        &config,
+                        url::Url::parse(&url).ok(),
+                    ) {
+                        error!(?e, "Can't write to disk obs url")
+                    };
+                };
+                Task::none()
+            }
+            Message::SetObsConnection(url) => {
+                self.obs_connection = url;
                 Task::none()
             }
             Message::ModifiersPressed(modifiers) => {

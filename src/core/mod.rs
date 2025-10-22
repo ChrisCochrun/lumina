@@ -5,6 +5,7 @@ pub mod kinds;
 pub mod model;
 pub mod presentations;
 pub mod service_items;
+pub mod settings;
 pub mod slide;
 pub mod songs;
 pub mod thumbnail;

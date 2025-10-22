@@ -820,8 +820,7 @@ pub(crate) fn slide_view<'a>(
                     .clip(true)
                 } else {
                     Container::new(Space::new(0.0, 0.0))
-                        .center_x(width)
-                        .center_y(size.height)
+                        .center(Length::Fill)
                         .clip(true)
                 }
             }
