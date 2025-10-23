@@ -448,20 +448,22 @@ order",
         )
         .gap(10);
 
-        let stroke_size_button =
-            icon::from_name("./res/text-outline.svg")
+        let stroke_size_button = tooltip(
+            icon::from_path("./res/text-outline.svg".into())
                 .symbolic(true)
                 .apply(button::icon)
-                .tooltip("Set the stroke or outline of the text")
-                .on_press(Message::None)
-                .padding(5);
-        let stroke_width_selector = combo_box(
-            &self.stroke_sizes,
-            "0",
-            Some(&self.stroke_size),
-            |v| Message::UpdateStrokeSize(v),
+                .on_press(Message::None),
+            "Stroke or outline of the text",
+            tooltip::Position::Bottom,
         )
-        .width(theme::active().cosmic().space_xxl());
+        .gap(10);
+        // let stroke_width_selector = combo_box(
+        //     &self.stroke_sizes,
+        //     "0",
+        //     Some(&self.stroke_size),
+        //     |v| Message::UpdateStrokeSize(v),
+        // )
+        // .width(theme::active().cosmic().space_xxl());
 
         let stroke_color_picker = color_picker::color_button(
             Some(Message::None),
@@ -482,8 +484,7 @@ order",
             font_selector,
             // text::body("Font Size:"),
             font_size,
-            text::body("Stroke Size:"),
-            stroke_width_selector,
+            stroke_size_button,
             text::body("Stroke Color:"),
             stroke_color_picker,
             horizontal_space(),
