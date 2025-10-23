@@ -34,6 +34,7 @@ pub struct Song {
     pub text_alignment: Option<TextAlignment>,
     pub font: Option<String>,
     pub font_size: Option<i32>,
+    pub stroke_size: Option<i32>,
 }
 
 impl From<&Song> for Value {
@@ -160,6 +161,7 @@ impl FromRow<'_, SqliteRow> for Song {
             }),
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
+            stroke_size: None,
         })
     }
 }
@@ -790,7 +792,8 @@ You saved my soul"
             background: Some(Background::try_from("file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg").unwrap()),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: Some("Quicksand Bold".to_string()),
-            font_size: Some(60)
+            font_size: Some(60),
+            stroke_size: None,
         }
     }
 

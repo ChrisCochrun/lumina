@@ -1,15 +1,16 @@
 use std::{io, path::PathBuf, sync::Arc};
 
 use cosmic::{
-    Element, Task,
+    Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::{Length, alignment::Vertical},
+    iced::{Color, Length, alignment::Vertical},
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{column, row},
     theme,
     widget::{
-        button, combo_box, container, horizontal_space, icon,
-        progress_bar, scrollable, text, text_editor, text_input,
+        button, color_picker, combo_box, container, horizontal_space,
+        icon, progress_bar, scrollable, spin_button, text,
+        text_editor, text_input, tooltip,
     },
 };
 use dirs::font_dir;
@@ -44,6 +45,8 @@ pub struct SongEditor {
     ccli: String,
     song_slides: Option<Vec<Slide>>,
     slide_state: SlideEditor,
+    stroke_sizes: combo_box::State<i32>,
+    stroke_size: i32,
 }
 
 pub enum Action {
@@ -68,6 +71,7 @@ pub enum Message {
     None,
     ChangeAuthor(String),
     PauseVideo,
+    UpdateStrokeSize(i32),
 }
 
 impl SongEditor {
@@ -80,6 +84,7 @@ impl SongEditor {
             .collect();
         fonts.dedup();
         fonts.sort();
+        let stroke_sizes = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let font_sizes = vec![
             "5".to_string(),
             "6".to_string(),
@@ -129,6 +134,8 @@ impl SongEditor {
             ccli: "8".to_string(),
             slide_state: SlideEditor::default(),
             song_slides: None,
+            stroke_sizes: combo_box::State::new(stroke_sizes),
+            stroke_size: 0,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -270,6 +277,14 @@ impl SongEditor {
                     video.set_paused(!paused);
                 };
             }
+            Message::UpdateStrokeSize(size) => {
+                self.stroke_size = size;
+                if let Some(song) = &mut self.song {
+                    song.stroke_size = Some(size);
+                    let song = song.to_owned();
+                    return self.update_song(song);
+                }
+            }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);
             }
@@ -404,24 +419,55 @@ order",
         } else {
             None
         };
-        let font_selector = combo_box(
-            &self.fonts_combo,
-            "Font",
-            Some(selected_font),
-            Message::ChangeFont,
+        let font_selector = tooltip(
+            combo_box(
+                &self.fonts_combo,
+                "Font",
+                Some(selected_font),
+                Message::ChangeFont,
+            )
+            .width(300),
+            "Font used in the song",
+            tooltip::Position::Bottom,
         )
-        .width(300);
-        let font_size = combo_box(
-            &self.font_sizes,
-            "Font Size",
-            selected_font_size,
-            |size| {
-                Message::ChangeFontSize(
-                    size.parse().expect("Should be a number"),
-                )
-            },
+        .gap(10);
+        let font_size = tooltip(
+            combo_box(
+                &self.font_sizes,
+                "Font Size",
+                selected_font_size,
+                |size| {
+                    Message::ChangeFontSize(
+                        size.parse().expect("Should be a number"),
+                    )
+                },
+            )
+            .width(theme::active().cosmic().space_xxl()),
+            "Font size",
+            tooltip::Position::Bottom,
+        )
+        .gap(10);
+
+        let stroke_size_button =
+            icon::from_name("./res/text-outline.svg")
+                .symbolic(true)
+                .apply(button::icon)
+                .tooltip("Set the stroke or outline of the text")
+                .on_press(Message::None)
+                .padding(5);
+        let stroke_width_selector = combo_box(
+            &self.stroke_sizes,
+            "0",
+            Some(&self.stroke_size),
+            |v| Message::UpdateStrokeSize(v),
         )
         .width(theme::active().cosmic().space_xxl());
+
+        let stroke_color_picker = color_picker::color_button(
+            Some(Message::None),
+            Some(Color::BLACK),
+            Length::Fixed(50.0),
+        );
 
         let background_selector = button::icon(
             icon::from_name("folder-pictures-symbolic").scale(2),
@@ -432,10 +478,14 @@ order",
         .padding(10);
 
         row![
-            text::body("Font:"),
+            // text::body("Font:"),
             font_selector,
-            text::body("Font Size:"),
+            // text::body("Font Size:"),
             font_size,
+            text::body("Stroke Size:"),
+            stroke_width_selector,
+            text::body("Stroke Color:"),
+            stroke_color_picker,
             horizontal_space(),
             background_selector
         ]
