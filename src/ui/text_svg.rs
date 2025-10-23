@@ -339,15 +339,16 @@ impl TextSvg {
             Pixmap::new(size.width as u32, size.height as u32)
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
-        let _ = pixmap.save_png(&path);
-
         debug!("rendered");
-        let handle = Handle::from_path(path);
-        // let handle = Handle::from_rgba(
-        //     size.width as u32,
-        //     size.height as u32,
-        //     pixmap.take(),
-        // );
+        // let _ = pixmap.save_png(&path);
+
+        debug!("saved");
+        // let handle = Handle::from_path(path);
+        let handle = Handle::from_rgba(
+            size.width as u32,
+            size.height as u32,
+            pixmap.take(),
+        );
         self.handle = Some(handle);
         debug!("stored");
         self
