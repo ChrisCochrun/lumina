@@ -35,6 +35,29 @@ pub struct Song {
     pub font: Option<String>,
     pub font_size: Option<i32>,
     pub stroke_size: Option<i32>,
+    pub verses: Vec<Verse>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Verse {
+    Verse { number: usize, lyric: String },
+    PreChorus { number: usize, lyric: String },
+    Chorus { number: usize, lyric: String },
+    PostChorus { number: usize, lyric: String },
+    Bridge { number: usize, lyric: String },
+    Intro { number: usize, lyric: String },
+    Outro { number: usize, lyric: String },
+    Instrumental { number: usize, lyric: String },
+    Other { number: usize, lyric: String },
+}
+
+impl Default for Verse {
+    fn default() -> Self {
+        Self::Verse {
+            number: 1,
+            lyric: "".into(),
+        }
+    }
 }
 
 impl From<&Song> for Value {
@@ -162,6 +185,7 @@ impl FromRow<'_, SqliteRow> for Song {
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
             stroke_size: None,
+            verses: lyrics_to_verse(row.try_get(8)?),
         })
     }
 }
@@ -173,6 +197,10 @@ impl From<Value> for Song {
             _ => Self::default(),
         }
     }
+}
+
+fn lyrics_to_verse(lyrics: String) -> Vec<Verse> {
+    todo!()
 }
 
 pub fn lisp_to_song(list: Vec<Value>) -> Song {
@@ -794,6 +822,7 @@ You saved my soul"
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(60),
             stroke_size: None,
+            verses: vec![]
         }
     }
 

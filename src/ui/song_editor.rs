@@ -5,12 +5,12 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{Color, Length, alignment::Vertical},
     iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::{column, row},
+    iced_widget::{column, row, vertical_rule},
     theme,
     widget::{
-        button, color_picker, combo_box, container, horizontal_space,
-        icon, progress_bar, scrollable, spin_button, text,
-        text_editor, text_input, tooltip,
+        button, color_picker, combo_box, container, dropdown,
+        horizontal_space, icon, popover, progress_bar, scrollable,
+        spin_button, text, text_editor, text_input, tooltip,
     },
 };
 use dirs::font_dir;
@@ -47,6 +47,7 @@ pub struct SongEditor {
     slide_state: SlideEditor,
     stroke_sizes: combo_box::State<i32>,
     stroke_size: i32,
+    stroke_open: bool,
 }
 
 pub enum Action {
@@ -72,6 +73,8 @@ pub enum Message {
     ChangeAuthor(String),
     PauseVideo,
     UpdateStrokeSize(i32),
+    OpenStroke,
+    CloseStroke,
 }
 
 impl SongEditor {
@@ -136,6 +139,7 @@ impl SongEditor {
             song_slides: None,
             stroke_sizes: combo_box::State::new(stroke_sizes),
             stroke_size: 0,
+            stroke_open: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -292,6 +296,12 @@ impl SongEditor {
                 self.song = Some(song.clone());
                 return Action::UpdateSong(song);
             }
+            Message::OpenStroke => {
+                self.stroke_open = true;
+            }
+            Message::CloseStroke => {
+                self.stroke_open = false;
+            }
             _ => (),
         }
         Action::None
@@ -413,6 +423,17 @@ order",
     }
 
     fn toolbar(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing {
+            space_xxs,
+            space_xs,
+            space_s,
+            space_m,
+            space_l,
+            space_xl,
+            space_xxl,
+            ..
+        } = theme::spacing();
+
         let selected_font = &self.font;
         let selected_font_size = if self.font_size > 0 {
             Some(&self.font_size.to_string())
@@ -448,12 +469,77 @@ order",
         )
         .gap(10);
 
-        let stroke_size_button = tooltip(
-            icon::from_path("./res/text-outline.svg".into())
-                .symbolic(true)
-                .apply(button::icon)
-                .on_press(Message::None),
-            "Stroke or outline of the text",
+        let stroke_size_row = row![
+            icon(
+                icon::from_path("./res/text-outline.svg".into())
+                    .symbolic(true)
+            ),
+            dropdown(
+                &["0", "1", "2", "3", "4", "5", "6", "7"],
+                Some(self.stroke_size as usize),
+                |i| Message::UpdateStrokeSize(i as i32),
+            )
+            .gap(5.0),
+        ]
+        .spacing(3)
+        .align_y(Vertical::Center);
+
+        // let stroke_sizes = container(column![
+        //     "1".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "2".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "3".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "4".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "5".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "6".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "7".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "8".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "9".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        //     "10".apply(button::standard)
+        //         .class(theme::Button::Icon)
+        //         .on_press(Message::None)
+        //         .width(35),
+        // ])
+        // .padding(theme::spacing().space_xs)
+        // .class(theme::Container::Dropdown);
+
+        // let mut stroke_popup = popover(stroke_size_button)
+        //     .modal(self.stroke_open)
+        //     .position(popover::Position::Bottom)
+        //     .on_close(Message::CloseStroke);
+
+        // if self.stroke_open {
+        //     stroke_popup = stroke_popup.popup(stroke_sizes);
+        // };
+        let stroke_size_selector = tooltip(
+            stroke_size_row,
+            "Outline of the text",
             tooltip::Position::Bottom,
         )
         .gap(10);
@@ -477,21 +563,30 @@ order",
         .label("Background")
         .tooltip("Select an image or video background")
         .on_press(Message::PickBackground)
-        .padding(10);
+        .padding(space_s);
+
+        // let stroke_size_selector = tooltip(
+        //     stroke_popup,
+        //     "Outline of the text",
+        //     tooltip::Position::Bottom,
+        // )
+        // .gap(10);
 
         row![
             // text::body("Font:"),
             font_selector,
             // text::body("Font Size:"),
             font_size,
-            stroke_size_button,
+            vertical_rule(1).height(space_l),
+            stroke_size_selector,
             text::body("Stroke Color:"),
             stroke_color_picker,
+            vertical_rule(1).height(space_l),
             horizontal_space(),
             background_selector
         ]
         .align_y(Vertical::Center)
-        .spacing(10)
+        .spacing(space_s)
         .into()
     }
 
