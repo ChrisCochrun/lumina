@@ -35,7 +35,7 @@ pub struct Song {
     pub font: Option<String>,
     pub font_size: Option<i32>,
     pub stroke_size: Option<i32>,
-    pub verses: Vec<Verse>,
+    pub verses: Option<Vec<Verse>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,7 +185,7 @@ impl FromRow<'_, SqliteRow> for Song {
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
             stroke_size: None,
-            verses: lyrics_to_verse(row.try_get(8)?),
+            verses: lyrics_to_verse(row.try_get(8)?).ok(),
         })
     }
 }
@@ -199,8 +199,93 @@ impl From<Value> for Song {
     }
 }
 
-fn lyrics_to_verse(lyrics: String) -> Vec<Verse> {
-    todo!()
+fn lyrics_to_verse(lyrics: String) -> Result<Vec<Verse>> {
+    let mut lyric_list = Vec::new();
+    if lyrics.is_empty() {
+        return Err(miette!("There is no lyrics here"));
+    }
+
+    let raw_lyrics = lyrics.as_str();
+
+    let mut lyric_map = HashMap::new();
+    let mut verse_title = String::new();
+    let mut lyric = String::new();
+    for (i, line) in raw_lyrics.split('\n').enumerate() {
+        if VERSE_KEYWORDS.contains(&line) {
+            if i != 0 {
+                lyric_map.insert(verse_title, lyric);
+                lyric = String::new();
+                verse_title = line.to_string();
+            } else {
+                verse_title = line.to_string();
+            }
+        } else {
+            lyric.push_str(line);
+            lyric.push('\n');
+        }
+    }
+    lyric_map.insert(verse_title, lyric);
+    for (verse_name, lyric) in lyric_map {
+        let mut verse_elements = verse_name.trim().split_whitespace();
+        let verse_keyword = verse_elements.next();
+        let Some(keyword) = verse_keyword else {
+            return Err(miette!(
+                "Can't parse a proper verse keyword from lyrics"
+            ));
+        };
+        let verse_index = verse_elements.next();
+        let Some(index) = verse_index else {
+            return Err(miette!(
+                "Can't parse a proper verse index from lyrics"
+            ));
+        };
+        let index = index.parse::<usize>().into_diagnostic()?;
+        let verse = match keyword {
+            "Verse" => Verse::Verse {
+                number: index,
+                lyric: lyric,
+            },
+            "Pre-Chorus" => Verse::PreChorus {
+                number: index,
+                lyric: lyric,
+            },
+            "Chorus" => Verse::Chorus {
+                number: index,
+                lyric: lyric,
+            },
+            "Post-Chorus" => Verse::PostChorus {
+                number: index,
+                lyric: lyric,
+            },
+            "Bridge" => Verse::Bridge {
+                number: index,
+                lyric: lyric,
+            },
+            "Intro" => Verse::Intro {
+                number: index,
+                lyric: lyric,
+            },
+            "Outro" => Verse::Outro {
+                number: index,
+                lyric: lyric,
+            },
+            "Instrumental" => Verse::Instrumental {
+                number: index,
+                lyric: lyric,
+            },
+            "Other" => Verse::Other {
+                number: index,
+                lyric: lyric,
+            },
+            _ => Verse::Other {
+                number: 99,
+                lyric: lyric,
+            },
+        };
+        lyric_list.push(verse);
+    }
+
+    Ok(lyric_list)
 }
 
 pub fn lisp_to_song(list: Vec<Value>) -> Song {
