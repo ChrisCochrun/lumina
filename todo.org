@@ -2,7 +2,7 @@
 
 
 * TODO [#A] Need to fix tests now that the basic app is working
-* TODO [#A] Allow for a way to split the presentation up but a right click menu for the presentation.
+* TODO [#A] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
