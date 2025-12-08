@@ -955,11 +955,13 @@ impl cosmic::Application for App {
                         let slide_index = self.current_item.1;
                         let item_index = self.current_item.0;
                         let mut tasks = vec![];
+                        debug!(slide_index, item_index);
                         if let Some(item) =
                             self.service.get(item_index)
                         {
                             if item.slides.len() > slide_index + 1 {
                                 let slide_index = slide_index + 1;
+                                debug!(slide_index, item_index);
                                 let action = self.presenter.update(
                                     presenter::Message::ActivateSlide(
                                         item_index,
@@ -976,7 +978,7 @@ impl cosmic::Application for App {
                                     }));
                                 }
                                 self.current_item =
-                                    (item_index, slide_index + 1);
+                                    (item_index, slide_index);
                                 Task::batch(tasks)
                             } else {
                                 // debug!("Slides are not longer");
@@ -1030,7 +1032,7 @@ impl cosmic::Application for App {
                                     }));
                                 }
                                 self.current_item =
-                                    (item_index, slide_index - 1);
+                                    (item_index, slide_index);
                                 Task::batch(tasks)
                             } else if slide_index == 0
                                 && item_index == 0

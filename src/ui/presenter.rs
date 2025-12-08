@@ -216,6 +216,7 @@ impl Presenter {
                 // ));
             }
             Message::ActivateSlide(item_index, slide_index) => {
+                debug!(slide_index, item_index);
                 if let Some(slide) = self
                     .service
                     .get(item_index)
