@@ -20,7 +20,11 @@ use tracing::{debug, error};
 
 use crate::{
     Background, BackgroundKind,
-    core::{service_items::ServiceTrait, slide::Slide, songs::Song},
+    core::{
+        service_items::ServiceTrait,
+        slide::Slide,
+        songs::{Song, Verse},
+    },
     ui::{
         presenter::slide_view, slide_editor::SlideEditor, text_svg,
     },
@@ -416,10 +420,89 @@ order",
         ]
         .spacing(5);
 
-        column![title_input, author_input, verse_input, lyric_input,]
-            .spacing(25)
-            .width(Length::FillPortion(2))
-            .into()
+        let verse_list = self.song.clone().map(|song| {
+            if let Some(verses) = song.verses.map(|verses| {
+                verses
+                    .iter()
+                    .map(|verse| match verse {
+                        Verse::Verse { number, .. } => text({
+                            let mut string = "Verse ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::PreChorus { number, lyric } => text({
+                            let mut string =
+                                "Pre-Chorus ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::Chorus { number, lyric } => text({
+                            let mut string = "Chorus ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::PostChorus { number, lyric } => {
+                            text({
+                                let mut string =
+                                    "Post-Chorus ".to_string();
+                                string.push_str(&number.to_string());
+                                string
+                            })
+                        }
+                        Verse::Bridge { number, lyric } => text({
+                            let mut string = "Bridge ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::Intro { number, lyric } => text({
+                            let mut string = "Intro ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::Outro { number, lyric } => text({
+                            let mut string = "Outro ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                        Verse::Instrumental { number, lyric } => {
+                            text({
+                                let mut string =
+                                    "Instrumental ".to_string();
+                                string.push_str(&number.to_string());
+                                string
+                            })
+                        }
+                        Verse::Other { number, lyric } => text({
+                            let mut string = "Other ".to_string();
+                            string.push_str(&number.to_string());
+                            string
+                        }),
+                    })
+                    .collect()
+            }) {
+                verses
+            } else {
+                vec![]
+            }
+        });
+        let verse_list = if let Some(verse_list) = verse_list {
+            Element::from(row(verse_list
+                .into_iter()
+                .map(|v| Element::from(v))))
+        } else {
+            Element::from(horizontal_space())
+        };
+
+        column![
+            title_input,
+            author_input,
+            verse_input,
+            lyric_input,
+            verse_list
+        ]
+        .spacing(25)
+        .width(Length::FillPortion(2))
+        .into()
     }
 
     fn toolbar(&self) -> Element<Message> {
