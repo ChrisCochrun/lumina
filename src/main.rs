@@ -951,6 +951,29 @@ impl cosmic::Application for App {
                         cosmic::Action::App(Message::Present(m))
                     }),
                     presenter::Action::None => Task::none(),
+                    presenter::Action::ChangeSlide(
+                        item_index,
+                        slide_index,
+                    ) => {
+                        self.current_item = (item_index, slide_index);
+                        let action = self.presenter.update(
+                            presenter::Message::ActivateSlide(
+                                item_index,
+                                slide_index,
+                            ),
+                        );
+
+                        if let presenter::Action::Task(task) = action
+                        {
+                            task.map(|m| {
+                                cosmic::Action::App(Message::Present(
+                                    m,
+                                ))
+                            })
+                        } else {
+                            Task::none()
+                        }
+                    }
                     presenter::Action::NextSlide => {
                         let slide_index = self.current_item.1;
                         let item_index = self.current_item.0;
@@ -982,8 +1005,6 @@ impl cosmic::Application for App {
                                 Task::batch(tasks)
                             } else {
                                 // debug!("Slides are not longer");
-                                self.current_item =
-                                    (item_index + 1, 0);
                                 if self
                                     .service
                                     .get(item_index + 1)
@@ -1000,6 +1021,8 @@ impl cosmic::Application for App {
                                             )
                                         }));
                                     }
+                                    self.current_item =
+                                        (item_index + 1, 0);
                                 }
                                 Task::batch(tasks)
                             }

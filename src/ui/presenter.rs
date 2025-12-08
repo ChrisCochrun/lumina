@@ -59,6 +59,7 @@ pub(crate) enum Action {
     Task(Task<Message>),
     NextSlide,
     PrevSlide,
+    ChangeSlide(usize, usize),
     None,
 }
 
@@ -68,6 +69,7 @@ pub(crate) enum Message {
     PrevSlide,
     SlideChange(Slide),
     ActivateSlide(usize, usize),
+    ClickSlide(usize, usize),
     EndVideo,
     StartVideo,
     StartAudio,
@@ -214,6 +216,9 @@ impl Presenter {
                 // return self.update(Message::SlideChange(
                 //     self.current_slide_index - 1,
                 // ));
+            }
+            Message::ClickSlide(item_index, slide_index) => {
+                return Action::ChangeSlide(item_index, slide_index);
             }
             Message::ActivateSlide(item_index, slide_index) => {
                 debug!(slide_index, item_index);
@@ -547,7 +552,7 @@ impl Presenter {
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
-                        .on_press(Message::ActivateSlide(
+                        .on_press(Message::ClickSlide(
                             item_index,
                             slide_index,
                         ));
