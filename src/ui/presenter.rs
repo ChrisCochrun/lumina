@@ -1,10 +1,15 @@
 use miette::{IntoDiagnostic, Result};
+use obws::{
+    Client, requests::scenes::SceneId, responses::scenes::Scene,
+};
 use std::{
+    collections::HashMap,
     fs::File,
     io::BufReader,
     path::PathBuf,
     sync::{Arc, LazyLock},
 };
+use tokio::task::spawn_blocking;
 
 use cosmic::{
     Task,
@@ -53,6 +58,8 @@ pub(crate) struct Presenter {
     hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
+    scene_slide_map: Option<HashMap<(usize, usize), Scene>>,
+    obs_client: Option<Arc<Client>>,
 }
 
 pub(crate) enum Action {
@@ -188,6 +195,8 @@ impl Presenter {
             },
             scroll_id: Id::unique(),
             current_font: cosmic::font::default(),
+            scene_slide_map: None,
+            obs_client: None,
         }
     }
 
@@ -344,6 +353,29 @@ impl Presenter {
                     self.update(Message::EndAudio);
                 }
                 let task_count = tasks.len();
+                let item_index = self.current_item;
+                let slide_index = self.current_slide_index;
+
+                if let Some(map) = &self.scene_slide_map {
+                    if let Some(scene) =
+                        map.get(&(item_index, slide_index))
+                    {
+                        if let Some(obs) = &self.obs_client {
+                            let obs = Arc::clone(&obs);
+                            let task = Task::perform(
+                                obs.scenes()
+                                    .set_current_program_scene(
+                                        scene.id.clone(),
+                                    ),
+                                |res| {
+                                    debug!(?res);
+                                    Message::None
+                                },
+                            );
+                            tasks.push(task);
+                        }
+                    }
+                }
                 debug!(?task_count);
                 return Action::Task(Task::batch(tasks));
             }
