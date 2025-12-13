@@ -341,6 +341,23 @@ impl cosmic::Application for App {
         // for item in items.iter() {
         //     nav_model.insert().text(item.title()).data(item.clone());
         // }
+        let presenter_obs_task = Task::perform(
+            async {
+                obws::Client::connect("localhost", 4455, Some(""))
+                    .await
+            },
+            |res| match res {
+                Ok(client) => cosmic::Action::App(Message::Present(
+                    presenter::Message::AddObsClient(Arc::new(
+                        client,
+                    )),
+                )),
+                Err(e) => {
+                    warn!("Obs may not be running: {e}");
+                    cosmic::Action::None
+                }
+            },
+        );
 
         let mut menu_keys = HashMap::new();
         menu_keys.insert(
@@ -401,6 +418,7 @@ impl cosmic::Application for App {
         };
 
         let mut batch = vec![];
+        batch.push(presenter_obs_task);
 
         if input.0.ui {
             debug!("main view");

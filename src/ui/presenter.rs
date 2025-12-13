@@ -9,7 +9,6 @@ use std::{
     path::PathBuf,
     sync::{Arc, LazyLock},
 };
-use tokio::task::spawn_blocking;
 
 use cosmic::{
     Task,
@@ -26,8 +25,8 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space, container, image, mouse_area,
-        responsive, scrollable, text,
+        Container, Id, Row, Space, container, context_menu, icon,
+        image, menu, mouse_area, responsive, scrollable, text,
     },
 };
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
@@ -37,7 +36,11 @@ use url::Url;
 
 use crate::{
     BackgroundKind,
-    core::{service_items::ServiceItem, slide::Slide},
+    core::{
+        service_items::ServiceItem,
+        slide::Slide,
+        slide_actions::{self, ObsAction},
+    },
 };
 
 const REFERENCE_WIDTH: f32 = 1920.0;
@@ -58,8 +61,11 @@ pub(crate) struct Presenter {
     hovered_slide: Option<(usize, usize)>,
     scroll_id: Id,
     current_font: Font,
-    scene_slide_map: Option<HashMap<(usize, usize), Scene>>,
+    slide_action_map:
+        Option<HashMap<(usize, usize), Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
+    context_menu_id: Option<(usize, usize)>,
+    obs_scenes: Option<Vec<Scene>>,
 }
 
 pub(crate) enum Action {
@@ -70,7 +76,7 @@ pub(crate) enum Action {
     None,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
@@ -88,6 +94,97 @@ pub(crate) enum Message {
     ChangeFont(String),
     Error(String),
     None,
+    RightClickSlide(usize, usize),
+    ObsStartStream,
+    ObsStopStream,
+    ObsSceneAssign(usize),
+    UpdateObsScenes(Vec<Scene>),
+    AddObsClient(Arc<Client>),
+}
+
+impl std::fmt::Debug for Message {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        match self {
+            Self::NextSlide => write!(f, "NextSlide"),
+            Self::PrevSlide => write!(f, "PrevSlide"),
+            Self::SlideChange(arg0) => {
+                f.debug_tuple("SlideChange").field(arg0).finish()
+            }
+            Self::ActivateSlide(arg0, arg1) => f
+                .debug_tuple("ActivateSlide")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::ClickSlide(arg0, arg1) => f
+                .debug_tuple("ClickSlide")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::EndVideo => write!(f, "EndVideo"),
+            Self::StartVideo => write!(f, "StartVideo"),
+            Self::StartAudio => write!(f, "StartAudio"),
+            Self::EndAudio => write!(f, "EndAudio"),
+            Self::VideoPos(arg0) => {
+                f.debug_tuple("VideoPos").field(arg0).finish()
+            }
+            Self::VideoFrame => write!(f, "VideoFrame"),
+            Self::MissingPlugin(arg0) => {
+                f.debug_tuple("MissingPlugin").field(arg0).finish()
+            }
+            Self::HoveredSlide(arg0) => {
+                f.debug_tuple("HoveredSlide").field(arg0).finish()
+            }
+            Self::ChangeFont(arg0) => {
+                f.debug_tuple("ChangeFont").field(arg0).finish()
+            }
+            Self::Error(arg0) => {
+                f.debug_tuple("Error").field(arg0).finish()
+            }
+            Self::None => write!(f, "None"),
+            Self::RightClickSlide(arg0, arg1) => f
+                .debug_tuple("RightClickSlide")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::ObsStartStream => write!(f, "ObsStartStream"),
+            Self::ObsStopStream => write!(f, "ObsStopStream"),
+            Self::ObsSceneAssign(arg0) => {
+                f.debug_tuple("ObsSceneAssign").field(arg0).finish()
+            }
+            Self::UpdateObsScenes(arg0) => {
+                f.debug_tuple("UpdateObsScenes").field(arg0).finish()
+            }
+            Self::AddObsClient(_) => write!(f, "AddObsClient"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    ObsSceneAssign(usize),
+    ObsStartStream,
+    ObsStopStream,
+    ObsStartRecord,
+    ObsStopRecord,
+}
+
+impl menu::Action for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            MenuAction::ObsSceneAssign(scene) => {
+                Message::ObsSceneAssign(*scene)
+            }
+            MenuAction::ObsStartStream => Message::ObsStartStream,
+            MenuAction::ObsStopStream => Message::ObsStopStream,
+            MenuAction::ObsStartRecord => todo!(),
+            MenuAction::ObsStopRecord => todo!(),
+        }
+    }
 }
 
 impl Presenter {
@@ -195,40 +292,120 @@ impl Presenter {
             },
             scroll_id: Id::unique(),
             current_font: cosmic::font::default(),
-            scene_slide_map: None,
+            slide_action_map: None,
             obs_client: None,
+            context_menu_id: None,
+            obs_scenes: None,
         }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
+            Message::AddObsClient(client) => {
+                self.obs_client = Some(client);
+            }
             Message::NextSlide => {
                 return Action::NextSlide;
-                // debug!("next slide");
-                // if self.slides.len() as u16 - 1
-                //     == self.current_slide_index
-                // {
-                //     debug!("no more slides");
-                //     return Action::None;
-                // }
-                // return self.update(Message::SlideChange(
-                //     self.current_slide_index + 1,
-                // ));
             }
             Message::PrevSlide => {
                 return Action::PrevSlide;
-                // debug!("prev slide");
-                // if 0 == self.current_slide_index {
-                //     debug!("beginning slides");
-                //     return Action::None;
-                // }
-                // return self.update(Message::SlideChange(
-                //     self.current_slide_index - 1,
-                // ));
             }
             Message::ClickSlide(item_index, slide_index) => {
                 return Action::ChangeSlide(item_index, slide_index);
             }
+            Message::RightClickSlide(item_index, slide_index) => {
+                debug!(
+                    item_index,
+                    slide_index, "right clicked slide"
+                );
+                self.context_menu_id =
+                    Some((item_index, slide_index));
+                if let Some(client) = &self.obs_client {
+                    let client = Arc::clone(client);
+                    return Action::Task(Task::perform(
+                        async move { client.scenes().list().await },
+                        |res| match res {
+                            Ok(scenes) => Message::UpdateObsScenes(
+                                scenes.scenes,
+                            ),
+                            Err(_) => todo!(),
+                        },
+                    ));
+                }
+            }
+            Message::UpdateObsScenes(scenes) => {
+                debug!(?scenes, "updating obs scenes");
+                self.obs_scenes = Some(scenes);
+            }
+            Message::ObsSceneAssign(scene_index) => {
+                let Some(scenes) = &self.obs_scenes else {
+                    return Action::None;
+                };
+                let new_scene = &scenes[scene_index];
+                debug!(?scenes, ?new_scene, "updating obs actions");
+                if let Some(map) = self.slide_action_map.as_mut() {
+                    if let Some(actions) = map.get_mut(
+                        &self.context_menu_id.unwrap_or_default(),
+                    ) {
+                        let mut altered_actions = vec![];
+                        actions.iter_mut().for_each(|action| {
+                            match action {
+                                slide_actions::Action::Obs {
+                                    action: ObsAction::Scene { .. },
+                                } => altered_actions.push(
+                                    slide_actions::Action::Obs {
+                                        action: ObsAction::Scene {
+                                            scene: new_scene.clone(),
+                                        },
+                                    },
+                                ),
+                                _ => altered_actions
+                                    .push(action.to_owned()),
+                            }
+                        });
+                        *actions = altered_actions;
+                        debug!(
+                            "updating the obs scene {:?}",
+                            new_scene
+                        )
+                    } else {
+                        if map
+                            .insert(
+                                self.context_menu_id.unwrap(),
+                                vec![slide_actions::Action::Obs {
+                                    action: ObsAction::Scene {
+                                        scene: new_scene.clone(),
+                                    },
+                                }],
+                            )
+                            .is_none()
+                        {
+                            debug!(
+                                "adding the obs scene {:?}",
+                                new_scene
+                            )
+                        } else {
+                            debug!(
+                                "updating the obs scene {:?}",
+                                new_scene
+                            )
+                        }
+                    }
+                } else {
+                    let mut map = HashMap::new();
+                    map.insert(
+                        self.context_menu_id.unwrap().clone(),
+                        vec![slide_actions::Action::Obs {
+                            action: ObsAction::Scene {
+                                scene: new_scene.clone(),
+                            },
+                        }],
+                    );
+                    self.slide_action_map = Some(map);
+                }
+            }
+            Message::ObsStartStream => todo!(),
+            Message::ObsStopStream => todo!(),
             Message::ActivateSlide(item_index, slide_index) => {
                 debug!(slide_index, item_index);
                 if let Some(slide) = self
@@ -302,6 +479,11 @@ impl Presenter {
                 let mut tasks = vec![];
                 tasks.push(scroll_to(self.scroll_id.clone(), offset));
 
+                if self.slide_action_map.is_some() {
+                    debug!("Found slide actions, running them");
+                    tasks.push(self.run_slide_actions());
+                };
+
                 if let Some(mut new_audio) =
                     self.current_slide.audio()
                 {
@@ -353,29 +535,6 @@ impl Presenter {
                     self.update(Message::EndAudio);
                 }
                 let task_count = tasks.len();
-                let item_index = self.current_item;
-                let slide_index = self.current_slide_index;
-
-                if let Some(map) = &self.scene_slide_map {
-                    if let Some(scene) =
-                        map.get(&(item_index, slide_index))
-                    {
-                        if let Some(obs) = &self.obs_client {
-                            let obs = Arc::clone(&obs);
-                            let task = Task::perform(
-                                obs.scenes()
-                                    .set_current_program_scene(
-                                        scene.id.clone(),
-                                    ),
-                                |res| {
-                                    debug!(?res);
-                                    Message::None
-                                },
-                            );
-                            tasks.push(task);
-                        }
-                    }
-                }
                 debug!(?task_count);
                 return Action::Task(Task::batch(tasks));
             }
@@ -587,6 +746,10 @@ impl Presenter {
                         .on_press(Message::ClickSlide(
                             item_index,
                             slide_index,
+                        ))
+                        .on_right_press(Message::RightClickSlide(
+                            item_index,
+                            slide_index,
                         ));
                         slides.push(delegate.into());
                     },
@@ -617,7 +780,50 @@ impl Presenter {
             .height(Length::Fill)
             .width(Length::Fill)
             .id(self.scroll_id.clone());
-        row.into()
+        let context_menu = self.context_menu(row.into());
+        context_menu.into()
+    }
+
+    fn context_menu<'a>(
+        &self,
+        items: Element<'a, Message>,
+    ) -> Element<'a, Message> {
+        if self.context_menu_id.is_some() {
+            let before_icon =
+                icon::from_path("./res/split-above.svg".into())
+                    .symbolic(true);
+            let mut scenes = vec![];
+            if let Some(obs_scenes) = &self.obs_scenes {
+                for scene in obs_scenes {
+                    let menu_item = menu::Item::Button(
+                        scene.id.name.clone(),
+                        None,
+                        MenuAction::ObsSceneAssign(scene.index),
+                    );
+                    scenes.push(menu_item);
+                }
+            }
+            let menu_items = vec![
+                menu::Item::Button(
+                    "Test Scene".to_string(),
+                    None,
+                    MenuAction::ObsSceneAssign(0),
+                ),
+                menu::Item::Folder("Obs Scene".to_string(), scenes),
+            ];
+            let context_menu = context_menu(
+                items,
+                self.context_menu_id.map_or_else(
+                    || None,
+                    |_| {
+                        Some(menu::items(&HashMap::new(), menu_items))
+                    },
+                ),
+            );
+            Element::from(context_menu)
+        } else {
+            items
+        }
     }
 
     // fn slide_delegate(&self, slide: &Slide) -> Element<'_, Message> {
@@ -745,6 +951,47 @@ impl Presenter {
         self.service = items;
         self.total_slides = total_slides;
     }
+
+    pub fn run_slide_actions(&self) -> Task<Message> {
+        let mut tasks = vec![];
+        let item_index = self.current_item;
+        let slide_index = self.current_slide_index;
+
+        if let Some(map) = &self.slide_action_map {
+            if let Some(actions) = map.get(&(item_index, slide_index))
+            {
+                for action in actions {
+                    match action {
+                        slide_actions::Action::Obs { action } => {
+                            debug!("found obs slide actions");
+                            if let Some(obs) = &self.obs_client {
+                                let obs = Arc::clone(&obs);
+                                let action = action.to_owned();
+                                let task = Task::perform(
+                                    async move { action.run(obs).await },
+                                    |res| {
+                                        debug!(?res);
+                                        Message::None
+                                    },
+                                );
+                                tasks.push(task);
+                            }
+                        }
+                        slide_actions::Action::Other => todo!(),
+                    }
+                }
+            }
+        }
+        Task::batch(tasks)
+    }
+}
+
+#[allow(clippy::unused_async)]
+async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
+    match client.scenes().set_current_program_scene(&scene.id).await {
+        Ok(_) => debug!("Set scene to: {:?}", scene),
+        Err(e) => error!(?e),
+    }
 }
 
 // This needs to be async so that rodio's audio will work
@@ -871,24 +1118,6 @@ pub(crate) fn slide_view<'a>(
         );
         Container::new(stack).center(Length::Fill).into()
     });
-    // let vid = if let Some(video) = &video {
-    //     Container::new(
-    //         VideoPlayer::new(video)
-    //             .mouse_hidden(hide_mouse)
-    //             .width(Length::Fill)
-    //             .height(Length::Fill)
-    //             .on_end_of_stream(Message::EndVideo)
-    //             .on_new_frame(Message::VideoFrame)
-    //             .on_missing_plugin(Message::MissingPlugin)
-    //             .on_warning(|w| Message::Error(w.to_string()))
-    //             .on_error(|e| Message::Error(e.to_string()))
-    //             .content_fit(ContentFit::Cover),
-    //     )
-    //     .center(Length::Shrink)
-    //     .clip(true)
-    // } else {
-    //     Container::new(Space::new(0, 0))
-    // };
-    // stack!(vid, res).into()
+
     res.into()
 }
