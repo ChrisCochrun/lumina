@@ -2,7 +2,7 @@
 
 
 * TODO [#A] Need to fix tests now that the basic app is working
-* TODO [#A] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
+* TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 * TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
@@ -20,8 +20,10 @@ I tried out a way of generating the svg and rasterizing it ahead of time and the
 
 The problem with this approach is that every change to a song's text or font metrics means we need to rebuild all the text items for that song. I need to think of a way for the text generation to be done asynchronously so that the ui isn't locked up.
 
-* TODO Add OBS integration
-This will be based on each slide having the ability to activate an OBS scene when it is active.
+* TODO [#A] Add Action system
+This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
+
+This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
 * TODO [#B] Develop ui for settings
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
