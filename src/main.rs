@@ -703,14 +703,6 @@ impl cosmic::Application for App {
     ) -> Option<
         cosmic::app::context_drawer::ContextDrawer<Self::Message>,
     > {
-        ContextDrawer {
-            title: Some("Context".into()),
-            header_actions: vec![],
-            header: Some("hi".into()),
-            content: "Sup".into(),
-            footer: Some("foot".into()),
-            on_close: Message::None,
-        };
         None
     }
 
