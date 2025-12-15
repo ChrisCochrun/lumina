@@ -1,7 +1,5 @@
 use miette::{IntoDiagnostic, Result};
-use obws::{
-    Client, requests::scenes::SceneId, responses::scenes::Scene,
-};
+use obws::{Client, responses::scenes::Scene};
 use std::{
     collections::HashMap,
     fs::File,
@@ -25,8 +23,9 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space, container, context_menu, icon,
-        image, menu, mouse_area, responsive, scrollable, text,
+        Container, Id, Row, Space, container, context_menu,
+        horizontal_space, icon, image, menu, mouse_area, responsive,
+        scrollable, text,
     },
 };
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
@@ -95,11 +94,10 @@ pub(crate) enum Message {
     Error(String),
     None,
     RightClickSlide(usize, usize),
-    ObsStartStream,
-    ObsStopStream,
-    ObsSceneAssign(usize),
+    AssignObsScene(usize),
     UpdateObsScenes(Vec<Scene>),
     AddObsClient(Arc<Client>),
+    AssignSlideAction(slide_actions::Action),
 }
 
 impl std::fmt::Debug for Message {
@@ -149,15 +147,17 @@ impl std::fmt::Debug for Message {
                 .field(arg0)
                 .field(arg1)
                 .finish(),
-            Self::ObsStartStream => write!(f, "ObsStartStream"),
-            Self::ObsStopStream => write!(f, "ObsStopStream"),
-            Self::ObsSceneAssign(arg0) => {
+            Self::AssignObsScene(arg0) => {
                 f.debug_tuple("ObsSceneAssign").field(arg0).finish()
             }
             Self::UpdateObsScenes(arg0) => {
                 f.debug_tuple("UpdateObsScenes").field(arg0).finish()
             }
             Self::AddObsClient(_) => write!(f, "AddObsClient"),
+            Self::AssignSlideAction(action) => f
+                .debug_tuple("AssignSlideAction")
+                .field(action)
+                .finish(),
         }
     }
 }
@@ -177,10 +177,18 @@ impl menu::Action for MenuAction {
     fn message(&self) -> Self::Message {
         match self {
             MenuAction::ObsSceneAssign(scene) => {
-                Message::ObsSceneAssign(*scene)
+                Message::AssignObsScene(*scene)
             }
-            MenuAction::ObsStartStream => Message::ObsStartStream,
-            MenuAction::ObsStopStream => Message::ObsStopStream,
+            MenuAction::ObsStartStream => Message::AssignSlideAction(
+                slide_actions::Action::Obs {
+                    action: ObsAction::StartStream,
+                },
+            ),
+            MenuAction::ObsStopStream => Message::AssignSlideAction(
+                slide_actions::Action::Obs {
+                    action: ObsAction::StopStream,
+                },
+            ),
             MenuAction::ObsStartRecord => todo!(),
             MenuAction::ObsStopRecord => todo!(),
         }
@@ -337,7 +345,7 @@ impl Presenter {
                 debug!(?scenes, "updating obs scenes");
                 self.obs_scenes = Some(scenes);
             }
-            Message::ObsSceneAssign(scene_index) => {
+            Message::AssignObsScene(scene_index) => {
                 let Some(scenes) = &self.obs_scenes else {
                     return Action::None;
                 };
@@ -404,8 +412,27 @@ impl Presenter {
                     self.slide_action_map = Some(map);
                 }
             }
-            Message::ObsStartStream => todo!(),
-            Message::ObsStopStream => todo!(),
+            Message::AssignSlideAction(action) => {
+                if let Some(map) = self.slide_action_map.as_mut() {
+                    if let Some(actions) =
+                        map.get_mut(&self.context_menu_id.unwrap())
+                    {
+                        actions.push(action)
+                    } else {
+                        map.insert(
+                            self.context_menu_id.unwrap(),
+                            vec![action],
+                        );
+                    }
+                } else {
+                    let mut map = HashMap::new();
+                    map.insert(
+                        self.context_menu_id.unwrap(),
+                        vec![action],
+                    );
+                    self.slide_action_map = Some(map);
+                }
+            }
             Message::ActivateSlide(item_index, slide_index) => {
                 debug!(slide_index, item_index);
                 if let Some(slide) = self
@@ -743,11 +770,11 @@ impl Presenter {
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
-                        .on_press(Message::ClickSlide(
+                        .on_release(Message::ClickSlide(
                             item_index,
                             slide_index,
                         ))
-                        .on_right_press(Message::RightClickSlide(
+                        .on_right_release(Message::RightClickSlide(
                             item_index,
                             slide_index,
                         ));
@@ -771,7 +798,7 @@ impl Presenter {
                 items.push(divider.into());
             },
         );
-        let row =
+        let scrollable =
             scrollable(container(Row::from_vec(items)).style(|t| {
                 let style = container::Style::default();
                 style.border(Border::default().width(2))
@@ -780,8 +807,7 @@ impl Presenter {
             .height(Length::Fill)
             .width(Length::Fill)
             .id(self.scroll_id.clone());
-        let context_menu = self.context_menu(row.into());
-        context_menu.into()
+        self.context_menu(scrollable.into())
     }
 
     fn context_menu<'a>(
@@ -789,9 +815,6 @@ impl Presenter {
         items: Element<'a, Message>,
     ) -> Element<'a, Message> {
         if self.context_menu_id.is_some() {
-            let before_icon =
-                icon::from_path("./res/split-above.svg".into())
-                    .symbolic(true);
             let mut scenes = vec![];
             if let Some(obs_scenes) = &self.obs_scenes {
                 for scene in obs_scenes {
@@ -805,9 +828,14 @@ impl Presenter {
             }
             let menu_items = vec![
                 menu::Item::Button(
-                    "Test Scene".to_string(),
+                    "Start Stream".to_string(),
                     None,
-                    MenuAction::ObsSceneAssign(0),
+                    MenuAction::ObsStartStream,
+                ),
+                menu::Item::Button(
+                    "Stop Stream".to_string(),
+                    None,
+                    MenuAction::ObsStopStream,
                 ),
                 menu::Item::Folder("Obs Scene".to_string(), scenes),
             ];
