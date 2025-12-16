@@ -38,8 +38,13 @@ pub struct Text {
     text: String,
 }
 
+pub struct Image {
+    source: PathBuf,
+}
+
 pub enum SlideWidget {
     Text(Text),
+    Image(Image),
 }
 
 #[derive(Debug, Clone)]
