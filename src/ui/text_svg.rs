@@ -14,7 +14,6 @@ use cosmic::{
     prelude::*,
     widget::{Image, image::Handle},
 };
-use rapidhash::v3::rapidhash_v3;
 use resvg::{
     tiny_skia::{self, Pixmap},
     usvg::{Tree, fontdb},
@@ -251,9 +250,9 @@ impl TextSvg {
     pub fn build(mut self) -> Self {
         // debug!("starting...");
 
-        let mut path = dirs::data_local_dir().unwrap();
-        path.push(PathBuf::from("lumina"));
-        path.push(PathBuf::from("temp"));
+        // let mut path = dirs::data_local_dir().unwrap();
+        // path.push(PathBuf::from("lumina"));
+        // path.push(PathBuf::from("temp"));
 
         let shadow = if let Some(shadow) = &self.shadow {
             format!(
@@ -313,18 +312,18 @@ impl TextSvg {
             text
         );
 
-        let hashed_title = rapidhash_v3(final_svg.as_bytes());
-        path.push(PathBuf::from(hashed_title.to_string()));
-        path.set_extension("png");
+        // let hashed_title = rapidhash_v3(final_svg.as_bytes());
+        // path.push(PathBuf::from(hashed_title.to_string()));
+        // path.set_extension("png");
 
-        if path.exists() {
-            // debug!("cached");
-            let handle = Handle::from_path(path);
-            self.handle = Some(handle);
-            return self;
-        }
+        // if path.exists() {
+        //     // debug!("cached");
+        //     let handle = Handle::from_path(path);
+        //     self.handle = Some(handle);
+        //     return self;
+        // }
 
-        debug!("text string built...");
+        // debug!("text string built...");
         let resvg_tree = Tree::from_data(
             final_svg.as_bytes(),
             &resvg::usvg::Options {
@@ -333,16 +332,16 @@ impl TextSvg {
             },
         )
         .expect("Woops mama");
-        debug!("parsed");
+        // debug!("parsed");
         let transform = tiny_skia::Transform::default();
         let mut pixmap =
             Pixmap::new(size.width as u32, size.height as u32)
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
-        debug!("rendered");
+        // debug!("rendered");
         // let _ = pixmap.save_png(&path);
 
-        debug!("saved");
+        // debug!("saved");
         // let handle = Handle::from_path(path);
         let handle = Handle::from_rgba(
             size.width as u32,
@@ -350,7 +349,7 @@ impl TextSvg {
             pixmap.take(),
         );
         self.handle = Some(handle);
-        debug!("stored");
+        // debug!("stored");
         self
     }
 

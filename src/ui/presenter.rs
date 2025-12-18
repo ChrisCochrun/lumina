@@ -23,9 +23,8 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space, container, context_menu,
-        horizontal_space, icon, image, menu, mouse_area, responsive,
-        scrollable, text,
+        Container, Id, Row, Space, container, context_menu, image,
+        menu, mouse_area, responsive, scrollable, text,
     },
 };
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
