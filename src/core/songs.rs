@@ -51,6 +51,72 @@ pub enum Verse {
     Other { number: usize, lyric: String },
 }
 
+impl Verse {
+    pub fn get_name(&self) -> String {
+        match self {
+            Verse::Verse { number, .. } => {
+                let mut string = "Verse ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::PreChorus { number, .. } => {
+                let mut string = "Pre-Chorus ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Chorus { number, .. } => {
+                let mut string = "Chorus ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::PostChorus { number, .. } => {
+                let mut string = "Post-Chorus ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Bridge { number, .. } => {
+                let mut string = "Bridge ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Intro { number, .. } => {
+                let mut string = "Intro ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Outro { number, .. } => {
+                let mut string = "Outro ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Instrumental { number, .. } => {
+                let mut string = "Instrumental ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+            Verse::Other { number, .. } => {
+                let mut string = "Other ".to_string();
+                string.push_str(&number.to_string());
+                string
+            }
+        }
+    }
+
+    pub fn get_lyric(&self) -> String {
+        match self {
+            Verse::Verse { lyric, .. } => lyric.clone(),
+            Verse::PreChorus { lyric, .. } => lyric.clone(),
+            Verse::Chorus { lyric, .. } => lyric.clone(),
+            Verse::PostChorus { lyric, .. } => lyric.clone(),
+            Verse::Bridge { lyric, .. } => lyric.clone(),
+            Verse::Intro { lyric, .. } => lyric.clone(),
+            Verse::Outro { lyric, .. } => lyric.clone(),
+            Verse::Instrumental { lyric, .. } => lyric.clone(),
+            Verse::Other { lyric, .. } => lyric.clone(),
+        }
+    }
+}
+
 impl Default for Verse {
     fn default() -> Self {
         Self::Verse {

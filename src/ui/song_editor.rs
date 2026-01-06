@@ -411,7 +411,7 @@ order",
         .label("Verse Order")
         .on_input(Message::ChangeVerseOrder);
 
-        let lyric_title = text("Lyrics");
+        let lyric_title = text::heading("Lyrics");
         let lyric_input = column![
             lyric_title,
             text_editor(&self.lyrics)
@@ -424,60 +424,7 @@ order",
             if let Some(verses) = song.verses.map(|verses| {
                 verses
                     .iter()
-                    .map(|verse| match verse {
-                        Verse::Verse { number, .. } => text({
-                            let mut string = "Verse ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::PreChorus { number, lyric } => text({
-                            let mut string =
-                                "Pre-Chorus ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::Chorus { number, lyric } => text({
-                            let mut string = "Chorus ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::PostChorus { number, lyric } => {
-                            text({
-                                let mut string =
-                                    "Post-Chorus ".to_string();
-                                string.push_str(&number.to_string());
-                                string
-                            })
-                        }
-                        Verse::Bridge { number, lyric } => text({
-                            let mut string = "Bridge ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::Intro { number, lyric } => text({
-                            let mut string = "Intro ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::Outro { number, lyric } => text({
-                            let mut string = "Outro ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                        Verse::Instrumental { number, lyric } => {
-                            text({
-                                let mut string =
-                                    "Instrumental ".to_string();
-                                string.push_str(&number.to_string());
-                                string
-                            })
-                        }
-                        Verse::Other { number, lyric } => text({
-                            let mut string = "Other ".to_string();
-                            string.push_str(&number.to_string());
-                            string
-                        }),
-                    })
+                    .map(|verse| text(verse.get_name()))
                     .collect()
             }) {
                 verses
@@ -720,6 +667,12 @@ order",
             self.video = None;
         }
     }
+}
+
+fn verses_editor<'a>(verse: Verse) -> Element<'a, Message> {
+    let verse_title = text(verse.get_name());
+    let lyric = text(verse.get_lyric());
+    todo!()
 }
 
 impl Default for SongEditor {
