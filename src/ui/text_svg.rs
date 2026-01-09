@@ -14,11 +14,12 @@ use cosmic::{
     prelude::*,
     widget::{Image, image::Handle},
 };
+use rayon::str::ParallelString;
 use resvg::{
     tiny_skia::{self, Pixmap},
     usvg::{Tree, fontdb},
 };
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::TextAlignment;
 
@@ -248,31 +249,14 @@ impl TextSvg {
     }
 
     pub fn build(mut self) -> Self {
-        // debug!("starting...");
+        debug!("starting...");
 
         // let mut path = dirs::data_local_dir().unwrap();
         // path.push(PathBuf::from("lumina"));
         // path.push(PathBuf::from("temp"));
 
-        let shadow = if let Some(shadow) = &self.shadow {
-            format!(
-                "<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
-                shadow.offset_x,
-                shadow.offset_y,
-                shadow.spread,
-                shadow.color
-            )
-        } else {
-            String::new()
-        };
-        let stroke = if let Some(stroke) = &self.stroke {
-            format!(
-                "stroke=\"{}\" stroke-width=\"{}px\" stroke-linejoin=\"arcs\" paint-order=\"stroke\"",
-                stroke.color, stroke.size
-            )
-        } else {
-            String::new()
-        };
+        let mut final_svg = String::with_capacity(1024);
+
         let size = Size::new(1920.0, 1080.0);
         let font_size = f32::from(self.font.size);
         let total_lines = self.text.lines().count();
@@ -282,6 +266,29 @@ impl TextSvg {
         let text_and_line_spacing = font_size + line_spacing;
         let starting_y_position = half_lines
             .mul_add(-text_and_line_spacing, middle_position);
+
+        final_svg.push_str(&format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height));
+
+        if let Some(shadow) = &self.shadow {
+            final_svg.push_str(&format!(
+                "<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
+                shadow.offset_x,
+                shadow.offset_y,
+                shadow.spread,
+                shadow.color
+            ))
+        };
+        final_svg.push_str("</defs>");
+
+        final_svg.push_str(&format!("<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", self.font.name, font_size, self.fill));
+
+        if let Some(stroke) = &self.stroke {
+            final_svg.push_str(&format!(
+                "stroke=\"{}\" stroke-width=\"{}px\" stroke-linejoin=\"arcs\" paint-order=\"stroke\"",
+                stroke.color, stroke.size
+            ))
+        };
+        final_svg.push_str(" style=\"filter:url(#shadow);\">");
 
         let text_pieces: Vec<String> = self
             .text
@@ -299,18 +306,21 @@ impl TextSvg {
             })
             .collect();
         let text: String = text_pieces.join("\n");
+        final_svg.push_str(&text);
 
-        let final_svg = format!(
-            "<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
-            size.width,
-            size.height,
-            shadow,
-            self.font.name,
-            font_size,
-            self.fill,
-            stroke,
-            text
-        );
+        final_svg.push_str("</text></svg>");
+
+        // final_svg.push_str(&format!(
+        //     "<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>{}</defs><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" {} style=\"filter:url(#shadow);\">{}</text></svg>",
+        //     size.width,
+        //     size.height,
+        //     shadow,
+        //     self.font.name,
+        //     font_size,
+        //     self.fill,
+        //     stroke,
+        //     text
+        // ));
 
         // let hashed_title = rapidhash_v3(final_svg.as_bytes());
         // path.push(PathBuf::from(hashed_title.to_string()));
@@ -323,7 +333,7 @@ impl TextSvg {
         //     return self;
         // }
 
-        // debug!("text string built...");
+        debug!("text string built...");
         let resvg_tree = Tree::from_data(
             final_svg.as_bytes(),
             &resvg::usvg::Options {
