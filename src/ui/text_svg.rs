@@ -249,7 +249,7 @@ impl TextSvg {
     }
 
     pub fn build(mut self) -> Self {
-        debug!("starting...");
+        // debug!("starting...");
 
         // let mut path = dirs::data_local_dir().unwrap();
         // path.push(PathBuf::from("lumina"));
@@ -333,7 +333,7 @@ impl TextSvg {
         //     return self;
         // }
 
-        debug!("text string built...");
+        // debug!("text string built...");
         let resvg_tree = Tree::from_data(
             final_svg.as_bytes(),
             &resvg::usvg::Options {
