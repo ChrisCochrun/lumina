@@ -26,7 +26,10 @@ use crate::{
         songs::{Song, Verse},
     },
     ui::{
-        presenter::slide_view, slide_editor::SlideEditor, text_svg,
+        presenter::slide_view,
+        slide_editor::SlideEditor,
+        text_svg,
+        widgets::verse_editor::{self, VerseEditor},
     },
 };
 
@@ -52,6 +55,7 @@ pub struct SongEditor {
     stroke_sizes: combo_box::State<i32>,
     stroke_size: i32,
     stroke_open: bool,
+    verses: Option<Vec<VerseEditor>>,
 }
 
 pub enum Action {
@@ -79,6 +83,7 @@ pub enum Message {
     UpdateStrokeSize(i32),
     OpenStroke,
     CloseStroke,
+    VerseEditorMessage((usize, verse_editor::Message)),
 }
 
 impl SongEditor {
@@ -144,6 +149,7 @@ impl SongEditor {
             stroke_sizes: combo_box::State::new(stroke_sizes),
             stroke_size: 0,
             stroke_open: false,
+            verses: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -202,6 +208,11 @@ impl SongEditor {
                     },
                     |slides| Message::UpdateSlides(slides),
                 );
+                self.verses = song.verses.map(|vec| {
+                    vec.into_iter()
+                        .map(|verse| VerseEditor::new(verse))
+                        .collect()
+                });
                 return Action::Task(task);
             }
             Message::ChangeFont(font) => {
@@ -306,7 +317,33 @@ impl SongEditor {
             Message::CloseStroke => {
                 self.stroke_open = false;
             }
-            _ => (),
+            Message::VerseEditorMessage((index, message)) => {
+                if let Some(verses) = self.verses.as_mut() {
+                    if let Some(verse) = verses.get_mut(index) {
+                        match verse.update(message) {
+                            verse_editor::Action::Task(task) => {
+                                return Action::Task(task.map(
+                                    move |m| {
+                                        Message::VerseEditorMessage((
+                                            index, m,
+                                        ))
+                                    },
+                                ));
+                            }
+                            verse_editor::Action::UpdateVerse(
+                                verse,
+                            ) => {
+                                if let Some(song) = self.song.as_mut()
+                                {
+                                    song.update_verse(index, verse);
+                                }
+                            }
+                            verse_editor::Action::None => (),
+                        }
+                    }
+                }
+            }
+            Message::None => (),
         }
         Action::None
     }
@@ -395,6 +432,17 @@ impl SongEditor {
     }
 
     fn left_column(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing {
+            space_xxs,
+            space_xs,
+            space_s,
+            space_m,
+            space_l,
+            space_xl,
+            space_xxl,
+            ..
+        } = theme::spacing();
+
         let title_input = text_input("song", &self.title)
             .on_input(Message::ChangeTitle)
             .label("Song Title");
@@ -420,22 +468,19 @@ order",
         ]
         .spacing(5);
 
-        let verse_list = self.song.clone().map(|song| {
-            if let Some(verses) = song.verses.map(|verses| {
-                verses
-                    .iter()
-                    .map(|verse| text(verse.get_name()))
-                    .collect()
-            }) {
-                verses
-            } else {
-                vec![]
-            }
-        });
-        let verse_list = if let Some(verse_list) = verse_list {
-            Element::from(row(verse_list
-                .into_iter()
-                .map(|v| Element::from(v))))
+        let verse_list = if let Some(verse_list) = &self.verses {
+            Element::from(
+                column(verse_list.into_iter().enumerate().map(
+                    |(index, v)| {
+                        v.view().map(move |message| {
+                            Message::VerseEditorMessage((
+                                index, message,
+                            ))
+                        })
+                    },
+                ))
+                .spacing(space_l),
+            )
         } else {
             Element::from(horizontal_space())
         };
@@ -667,12 +712,6 @@ order",
             self.video = None;
         }
     }
-}
-
-fn verses_editor<'a>(verse: Verse) -> Element<'a, Message> {
-    let verse_title = text(verse.get_name());
-    let lyric = text(verse.get_lyric());
-    todo!()
 }
 
 impl Default for SongEditor {

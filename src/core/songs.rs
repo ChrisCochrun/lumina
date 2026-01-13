@@ -115,6 +115,22 @@ impl Verse {
             Verse::Other { lyric, .. } => lyric.clone(),
         }
     }
+
+    pub fn set_lyrics(&mut self, lyrics: String) {
+        match self {
+            Verse::Verse { number: _, lyric } => *lyric = lyrics,
+            Verse::PreChorus { number: _, lyric } => *lyric = lyrics,
+            Verse::Chorus { number: _, lyric } => *lyric = lyrics,
+            Verse::PostChorus { number: _, lyric } => *lyric = lyrics,
+            Verse::Bridge { number: _, lyric } => *lyric = lyrics,
+            Verse::Intro { number: _, lyric } => *lyric = lyrics,
+            Verse::Outro { number: _, lyric } => *lyric = lyrics,
+            Verse::Instrumental { number: _, lyric } => {
+                *lyric = lyrics
+            }
+            Verse::Other { number: _, lyric } => *lyric = lyrics,
+        }
+    }
 }
 
 impl Default for Verse {
@@ -782,6 +798,14 @@ impl Song {
             Ok(lyric_list)
         } else {
             Err(miette!("There are no lyrics"))
+        }
+    }
+
+    pub fn update_verse(&mut self, index: usize, verse: Verse) {
+        if let Some(verses) = self.verses.as_mut() {
+            if let Some(old_verse) = verses.get_mut(index) {
+                *old_verse = verse;
+            }
         }
     }
 }
