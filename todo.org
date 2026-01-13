@@ -15,6 +15,7 @@ Since SVG's apparently run poorly in iced, instead I'll need to see about either
 This fork will render text 3 times. Once for the text, once for the stroke, once for the shadow. This will only be used in the slides and therefore should not be much of a performance hit since we will only be render 3 copies of the given text. This should not be bad performance since it's not a large amount of text.
 
 This also means in our custom widget with our custom fork, we can animate each individually perhaps.
+
 ** Actually.....
 I tried out a way of generating the svg and rasterizing it ahead of time and then storing it in the file system to be cached. This works out very well. The text is one whole image for a slides text that gets layered on top of the background, but it works out well for now.
 
@@ -24,6 +25,7 @@ The problem with this approach is that every change to a song's text or font met
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
 This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
+
 * TODO [#B] Develop ui for settings
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
