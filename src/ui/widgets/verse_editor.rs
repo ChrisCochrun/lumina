@@ -1,16 +1,17 @@
 use cosmic::{
     Apply, Element, Task,
-    iced::{Length, alignment::Vertical},
+    iced::{Border, Length, alignment::Vertical},
     iced_widget::{column, row},
     theme,
     widget::{container, icon, text, text_editor},
 };
 
-use crate::core::songs::Verse;
+use crate::core::songs::VerseName;
 
 #[derive(Debug)]
 pub struct VerseEditor {
-    verse: Verse,
+    verse_name: VerseName,
+    lyric: String,
     content: text_editor::Content,
 }
 
@@ -22,16 +23,16 @@ pub enum Message {
 
 pub enum Action {
     Task(Task<Message>),
-    UpdateVerse(Verse),
+    UpdateVerse(VerseName),
     None,
 }
 
 impl VerseEditor {
-    pub fn new(verse: Verse) -> Self {
-        let text = verse.get_lyric();
+    pub fn new(verse: VerseName, lyric: String) -> Self {
         Self {
-            verse,
-            content: text_editor::Content::with_text(&text),
+            verse_name: verse,
+            lyric: lyric.clone(),
+            content: text_editor::Content::with_text(&lyric),
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -39,15 +40,15 @@ impl VerseEditor {
             Message::ChangeText(action) => {
                 self.content.perform(action);
                 let lyrics = self.content.text();
-                self.verse.set_lyrics(lyrics);
-                let verse = self.verse.clone();
+                self.lyric = lyrics;
+                let verse = self.verse_name.clone();
                 Action::UpdateVerse(verse)
             }
             Message::None => Action::None,
         }
     }
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(&self, editable: bool) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
             space_xxs,
             space_xs,
@@ -60,17 +61,41 @@ impl VerseEditor {
         } = theme::spacing();
 
         let verse_title =
-            text::heading(self.verse.get_name()).size(space_m);
-        let editor = text_editor(&self.content)
-            .on_action(Message::ChangeText)
-            .padding(space_s)
-            .height(Length::Fill);
+            text::heading(self.verse_name.get_name()).size(space_m);
+        let lyric: Element<Message> = if editable {
+            text_editor(&self.content)
+                .on_action(Message::ChangeText)
+                .padding(space_s)
+                .height(Length::Fill)
+                // .style(|theme, status| {
+                //     let mut style =
+                //         text_editor::default(theme, status);
+                //     style.border = Border::default().rounded(space_s);
+                //     style
+                // })
+                .into()
+        } else {
+            text(self.lyric.clone())
+                .apply(container)
+                .center_y(Length::Fill)
+                .width(Length::Fill)
+                .style(move |t| {
+                    container::Style::default().border(
+                        Border::default()
+                            .rounded(space_s)
+                            .width(space_xxs)
+                            .color(t.cosmic().bg_component_divider()),
+                    )
+                })
+                .padding(space_s)
+                .into()
+        };
 
         let drag_handle = icon::from_name("object-rows")
             .prefer_svg(true)
             .size(space_xxl);
 
-        let row = row![drag_handle, editor]
+        let row = row![drag_handle, lyric]
             .spacing(space_s)
             .align_y(Vertical::Center);
         container(column![verse_title, row].spacing(space_s))

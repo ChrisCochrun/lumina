@@ -23,13 +23,16 @@ use crate::{
     core::{
         service_items::ServiceTrait,
         slide::Slide,
-        songs::{Song, Verse},
+        songs::{Song, VerseName},
     },
     ui::{
         presenter::slide_view,
         slide_editor::SlideEditor,
         text_svg,
-        widgets::verse_editor::{self, VerseEditor},
+        widgets::{
+            draggable,
+            verse_editor::{self, VerseEditor},
+        },
     },
 };
 
@@ -47,6 +50,7 @@ pub struct SongEditor {
     verse_order: String,
     pub lyrics: text_editor::Content,
     editing: bool,
+    editing_verses_order: bool,
     background: Option<Background>,
     video: Option<Video>,
     ccli: String,
@@ -150,6 +154,7 @@ impl SongEditor {
             stroke_size: 0,
             stroke_open: false,
             verses: None,
+            editing_verses_order: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -208,9 +213,11 @@ impl SongEditor {
                     },
                     |slides| Message::UpdateSlides(slides),
                 );
-                self.verses = song.verses.map(|vec| {
+                self.verses = song.verse_map.map(|vec| {
                     vec.into_iter()
-                        .map(|verse| VerseEditor::new(verse))
+                        .map(|(verse_name, lyric)| {
+                            VerseEditor::new(verse_name, lyric)
+                        })
                         .collect()
                 });
                 return Action::Task(task);
@@ -469,18 +476,35 @@ order",
         .spacing(5);
 
         let verse_list = if let Some(verse_list) = &self.verses {
-            Element::from(
-                column(verse_list.into_iter().enumerate().map(
-                    |(index, v)| {
-                        v.view().map(move |message| {
-                            Message::VerseEditorMessage((
-                                index, message,
-                            ))
-                        })
-                    },
-                ))
-                .spacing(space_l),
-            )
+            if self.editing_verses_order {
+                Element::from(
+                    draggable::column(
+                        verse_list.into_iter().enumerate().map(
+                            |(index, v)| {
+                                v.view(false).map(move |message| {
+                                    Message::VerseEditorMessage((
+                                        index, message,
+                                    ))
+                                })
+                            },
+                        ),
+                    )
+                    .spacing(space_l),
+                )
+            } else {
+                Element::from(
+                    column(verse_list.into_iter().enumerate().map(
+                        |(index, v)| {
+                            v.view(true).map(move |message| {
+                                Message::VerseEditorMessage((
+                                    index, message,
+                                ))
+                            })
+                        },
+                    ))
+                    .spacing(space_l),
+                )
+            }
         } else {
             Element::from(horizontal_space())
         };

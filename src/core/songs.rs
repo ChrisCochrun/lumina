@@ -35,110 +35,80 @@ pub struct Song {
     pub font: Option<String>,
     pub font_size: Option<i32>,
     pub stroke_size: Option<i32>,
-    pub verses: Option<Vec<Verse>>,
+    pub verses: Option<Vec<VerseName>>,
+    pub verse_map: Option<HashMap<VerseName, String>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Verse {
-    Verse { number: usize, lyric: String },
-    PreChorus { number: usize, lyric: String },
-    Chorus { number: usize, lyric: String },
-    PostChorus { number: usize, lyric: String },
-    Bridge { number: usize, lyric: String },
-    Intro { number: usize, lyric: String },
-    Outro { number: usize, lyric: String },
-    Instrumental { number: usize, lyric: String },
-    Other { number: usize, lyric: String },
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash,
+)]
+pub enum VerseName {
+    Verse { number: usize },
+    PreChorus { number: usize },
+    Chorus { number: usize },
+    PostChorus { number: usize },
+    Bridge { number: usize },
+    Intro { number: usize },
+    Outro { number: usize },
+    Instrumental { number: usize },
+    Other { number: usize },
 }
 
-impl Verse {
+impl VerseName {
     pub fn get_name(&self) -> String {
         match self {
-            Verse::Verse { number, .. } => {
+            VerseName::Verse { number, .. } => {
                 let mut string = "Verse ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::PreChorus { number, .. } => {
+            VerseName::PreChorus { number, .. } => {
                 let mut string = "Pre-Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Chorus { number, .. } => {
+            VerseName::Chorus { number, .. } => {
                 let mut string = "Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::PostChorus { number, .. } => {
+            VerseName::PostChorus { number, .. } => {
                 let mut string = "Post-Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Bridge { number, .. } => {
+            VerseName::Bridge { number, .. } => {
                 let mut string = "Bridge ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Intro { number, .. } => {
+            VerseName::Intro { number, .. } => {
                 let mut string = "Intro ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Outro { number, .. } => {
+            VerseName::Outro { number, .. } => {
                 let mut string = "Outro ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Instrumental { number, .. } => {
+            VerseName::Instrumental { number, .. } => {
                 let mut string = "Instrumental ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            Verse::Other { number, .. } => {
+            VerseName::Other { number, .. } => {
                 let mut string = "Other ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
         }
     }
-
-    pub fn get_lyric(&self) -> String {
-        match self {
-            Verse::Verse { lyric, .. } => lyric.clone(),
-            Verse::PreChorus { lyric, .. } => lyric.clone(),
-            Verse::Chorus { lyric, .. } => lyric.clone(),
-            Verse::PostChorus { lyric, .. } => lyric.clone(),
-            Verse::Bridge { lyric, .. } => lyric.clone(),
-            Verse::Intro { lyric, .. } => lyric.clone(),
-            Verse::Outro { lyric, .. } => lyric.clone(),
-            Verse::Instrumental { lyric, .. } => lyric.clone(),
-            Verse::Other { lyric, .. } => lyric.clone(),
-        }
-    }
-
-    pub fn set_lyrics(&mut self, lyrics: String) {
-        match self {
-            Verse::Verse { number: _, lyric } => *lyric = lyrics,
-            Verse::PreChorus { number: _, lyric } => *lyric = lyrics,
-            Verse::Chorus { number: _, lyric } => *lyric = lyrics,
-            Verse::PostChorus { number: _, lyric } => *lyric = lyrics,
-            Verse::Bridge { number: _, lyric } => *lyric = lyrics,
-            Verse::Intro { number: _, lyric } => *lyric = lyrics,
-            Verse::Outro { number: _, lyric } => *lyric = lyrics,
-            Verse::Instrumental { number: _, lyric } => {
-                *lyric = lyrics
-            }
-            Verse::Other { number: _, lyric } => *lyric = lyrics,
-        }
-    }
 }
 
-impl Default for Verse {
+impl Default for VerseName {
     fn default() -> Self {
-        Self::Verse {
-            number: 1,
-            lyric: "".into(),
-        }
+        Self::Verse { number: 1 }
     }
 }
 
@@ -221,6 +191,17 @@ const VERSE_KEYWORDS: [&str; 24] = [
 
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let Some((verses, verse_map)) =
+            lyrics_to_verse(row.try_get(8)?).ok()
+        else {
+            return Err(sqlx::Error::ColumnDecode {
+                index: "8".into(),
+                source: miette!(
+                    "Couldn't decode the song into verses"
+                )
+                .into(),
+            });
+        };
         Ok(Self {
             id: row.try_get(12)?,
             title: row.try_get(5)?,
@@ -267,7 +248,8 @@ impl FromRow<'_, SqliteRow> for Song {
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
             stroke_size: None,
-            verses: lyrics_to_verse(row.try_get(8)?).ok(),
+            verses: Some(verses),
+            verse_map: Some(verse_map),
         })
     }
 }
@@ -281,8 +263,10 @@ impl From<Value> for Song {
     }
 }
 
-fn lyrics_to_verse(lyrics: String) -> Result<Vec<Verse>> {
-    let mut lyric_list = Vec::new();
+fn lyrics_to_verse(
+    lyrics: String,
+) -> Result<(Vec<VerseName>, HashMap<VerseName, String>)> {
+    let mut verse_list = Vec::new();
     if lyrics.is_empty() {
         return Err(miette!("There is no lyrics here"));
     }
@@ -307,6 +291,7 @@ fn lyrics_to_verse(lyrics: String) -> Result<Vec<Verse>> {
         }
     }
     lyric_map.insert(verse_title, lyric);
+    let mut verse_map = HashMap::new();
     for (verse_name, lyric) in lyric_map {
         let mut verse_elements = verse_name.trim().split_whitespace();
         let verse_keyword = verse_elements.next();
@@ -323,51 +308,24 @@ fn lyrics_to_verse(lyrics: String) -> Result<Vec<Verse>> {
         };
         let index = index.parse::<usize>().into_diagnostic()?;
         let verse = match keyword {
-            "Verse" => Verse::Verse {
-                number: index,
-                lyric: lyric,
-            },
-            "Pre-Chorus" => Verse::PreChorus {
-                number: index,
-                lyric: lyric,
-            },
-            "Chorus" => Verse::Chorus {
-                number: index,
-                lyric: lyric,
-            },
-            "Post-Chorus" => Verse::PostChorus {
-                number: index,
-                lyric: lyric,
-            },
-            "Bridge" => Verse::Bridge {
-                number: index,
-                lyric: lyric,
-            },
-            "Intro" => Verse::Intro {
-                number: index,
-                lyric: lyric,
-            },
-            "Outro" => Verse::Outro {
-                number: index,
-                lyric: lyric,
-            },
-            "Instrumental" => Verse::Instrumental {
-                number: index,
-                lyric: lyric,
-            },
-            "Other" => Verse::Other {
-                number: index,
-                lyric: lyric,
-            },
-            _ => Verse::Other {
-                number: 99,
-                lyric: lyric,
-            },
+            "Verse" => VerseName::Verse { number: index },
+            "Pre-Chorus" => VerseName::PreChorus { number: index },
+            "Chorus" => VerseName::Chorus { number: index },
+            "Post-Chorus" => VerseName::PostChorus { number: index },
+            "Bridge" => VerseName::Bridge { number: index },
+            "Intro" => VerseName::Intro { number: index },
+            "Outro" => VerseName::Outro { number: index },
+            "Instrumental" => {
+                VerseName::Instrumental { number: index }
+            }
+            "Other" => VerseName::Other { number: index },
+            _ => VerseName::Other { number: 99 },
         };
-        lyric_list.push(verse);
+        verse_list.push(verse.clone());
+        verse_map.insert(verse, lyric);
     }
 
-    Ok(lyric_list)
+    Ok((verse_list, verse_map))
 }
 
 pub fn lisp_to_song(list: Vec<Value>) -> Song {
@@ -725,6 +683,23 @@ pub async fn update_song_in_db(
 }
 
 impl Song {
+    pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
+        self.verse_map
+            .as_ref()
+            .map(|verse_map| verse_map.get(verse).cloned())
+            .flatten()
+    }
+
+    pub fn set_lyrics<T: Into<String>>(
+        &mut self,
+        verse: &VerseName,
+        lyrics: T,
+    ) {
+        if let Some(verse_map) = self.verse_map.as_mut() {
+            verse_map.entry(verse.clone()).or_insert(lyrics.into());
+        }
+    }
+
     pub fn get_lyrics(&self) -> Result<Vec<String>> {
         let mut lyric_list = Vec::new();
         if self.lyrics.is_none() {
@@ -801,7 +776,7 @@ impl Song {
         }
     }
 
-    pub fn update_verse(&mut self, index: usize, verse: Verse) {
+    pub fn update_verse(&mut self, index: usize, verse: VerseName) {
         if let Some(verses) = self.verses.as_mut() {
             if let Some(old_verse) = verses.get_mut(index) {
                 *old_verse = verse;
@@ -997,7 +972,8 @@ You saved my soul"
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(60),
             stroke_size: None,
-            verses: vec![]
+            verses: Some(vec![]),
+            verse_map: None,
         }
     }
 
