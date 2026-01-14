@@ -170,7 +170,10 @@ mod test {
             background: Some(Background::try_from("file:///home/chris/nc/tfc/openlp/CMG - Bright Mountains 01.jpg").unwrap()),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: Some("Quicksand Bold".to_string()),
-            font_size: Some(60)
+            font_size: Some(60),
+            stroke_size: Some(2),
+            verses: None,
+            verse_map: None
         }
     }
 }

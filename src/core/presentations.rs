@@ -522,13 +522,7 @@ mod test {
     #[test]
     pub fn test_pres() {
         let pres = Presentation::new();
-        assert_eq!(
-            pres.get_kind(),
-            &PresKind::Pdf {
-                starting_index: 0,
-                ending_index: 0,
-            }
-        )
+        assert_eq!(pres.get_kind(), &PresKind::Generic)
     }
 
     #[tokio::test]
