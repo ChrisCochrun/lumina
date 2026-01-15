@@ -3,14 +3,21 @@ use std::{io, path::PathBuf, sync::Arc};
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::{Color, Length, alignment::Vertical},
+    iced::{
+        Background as ContainerBackground, Border, Color, Length,
+        Padding, alignment::Vertical, color,
+    },
     iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::{column, row, vertical_rule},
+    iced_widget::{
+        column, row,
+        scrollable::{Direction, Scrollbar},
+        vertical_rule,
+    },
     theme,
     widget::{
         button, color_picker, combo_box, container, dropdown,
-        horizontal_space, icon, popover, progress_bar, scrollable,
-        spin_button, text, text_editor, text_input, tooltip,
+        horizontal_space, icon, progress_bar, scrollable, text,
+        text_editor, text_input, tooltip,
     },
 };
 use dirs::font_dir;
@@ -29,10 +36,7 @@ use crate::{
         presenter::slide_view,
         slide_editor::SlideEditor,
         text_svg,
-        widgets::{
-            draggable,
-            verse_editor::{self, VerseEditor},
-        },
+        widgets::verse_editor::{self, VerseEditor},
     },
 };
 
@@ -440,6 +444,7 @@ impl SongEditor {
 
     fn left_column(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
+            space_none,
             space_xxs,
             space_xs,
             space_s,
@@ -466,6 +471,109 @@ order",
         .label("Verse Order")
         .on_input(Message::ChangeVerseOrder);
 
+        let verse_options: Vec<Element<Message>> = if let Some(song) =
+            &self.song
+        {
+            if let Some(verses) = &song.verses {
+                verses
+                    .iter()
+                    .map(|verse| {
+                        let name = verse.get_name();
+                        let dark_text = theme::Text::Color(
+                            theme::active()
+                                .cosmic()
+                                .primary
+                                .base
+                                .color,
+                        );
+                        let (background_color, text_color) =
+                            match verse {
+                                VerseName::Verse { .. } => (
+                                    color!(242, 100, 48),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::PreChorus { .. } => (
+                                    color!(217, 3, 104),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::Chorus { .. } => (
+                                    color!(58, 134, 255),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::PostChorus { .. } => {
+                                    todo!()
+                                }
+                                VerseName::Bridge { .. } => (
+                                    color!(71, 229, 188),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::Intro { .. } => (
+                                    color!(255, 212, 0),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::Outro { .. } => (
+                                    color!(255, 212, 0),
+                                    theme::active()
+                                        .cosmic()
+                                        .primary
+                                        .base
+                                        .color,
+                                ),
+                                VerseName::Instrumental {
+                                    ..
+                                } => {
+                                    todo!()
+                                }
+                                VerseName::Other { .. } => todo!(),
+                            };
+
+                        text(verse.get_name())
+                            .color(text_color)
+                            .apply(container)
+                            .style(move |t| {
+                                let style =
+                                    container::Style::default();
+                                style.background(
+                                    ContainerBackground::Color(
+                                        background_color,
+                                    ),
+                                );
+                                style.border(
+                                    Border::default()
+                                        .rounded(space_m),
+                                );
+                                style
+                            })
+                            .into()
+                    })
+                    .collect()
+            } else {
+                vec![]
+            }
+        } else {
+            vec![]
+        };
+
         let lyric_title = text::heading("Lyrics");
         let lyric_input = column![
             lyric_title,
@@ -476,45 +584,34 @@ order",
         .spacing(5);
 
         let verse_list = if let Some(verse_list) = &self.verses {
-            if self.editing_verses_order {
-                Element::from(
-                    draggable::column(
-                        verse_list.into_iter().enumerate().map(
-                            |(index, v)| {
-                                v.view(false).map(move |message| {
-                                    Message::VerseEditorMessage((
-                                        index, message,
-                                    ))
-                                })
-                            },
-                        ),
-                    )
-                    .spacing(space_l),
-                )
-            } else {
-                Element::from(
-                    column(verse_list.into_iter().enumerate().map(
-                        |(index, v)| {
-                            v.view(true).map(move |message| {
-                                Message::VerseEditorMessage((
-                                    index, message,
-                                ))
-                            })
-                        },
-                    ))
-                    .spacing(space_l),
-                )
-            }
+            Element::from(
+                column(verse_list.into_iter().enumerate().map(
+                    |(index, v)| {
+                        v.view().map(move |message| {
+                            Message::VerseEditorMessage((
+                                index, message,
+                            ))
+                        })
+                    },
+                ))
+                .spacing(space_l),
+            )
         } else {
             Element::from(horizontal_space())
         };
+        let verse_scroller = scrollable(
+            verse_list
+                .apply(container)
+                .padding(Padding::default().right(space_l)),
+        )
+        .height(Length::Fill)
+        .direction(Direction::Vertical(Scrollbar::new()));
 
         column![
             title_input,
             author_input,
             verse_input,
-            lyric_input,
-            verse_list
+            verse_scroller
         ]
         .spacing(25)
         .width(Length::FillPortion(2))

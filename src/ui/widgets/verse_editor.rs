@@ -48,8 +48,10 @@ impl VerseEditor {
         }
     }
 
-    pub fn view(&self, editable: bool) -> Element<Message> {
+    pub fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_xxxs,
             space_xxs,
             space_xs,
             space_s,
@@ -57,48 +59,23 @@ impl VerseEditor {
             space_l,
             space_xl,
             space_xxl,
-            ..
+            space_xxxl,
         } = theme::spacing();
 
         let verse_title =
             text::heading(self.verse_name.get_name()).size(space_m);
-        let lyric: Element<Message> = if editable {
-            text_editor(&self.content)
-                .on_action(Message::ChangeText)
-                .padding(space_s)
-                .height(Length::Fill)
-                // .style(|theme, status| {
-                //     let mut style =
-                //         text_editor::default(theme, status);
-                //     style.border = Border::default().rounded(space_s);
-                //     style
-                // })
-                .into()
-        } else {
-            text(self.lyric.clone())
-                .apply(container)
-                .center_y(Length::Fill)
-                .width(Length::Fill)
-                .style(move |t| {
-                    container::Style::default().border(
-                        Border::default()
-                            .rounded(space_s)
-                            .width(space_xxs)
-                            .color(t.cosmic().bg_component_divider()),
-                    )
-                })
-                .padding(space_s)
-                .into()
-        };
+        let lyric = text_editor(&self.content)
+            .on_action(Message::ChangeText)
+            .padding(space_s)
+            // .style(|theme, status| {
+            //     let mut style =
+            //         text_editor::default(theme, status);
+            //     style.border = Border::default().rounded(space_s);
+            //     style
+            // })
+            .height(150);
 
-        let drag_handle = icon::from_name("object-rows")
-            .prefer_svg(true)
-            .size(space_xxl);
-
-        let row = row![drag_handle, lyric]
-            .spacing(space_s)
-            .align_y(Vertical::Center);
-        container(column![verse_title, row].spacing(space_s))
+        container(column![verse_title, lyric].spacing(space_s))
             .padding(space_s)
             .class(theme::Container::Card)
             .into()
