@@ -19,7 +19,7 @@ use super::songs::Song;
 )]
 pub struct Slide {
     id: i32,
-    background: Background,
+    pub(crate) background: Background,
     text: String,
     font: String,
     font_size: i32,
@@ -708,7 +708,7 @@ mod test {
             background: Background::try_from("~/pics/frodo.jpg")
                 .unwrap(),
             font: "Quicksand".to_string(),
-            font_size: 70,
+            font_size: 140,
             ..Default::default()
         }
     }

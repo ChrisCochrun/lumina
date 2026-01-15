@@ -39,12 +39,13 @@ pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
 mod test {
     use std::{fs::read_to_string, path::PathBuf};
 
-    use crate::{
-        Background, TextAlignment,
-        core::{
-            images::Image, kinds::ServiceItemKind,
-            service_items::ServiceTrait, songs::Song, videos::Video,
-        },
+    use crate::core::{
+        images::Image,
+        kinds::ServiceItemKind,
+        service_items::ServiceTrait,
+        slide::{Background, Slide, SlideBuilder, TextAlignment},
+        songs::Song,
+        videos::Video,
     };
 
     use super::*;
@@ -115,11 +116,16 @@ mod test {
         ServiceItem {
             title: "This is frodo".to_string(),
             kind: ServiceItemKind::Content(slide.clone()),
+            slides: vec![slide],
             ..Default::default()
         }
     }
 
     fn service_item_2() -> ServiceItem {
+        let video = Video::from(PathBuf::from(
+            "~/vids/test/camprules2024.mp4",
+        ));
+        let slide = &video.to_slides().unwrap()[0];
         ServiceItem {
             title: "camprules2024.mp4".to_string(),
             kind: ServiceItemKind::Video(Video {
@@ -130,6 +136,7 @@ mod test {
                 looping: false,
                 ..Default::default()
             }),
+            slides: vec![slide.clone()],
             ..Default::default()
         }
     }
