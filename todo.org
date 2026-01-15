@@ -2,8 +2,19 @@
 
 
 * TODO [#A] Need to fix tests now that the basic app is working
+* TODO [#A] Add Action system
+This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
+
+This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
+* TODO [#B] Develop ui for settings
+
+* TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO [#B] Functions for text alignments
+This will need to be matched on for the =TextAlignment= from the user
+
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
-* TODO [#A] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
+* TODO [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
 Actually, what if we just made the svg at load/creation time and stored it in the file system for later, then load the entire songs svg's into memory during the presentation to speed things up? Would that be faster than creating them at on the fly? Is it the creation of them that is slow or the rendering?
@@ -21,17 +32,8 @@ I tried out a way of generating the svg and rasterizing it ahead of time and the
 
 The problem with this approach is that every change to a song's text or font metrics means we need to rebuild all the text items for that song. I need to think of a way for the text generation to be done asynchronously so that the ui isn't locked up.
 
-* TODO [#A] Add Action system
-This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
-
-This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
-
-* TODO [#B] Develop ui for settings
-
-* TODO [#B] Develop library system for slides that are more than images or video i.e. content
-
-* TODO [#B] Functions for text alignments
-This will need to be matched on for the =TextAlignment= from the user
+** Made this slightly faster
+Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
