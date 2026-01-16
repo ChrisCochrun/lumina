@@ -22,6 +22,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use cosmic::Theme;
 use cosmic::iced::advanced::layout::{self, Layout};
 use cosmic::iced::advanced::widget::{Operation, Tree, Widget, tree};
 use cosmic::iced::advanced::{Clipboard, Shell, overlay, renderer};
@@ -30,7 +31,7 @@ use cosmic::iced::event::{self, Event};
 use cosmic::iced::{self, Transformation, mouse};
 use cosmic::iced::{
     Background, Border, Color, Element, Length, Padding, Pixels,
-    Point, Rectangle, Size, Theme, Vector,
+    Point, Rectangle, Size, Vector,
 };
 
 use super::{Action, DragEvent, DropPosition};
@@ -802,7 +803,7 @@ where
 pub struct Wrapping<
     'a,
     Message,
-    Theme = iced::Theme,
+    Theme = cosmic::Theme,
     Renderer = iced::Renderer,
 > where
     Theme: Catalog,
@@ -1029,7 +1030,7 @@ pub struct Style {
 /// A styling function for a [`Row`].
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-impl Catalog for Theme {
+impl Catalog for cosmic::Theme {
     type Class<'a> = StyleFn<'a, Self>;
 
     fn default<'a>() -> Self::Class<'a> {
@@ -1041,26 +1042,22 @@ impl Catalog for Theme {
     }
 }
 
-pub fn default(theme: &Theme) -> Style {
+pub fn default(theme: &cosmic::Theme) -> Style {
     Style {
         scale: 1.05,
-        moved_item_overlay: theme
-            .extended_palette()
-            .primary
-            .base
-            .color
-            .scale_alpha(0.2),
+        moved_item_overlay: Color::from(
+            theme.cosmic().primary.base.color,
+        )
+        .scale_alpha(0.2),
         ghost_border: Border {
             width: 1.0,
-            color: theme.extended_palette().secondary.base.color,
+            color: theme.cosmic().secondary.base.color.into(),
             radius: 0.0.into(),
         },
-        ghost_background: theme
-            .extended_palette()
-            .secondary
-            .base
-            .color
-            .scale_alpha(0.2)
-            .into(),
+        ghost_background: Color::from(
+            theme.cosmic().secondary.base.color,
+        )
+        .scale_alpha(0.2)
+        .into(),
     }
 }

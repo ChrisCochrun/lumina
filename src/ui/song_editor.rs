@@ -36,7 +36,10 @@ use crate::{
         presenter::slide_view,
         slide_editor::SlideEditor,
         text_svg,
-        widgets::verse_editor::{self, VerseEditor},
+        widgets::{
+            draggable,
+            verse_editor::{self, VerseEditor},
+        },
     },
 };
 
@@ -479,76 +482,43 @@ order",
                     .iter()
                     .map(|verse| {
                         let name = verse.get_name();
-                        let dark_text = theme::Text::Color(
-                            theme::active()
-                                .cosmic()
-                                .primary
-                                .base
-                                .color,
-                        );
+                        let dark_text = color!(0, 0, 0);
+                        let light_text = color!(255, 255, 255);
                         let (background_color, text_color) =
                             match verse {
-                                VerseName::Verse { .. } => (
-                                    color!(242, 100, 48),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
-                                VerseName::PreChorus { .. } => (
-                                    color!(217, 3, 104),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
-                                VerseName::Chorus { .. } => (
-                                    color!(58, 134, 255),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
+                                VerseName::Verse { .. } => {
+                                    (color!(0xf26430), dark_text)
+                                }
+                                VerseName::PreChorus { .. } => {
+                                    (color!(0xd90368), dark_text)
+                                }
+                                VerseName::Chorus { .. } => {
+                                    (color!(0x3A86ff), dark_text)
+                                }
                                 VerseName::PostChorus { .. } => {
                                     todo!()
                                 }
-                                VerseName::Bridge { .. } => (
-                                    color!(71, 229, 188),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
-                                VerseName::Intro { .. } => (
-                                    color!(255, 212, 0),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
-                                VerseName::Outro { .. } => (
-                                    color!(255, 212, 0),
-                                    theme::active()
-                                        .cosmic()
-                                        .primary
-                                        .base
-                                        .color,
-                                ),
+                                VerseName::Bridge { .. } => {
+                                    (color!(0x47e5bc), dark_text)
+                                }
+                                VerseName::Intro { .. } => {
+                                    (color!(0xffd400), dark_text)
+                                }
+                                VerseName::Outro { .. } => {
+                                    (color!(0xffd400), dark_text)
+                                }
                                 VerseName::Instrumental {
                                     ..
                                 } => {
                                     todo!()
                                 }
-                                VerseName::Other { .. } => todo!(),
+                                VerseName::Other { .. } => {
+                                    (color!(0xffd400), dark_text)
+                                }
                             };
 
                         text(verse.get_name())
-                            .color(text_color)
+                            .class(theme::Text::Color(text_color))
                             .apply(container)
                             .style(move |t| {
                                 let style =
@@ -564,6 +534,7 @@ order",
                                 );
                                 style
                             })
+                            .padding(space_xs)
                             .into()
                     })
                     .collect()
@@ -573,6 +544,11 @@ order",
         } else {
             vec![]
         };
+
+        let verse_options =
+            container(draggable::row(verse_options).spacing(space_s))
+                .padding(space_m)
+                .class(theme::Container::Card);
 
         let lyric_title = text::heading("Lyrics");
         let lyric_input = column![
@@ -611,6 +587,7 @@ order",
             title_input,
             author_input,
             verse_input,
+            verse_options,
             verse_scroller
         ]
         .spacing(25)
