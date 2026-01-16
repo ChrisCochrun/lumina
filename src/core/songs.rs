@@ -1,5 +1,8 @@
-use std::{collections::HashMap, option::Option, path::PathBuf};
+use std::{
+    borrow::Cow, collections::HashMap, option::Option, path::PathBuf,
+};
 
+use cosmic::iced::clipboard::mime::AsMimeTypes;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
@@ -103,6 +106,19 @@ impl VerseName {
                 string
             }
         }
+    }
+}
+
+impl AsMimeTypes for VerseName {
+    fn available(&self) -> std::borrow::Cow<'static, [String]> {
+        Cow::from(vec!["application/verse".to_string()])
+    }
+
+    fn as_bytes(
+        &self,
+        mime_type: &str,
+    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+        None
     }
 }
 

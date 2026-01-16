@@ -1,12 +1,14 @@
-use std::{io, path::PathBuf, sync::Arc};
+use std::{cell::RefCell, io, path::PathBuf, rc::Rc, sync::Arc};
 
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, alignment::Vertical, color,
+        Padding, Vector, alignment::Vertical,
+        clipboard::mime::AsMimeTypes, color,
     },
+    iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
         column, row,
@@ -15,9 +17,9 @@ use cosmic::{
     },
     theme,
     widget::{
-        button, color_picker, combo_box, container, dropdown,
-        horizontal_space, icon, progress_bar, scrollable, text,
-        text_editor, text_input, tooltip,
+        RcElementWrapper, button, color_picker, combo_box, container,
+        dnd_source, dropdown, horizontal_space, icon, progress_bar,
+        scrollable, text, text_editor, text_input, tooltip,
     },
 };
 use dirs::font_dir;
@@ -28,7 +30,7 @@ use tracing::{debug, error};
 use crate::{
     Background, BackgroundKind,
     core::{
-        service_items::ServiceTrait,
+        service_items::{ServiceItem, ServiceTrait},
         slide::Slide,
         songs::{Song, VerseName},
     },
@@ -474,68 +476,46 @@ order",
         .label("Verse Order")
         .on_input(Message::ChangeVerseOrder);
 
-        let verse_options: Vec<Element<Message>> = if let Some(song) =
+        let verse_chips: Vec<Element<Message>> = if let Some(song) =
             &self.song
         {
             if let Some(verses) = &song.verses {
                 verses
                     .iter()
                     .map(|verse| {
-                        let name = verse.get_name();
-                        let dark_text = color!(0, 0, 0);
-                        let light_text = color!(255, 255, 255);
-                        let (background_color, text_color) =
-                            match verse {
-                                VerseName::Verse { .. } => {
-                                    (color!(0xf26430), dark_text)
-                                }
-                                VerseName::PreChorus { .. } => {
-                                    (color!(0xd90368), dark_text)
-                                }
-                                VerseName::Chorus { .. } => {
-                                    (color!(0x3A86ff), dark_text)
-                                }
-                                VerseName::PostChorus { .. } => {
-                                    todo!()
-                                }
-                                VerseName::Bridge { .. } => {
-                                    (color!(0x47e5bc), dark_text)
-                                }
-                                VerseName::Intro { .. } => {
-                                    (color!(0xffd400), dark_text)
-                                }
-                                VerseName::Outro { .. } => {
-                                    (color!(0xffd400), dark_text)
-                                }
-                                VerseName::Instrumental {
-                                    ..
-                                } => {
-                                    todo!()
-                                }
-                                VerseName::Other { .. } => {
-                                    (color!(0xffd400), dark_text)
-                                }
-                            };
-
-                        text(verse.get_name())
-                            .class(theme::Text::Color(text_color))
-                            .apply(container)
-                            .style(move |t| {
-                                let style =
-                                    container::Style::default();
-                                style.background(
-                                    ContainerBackground::Color(
-                                        background_color,
-                                    ),
-                                );
-                                style.border(
-                                    Border::default()
-                                        .rounded(space_m),
-                                );
-                                style
-                            })
-                            .padding(space_xs)
-                            .into()
+                        let verse = verse.clone();
+                        let chip = verse_chip(verse.clone())
+                            .map(|_| Message::None);
+                        let verse_chip_wrapped =
+                            RcElementWrapper::<Message>::new(chip);
+                        Element::from(
+                            dnd_source::<Message, Box<VerseName>>(
+                                RcElementWrapper::clone(
+                                    &verse_chip_wrapped,
+                                ),
+                            )
+                            .on_start(Some(Message::None))
+                            .on_finish(Some(Message::None))
+                            .on_cancel(Some(Message::None))
+                            .drag_content(move || Box::new(verse))
+                            .drag_icon(
+                                move |_| {
+                                    let state: tree::State =
+                                        cosmic::widget::Widget::<
+                                            Message,
+                                            _,
+                                            _,
+                                        >::state(
+                                            &verse_chip_wrapped
+                                        );
+                                    (
+                                        verse_chip(verse),
+                                        state,
+                                        Vector::ZERO,
+                                    )
+                                },
+                            ),
+                        )
                     })
                     .collect()
             } else {
@@ -546,7 +526,7 @@ order",
         };
 
         let verse_options =
-            container(draggable::row(verse_options).spacing(space_s))
+            container(row(verse_chips).spacing(space_s))
                 .padding(space_m)
                 .class(theme::Container::Card);
 
@@ -810,6 +790,62 @@ order",
             self.video = None;
         }
     }
+}
+
+fn verse_chip(verse: VerseName) -> Element<'static, ()> {
+    let cosmic::cosmic_theme::Spacing {
+        space_xs, space_m, ..
+    } = theme::spacing();
+
+    let (
+        verse_color,
+        chorus_color,
+        bridge_color,
+        instrumental_color,
+        other_color,
+    ) = {
+        (
+            color!(0xf26430),
+            color!(0x3A86ff),
+            color!(0x47e5bc),
+            color!(0xd90368),
+            color!(0xffd400),
+        )
+    };
+
+    let name = verse.get_name();
+    let dark_text = Color::BLACK;
+    let light_text = Color::WHITE;
+    let (background_color, text_color) = match verse {
+        VerseName::Verse { .. } => (verse_color, light_text),
+        VerseName::PreChorus { .. } => {
+            (instrumental_color, light_text)
+        }
+        VerseName::Chorus { .. } => (chorus_color, light_text),
+        VerseName::PostChorus { .. } => {
+            todo!()
+        }
+        VerseName::Bridge { .. } => (bridge_color, dark_text),
+        VerseName::Intro { .. } => (other_color, dark_text),
+        VerseName::Outro { .. } => (other_color, dark_text),
+        VerseName::Instrumental { .. } => {
+            todo!()
+        }
+        VerseName::Other { .. } => (other_color, dark_text),
+    };
+
+    text(name)
+        .apply(container)
+        .padding(space_xs)
+        .class(theme::Container::Custom(Box::new(move |t| {
+            container::Style::default()
+                .background(ContainerBackground::Color(
+                    background_color,
+                ))
+                .color(text_color)
+                .border(Border::default().rounded(space_m).width(2))
+        })))
+        .into()
 }
 
 impl Default for SongEditor {
