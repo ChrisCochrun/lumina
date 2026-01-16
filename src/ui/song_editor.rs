@@ -18,8 +18,9 @@ use cosmic::{
     theme,
     widget::{
         RcElementWrapper, button, color_picker, combo_box, container,
-        dnd_source, dropdown, horizontal_space, icon, progress_bar,
-        scrollable, text, text_editor, text_input, tooltip,
+        dnd_destination, dnd_source, dropdown, horizontal_space,
+        icon, progress_bar, scrollable, text, text_editor,
+        text_input, tooltip,
     },
 };
 use dirs::font_dir;
@@ -479,20 +480,18 @@ order",
         let verse_chips: Vec<Element<Message>> = if let Some(song) =
             &self.song
         {
-            if let Some(verses) = &song.verses {
-                verses
-                    .iter()
+            if let Some(verse_map) = &song.verse_map {
+                verse_map
+                    .keys()
                     .map(|verse| {
                         let verse = verse.clone();
-                        let chip = verse_chip(verse.clone())
-                            .map(|_| Message::None);
+                        let chip =
+                            verse_chip(verse).map(|_| Message::None);
                         let verse_chip_wrapped =
                             RcElementWrapper::<Message>::new(chip);
                         Element::from(
                             dnd_source::<Message, Box<VerseName>>(
-                                RcElementWrapper::clone(
-                                    &verse_chip_wrapped,
-                                ),
+                                verse_chip_wrapped.clone(),
                             )
                             .on_start(Some(Message::None))
                             .on_finish(Some(Message::None))
@@ -509,9 +508,13 @@ order",
                                             &verse_chip_wrapped
                                         );
                                     (
-                                        verse_chip(verse),
+                                        Element::from(
+                                            verse_chip_wrapped
+                                                .clone(),
+                                        )
+                                        .map(|_| ()),
                                         state,
-                                        Vector::ZERO,
+                                        Vector::new(-5.0, -15.0),
                                     )
                                 },
                             ),
@@ -528,7 +531,70 @@ order",
         let verse_options =
             container(row(verse_chips).spacing(space_s))
                 .padding(space_m)
-                .class(theme::Container::Card);
+                .width(Length::Fill)
+                .class(theme::Container::Primary);
+
+        let verse_order_items: Vec<Element<Message>> =
+            if let Some(song) = &self.song {
+                if let Some(verses) = &song.verses {
+                    verses
+                        .iter()
+                        .map(|verse| {
+                            let verse = verse.clone();
+                            let chip = verse_chip(verse)
+                                .map(|_| Message::None);
+                            let verse_chip_wrapped =
+                                RcElementWrapper::<Message>::new(
+                                    chip,
+                                );
+                            Element::from(
+                                dnd_destination(
+                                    verse_chip_wrapped.clone(),
+                                    vec!["application/verse".into()],
+                                )
+                                .on_enter(|x, y, mimes| {
+                                    debug!(x, y, ?mimes);
+                                    Message::None
+                                })
+                                .on_finish(
+                                    |mime, data, action, x, y| {
+                                        debug!(mime, ?data, ?action);
+                                        Message::None
+                                    },
+                                ),
+                            )
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                }
+            } else {
+                vec![]
+            };
+
+        let verse_order =
+            container(row(verse_order_items).spacing(space_s))
+                .padding(space_m)
+                .width(Length::Fill)
+                .class(theme::Container::Primary);
+
+        let verse_order = container(
+            column![verse_order, verse_options].spacing(space_m),
+        )
+        .padding(space_s)
+        .class(theme::Container::Card);
+
+        let verse_order_text: Element<Message> =
+            if let Some(song) = &self.song {
+                if let Some(vo) = &song.verse_order {
+                    text(vo.clone().into_iter().collect::<String>())
+                        .into()
+                } else {
+                    text("").into()
+                }
+            } else {
+                text("").into()
+            };
 
         let lyric_title = text::heading("Lyrics");
         let lyric_input = column![
@@ -567,7 +633,8 @@ order",
             title_input,
             author_input,
             verse_input,
-            verse_options,
+            verse_order_text,
+            verse_order,
             verse_scroller
         ]
         .spacing(25)
@@ -637,59 +704,6 @@ order",
         .spacing(3)
         .align_y(Vertical::Center);
 
-        // let stroke_sizes = container(column![
-        //     "1".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "2".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "3".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "4".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "5".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "6".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "7".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "8".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "9".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        //     "10".apply(button::standard)
-        //         .class(theme::Button::Icon)
-        //         .on_press(Message::None)
-        //         .width(35),
-        // ])
-        // .padding(theme::spacing().space_xs)
-        // .class(theme::Container::Dropdown);
-
-        // let mut stroke_popup = popover(stroke_size_button)
-        //     .modal(self.stroke_open)
-        //     .position(popover::Position::Bottom)
-        //     .on_close(Message::CloseStroke);
-
-        // if self.stroke_open {
-        //     stroke_popup = stroke_popup.popup(stroke_sizes);
-        // };
         let stroke_size_selector = tooltip(
             stroke_size_row,
             "Outline of the text",
@@ -794,7 +808,7 @@ order",
 
 fn verse_chip(verse: VerseName) -> Element<'static, ()> {
     let cosmic::cosmic_theme::Spacing {
-        space_xs, space_m, ..
+        space_s, space_m, ..
     } = theme::spacing();
 
     let (
@@ -836,7 +850,9 @@ fn verse_chip(verse: VerseName) -> Element<'static, ()> {
 
     text(name)
         .apply(container)
-        .padding(space_xs)
+        .padding(
+            Padding::new(space_s.into()).right(space_m).left(space_m),
+        )
         .class(theme::Container::Custom(Box::new(move |t| {
             container::Style::default()
                 .background(ContainerBackground::Color(

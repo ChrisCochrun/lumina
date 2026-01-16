@@ -218,6 +218,14 @@ impl FromRow<'_, SqliteRow> for Song {
                 .into(),
             });
         };
+
+        let verse_order: String = {
+            let str: &str = row.try_get(0)?;
+            str.split(' ')
+                .map(std::string::ToString::to_string)
+                .collect()
+        };
+
         Ok(Self {
             id: row.try_get(12)?,
             title: row.try_get(5)?,
