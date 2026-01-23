@@ -23,7 +23,7 @@ pub enum Message {
 
 pub enum Action {
     Task(Task<Message>),
-    UpdateVerse(VerseName),
+    UpdateVerse((VerseName, String)),
     None,
 }
 
@@ -40,9 +40,9 @@ impl VerseEditor {
             Message::ChangeText(action) => {
                 self.content.perform(action);
                 let lyrics = self.content.text();
-                self.lyric = lyrics;
+                self.lyric = lyrics.clone();
                 let verse = self.verse_name.clone();
-                Action::UpdateVerse(verse)
+                Action::UpdateVerse((verse, lyrics))
             }
             Message::None => Action::None,
         }

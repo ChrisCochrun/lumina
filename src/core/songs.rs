@@ -10,7 +10,7 @@ use sqlx::{
     Acquire, FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
     pool::PoolConnection, query, sqlite::SqliteRow,
 };
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::{Slide, SlideBuilder, core::slide};
 
@@ -648,13 +648,13 @@ pub async fn add_song_to_db(
 }
 
 pub async fn update_song_in_db(
-    item: &Song,
+    item: Song,
     db: PoolConnection<Sqlite>,
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
     let verse_order = {
-        if let Some(vo) = item.verse_order.clone() {
+        if let Some(vo) = item.verse_order {
             vo.into_iter()
                 .map(|mut s| {
                     s.push(' ');
@@ -668,12 +668,10 @@ pub async fn update_song_in_db(
 
     let audio = item
         .audio
-        .as_ref()
         .map(|a| a.to_str().unwrap_or_default().to_string());
 
     let background = item
         .background
-        .as_ref()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
     // let text_alignment = item.text_alignment.map(|ta| match ta {
@@ -802,11 +800,79 @@ impl Song {
         }
     }
 
-    pub fn update_verse(&mut self, index: usize, verse: VerseName) {
+    // TODO update_verse needs to also change the lyrics for the song such that
+    // the song can be sent to the db and it's lyrics will actually change. Or we
+    // could have the update_song_in_db function recreate the lyrics from the new
+    // verse layout. But I do feel like it belongs here more.
+    pub fn update_verse(
+        &mut self,
+        index: usize,
+        verse: VerseName,
+        lyric: String,
+    ) {
         if let Some(verses) = self.verses.as_mut() {
             if let Some(old_verse) = verses.get_mut(index) {
-                *old_verse = verse;
+                if let Some(verse_map) = self.verse_map.as_mut() {
+                    if let Some(old_lyric) = verse_map.get_mut(&verse)
+                    {
+                        *old_lyric = lyric;
+                        *old_verse = verse;
+                    }
+                }
             }
+        }
+
+        if let Some(verses) = &self.verses {
+            let mut new_lyrics = String::new();
+
+            for verse in verses {
+                let Some(lyrics) = self.get_lyric(verse) else {
+                    return;
+                };
+
+                let verse_name = match verse {
+                    VerseName::Verse { number } => {
+                        format!("Verse {number}")
+                    }
+                    VerseName::PreChorus { number } => {
+                        format!("Pre-Chorus {number}")
+                    }
+                    VerseName::Chorus { number } => {
+                        format!("Chorus {number}")
+                    }
+                    VerseName::PostChorus { number } => {
+                        format!("Post-Chorus {number}")
+                    }
+                    VerseName::Bridge { number } => {
+                        format!("Bridge {number}")
+                    }
+                    VerseName::Intro { number } => {
+                        format!("Intro {number}")
+                    }
+                    VerseName::Outro { number } => {
+                        format!("Outro {number}")
+                    }
+                    VerseName::Instrumental { number } => {
+                        format!("Instrumental {number}")
+                    }
+                    VerseName::Other { number } => {
+                        format!("Other {number}")
+                    }
+                };
+
+                new_lyrics.push_str(&verse_name);
+                new_lyrics.push_str("\n");
+                new_lyrics.push_str(&lyrics);
+                new_lyrics.push_str("\n");
+                new_lyrics.push_str("\n");
+            }
+
+            debug!(
+                same = self.lyrics == Some(new_lyrics.clone()),
+                old_lyrics = self.lyrics,
+                new_lyrics
+            );
+            self.lyrics = Some(new_lyrics);
         }
     }
 }

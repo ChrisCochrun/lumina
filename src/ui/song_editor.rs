@@ -367,9 +367,14 @@ impl SongEditor {
                             verse_editor::Action::UpdateVerse(
                                 verse,
                             ) => {
-                                if let Some(song) = self.song.as_mut()
+                                if let Some(mut song) =
+                                    self.song.clone()
                                 {
-                                    song.update_verse(index, verse);
+                                    let (verse, lyric) = verse;
+                                    song.update_verse(
+                                        index, verse, lyric,
+                                    );
+                                    return self.update_song(song);
                                 }
                             }
                             verse_editor::Action::None => (),
