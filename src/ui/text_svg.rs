@@ -14,6 +14,7 @@ use cosmic::{
     prelude::*,
     widget::{Image, image::Handle},
 };
+use rapidhash::v3::rapidhash_v3;
 use rayon::str::ParallelString;
 use resvg::{
     tiny_skia::{self, Pixmap},
@@ -251,9 +252,9 @@ impl TextSvg {
     pub fn build(mut self) -> Self {
         // debug!("starting...");
 
-        // let mut path = dirs::data_local_dir().unwrap();
-        // path.push(PathBuf::from("lumina"));
-        // path.push(PathBuf::from("temp"));
+        let mut path = dirs::data_local_dir().unwrap();
+        path.push(PathBuf::from("lumina"));
+        path.push(PathBuf::from("temp"));
 
         let mut final_svg = String::with_capacity(1024);
 
@@ -322,16 +323,16 @@ impl TextSvg {
         //     text
         // ));
 
-        // let hashed_title = rapidhash_v3(final_svg.as_bytes());
-        // path.push(PathBuf::from(hashed_title.to_string()));
-        // path.set_extension("png");
+        let hashed_title = rapidhash_v3(final_svg.as_bytes());
+        path.push(PathBuf::from(hashed_title.to_string()));
+        path.set_extension("png");
 
-        // if path.exists() {
-        //     // debug!("cached");
-        //     let handle = Handle::from_path(path);
-        //     self.handle = Some(handle);
-        //     return self;
-        // }
+        if path.exists() {
+            // debug!("cached");
+            let handle = Handle::from_path(path);
+            self.handle = Some(handle);
+            return self;
+        }
 
         // debug!("text string built...");
         let resvg_tree = Tree::from_data(
@@ -349,7 +350,9 @@ impl TextSvg {
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
-        // let _ = pixmap.save_png(&path);
+        if let Err(e) = pixmap.save_png(&path) {
+            error!(?e, "Couldn't save a copy of the text");
+        };
 
         // debug!("saved");
         // let handle = Handle::from_path(path);
