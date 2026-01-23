@@ -528,11 +528,16 @@ order",
             vec![]
         };
 
-        let verse_options =
-            container(row(verse_chips).spacing(space_s))
-                .padding(space_m)
-                .width(Length::Fill)
-                .class(theme::Container::Primary);
+        let verse_options = container(
+            scrollable(row(verse_chips).spacing(space_s)).direction(
+                Direction::Horizontal(
+                    Scrollbar::new().spacing(space_s),
+                ),
+            ),
+        )
+        .padding(space_s)
+        .width(Length::Fill)
+        .class(theme::Container::Primary);
 
         let verse_order_items: Vec<Element<Message>> =
             if let Some(song) = &self.song {
@@ -572,29 +577,25 @@ order",
                 vec![]
             };
 
-        let verse_order =
-            container(row(verse_order_items).spacing(space_s))
-                .padding(space_m)
-                .width(Length::Fill)
-                .class(theme::Container::Primary);
+        let verse_order = container(
+            scrollable(row(verse_order_items).spacing(space_s))
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .spacing(space_s),
+        )
+        .padding(space_s)
+        .width(Length::Fill)
+        .class(theme::Container::Primary);
 
         let verse_order = container(
-            column![verse_order, verse_options].spacing(space_m),
+            column![verse_order, verse_options].spacing(space_s),
         )
         .padding(space_s)
         .class(theme::Container::Card);
 
-        let verse_order_text: Element<Message> =
-            if let Some(song) = &self.song {
-                if let Some(vo) = &song.verse_order {
-                    text(vo.clone().into_iter().collect::<String>())
-                        .into()
-                } else {
-                    text("").into()
-                }
-            } else {
-                text("").into()
-            };
+        let verse_label = text("Verse Order");
+
+        let verse_order =
+            column![verse_label, verse_order].spacing(space_s);
 
         let lyric_title = text::heading("Lyrics");
         let lyric_input = column![
@@ -632,12 +633,10 @@ order",
         column![
             title_input,
             author_input,
-            verse_input,
-            verse_order_text,
             verse_order,
             verse_scroller
         ]
-        .spacing(25)
+        .spacing(space_m)
         .width(Length::FillPortion(2))
         .into()
     }
@@ -808,7 +807,10 @@ order",
 
 fn verse_chip(verse: VerseName) -> Element<'static, ()> {
     let cosmic::cosmic_theme::Spacing {
-        space_s, space_m, ..
+        space_s,
+        space_m,
+        space_xxs,
+        ..
     } = theme::spacing();
 
     let (
@@ -851,7 +853,9 @@ fn verse_chip(verse: VerseName) -> Element<'static, ()> {
     text(name)
         .apply(container)
         .padding(
-            Padding::new(space_s.into()).right(space_m).left(space_m),
+            Padding::new(space_xxs.into())
+                .right(space_s)
+                .left(space_s),
         )
         .class(theme::Container::Custom(Box::new(move |t| {
             container::Style::default()
