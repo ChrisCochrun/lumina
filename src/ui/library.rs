@@ -816,6 +816,8 @@ impl<'a> Library {
     }
 
     pub fn view(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing { space_s, .. } =
+            cosmic::theme::spacing();
         let song_library = self.library_item(&self.song_library);
         let image_library = self.library_item(&self.image_library);
         let video_library = self.library_item(&self.video_library);
@@ -832,7 +834,7 @@ impl<'a> Library {
         ]
         .height(Length::Fill)
         .padding(10)
-        .spacing(10);
+        .spacing(space_s);
         let library_dnd = dnd_destination(
             library_column,
             vec![

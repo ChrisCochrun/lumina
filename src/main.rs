@@ -1572,6 +1572,12 @@ impl cosmic::Application for App {
 
     // Main window view
     fn view(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_xs,
+            space_s,
+            ..
+        } = cosmic::theme::spacing();
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
 
@@ -1635,7 +1641,7 @@ impl cosmic::Application for App {
         .spacing(3);
 
         let service_list = Container::new(self.service_list())
-            .padding(5)
+            .padding([space_s, space_s, space_s, space_none])
             .width(Length::FillPortion(2));
 
         let library = if self.library_open {
@@ -1649,7 +1655,7 @@ impl cosmic::Application for App {
                 )
                 .style(nav_bar_style),
             )
-            .padding(5)
+            .padding(space_s)
             .width(Length::FillPortion(2))
         } else {
             Container::new(horizontal_space().width(0))
@@ -1742,7 +1748,8 @@ impl cosmic::Application for App {
                     container(Space::new(0, 0))
                 },
                 main_area.width(Length::FillPortion(4))
-            ],
+            ]
+            .spacing(space_none),
             preview_bar
         ];
 
