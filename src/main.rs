@@ -1734,10 +1734,7 @@ impl cosmic::Application for App {
 
         let main_area = self.editor_mode.as_ref().map_or_else(
             || Container::new(service_row).center_y(Length::Fill),
-            |_| {
-                container(editor)
-                    .padding(cosmic::theme::spacing().space_xxl)
-            },
+            |_| container(editor).padding(space_s),
         );
 
         let column = column![
