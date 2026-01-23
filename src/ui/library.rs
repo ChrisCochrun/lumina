@@ -481,10 +481,7 @@ impl<'a> Library {
                     Task::future(self.db.acquire()).and_then(
                         move |conn| {
                             Task::perform(
-                                update_song_in_db(
-                                    song.to_owned(),
-                                    conn,
-                                ),
+                                update_song_in_db(&song, conn),
                                 |r| match r {
                                     Ok(_) => Message::SongChanged,
                                     Err(e) => {

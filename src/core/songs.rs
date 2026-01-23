@@ -648,13 +648,13 @@ pub async fn add_song_to_db(
 }
 
 pub async fn update_song_in_db(
-    item: Song,
+    item: &Song,
     db: PoolConnection<Sqlite>,
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
     let verse_order = {
-        if let Some(vo) = item.verse_order {
+        if let Some(vo) = item.verse_order.clone() {
             vo.into_iter()
                 .map(|mut s| {
                     s.push(' ');
@@ -668,10 +668,12 @@ pub async fn update_song_in_db(
 
     let audio = item
         .audio
+        .as_ref()
         .map(|a| a.to_str().unwrap_or_default().to_string());
 
     let background = item
         .background
+        .as_ref()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
     // let text_alignment = item.text_alignment.map(|ta| match ta {
