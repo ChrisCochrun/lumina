@@ -1,18 +1,27 @@
-use std::{cell::RefCell, io, path::PathBuf, rc::Rc, sync::Arc};
+use std::{
+    cell::RefCell,
+    fs::File,
+    io::{self, Read},
+    path::PathBuf,
+    rc::Rc,
+    sync::{Arc, LazyLock},
+};
 
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
-        Background as ContainerBackground, Border, Color, Length,
-        Padding, Vector, alignment::Vertical,
-        clipboard::mime::AsMimeTypes, color,
+        Background as ContainerBackground, Border, Color, Font,
+        Length, Padding, Vector, alignment::Vertical,
+        clipboard::mime::AsMimeTypes, color, font,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
         column, row,
         scrollable::{Direction, Scrollbar},
+        stack,
+        text_input::{Icon, Side},
         vertical_rule,
     },
     theme,
@@ -57,6 +66,8 @@ pub struct SongEditor {
     author: String,
     audio: PathBuf,
     font_size: usize,
+    font_size_open: bool,
+    font_selector_open: bool,
     verse_order: String,
     pub lyrics: text_editor::Content,
     editing: bool,
@@ -98,6 +109,8 @@ pub enum Message {
     OpenStroke,
     CloseStroke,
     VerseEditorMessage((usize, verse_editor::Message)),
+    FontSizeOpen(bool),
+    FontSelectorOpen(bool),
 }
 
 impl SongEditor {
@@ -150,6 +163,8 @@ impl SongEditor {
             font: "".into(),
             font_size: 60,
             font_sizes: combo_box::State::new(font_sizes),
+            font_size_open: false,
+            font_selector_open: false,
             verse_order: "".into(),
             lyrics: text_editor::Content::new(),
             editing: false,
@@ -173,6 +188,8 @@ impl SongEditor {
                 self.song = Some(song.clone());
                 let song_slides = song.clone().to_slides();
                 self.title = song.title;
+                self.font_size_open = false;
+                self.font_selector_open = false;
                 if let Some(font) = song.font {
                     self.font = font;
                 }
@@ -359,6 +376,12 @@ impl SongEditor {
                         }
                     }
                 }
+            }
+            Message::FontSizeOpen(open) => {
+                self.font_size_open = open;
+            }
+            Message::FontSelectorOpen(open) => {
+                self.font_selector_open = open;
             }
             Message::None => (),
         }
@@ -643,6 +666,7 @@ order",
 
     fn toolbar(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
+            space_none,
             space_xxs,
             space_xs,
             space_s,
@@ -650,6 +674,7 @@ order",
             space_l,
             space_xl,
             space_xxl,
+            space_xxxl,
             ..
         } = theme::spacing();
 
@@ -660,29 +685,63 @@ order",
             None
         };
         let font_selector = tooltip(
-            combo_box(
-                &self.fonts_combo,
-                "Font",
-                Some(selected_font),
-                Message::ChangeFont,
-            )
-            .width(300),
+            stack![
+                combo_box(
+                    &self.fonts_combo,
+                    "Font",
+                    Some(selected_font),
+                    Message::ChangeFont,
+                )
+                .on_open(Message::FontSelectorOpen(true))
+                .on_close(Message::FontSelectorOpen(false))
+                .width(300),
+                container(if self.font_selector_open {
+                    Element::from(horizontal_space())
+                } else {
+                    Element::from(
+                        icon::from_name("arrow-down").size(space_m),
+                    )
+                })
+                .padding([
+                    space_none, space_xxs, space_none, space_none
+                ])
+                .height(Length::Fill)
+                .align_right(Length::Fill)
+                .align_y(Vertical::Center)
+            ],
             "Font used in the song",
             tooltip::Position::Bottom,
         )
         .gap(10);
         let font_size = tooltip(
-            combo_box(
-                &self.font_sizes,
-                "Font Size",
-                selected_font_size,
-                |size| {
-                    Message::ChangeFontSize(
-                        size.parse().expect("Should be a number"),
+            stack![
+                combo_box(
+                    &self.font_sizes,
+                    "Font Size",
+                    selected_font_size,
+                    |size| {
+                        Message::ChangeFontSize(
+                            size.parse().expect("Should be a number"),
+                        )
+                    },
+                )
+                .on_open(Message::FontSizeOpen(true))
+                .on_close(Message::FontSizeOpen(false))
+                .width(space_xxxl),
+                container(if self.font_size_open {
+                    Element::from(horizontal_space())
+                } else {
+                    Element::from(
+                        icon::from_name("arrow-down").size(space_m),
                     )
-                },
-            )
-            .width(theme::active().cosmic().space_xxl()),
+                })
+                .padding([
+                    space_none, space_xxs, space_none, space_none
+                ])
+                .height(Length::Fill)
+                .align_right(Length::Fill)
+                .align_y(Vertical::Center)
+            ],
             "Font size",
             tooltip::Position::Bottom,
         )
