@@ -5,6 +5,8 @@
 [[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
 
 This is necessary so that the entire song gets changed and we can propogate those changes then back to the db.
+
+There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * TODO [#A] Need to fix tests now that the basic app is working
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
