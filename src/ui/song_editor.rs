@@ -1,28 +1,22 @@
 use std::{
-    cell::RefCell,
-    fs::File,
     io::{self, Read},
     path::PathBuf,
-    rc::Rc,
-    sync::{Arc, LazyLock},
+    sync::Arc,
 };
 
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
-        Background as ContainerBackground, Border, Color, Font,
-        Length, Padding, Vector, alignment::Vertical,
-        clipboard::mime::AsMimeTypes, color, font,
+        Background as ContainerBackground, Border, Color, Length,
+        Padding, Vector, alignment::Vertical, color,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
         column, row,
         scrollable::{Direction, Scrollbar},
-        stack,
-        text_input::{Icon, Side},
-        vertical_rule,
+        stack, vertical_rule,
     },
     theme,
     widget::{
@@ -71,7 +65,7 @@ pub struct SongEditor {
     verse_order: String,
     pub lyrics: text_editor::Content,
     editing: bool,
-    editing_verses_order: bool,
+    editing_verse_order: bool,
     background: Option<Background>,
     video: Option<Video>,
     ccli: String,
@@ -111,6 +105,7 @@ pub enum Message {
     VerseEditorMessage((usize, verse_editor::Message)),
     FontSizeOpen(bool),
     FontSelectorOpen(bool),
+    EditVerseOrder,
 }
 
 impl SongEditor {
@@ -179,7 +174,7 @@ impl SongEditor {
             stroke_size: 0,
             stroke_open: false,
             verses: None,
-            editing_verses_order: false,
+            editing_verse_order: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -190,6 +185,7 @@ impl SongEditor {
                 self.title = song.title;
                 self.font_size_open = false;
                 self.font_selector_open = false;
+                self.editing_verse_order = false;
                 if let Some(font) = song.font {
                     self.font = font;
                 }
@@ -388,6 +384,9 @@ impl SongEditor {
             Message::FontSelectorOpen(open) => {
                 self.font_selector_open = open;
             }
+            Message::EditVerseOrder => {
+                self.editing_verse_order = !self.editing_verse_order;
+            }
             Message::None => (),
         }
         Action::None
@@ -478,14 +477,9 @@ impl SongEditor {
 
     fn left_column(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
-            space_none,
-            space_xxs,
-            space_xs,
             space_s,
             space_m,
             space_l,
-            space_xl,
-            space_xxl,
             ..
         } = theme::spacing();
 
@@ -497,13 +491,13 @@ impl SongEditor {
             .on_input(Message::ChangeAuthor)
             .label("Song Author");
 
-        let verse_input = text_input(
-            "Verse
-order",
-            &self.verse_order,
-        )
-        .label("Verse Order")
-        .on_input(Message::ChangeVerseOrder);
+        //         let verse_input = text_input(
+        //             "Verse
+        // order",
+        //             &self.verse_order,
+        //         )
+        //         .label("Verse Order")
+        //         .on_input(Message::ChangeVerseOrder);
 
         let verse_chips: Vec<Element<Message>> = if let Some(song) =
             &self.song
@@ -556,6 +550,14 @@ order",
             vec![]
         };
 
+        let verse_chips_edit_toggle =
+            button::icon(if self.editing_verse_order {
+                icon::from_name("arrow-up")
+            } else {
+                icon::from_name("arrow-down")
+            })
+            .on_press(Message::EditVerseOrder);
+
         let verse_options = container(
             scrollable(row(verse_chips).spacing(space_s)).direction(
                 Direction::Horizontal(
@@ -605,17 +607,27 @@ order",
                 vec![]
             };
 
-        let verse_order = container(
+        let verse_order = container(row![
             scrollable(row(verse_order_items).spacing(space_s))
                 .direction(Direction::Horizontal(Scrollbar::new()))
                 .spacing(space_s),
-        )
+            horizontal_space(),
+            verse_chips_edit_toggle
+        ])
         .padding(space_s)
         .width(Length::Fill)
         .class(theme::Container::Primary);
 
         let verse_order = container(
-            column![verse_order, verse_options].spacing(space_s),
+            column![
+                verse_order,
+                if self.editing_verse_order {
+                    Element::from(verse_options)
+                } else {
+                    Element::from(horizontal_space())
+                }
+            ]
+            .spacing(space_s),
         )
         .padding(space_s)
         .class(theme::Container::Card);
@@ -673,12 +685,9 @@ order",
         let cosmic::cosmic_theme::Spacing {
             space_none,
             space_xxs,
-            space_xs,
             space_s,
             space_m,
             space_l,
-            space_xl,
-            space_xxl,
             space_xxxl,
             ..
         } = theme::spacing();
@@ -921,7 +930,7 @@ fn verse_chip(verse: VerseName) -> Element<'static, ()> {
                 .right(space_s)
                 .left(space_s),
         )
-        .class(theme::Container::Custom(Box::new(move |t| {
+        .class(theme::Container::Custom(Box::new(move |_t| {
             container::Style::default()
                 .background(ContainerBackground::Color(
                     background_color,

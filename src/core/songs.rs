@@ -710,7 +710,12 @@ impl Song {
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
         self.verse_map
             .as_ref()
-            .map(|verse_map| verse_map.get(verse).cloned())
+            .map(|verse_map| {
+                verse_map
+                    .get(verse)
+                    .cloned()
+                    .map(|lyric| lyric.trim_end().to_string())
+            })
             .flatten()
     }
 
@@ -810,15 +815,10 @@ impl Song {
         verse: VerseName,
         lyric: String,
     ) {
+        self.set_lyrics(&verse, lyric);
         if let Some(verses) = self.verses.as_mut() {
             if let Some(old_verse) = verses.get_mut(index) {
-                if let Some(verse_map) = self.verse_map.as_mut() {
-                    if let Some(old_lyric) = verse_map.get_mut(&verse)
-                    {
-                        *old_lyric = lyric;
-                        *old_verse = verse;
-                    }
-                }
+                *old_verse = verse;
             }
         }
 
