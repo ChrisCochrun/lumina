@@ -43,6 +43,7 @@ tar = "0.4.44"
 zstd = "0.13.3"
 fastrand = "2.3.0"
 obws = "0.14.0"
+derive_more = { version = "2.1.1", features = ["debug"] }
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
 

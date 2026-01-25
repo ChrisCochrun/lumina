@@ -20,12 +20,14 @@ use cosmic::{
     },
     theme,
     widget::{
-        RcElementWrapper, button, color_picker, combo_box, container,
-        dnd_destination, dnd_source, dropdown, horizontal_space,
-        icon, progress_bar, scrollable, text, text_editor,
-        text_input, tooltip,
+        ColorPickerModel, RcElementWrapper, button,
+        color_picker::{self, ColorPickerUpdate},
+        combo_box, container, dnd_destination, dnd_source, dropdown,
+        horizontal_space, icon, popover, progress_bar, scrollable,
+        text, text_editor, text_input, tooltip,
     },
 };
+use derive_more::Debug;
 use dirs::font_dir;
 use iced_video_player::Video;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -74,7 +76,10 @@ pub struct SongEditor {
     stroke_sizes: combo_box::State<i32>,
     stroke_size: i32,
     stroke_open: bool,
+    #[debug(skip)]
+    stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
+    stroke_color_picker_open: bool,
 }
 
 pub enum Action {
@@ -100,12 +105,14 @@ pub enum Message {
     ChangeAuthor(String),
     PauseVideo,
     UpdateStrokeSize(i32),
+    UpdateStrokeColor(ColorPickerUpdate),
     OpenStroke,
     CloseStroke,
     VerseEditorMessage((usize, verse_editor::Message)),
     FontSizeOpen(bool),
     FontSelectorOpen(bool),
     EditVerseOrder,
+    OpenStrokeColorPicker,
 }
 
 impl SongEditor {
@@ -173,6 +180,13 @@ impl SongEditor {
             stroke_sizes: combo_box::State::new(stroke_sizes),
             stroke_size: 0,
             stroke_open: false,
+            stroke_color_model: ColorPickerModel::new(
+                "hex",
+                "rgb",
+                Some(Color::BLACK),
+                Some(Color::BLACK),
+            ),
+            stroke_color_picker_open: false,
             verses: None,
             editing_verse_order: false,
         }
@@ -186,6 +200,7 @@ impl SongEditor {
                 self.font_size_open = false;
                 self.font_selector_open = false;
                 self.editing_verse_order = false;
+                self.stroke_color_picker_open = false;
                 if let Some(font) = song.font {
                     self.font = font;
                 }
@@ -334,6 +349,12 @@ impl SongEditor {
                     return self.update_song(song);
                 }
             }
+            Message::UpdateStrokeColor(update) => {
+                debug!(color = ?self.stroke_color_model.get_applied_color());
+                return Action::Task(
+                    self.stroke_color_model.update(update),
+                );
+            }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);
             }
@@ -346,6 +367,10 @@ impl SongEditor {
             }
             Message::CloseStroke => {
                 self.stroke_open = false;
+            }
+            Message::OpenStrokeColorPicker => {
+                self.stroke_color_picker_open =
+                    !self.stroke_color_picker_open;
             }
             Message::VerseEditorMessage((index, message)) => {
                 if let Some(verses) = self.verses.as_mut() {
@@ -688,6 +713,7 @@ impl SongEditor {
             space_s,
             space_m,
             space_l,
+            space_xl,
             space_xxxl,
             ..
         } = theme::spacing();
@@ -790,11 +816,33 @@ impl SongEditor {
         // )
         // .width(theme::active().cosmic().space_xxl());
 
-        let stroke_color_picker = color_picker::color_button(
-            Some(Message::None),
-            Some(Color::BLACK),
+        let stroke_color_button = color_picker::color_button(
+            Some(Message::OpenStrokeColorPicker),
+            self.stroke_color_model.get_applied_color(),
             Length::Fixed(50.0),
-        );
+        )
+        .width(space_l)
+        .height(space_l);
+
+        let mut stroke_color_button = popover(stroke_color_button)
+            .modal(false)
+            .position(popover::Position::Bottom)
+            .on_close(Message::OpenStrokeColorPicker);
+        if self.stroke_color_picker_open {
+            let stroke_color_picker = self
+                .stroke_color_model
+                .builder(Message::UpdateStrokeColor)
+                .height(Length::Fixed(200.0))
+                .width(Length::Fixed(200.0))
+                .build("Recent Colors", "Copy", "Copied")
+                .apply(container)
+                .width(Length::Fixed(230.0))
+                .height(Length::Fixed(400.0))
+                .class(theme::Container::Secondary);
+
+            stroke_color_button =
+                stroke_color_button.popup(stroke_color_picker);
+        }
 
         let background_selector = button::icon(
             icon::from_name("folder-pictures-symbolic").scale(2),
@@ -819,7 +867,7 @@ impl SongEditor {
             vertical_rule(1).height(space_l),
             stroke_size_selector,
             text::body("Stroke Color:"),
-            stroke_color_picker,
+            stroke_color_button,
             vertical_rule(1).height(space_l),
             horizontal_space(),
             background_selector
