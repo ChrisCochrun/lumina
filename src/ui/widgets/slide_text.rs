@@ -4,6 +4,7 @@ use cosmic::iced::advanced::widget::{self, Widget};
 use cosmic::iced::border;
 use cosmic::iced::mouse;
 use cosmic::iced::{Color, Element, Length, Rectangle, Size};
+use cosmic::iced_wgpu::Primitive;
 use cosmic::iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 
 pub struct SlideText {
@@ -60,6 +61,8 @@ where
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
+        renderer
+            .draw_primitive(layout.bounds(), TextPrimitive::new());
         renderer.fill_quad(
             renderer::Quad {
                 bounds: layout.bounds(),
@@ -80,5 +83,41 @@ where
 {
     fn from(slide_text: SlideText) -> Self {
         Self::new(slide_text)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct TextPrimitive {
+    text_id: u64,
+    size: (u32, u32),
+}
+
+impl TextPrimitive {
+    pub fn new() -> Self {
+        todo!()
+    }
+}
+
+impl Primitive for TextPrimitive {
+    fn prepare(
+        &self,
+        device: &cosmic::iced::wgpu::Device,
+        queue: &cosmic::iced::wgpu::Queue,
+        format: cosmic::iced::wgpu::TextureFormat,
+        storage: &mut cosmic::iced_widget::shader::Storage,
+        bounds: &Rectangle,
+        viewport: &cosmic::iced_wgpu::graphics::Viewport,
+    ) {
+        todo!()
+    }
+
+    fn render(
+        &self,
+        encoder: &mut cosmic::iced::wgpu::CommandEncoder,
+        storage: &cosmic::iced_widget::shader::Storage,
+        target: &cosmic::iced::wgpu::TextureView,
+        clip_bounds: &Rectangle<u32>,
+    ) {
+        todo!()
     }
 }
