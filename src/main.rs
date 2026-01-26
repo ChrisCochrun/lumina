@@ -3,7 +3,6 @@ use core::service_items::ServiceItem;
 use core::slide::{
     Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
 };
-use cosmic::app::context_drawer::ContextDrawer;
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::save;
@@ -941,6 +940,15 @@ impl cosmic::Application for App {
                             self.update(Message::Library(
                                 library::Message::UpdatePresentation(presentation),
                             ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presentation_editor::Action::SplitAddPresentation((first, second)) => {
+                        if self.library.is_some() {
+                            let second_task = self.update(Message::Library(library::Message::AddPresentations(Some(vec![second]))));
+                            self.update(Message::Library(library::Message::UpdatePresentation(first))).chain(second_task)
+
                         } else {
                             Task::none()
                         }

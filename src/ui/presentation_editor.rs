@@ -1,10 +1,11 @@
 use std::{
     collections::HashMap,
     io,
+    ops::{Range, RangeBounds},
     path::{Path, PathBuf},
 };
 
-use crate::core::presentations::Presentation;
+use crate::core::presentations::{PresKind, Presentation};
 use cosmic::{
     Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
@@ -17,7 +18,7 @@ use cosmic::{
         scrollable, text, text_input,
     },
 };
-use miette::IntoDiagnostic;
+use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use tracing::{debug, error, warn};
 
@@ -38,6 +39,7 @@ pub struct PresentationEditor {
 pub enum Action {
     Task(Task<Message>),
     UpdatePresentation(Presentation),
+    SplitAddPresentation((Presentation, Presentation)),
     None,
 }
 
@@ -98,10 +100,25 @@ impl PresentationEditor {
                 self.update_entire_presentation(&presentation);
                 if let Some(presentation) = self.presentation.clone()
                 {
-                    let task = Task::perform(
-                        get_all_pages(presentation.path.clone()),
-                        |pages| Message::AddSlides(pages),
-                    );
+                    let task;
+                    if let PresKind::Pdf {
+                        starting_index,
+                        ending_index,
+                    } = presentation.kind.clone()
+                    {
+                        task = Task::perform(
+                            get_pages(
+                                starting_index..=ending_index,
+                                presentation.path.clone(),
+                            ),
+                            |pages| Message::AddSlides(pages),
+                        );
+                    } else {
+                        task = Task::perform(
+                            get_pages(.., presentation.path.clone()),
+                            |pages| Message::AddSlides(pages),
+                        );
+                    };
                     return Action::Task(task);
                 }
             }
@@ -150,17 +167,34 @@ impl PresentationEditor {
                 self.update_entire_presentation(&presentation);
                 if let Some(presentation) = self.presentation.clone()
                 {
-                    let task = Task::perform(
-                        get_all_pages(presentation.path.clone()),
-                        |pages| Message::AddSlides(pages),
-                    )
-                    .chain(Task::done(Message::Update(
+                    let mut task;
+                    if let PresKind::Pdf {
+                        starting_index,
+                        ending_index,
+                    } = presentation.kind.clone()
+                    {
+                        task = Task::perform(
+                            get_pages(
+                                starting_index..=ending_index,
+                                presentation.path.clone(),
+                            ),
+                            |pages| Message::AddSlides(pages),
+                        );
+                    } else {
+                        task = Task::perform(
+                            get_pages(.., presentation.path.clone()),
+                            |pages| Message::AddSlides(pages),
+                        );
+                    };
+
+                    task = task.chain(Task::done(Message::Update(
                         presentation.clone(),
                     )));
                     return Action::Task(task);
                 }
             }
             Message::AddSlides(slides) => {
+                debug!(?slides);
                 self.slides = slides;
             }
             Message::None => (),
@@ -258,17 +292,19 @@ impl PresentationEditor {
                 self.context_menu_id = Some(index as i32);
             }
             Message::SplitBefore => {
-                if let Some(index) = self.context_menu_id {
-                    debug!("split before {index}");
-                } else {
-                    error!("split before no index");
+                if let Ok((first, second)) = self.split_before() {
+                    self.update_entire_presentation(&first);
+                    return Action::SplitAddPresentation((
+                        first, second,
+                    ));
                 }
             }
             Message::SplitAfter => {
-                if let Some(index) = self.context_menu_id {
-                    debug!("split after {index}");
-                } else {
-                    error!("split after no index");
+                if let Ok((first, second)) = self.split_after() {
+                    self.update_entire_presentation(&first);
+                    return Action::SplitAddPresentation((
+                        first, second,
+                    ));
                 }
             }
         }
@@ -458,6 +494,94 @@ impl PresentationEditor {
         });
         self.current_slide_index = Some(0);
     }
+
+    fn split_before(&self) -> Result<(Presentation, Presentation)> {
+        if let Some(index) = self.context_menu_id {
+            let Some(current_presentation) =
+                self.presentation.as_ref()
+            else {
+                return Err(miette!(
+                    "There is no current presentation"
+                ));
+            };
+            let first_presentation = Presentation {
+                id: current_presentation.id.clone(),
+                title: current_presentation.title.clone(),
+                path: current_presentation.path.clone(),
+                kind: match current_presentation.kind {
+                    PresKind::Pdf { .. } => PresKind::Pdf {
+                        starting_index: 0,
+                        ending_index: index - 1,
+                    },
+                    _ => current_presentation.kind.clone(),
+                },
+            };
+            let second_presentation = Presentation {
+                id: 0,
+                title: current_presentation.title.clone(),
+                path: current_presentation.path.clone(),
+                kind: match current_presentation.kind {
+                    PresKind::Pdf { ending_index, .. } => {
+                        PresKind::Pdf {
+                            starting_index: index,
+                            ending_index,
+                        }
+                    }
+                    _ => current_presentation.kind.clone(),
+                },
+            };
+            Ok((first_presentation, second_presentation))
+        } else {
+            error!("split before no index");
+            Err(miette!(
+                "No current index from context menu, has there been a right click on a presentation page"
+            ))
+        }
+    }
+
+    fn split_after(&self) -> Result<(Presentation, Presentation)> {
+        if let Some(index) = self.context_menu_id {
+            let Some(current_presentation) =
+                self.presentation.as_ref()
+            else {
+                return Err(miette!(
+                    "There is no current presentation"
+                ));
+            };
+            let first_presentation = Presentation {
+                id: current_presentation.id.clone(),
+                title: current_presentation.title.clone(),
+                path: current_presentation.path.clone(),
+                kind: match current_presentation.kind {
+                    PresKind::Pdf { .. } => PresKind::Pdf {
+                        starting_index: 0,
+                        ending_index: index,
+                    },
+                    _ => current_presentation.kind.clone(),
+                },
+            };
+            let second_presentation = Presentation {
+                id: 0,
+                title: current_presentation.title.clone(),
+                path: current_presentation.path.clone(),
+                kind: match current_presentation.kind {
+                    PresKind::Pdf { ending_index, .. } => {
+                        PresKind::Pdf {
+                            starting_index: index + 1,
+                            ending_index,
+                        }
+                    }
+                    _ => current_presentation.kind.clone(),
+                },
+            };
+            Ok((first_presentation, second_presentation))
+        } else {
+            error!("split before no index");
+            Err(miette!(
+                "No current index from context menu, has there been a right click on a presentation page"
+            ))
+        }
+    }
 }
 
 impl Default for PresentationEditor {
@@ -466,14 +590,19 @@ impl Default for PresentationEditor {
     }
 }
 
-async fn get_all_pages(
+async fn get_pages(
+    range: impl RangeBounds<i32>,
     presentation_path: impl AsRef<Path>,
 ) -> Option<Vec<Handle>> {
     let document = Document::open(presentation_path.as_ref()).ok()?;
     let pages = document.pages().ok()?;
     Some(
         pages
-            .filter_map(|page| {
+            .enumerate()
+            .filter_map(|(index, page)| {
+                if !range.contains(&(index as i32)) {
+                    return None;
+                };
                 let page = page.ok()?;
                 let matrix = Matrix::IDENTITY;
                 let colorspace = Colorspace::device_rgb();
