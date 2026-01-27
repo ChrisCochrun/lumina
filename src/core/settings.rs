@@ -64,14 +64,8 @@ impl Default for Settings {
     PartialEq,
     Serialize,
 )]
+#[derive(Default)]
 pub struct PersistentState {
     pub recent_files: VecDeque<PathBuf>,
 }
 
-impl Default for PersistentState {
-    fn default() -> Self {
-        Self {
-            recent_files: VecDeque::new(),
-        }
-    }
-}

@@ -40,7 +40,7 @@ impl VerseEditor {
                 self.content.perform(action);
                 let lyrics = self.content.text();
                 self.lyric = lyrics.clone();
-                let verse = self.verse_name.clone();
+                let verse = self.verse_name;
                 Action::UpdateVerse((verse, lyrics))
             }
             Message::None => Action::None,

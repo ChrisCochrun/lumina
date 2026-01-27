@@ -88,8 +88,7 @@ impl TryFrom<PathBuf> for ServiceItem {
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let ext = path
             .extension()
-            .map(|ext| ext.to_str())
-            .flatten()
+            .and_then(|ext| ext.to_str())
             .ok_or(miette::miette!(
                 "There isn't an extension on this file"
             ))?;

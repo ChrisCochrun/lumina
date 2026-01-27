@@ -1521,7 +1521,7 @@ impl cosmic::Application for App {
             Message::SaveAs(file) => {
                 debug!(?file, "saving as a file");
                 self.file = file;
-                return self.update(Message::Save);
+                self.update(Message::Save)
             }
             Message::SaveAsDialog => {
                 Task::perform(save_as_dialog(), |file| match file {
@@ -1547,14 +1547,13 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::SetObsUrl(url) => {
-                if let Some(config) = &self.config_handler {
-                    if let Err(e) = self.settings.set_obs_url(
-                        &config,
+                if let Some(config) = &self.config_handler
+                    && let Err(e) = self.settings.set_obs_url(
+                        config,
                         url::Url::parse(&url).ok(),
                     ) {
                         error!(?e, "Can't write to disk obs url")
-                    };
-                };
+                    };;
                 Task::none()
             }
             Message::SetObsConnection(url) => {
@@ -1582,7 +1581,7 @@ impl cosmic::Application for App {
     fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
             space_none,
-            space_xs,
+            
             space_s,
             ..
         } = cosmic::theme::spacing();
@@ -1724,7 +1723,7 @@ impl cosmic::Application for App {
         .spacing(20);
 
         let preview_bar = if self.editor_mode.is_none() {
-            if self.service.len() == 0 {
+            if self.service.is_empty() {
                 Container::new(horizontal_space())
             } else {
                 Container::new(
@@ -1956,13 +1955,13 @@ where
                 let visual_item = if self.hovered_dnd.is_some_and(|h| h == index) {
                     let divider = divider::horizontal::default().class(theme::Rule::custom(|t| {
                         let color = t.cosmic().accent_color();
-                        let style = cosmic::iced_widget::rule::Style {
+                        
+                        cosmic::iced_widget::rule::Style {
                             color: color.into(),
                             width: 2,
                             radius: t.cosmic().corner_radii.radius_xs.into(),
                             fill_mode: cosmic::iced_widget::rule::FillMode::Full,
-                        };
-                        style
+                        }
                     } ));
                     Container::new(column![divider, container].spacing(theme::spacing().space_s))
                 } else { container };

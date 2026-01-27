@@ -375,33 +375,31 @@ impl Presenter {
                             "updating the obs scene {:?}",
                             new_scene
                         )
+                    } else if map
+                        .insert(
+                            self.context_menu_id.unwrap(),
+                            vec![slide_actions::Action::Obs {
+                                action: ObsAction::Scene {
+                                    scene: new_scene.clone(),
+                                },
+                            }],
+                        )
+                        .is_none()
+                    {
+                        debug!(
+                            "adding the obs scene {:?}",
+                            new_scene
+                        )
                     } else {
-                        if map
-                            .insert(
-                                self.context_menu_id.unwrap(),
-                                vec![slide_actions::Action::Obs {
-                                    action: ObsAction::Scene {
-                                        scene: new_scene.clone(),
-                                    },
-                                }],
-                            )
-                            .is_none()
-                        {
-                            debug!(
-                                "adding the obs scene {:?}",
-                                new_scene
-                            )
-                        } else {
-                            debug!(
-                                "updating the obs scene {:?}",
-                                new_scene
-                            )
-                        }
+                        debug!(
+                            "updating the obs scene {:?}",
+                            new_scene
+                        )
                     }
                 } else {
                     let mut map = HashMap::new();
                     map.insert(
-                        self.context_menu_id.unwrap().clone(),
+                        self.context_menu_id.unwrap(),
                         vec![slide_actions::Action::Obs {
                             action: ObsAction::Scene {
                                 scene: new_scene.clone(),
@@ -984,15 +982,15 @@ impl Presenter {
         let item_index = self.current_item;
         let slide_index = self.current_slide_index;
 
-        if let Some(map) = &self.slide_action_map {
-            if let Some(actions) = map.get(&(item_index, slide_index))
+        if let Some(map) = &self.slide_action_map
+            && let Some(actions) = map.get(&(item_index, slide_index))
             {
                 for action in actions {
                     match action {
                         slide_actions::Action::Obs { action } => {
                             debug!("found obs slide actions");
                             if let Some(obs) = &self.obs_client {
-                                let obs = Arc::clone(&obs);
+                                let obs = Arc::clone(obs);
                                 let action = action.to_owned();
                                 let task = Task::perform(
                                     async move { action.run(obs).await },
@@ -1008,7 +1006,6 @@ impl Presenter {
                     }
                 }
             }
-        }
         Task::batch(tasks)
     }
 }

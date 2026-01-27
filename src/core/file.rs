@@ -126,7 +126,7 @@ async fn process_service_items(
     items: &Vec<ServiceItem>,
 ) -> Result<String> {
     Ok(items
-        .into_iter()
+        .iter()
         .filter_map(|item| {
             let ron = ron::ser::to_string(item);
             ron.ok()

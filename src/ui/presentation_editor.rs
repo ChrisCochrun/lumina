@@ -110,12 +110,12 @@ impl PresentationEditor {
                                 starting_index..=ending_index,
                                 presentation.path.clone(),
                             ),
-                            |pages| Message::AddSlides(pages),
+                            Message::AddSlides,
                         );
                     } else {
                         task = Task::perform(
                             get_pages(.., presentation.path.clone()),
-                            |pages| Message::AddSlides(pages),
+                            Message::AddSlides,
                         );
                     };
                     return Action::Task(task);
@@ -176,12 +176,12 @@ impl PresentationEditor {
                                 starting_index..=ending_index,
                                 presentation.path.clone(),
                             ),
-                            |pages| Message::AddSlides(pages),
+                            Message::AddSlides,
                         );
                     } else {
                         task = Task::perform(
                             get_pages(.., presentation.path.clone()),
-                            |pages| Message::AddSlides(pages),
+                            Message::AddSlides,
                         );
                     };
 
@@ -202,13 +202,11 @@ impl PresentationEditor {
                 let mut last_index =
                     self.page_count.unwrap_or_default();
                 if let Some(presentation) = self.presentation.as_ref()
-                {
-                    if let PresKind::Pdf { ending_index, .. } =
+                    && let PresKind::Pdf { ending_index, .. } =
                         presentation.kind
                     {
                         last_index = ending_index;
-                    }
-                };
+                    };
 
                 if next_index > last_index {
                     return Action::None;
@@ -247,13 +245,11 @@ impl PresentationEditor {
                 let mut first_index =
                     self.page_count.unwrap_or_default();
                 if let Some(presentation) = self.presentation.as_ref()
-                {
-                    if let PresKind::Pdf { starting_index, .. } =
+                    && let PresKind::Pdf { starting_index, .. } =
                         presentation.kind
                     {
                         first_index = starting_index;
-                    }
-                };
+                    };
 
                 if previous_index < first_index {
                     return Action::None;
@@ -525,7 +521,7 @@ impl PresentationEditor {
                 ));
             };
             let first_presentation = Presentation {
-                id: current_presentation.id.clone(),
+                id: current_presentation.id,
                 title: current_presentation.title.clone(),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {
@@ -569,7 +565,7 @@ impl PresentationEditor {
                 ));
             };
             let first_presentation = Presentation {
-                id: current_presentation.id.clone(),
+                id: current_presentation.id,
                 title: current_presentation.title.clone(),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {

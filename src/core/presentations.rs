@@ -326,42 +326,40 @@ impl Model<Presentation> {
                         path: presentation.path.clone().into(),
                         kind: if presentation.html {
                             PresKind::Html
+                        } else if let (
+                            Some(starting_index),
+                            Some(ending_index),
+                        ) = (
+                            presentation.starting_index,
+                            presentation.ending_index,
+                        ) {
+                            PresKind::Pdf {
+                                starting_index: starting_index
+                                    as i32,
+                                ending_index: ending_index as i32,
+                            }
                         } else {
-                            if let (
-                                Some(starting_index),
-                                Some(ending_index),
-                            ) = (
-                                presentation.starting_index,
-                                presentation.ending_index,
-                            ) {
-                                PresKind::Pdf {
-                                    starting_index: starting_index
-                                        as i32,
-                                    ending_index: ending_index as i32,
-                                }
-                            } else {
-                                let path =
-                                    PathBuf::from(presentation.path);
-                                if let Ok(document) =
-                                    Document::open(path.as_path())
+                            let path =
+                                PathBuf::from(presentation.path);
+                            if let Ok(document) =
+                                Document::open(path.as_path())
+                            {
+                                if let Ok(count) =
+                                    document.page_count()
                                 {
-                                    if let Ok(count) =
-                                        document.page_count()
-                                    {
-                                        let ending_index = count - 1;
-                                        PresKind::Pdf {
-                                            starting_index: 0,
-                                            ending_index,
-                                        }
-                                    } else {
-                                        PresKind::Pdf {
-                                            starting_index: 0,
-                                            ending_index: 0,
-                                        }
+                                    let ending_index = count - 1;
+                                    PresKind::Pdf {
+                                        starting_index: 0,
+                                        ending_index,
                                     }
                                 } else {
-                                    PresKind::Generic
+                                    PresKind::Pdf {
+                                        starting_index: 0,
+                                        ending_index: 0,
+                                    }
                                 }
+                            } else {
+                                PresKind::Generic
                             }
                         },
                     });

@@ -335,7 +335,7 @@ fn lyrics_to_verse(
     lyric_map.insert(verse_title, lyric);
     let mut verse_map = HashMap::new();
     for (verse_name, lyric) in lyric_map {
-        let mut verse_elements = verse_name.trim().split_whitespace();
+        let mut verse_elements = verse_name.split_whitespace();
         let verse_keyword = verse_elements.next();
         let Some(keyword) = verse_keyword else {
             return Err(miette!(
@@ -363,7 +363,7 @@ fn lyrics_to_verse(
             "Other" => VerseName::Other { number: index },
             _ => VerseName::Other { number: 99 },
         };
-        verse_list.push(verse.clone());
+        verse_list.push(verse);
         verse_map.insert(verse, lyric);
     }
 
@@ -719,13 +719,12 @@ impl Song {
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
         self.verse_map
             .as_ref()
-            .map(|verse_map| {
+            .and_then(|verse_map| {
                 verse_map
                     .get(verse)
                     .cloned()
                     .map(|lyric| lyric.trim_end().to_string())
             })
-            .flatten()
     }
 
     pub fn set_lyrics<T: Into<String>>(
@@ -734,7 +733,7 @@ impl Song {
         lyrics: T,
     ) {
         if let Some(verse_map) = self.verse_map.as_mut() {
-            verse_map.entry(verse.clone()).or_insert(lyrics.into());
+            verse_map.entry(*verse).or_insert(lyrics.into());
         }
     }
 
@@ -813,11 +812,10 @@ impl Song {
         lyric: String,
     ) {
         self.set_lyrics(&verse, lyric);
-        if let Some(verses) = self.verses.as_mut() {
-            if let Some(old_verse) = verses.get_mut(index) {
+        if let Some(verses) = self.verses.as_mut()
+            && let Some(old_verse) = verses.get_mut(index) {
                 *old_verse = verse;
             }
-        }
 
         if let Some(verses) = &self.verses {
             let mut new_lyrics = String::new();
@@ -858,10 +856,10 @@ impl Song {
                 };
 
                 new_lyrics.push_str(&verse_name);
-                new_lyrics.push_str("\n");
+                new_lyrics.push('\n');
                 new_lyrics.push_str(&lyrics);
-                new_lyrics.push_str("\n");
-                new_lyrics.push_str("\n");
+                new_lyrics.push('\n');
+                new_lyrics.push('\n');
             }
 
             debug!(

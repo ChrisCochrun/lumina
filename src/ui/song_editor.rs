@@ -250,7 +250,7 @@ impl SongEditor {
                             })
                             .unwrap_or_default()
                     },
-                    |slides| Message::UpdateSlides(slides),
+                    Message::UpdateSlides,
                 );
                 self.verses = song.verse_map.map(|vec| {
                     vec.into_iter()
@@ -374,33 +374,30 @@ impl SongEditor {
                     !self.stroke_color_picker_open;
             }
             Message::VerseEditorMessage((index, message)) => {
-                if let Some(verses) = self.verses.as_mut() {
-                    if let Some(verse) = verses.get_mut(index) {
-                        match verse.update(message) {
-                            verse_editor::Action::Task(task) => {
-                                return Action::Task(task.map(
-                                    move |m| {
-                                        Message::VerseEditorMessage((
-                                            index, m,
-                                        ))
-                                    },
-                                ));
-                            }
-                            verse_editor::Action::UpdateVerse(
-                                verse,
-                            ) => {
-                                if let Some(mut song) =
-                                    self.song.clone()
-                                {
-                                    let (verse, lyric) = verse;
-                                    song.update_verse(
-                                        index, verse, lyric,
-                                    );
-                                    return self.update_song(song);
-                                }
-                            }
-                            verse_editor::Action::None => (),
+                if let Some(verses) = self.verses.as_mut()
+                    && let Some(verse) = verses.get_mut(index)
+                {
+                    match verse.update(message) {
+                        verse_editor::Action::Task(task) => {
+                            return Action::Task(task.map(
+                                move |m| {
+                                    Message::VerseEditorMessage((
+                                        index, m,
+                                    ))
+                                },
+                            ));
                         }
+                        verse_editor::Action::UpdateVerse(verse) => {
+                            if let Some(mut song) = self.song.clone()
+                            {
+                                let (verse, lyric) = verse;
+                                song.update_verse(
+                                    index, verse, lyric,
+                                );
+                                return self.update_song(song);
+                            }
+                        }
+                        verse_editor::Action::None => (),
                     }
                 }
             }
@@ -558,7 +555,7 @@ impl SongEditor {
                 verse_map
                     .keys()
                     .map(|verse| {
-                        let verse = verse.clone();
+                        let verse = *verse;
                         let chip =
                             verse_chip(verse).map(|_| Message::None);
                         let verse_chip_wrapped =
@@ -630,13 +627,12 @@ impl SongEditor {
                     .iter()
                     .enumerate()
                     .map(|(index, verse)| {
-                        let verse = verse.clone();
+                        let verse = *verse;
                         let mut chip =
                             verse_chip(verse).map(|_| Message::None);
                         if let Some(hovered_chip) =
                             self.hovered_verse_chip
-                        {
-                            if index == hovered_chip {
+                            && index == hovered_chip {
                                 let phantom_chip = horizontal_space().width(60).height(19)
                                     .apply(container)
                                     .padding(
@@ -658,7 +654,6 @@ impl SongEditor {
                                 .spacing(space_s)
                                 .into();
                             }
-                        }
                         let verse_chip_wrapped =
                             RcElementWrapper::<Message>::new(chip);
                         Element::from(
@@ -730,7 +725,7 @@ impl SongEditor {
 
         let verse_list = if let Some(verse_list) = &self.verses {
             Element::from(
-                column(verse_list.into_iter().enumerate().map(
+                column(verse_list.iter().enumerate().map(
                     |(index, v)| {
                         v.view().map(move |message| {
                             Message::VerseEditorMessage((
@@ -984,7 +979,7 @@ impl SongEditor {
                     })
                     .unwrap_or_default()
             },
-            |slides| Message::UpdateSlides(slides),
+            Message::UpdateSlides,
         );
         Action::Task(task.chain(update_task))
     }
