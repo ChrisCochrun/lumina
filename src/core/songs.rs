@@ -109,6 +109,18 @@ impl VerseName {
     }
 }
 
+impl TryFrom<(Vec<u8>, String)> for VerseName {
+    type Error = miette::Error;
+
+    fn try_from(
+        value: (Vec<u8>, String),
+    ) -> std::result::Result<Self, Self::Error> {
+        let (data, mime) = value;
+        debug!(?mime);
+        ron::de::from_bytes(&data).into_diagnostic()
+    }
+}
+
 impl AsMimeTypes for VerseName {
     fn available(&self) -> std::borrow::Cow<'static, [String]> {
         Cow::from(vec!["application/verse".to_string()])
@@ -118,7 +130,8 @@ impl AsMimeTypes for VerseName {
         &self,
         mime_type: &str,
     ) -> Option<std::borrow::Cow<'static, [u8]>> {
-        None
+        let ron = ron::ser::to_string(self).ok()?;
+        Some(Cow::from(ron.into_bytes()))
     }
 }
 
@@ -219,11 +232,21 @@ impl FromRow<'_, SqliteRow> for Song {
             });
         };
 
+        let mut verses = vec![];
         let verse_order: String = {
-            let str: &str = row.try_get(0)?;
-            str.split(' ')
-                .map(std::string::ToString::to_string)
-                .collect()
+            let vo: &str = row.try_get(0)?;
+            if let Ok(verse_order_vec) =
+                ron::de::from_str::<Vec<VerseName>>(vo)
+            {
+                verses = verse_order_vec;
+                vo.split(' ')
+                    .map(std::string::ToString::to_string)
+                    .collect()
+            } else {
+                vo.split(' ')
+                    .map(std::string::ToString::to_string)
+                    .collect()
+            }
         };
 
         Ok(Self {
@@ -236,12 +259,7 @@ impl FromRow<'_, SqliteRow> for Song {
                 let string: String = row.try_get(11)?;
                 string
             })),
-            verse_order: Some({
-                let str: &str = row.try_get(0)?;
-                str.split(' ')
-                    .map(std::string::ToString::to_string)
-                    .collect()
-            }),
+            verse_order: Some(verse_order),
             background: {
                 let string: String = row.try_get(7)?;
                 Background::try_from(string).ok()
@@ -653,18 +671,9 @@ pub async fn update_song_in_db(
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
-    let verse_order = {
-        if let Some(vo) = item.verse_order {
-            vo.into_iter()
-                .map(|mut s| {
-                    s.push(' ');
-                    s
-                })
-                .collect::<String>()
-        } else {
-            String::new()
-        }
-    };
+    debug!(?item);
+    let verse_order =
+        ron::ser::to_string(&item.verses).into_diagnostic()?;
 
     let audio = item
         .audio

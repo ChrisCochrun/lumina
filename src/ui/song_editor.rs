@@ -79,6 +79,7 @@ pub struct SongEditor {
     #[debug(skip)]
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
+    hovered_verse_chip: Option<usize>,
     stroke_color_picker_open: bool,
 }
 
@@ -113,6 +114,8 @@ pub enum Message {
     FontSelectorOpen(bool),
     EditVerseOrder,
     OpenStrokeColorPicker,
+    ChipHovered(Option<usize>),
+    ChipDropped((usize, Vec<u8>, String)),
 }
 
 impl SongEditor {
@@ -189,6 +192,7 @@ impl SongEditor {
             stroke_color_picker_open: false,
             verses: None,
             editing_verse_order: false,
+            hovered_verse_chip: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -412,6 +416,31 @@ impl SongEditor {
             Message::EditVerseOrder => {
                 self.editing_verse_order = !self.editing_verse_order;
             }
+            Message::ChipHovered(index) => {
+                self.hovered_verse_chip = index;
+            }
+            Message::ChipDropped((index, data, mime)) => {
+                self.hovered_verse_chip = None;
+                match VerseName::try_from((data, mime)) {
+                    Ok(verse) => {
+                        if let Some(song) = self.song.as_mut() {
+                            if let Some(verses) = song.verses.as_mut()
+                            {
+                                verses.insert(index, verse);
+                                let song = song.clone();
+                                return self.update_song(song);
+                            } else {
+                                error!("No verses in this song?")
+                            }
+                        } else {
+                            error!("No song here?")
+                        }
+                    }
+                    Err(e) => {
+                        error!(?e, "Couldn't convert verse back")
+                    }
+                }
+            }
             Message::None => (),
         }
         Action::None
@@ -502,6 +531,7 @@ impl SongEditor {
 
     fn left_column(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
+            space_xxs,
             space_s,
             space_m,
             space_l,
@@ -579,65 +609,95 @@ impl SongEditor {
             button::icon(if self.editing_verse_order {
                 icon::from_name("arrow-up")
             } else {
-                icon::from_name("arrow-down")
+                icon::from_name("edit")
             })
             .on_press(Message::EditVerseOrder);
 
-        let verse_options = container(
-            scrollable(row(verse_chips).spacing(space_s)).direction(
+        let verse_options =
+            container(scrollable(row(verse_chips)).direction(
                 Direction::Horizontal(
                     Scrollbar::new().spacing(space_s),
                 ),
-            ),
-        )
-        .padding(space_s)
-        .width(Length::Fill)
-        .class(theme::Container::Primary);
+            ))
+            .padding(space_s)
+            .width(Length::Fill)
+            .class(theme::Container::Primary);
 
-        let verse_order_items: Vec<Element<Message>> =
-            if let Some(song) = &self.song {
-                if let Some(verses) = &song.verses {
-                    verses
-                        .iter()
-                        .map(|verse| {
-                            let verse = verse.clone();
-                            let chip = verse_chip(verse)
-                                .map(|_| Message::None);
-                            let verse_chip_wrapped =
-                                RcElementWrapper::<Message>::new(
-                                    chip,
-                                );
-                            Element::from(
-                                dnd_destination(
-                                    verse_chip_wrapped.clone(),
-                                    vec!["application/verse".into()],
-                                )
-                                .on_enter(|x, y, mimes| {
-                                    debug!(x, y, ?mimes);
-                                    Message::None
-                                })
-                                .on_finish(
-                                    |mime, data, action, x, y| {
-                                        debug!(mime, ?data, ?action);
-                                        Message::None
-                                    },
-                                ),
+        let verse_order_items: Vec<Element<Message>> = if let Some(
+            song,
+        ) =
+            &self.song
+        {
+            if let Some(verses) = &song.verses {
+                verses
+                    .iter()
+                    .enumerate()
+                    .map(|(index, verse)| {
+                        let verse = verse.clone();
+                        let mut chip =
+                            verse_chip(verse).map(|_| Message::None);
+                        if let Some(hovered_chip) =
+                            self.hovered_verse_chip
+                        {
+                            if index == hovered_chip {
+                                let phantom_chip = horizontal_space().width(60).height(19)
+                                    .apply(container)
+                                    .padding(
+                                        Padding::new(space_xxs.into())
+                                            .right(space_s)
+                                            .left(space_s),
+                                    )
+                                    .class(theme::Container::Custom(Box::new(move |t| {
+                                        container::Style::default()
+                                            .background(ContainerBackground::Color(
+                                                Color::from(t.cosmic().secondary.base).scale_alpha(0.5)
+                                            ))
+                                            .border(Border::default().rounded(space_m).width(2))
+                                    })));
+                                chip = row![
+                                    phantom_chip,
+                                    chip
+                                ]
+                                .spacing(space_s)
+                                .into();
+                            }
+                        }
+                        let verse_chip_wrapped =
+                            RcElementWrapper::<Message>::new(chip);
+                        Element::from(
+                            dnd_destination(
+                                verse_chip_wrapped.clone(),
+                                vec!["application/verse".into()],
                             )
-                        })
-                        .collect()
-                } else {
-                    vec![]
-                }
+                            .on_enter(move |x, y, mimes| {
+                                debug!(x, y, ?mimes);
+                                Message::ChipHovered(Some(index))
+                            })
+                            .on_leave(move || {
+                                Message::ChipHovered(None)
+                            })
+                            .on_finish(
+                                move |mime, data, action, x, y| {
+                                    debug!(mime, ?data, ?action);
+                                    Message::ChipDropped((index, data, mime))
+                                },
+                            ),
+                        )
+                    })
+                    .collect()
             } else {
                 vec![]
-            };
+            }
+        } else {
+            vec![]
+        };
 
         let verse_order = container(row![
             scrollable(row(verse_order_items).spacing(space_s))
                 .direction(Direction::Horizontal(Scrollbar::new()))
                 .spacing(space_s),
             horizontal_space(),
-            verse_chips_edit_toggle
+            verse_chips_edit_toggle.width(Length::Fixed(50.0))
         ])
         .padding(space_s)
         .width(Length::Fill)
@@ -787,6 +847,26 @@ impl SongEditor {
         )
         .gap(10);
 
+        let bold_button = tooltip(
+            button::icon(icon::from_name("format-text-bold"))
+                .on_press(Message::None),
+            "Bold",
+            tooltip::Position::Bottom,
+        );
+        let italic_button = tooltip(
+            button::icon(icon::from_name("format-text-italic"))
+                .on_press(Message::None),
+            "Italicize",
+            tooltip::Position::Bottom,
+        );
+
+        let underline_button = tooltip(
+            button::icon(icon::from_name("format-text-underline"))
+                .on_press(Message::None),
+            "Underline",
+            tooltip::Position::Bottom,
+        );
+
         let stroke_size_row = row![
             icon(
                 icon::from_path("./res/text-outline.svg".into())
@@ -864,6 +944,10 @@ impl SongEditor {
             font_selector,
             // text::body("Font Size:"),
             font_size,
+            vertical_rule(1).height(space_l),
+            bold_button,
+            italic_button,
+            underline_button,
             vertical_rule(1).height(space_l),
             stroke_size_selector,
             text::body("Stroke Color:"),
