@@ -41,9 +41,9 @@ pub async fn save(
             f.write(ron.as_bytes()).into_diagnostic()?;
         }
         Err(e) => {
-            error!("There were problems making a file i guess: {e}")
+            error!("There were problems making a file i guess: {e}");
         }
-    };
+    }
     // let list list.iter_mut().map(|item| {
     //     match item.kind {
     //         ServiceItemKind::Song(mut song) => {
@@ -83,7 +83,7 @@ pub async fn save(
             ServiceItemKind::Content(_slide) => {
                 todo!()
             }
-        };
+        }
         if let Some(file) = audio {
             let audio_file =
                 temp_dir.join(file.file_name().expect(
@@ -96,7 +96,7 @@ pub async fn save(
                 fs::File::create(&audio_file).into_diagnostic()?;
                 fs::copy(file, audio_file).into_diagnostic()?;
             }
-        };
+        }
         if let Some(file) = background {
             let background_file =
                 temp_dir.join(file.path.file_name().expect(

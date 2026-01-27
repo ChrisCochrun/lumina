@@ -38,6 +38,7 @@ pub enum Message {
 }
 
 impl ImageEditor {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             image: None,
@@ -92,6 +93,7 @@ impl ImageEditor {
         Action::None
     }
 
+    #[must_use] 
     pub fn view(&self) -> Element<Message> {
         let container = if let Some(pic) = &self.image {
             let image = widget::image(pic.path.clone());
@@ -130,6 +132,7 @@ impl ImageEditor {
         .into()
     }
 
+    #[must_use] 
     pub const fn editing(&self) -> bool {
         self.editing
     }

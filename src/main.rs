@@ -236,12 +236,12 @@ impl menu::Action for MenuAction {
 
     fn message(&self) -> Self::Message {
         match self {
-            MenuAction::New => Message::New,
-            MenuAction::Save => Message::Save,
-            MenuAction::SaveAs => Message::SaveAsDialog,
-            MenuAction::Open => Message::Open,
-            MenuAction::OpenSettings => Message::OpenSettings,
-            MenuAction::DeleteItem(index) => {
+            Self::New => Message::New,
+            Self::Save => Message::Save,
+            Self::SaveAs => Message::SaveAsDialog,
+            Self::Open => Message::Open,
+            Self::OpenSettings => Message::OpenSettings,
+            Self::DeleteItem(index) => {
                 Message::RemoveServiceItem(*index)
             }
         }
@@ -413,7 +413,7 @@ impl cosmic::Application for App {
             settings_open: false,
             settings,
             config_handler,
-            obs_connection: "".into(),
+            obs_connection: String::new(),
         };
 
         let mut batch = vec![];
@@ -723,7 +723,7 @@ impl cosmic::Application for App {
                 .search_results
                 .iter()
                 .map(|item| {
-                    let title = text::title4(item.title().clone());
+                    let title = text::title4(item.title());
                     let subtitle = text::body(item.to_string());
                     Element::from(
                         row![
@@ -1504,7 +1504,7 @@ impl cosmic::Application for App {
                 Task::perform(
                     file::save(service, file.clone()),
                     move |res| match res {
-                        Ok(_) => {
+                        Ok(()) => {
                             tracing::info!(
                                 "saving file to: {:?}",
                                 file
@@ -1552,8 +1552,8 @@ impl cosmic::Application for App {
                         config,
                         url::Url::parse(&url).ok(),
                     ) {
-                        error!(?e, "Can't write to disk obs url")
-                    };;
+                        error!(?e, "Can't write to disk obs url");
+                    }
                 Task::none()
             }
             Message::SetObsConnection(url) => {

@@ -27,6 +27,7 @@ pub enum Action {
 }
 
 impl VerseEditor {
+    #[must_use] 
     pub fn new(verse: VerseName, lyric: String) -> Self {
         Self {
             verse_name: verse,

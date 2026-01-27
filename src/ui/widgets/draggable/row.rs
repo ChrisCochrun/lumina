@@ -95,11 +95,13 @@ where
     Theme: Catalog,
 {
     /// Creates an empty [`Row`].
+    #[must_use] 
     pub fn new() -> Self {
         Self::from_vec(Vec::new())
     }
 
     /// Creates a [`Row`] with the given capacity.
+    #[must_use] 
     pub fn with_capacity(capacity: usize) -> Self {
         Self::from_vec(Vec::with_capacity(capacity))
     }
@@ -122,6 +124,7 @@ where
     ///
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
     /// call [`Row::width`] or [`Row::height`] accordingly.
+    #[must_use] 
     pub fn from_vec(
         children: Vec<Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
@@ -178,13 +181,13 @@ where
 
     /// Sets whether the contents of the [`Row`] should be clipped on
     /// overflow.
-    pub fn clip(mut self, clip: bool) -> Self {
+    pub const fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
         self
     }
 
     /// Sets the drag deadband zone of the [`Row`].
-    pub fn deadband_zone(mut self, deadband_zone: f32) -> Self {
+    pub const fn deadband_zone(mut self, deadband_zone: f32) -> Self {
         self.deadband_zone = deadband_zone;
         self
     }
@@ -254,7 +257,7 @@ where
     /// Turns the [`Row`] into a [`Wrapping`] row.
     ///
     /// The original alignment of the [`Row`] is preserved per row wrapped.
-    pub fn wrap(self) -> Wrapping<'a, Message, Theme, Renderer> {
+    pub const fn wrap(self) -> Wrapping<'a, Message, Theme, Renderer> {
         Wrapping { row: self }
     }
 
@@ -297,10 +300,9 @@ where
                 } else if cursor_x > right_threshold {
                     // Near the right edge - insert after
                     return (i + 1, DropPosition::After);
-                } else {
-                    // Middle area - swap
-                    return (i, DropPosition::Swap);
                 }
+                // Middle area - swap
+                return (i, DropPosition::Swap);
             } else if cursor_x < x {
                 // Cursor is before this child
                 return (i, DropPosition::Before);
@@ -312,8 +314,8 @@ where
     }
 }
 
-impl<'a, Message, Renderer> Default
-    for Row<'a, Message, Theme, Renderer>
+impl<Message, Renderer> Default
+    for Row<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -338,8 +340,8 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for Row<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for Row<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -811,8 +813,8 @@ pub struct Wrapping<
     row: Row<'a, Message, Theme, Renderer>,
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for Wrapping<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for Wrapping<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -1042,6 +1044,7 @@ impl Catalog for cosmic::Theme {
     }
 }
 
+#[must_use] 
 pub fn default(theme: &cosmic::Theme) -> Style {
     Style {
         scale: 1.05,

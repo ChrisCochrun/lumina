@@ -44,6 +44,7 @@ pub enum Message {
 }
 
 impl VideoEditor {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             video: None,
@@ -73,7 +74,7 @@ impl VideoEditor {
                 if let Some(video) = &mut self.video {
                     let paused = video.paused();
                     video.set_paused(!paused);
-                };
+                }
             }
             Message::Update(video) => {
                 warn!(?video);

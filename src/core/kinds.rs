@@ -46,25 +46,25 @@ impl TryFrom<PathBuf> for ServiceItemKind {
 impl ServiceItemKind {
     pub fn title(&self) -> String {
         match self {
-            ServiceItemKind::Song(song) => song.title.to_string(),
-            ServiceItemKind::Video(video) => video.title.to_string(),
-            ServiceItemKind::Image(image) => image.title.to_string(),
-            ServiceItemKind::Presentation(presentation) => {
-                presentation.title.to_string()
+            Self::Song(song) => song.title.clone(),
+            Self::Video(video) => video.title.clone(),
+            Self::Image(image) => image.title.clone(),
+            Self::Presentation(presentation) => {
+                presentation.title.clone()
             }
-            ServiceItemKind::Content(_slide) => todo!(),
+            Self::Content(_slide) => todo!(),
         }
     }
 
     pub fn to_service_item(&self) -> ServiceItem {
         match self {
-            ServiceItemKind::Song(song) => song.to_service_item(),
-            ServiceItemKind::Video(video) => video.to_service_item(),
-            ServiceItemKind::Image(image) => image.to_service_item(),
-            ServiceItemKind::Presentation(presentation) => {
+            Self::Song(song) => song.to_service_item(),
+            Self::Video(video) => video.to_service_item(),
+            Self::Image(image) => image.to_service_item(),
+            Self::Presentation(presentation) => {
                 presentation.to_service_item()
             }
-            ServiceItemKind::Content(_slide) => {
+            Self::Content(_slide) => {
                 todo!()
             }
         }

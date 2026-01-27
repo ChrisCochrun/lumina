@@ -175,21 +175,21 @@ impl menu::Action for MenuAction {
 
     fn message(&self) -> Self::Message {
         match self {
-            MenuAction::ObsSceneAssign(scene) => {
+            Self::ObsSceneAssign(scene) => {
                 Message::AssignObsScene(*scene)
             }
-            MenuAction::ObsStartStream => Message::AssignSlideAction(
+            Self::ObsStartStream => Message::AssignSlideAction(
                 slide_actions::Action::Obs {
                     action: ObsAction::StartStream,
                 },
             ),
-            MenuAction::ObsStopStream => Message::AssignSlideAction(
+            Self::ObsStopStream => Message::AssignSlideAction(
                 slide_actions::Action::Obs {
                     action: ObsAction::StopStream,
                 },
             ),
-            MenuAction::ObsStartRecord => todo!(),
-            MenuAction::ObsStopRecord => todo!(),
+            Self::ObsStartRecord => todo!(),
+            Self::ObsStopRecord => todo!(),
         }
     }
 }
@@ -271,7 +271,7 @@ impl Presenter {
         let audio = items
             .first()
             .and_then(|item| {
-                item.slides.first().map(|slide| slide.audio())
+                item.slides.first().map(super::super::core::slide::Slide::audio)
             })
             .flatten();
 
@@ -374,7 +374,7 @@ impl Presenter {
                         debug!(
                             "updating the obs scene {:?}",
                             new_scene
-                        )
+                        );
                     } else if map
                         .insert(
                             self.context_menu_id.unwrap(),
@@ -389,12 +389,12 @@ impl Presenter {
                         debug!(
                             "adding the obs scene {:?}",
                             new_scene
-                        )
+                        );
                     } else {
                         debug!(
                             "updating the obs scene {:?}",
                             new_scene
-                        )
+                        );
                     }
                 } else {
                     let mut map = HashMap::new();
@@ -414,7 +414,7 @@ impl Presenter {
                     if let Some(actions) =
                         map.get_mut(&self.context_menu_id.unwrap())
                     {
-                        actions.push(action)
+                        actions.push(action);
                     } else {
                         map.insert(
                             self.context_menu_id.unwrap(),
@@ -506,7 +506,7 @@ impl Presenter {
                 if self.slide_action_map.is_some() {
                     debug!("Found slide actions, running them");
                     tasks.push(self.run_slide_actions());
-                };
+                }
 
                 if let Some(mut new_audio) =
                     self.current_slide.audio()
@@ -1013,7 +1013,7 @@ impl Presenter {
 #[allow(clippy::unused_async)]
 async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
     match client.scenes().set_current_program_scene(&scene.id).await {
-        Ok(_) => debug!("Set scene to: {:?}", scene),
+        Ok(()) => debug!("Set scene to: {:?}", scene),
         Err(e) => error!(?e),
     }
 }

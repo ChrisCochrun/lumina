@@ -101,11 +101,13 @@ where
     Theme: Catalog,
 {
     /// Creates an empty [`Column`].
+    #[must_use] 
     pub fn new() -> Self {
         Self::from_vec(Vec::new())
     }
 
     /// Creates a [`Column`] with the given capacity.
+    #[must_use] 
     pub fn with_capacity(capacity: usize) -> Self {
         Self::from_vec(Vec::with_capacity(capacity))
     }
@@ -128,6 +130,7 @@ where
     ///
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
     /// call [`Column::width`] or [`Column::height`] accordingly.
+    #[must_use] 
     pub fn from_vec(
         children: Vec<Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
@@ -191,13 +194,13 @@ where
 
     /// Sets whether the contents of the [`Column`] should be clipped on
     /// overflow.
-    pub fn clip(mut self, clip: bool) -> Self {
+    pub const fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
         self
     }
 
     /// Sets the drag deadband zone of the [`Column`].
-    pub fn deadband_zone(mut self, deadband_zone: f32) -> Self {
+    pub const fn deadband_zone(mut self, deadband_zone: f32) -> Self {
         self.deadband_zone = deadband_zone;
         self
     }
@@ -303,10 +306,9 @@ where
                 } else if cursor_y > bottom_threshold {
                     // Near the bottom edge - insert below
                     return (i + 1, DropPosition::After);
-                } else {
-                    // Middle area - swap
-                    return (i, DropPosition::Swap);
                 }
+                // Middle area - swap
+                return (i, DropPosition::Swap);
             } else if cursor_y < y {
                 // Cursor is above this child
                 return (i, DropPosition::Before);
@@ -318,8 +320,8 @@ where
     }
 }
 
-impl<'a, Message, Renderer> Default
-    for Column<'a, Message, Theme, Renderer>
+impl<Message, Renderer> Default
+    for Column<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -344,8 +346,8 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for Column<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for Column<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -894,6 +896,7 @@ impl Catalog for cosmic::Theme {
     }
 }
 
+#[must_use] 
 pub fn default(theme: &Theme) -> Style {
     Style {
         scale: 1.05,

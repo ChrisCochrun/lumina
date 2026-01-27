@@ -21,7 +21,7 @@ pub(crate) enum Action {
 impl ObsAction {
     pub async fn run(&self, client: Arc<Client>) -> Result<()> {
         match self {
-            ObsAction::Scene { scene } => {
+            Self::Scene { scene } => {
                 warn!(?scene, "Changing obs scenes");
                 client
                     .scenes()
@@ -29,11 +29,11 @@ impl ObsAction {
                     .await
                     .into_diagnostic()?;
             }
-            ObsAction::StartStream => {
-                client.streaming().start().await.into_diagnostic()?
+            Self::StartStream => {
+                client.streaming().start().await.into_diagnostic()?;
             }
-            ObsAction::StopStream => {
-                client.streaming().stop().await.into_diagnostic()?
+            Self::StopStream => {
+                client.streaming().stop().await.into_diagnostic()?;
             }
         }
         Ok(())

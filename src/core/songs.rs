@@ -58,49 +58,50 @@ pub enum VerseName {
 }
 
 impl VerseName {
+    #[must_use] 
     pub fn get_name(&self) -> String {
         match self {
-            VerseName::Verse { number, .. } => {
+            Self::Verse { number, .. } => {
                 let mut string = "Verse ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::PreChorus { number, .. } => {
+            Self::PreChorus { number, .. } => {
                 let mut string = "Pre-Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Chorus { number, .. } => {
+            Self::Chorus { number, .. } => {
                 let mut string = "Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::PostChorus { number, .. } => {
+            Self::PostChorus { number, .. } => {
                 let mut string = "Post-Chorus ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Bridge { number, .. } => {
+            Self::Bridge { number, .. } => {
                 let mut string = "Bridge ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Intro { number, .. } => {
+            Self::Intro { number, .. } => {
                 let mut string = "Intro ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Outro { number, .. } => {
+            Self::Outro { number, .. } => {
                 let mut string = "Outro ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Instrumental { number, .. } => {
+            Self::Instrumental { number, .. } => {
                 let mut string = "Instrumental ".to_string();
                 string.push_str(&number.to_string());
                 string
             }
-            VerseName::Other { number, .. } => {
+            Self::Other { number, .. } => {
                 let mut string = "Other ".to_string();
                 string.push_str(&number.to_string());
                 string
@@ -716,6 +717,7 @@ pub async fn update_song_in_db(
 }
 
 impl Song {
+    #[must_use] 
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
         self.verse_map
             .as_ref()
@@ -787,7 +789,7 @@ impl Song {
                         }
                         continue;
                     }
-                    lyric_list.push(lyric.to_string());
+                    lyric_list.push(lyric.clone());
                 } else {
                     // error!("NOT WORKING!");
                 }

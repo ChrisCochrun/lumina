@@ -17,9 +17,10 @@ use tracing::debug;
 
 use crate::core::service_items::ServiceItem;
 
-pub fn service<'a, Message: Clone + 'static>(
-    service: &'a Vec<ServiceItem>,
-) -> Service<'a, Message> {
+#[must_use] 
+pub const fn service<Message: Clone + 'static>(
+    service: &Vec<ServiceItem>,
+) -> Service<'_, Message> {
     Service::new(service)
 }
 
@@ -34,7 +35,8 @@ pub struct Service<'a, Message> {
 }
 
 impl<'a, Message: Clone + 'static> Service<'a, Message> {
-    pub fn new(service: &'a Vec<ServiceItem>) -> Self {
+    #[must_use] 
+    pub const fn new(service: &'a Vec<ServiceItem>) -> Self {
         Self {
             service,
             drag_threshold: 8.0,
@@ -47,7 +49,7 @@ impl<'a, Message: Clone + 'static> Service<'a, Message> {
     }
 
     #[must_use]
-    pub fn drag_threshold(mut self, threshold: f32) -> Self {
+    pub const fn drag_threshold(mut self, threshold: f32) -> Self {
         self.drag_threshold = threshold;
         self
     }
@@ -203,7 +205,7 @@ impl<Message: Clone + 'static>
                                 if let Some(on_start) =
                                     self.on_start.as_ref()
                                 {
-                                    shell.publish(on_start.clone())
+                                    shell.publish(on_start.clone());
                                 }
                                 let _offset = Vector::new(
                                     left_pressed_position.x
@@ -328,7 +330,7 @@ impl<Message: Clone + 'static>
 impl<'a, Message: Clone + 'static> From<Service<'a, Message>>
     for Element<'a, Message>
 {
-    fn from(e: Service<'a, Message>) -> Element<'a, Message> {
+    fn from(e: Service<'a, Message>) -> Self {
         Element::new(e)
     }
 }

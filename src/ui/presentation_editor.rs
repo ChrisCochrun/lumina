@@ -73,18 +73,19 @@ impl menu::Action for MenuAction {
 
     fn message(&self) -> Self::Message {
         match self {
-            MenuAction::SplitBefore => Message::SplitBefore,
-            MenuAction::SplitAfter => Message::SplitAfter,
+            Self::SplitBefore => Message::SplitBefore,
+            Self::SplitAfter => Message::SplitAfter,
         }
     }
 }
 
 impl PresentationEditor {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             presentation: None,
             document: None,
-            title: "".to_string(),
+            title: String::new(),
             editing: false,
             current_slide: None,
             current_slide_index: None,
@@ -117,7 +118,7 @@ impl PresentationEditor {
                             get_pages(.., presentation.path.clone()),
                             Message::AddSlides,
                         );
-                    };
+                    }
                     return Action::Task(task);
                 }
             }
@@ -183,7 +184,7 @@ impl PresentationEditor {
                             get_pages(.., presentation.path.clone()),
                             Message::AddSlides,
                         );
-                    };
+                    }
 
                     task = task.chain(Task::done(Message::Update(
                         presentation.clone(),
@@ -206,7 +207,7 @@ impl PresentationEditor {
                         presentation.kind
                     {
                         last_index = ending_index;
-                    };
+                    }
 
                 if next_index > last_index {
                     return Action::None;
@@ -249,7 +250,7 @@ impl PresentationEditor {
                         presentation.kind
                     {
                         first_index = starting_index;
-                    };
+                    }
 
                 if previous_index < first_index {
                     return Action::None;
@@ -618,7 +619,7 @@ async fn get_pages(
             .filter_map(|(index, page)| {
                 if !range.contains(&(index as i32)) {
                     return None;
-                };
+                }
                 let page = page.ok()?;
                 let matrix = Matrix::IDENTITY;
                 let colorspace = Colorspace::device_rgb();

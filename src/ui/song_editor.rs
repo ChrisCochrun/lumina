@@ -161,20 +161,20 @@ impl SongEditor {
             song: None,
             font_db,
             fonts_combo: combo_box::State::new(fonts),
-            title: "".into(),
-            font: "".into(),
+            title: String::new(),
+            font: String::new(),
             font_size: 60,
             font_sizes: combo_box::State::new(font_sizes),
             font_size_open: false,
             font_selector_open: false,
-            verse_order: "".into(),
+            verse_order: String::new(),
             lyrics: text_editor::Content::new(),
             editing: false,
-            author: "".into(),
+            author: String::new(),
             audio: PathBuf::new(),
             background: None,
             video: None,
-            ccli: "".to_string(),
+            ccli: String::new(),
             slide_state: SlideEditor::default(),
             song_slides: None,
             stroke_sizes: combo_box::State::new(stroke_sizes),
@@ -340,7 +340,7 @@ impl SongEditor {
                 if let Some(video) = &mut self.video {
                     let paused = video.paused();
                     video.set_paused(!paused);
-                };
+                }
             }
             Message::UpdateStrokeSize(size) => {
                 self.stroke_size = size;
@@ -423,15 +423,14 @@ impl SongEditor {
                                 verses.insert(index, verse);
                                 let song = song.clone();
                                 return self.update_song(song);
-                            } else {
-                                error!("No verses in this song?")
                             }
+                            error!("No verses in this song?");
                         } else {
-                            error!("No song here?")
+                            error!("No song here?");
                         }
                     }
                     Err(e) => {
-                        error!(?e, "Couldn't convert verse back")
+                        error!(?e, "Couldn't convert verse back");
                     }
                 }
             }
@@ -557,7 +556,7 @@ impl SongEditor {
                     .map(|verse| {
                         let verse = *verse;
                         let chip =
-                            verse_chip(verse).map(|_| Message::None);
+                            verse_chip(verse).map(|()| Message::None);
                         let verse_chip_wrapped =
                             RcElementWrapper::<Message>::new(chip);
                         Element::from(
@@ -629,7 +628,7 @@ impl SongEditor {
                     .map(|(index, verse)| {
                         let verse = *verse;
                         let mut chip =
-                            verse_chip(verse).map(|_| Message::None);
+                            verse_chip(verse).map(|()| Message::None);
                         if let Some(hovered_chip) =
                             self.hovered_verse_chip
                             && index == hovered_chip {
@@ -658,7 +657,7 @@ impl SongEditor {
                             RcElementWrapper::<Message>::new(chip);
                         Element::from(
                             dnd_destination(
-                                verse_chip_wrapped.clone(),
+                                verse_chip_wrapped,
                                 vec!["application/verse".into()],
                             )
                             .on_enter(move |x, y, mimes| {

@@ -55,13 +55,13 @@ pub async fn link_to_online_song(
         let parts = link
             .to_string()
             .split('/')
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<String>>();
         let link = format!("https://www.lyrics.com/lyric/{link}");
         dbg!(&link);
         let _id = &parts[0];
-        let author = &parts[1].replace("+", " ");
-        let title = &parts[2].replace("+", " ");
+        let author = &parts[1].replace('+', " ");
+        let title = &parts[2].replace('+', " ");
 
         let html = reqwest::get(&link)
             .await
@@ -89,8 +89,8 @@ pub async fn link_to_online_song(
         if let Some(lyrics) = lyrics {
             let song = OnlineSong {
                 lyrics,
-                title: title.to_string(),
-                author: author.to_string(),
+                title: title.clone(),
+                author: author.clone(),
                 site: "https://www.lyrics.com".into(),
                 link,
             };

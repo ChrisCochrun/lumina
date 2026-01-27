@@ -64,8 +64,8 @@ impl MenuAction for MenuMessage {
 
     fn message(&self) -> Self::Message {
         match self {
-            MenuMessage::Delete => Message::DeleteItem,
-            MenuMessage::Open => Message::OpenContextItem,
+            Self::Delete => Message::DeleteItem,
+            Self::Open => Message::OpenContextItem,
         }
     }
 }
@@ -110,7 +110,7 @@ impl<'a> Library {
     pub async fn new() -> Self {
         let mut db = add_db().await.expect("probs");
         if let Err(e) = migrate!("./migrations").run(&db).await {
-            error!(?e)
+            error!(?e);
         }
         Self {
             song_library: Model::new_song_model(&mut db).await,
@@ -132,6 +132,7 @@ impl<'a> Library {
         }
     }
 
+    #[must_use] 
     pub fn get_song(&self, index: i32) -> Option<&Song> {
         self.song_library.get_item(index)
     }
@@ -211,7 +212,7 @@ impl<'a> Library {
                             .and_then(move |db| {
                                 Task::perform(
                                     add_video_to_db(
-                                        video.to_owned(),
+                                        video.clone(),
                                         db,
                                     ),
                                     move |res| {
@@ -267,7 +268,7 @@ impl<'a> Library {
                                     .and_then(move |db| {
                                         Task::perform(
                                             add_presentation_to_db(
-                                                presentation.to_owned(),
+                                                presentation.clone(),
                                                 db,
                                             ),
                                             move |res| {
@@ -321,7 +322,7 @@ impl<'a> Library {
                             .and_then(move |db| {
                                 Task::perform(
                                     add_image_to_db(
-                                        image.to_owned(),
+                                        image.clone(),
                                         db,
                                     ),
                                     move |res| {
@@ -449,7 +450,7 @@ impl<'a> Library {
                         return Action::None;
                     };
                     items.push(item);
-                    self.selected_items = Some(items.to_vec());
+                    self.selected_items = Some(items.clone());
                 }
             }
             Message::DragItem(item) => {
@@ -475,7 +476,7 @@ impl<'a> Library {
                 {
                     error!("Couldn't update song in model");
                     return Action::None;
-                };
+                }
 
                 return Action::Task(
                     Task::future(self.db.acquire()).and_then(
@@ -483,7 +484,7 @@ impl<'a> Library {
                             Task::perform(
                                 update_song_in_db(song.clone(), conn),
                                 |r| match r {
-                                    Ok(_) => Message::SongChanged,
+                                    Ok(()) => Message::SongChanged,
                                     Err(e) => {
                                         error!(?e);
                                         Message::None
@@ -516,7 +517,7 @@ impl<'a> Library {
                 {
                     error!("Couldn't update image in model");
                     return Action::None;
-                };
+                }
 
                 if self
                     .image_library
@@ -525,18 +526,18 @@ impl<'a> Library {
                 {
                     error!("Couldn't update image in model");
                     return Action::None;
-                };
+                }
 
                 return Action::Task(
                     Task::future(self.db.acquire()).and_then(
                         move |conn| {
                             Task::perform(
                                 update_image_in_db(
-                                    image.to_owned(),
+                                    image.clone(),
                                     conn,
                                 ),
                                 |r| match r {
-                                    Ok(_) => Message::ImageChanged,
+                                    Ok(()) => Message::ImageChanged,
                                     Err(e) => {
                                         error!(?e);
                                         Message::None
@@ -566,18 +567,18 @@ impl<'a> Library {
                 {
                     error!("Couldn't update video in model");
                     return Action::None;
-                };
+                }
 
                 return Action::Task(
                     Task::future(self.db.acquire()).and_then(
                         move |conn| {
                             Task::perform(
                                 update_video_in_db(
-                                    video.to_owned(),
+                                    video.clone(),
                                     conn,
                                 ),
                                 |r| match r {
-                                    Ok(_) => Message::VideoChanged,
+                                    Ok(()) => Message::VideoChanged,
                                     Err(e) => {
                                         error!(?e);
                                         Message::None
@@ -613,7 +614,7 @@ impl<'a> Library {
                                                 conn,
                                             ),
                                             |r| match r {
-                                                Ok(_) => Message::PresentationChanged,
+                                                Ok(()) => Message::PresentationChanged,
                                                 Err(e) => {
                                                     error!(?e);
                                                     Message::None
@@ -641,7 +642,7 @@ impl<'a> Library {
 
                 if items.contains(&(kind, index)) {
                     debug!(index, "should context contained");
-                    self.selected_items = Some(items.to_vec());
+                    self.selected_items = Some(items.clone());
                 } else {
                     debug!(index, "should context not contained");
                     self.selected_items = vec![(kind, index)].into();
@@ -812,6 +813,7 @@ impl<'a> Library {
         Action::None
     }
 
+    #[must_use] 
     pub fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing { space_s, .. } =
             cosmic::theme::spacing();
@@ -1261,14 +1263,17 @@ impl<'a> Library {
         items.into_iter().map(|item| item.1).collect()
     }
 
+    #[must_use] 
     pub fn get_video(&self, index: i32) -> Option<&Video> {
         self.video_library.get_item(index)
     }
 
+    #[must_use] 
     pub fn get_image(&self, index: i32) -> Option<&Image> {
         self.image_library.get_item(index)
     }
 
+    #[must_use] 
     pub fn get_presentation(
         &self,
         index: i32,
@@ -1276,7 +1281,7 @@ impl<'a> Library {
         self.presentation_library.get_item(index)
     }
 
-    pub fn set_modifiers(&mut self, modifiers: Option<Modifiers>) {
+    pub const fn set_modifiers(&mut self, modifiers: Option<Modifiers>) {
         self.modifiers_pressed = modifiers;
     }
 
@@ -1310,7 +1315,7 @@ impl<'a> Library {
                                         ),
                                         |r| {
                                             if let Err(e) = r {
-                                                error!(?e)
+                                                error!(?e);
                                             }
                                             Message::None
                                         },
@@ -1341,7 +1346,7 @@ impl<'a> Library {
                                         ),
                                         |r| {
                                             if let Err(e) = r {
-                                                error!(?e)
+                                                error!(?e);
                                             }
                                             Message::None
                                         },
@@ -1374,7 +1379,7 @@ impl<'a> Library {
                                         ),
                                         |r| {
                                             if let Err(e) = r {
-                                                error!(?e)
+                                                error!(?e);
                                             }
                                             Message::None
                                         },
@@ -1407,7 +1412,7 @@ impl<'a> Library {
                                         ),
                                         |r| {
                                             if let Err(e) = r {
-                                                error!(?e)
+                                                error!(?e);
                                             }
                                             Message::None
                                         },

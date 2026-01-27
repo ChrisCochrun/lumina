@@ -276,8 +276,8 @@ impl TextSvg {
                 shadow.offset_y,
                 shadow.spread,
                 shadow.color
-            ))
-        };
+            ));
+        }
         final_svg.push_str("</defs>");
 
         final_svg.push_str(&format!("<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", self.font.name, font_size, self.fill));
@@ -286,8 +286,8 @@ impl TextSvg {
             final_svg.push_str(&format!(
                 "stroke=\"{}\" stroke-width=\"{}px\" stroke-linejoin=\"arcs\" paint-order=\"stroke\"",
                 stroke.color, stroke.size
-            ))
-        };
+            ));
+        }
         final_svg.push_str(" style=\"filter:url(#shadow);\">");
 
         let text_pieces: Vec<String> = self
@@ -351,7 +351,7 @@ impl TextSvg {
         // debug!("rendered");
         if let Err(e) = pixmap.save_png(&path) {
             error!(?e, "Couldn't save a copy of the text");
-        };
+        }
 
         // debug!("saved");
         // let handle = Handle::from_path(path);

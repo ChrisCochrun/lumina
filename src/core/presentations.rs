@@ -210,7 +210,7 @@ impl ServiceTrait for Presentation {
                     return None;
                 } else if (index as i32) > ending_index {
                     return None;
-                };
+                }
 
                 let Some(page) = page.ok() else {
                     return None;
@@ -426,7 +426,7 @@ pub async fn update_presentation_in_db(
     {
         starting_index = *s_index;
         ending_index = *e_index;
-    };
+    }
     let id = presentation.id;
     if let Err(e) =
         query!("SELECT id FROM presentations where id = $1", id)
@@ -465,10 +465,9 @@ pub async fn update_presentation_in_db(
                     Err(e)
                 }
             };
-        } else {
-            return Err(miette::miette!("cannot find ids"));
         }
-    };
+        return Err(miette::miette!("cannot find ids"));
+    }
 
     debug!(?presentation, "should be been updated");
     let result = query!(
