@@ -44,7 +44,7 @@ pub enum Message {
 }
 
 impl VideoEditor {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             video: None,

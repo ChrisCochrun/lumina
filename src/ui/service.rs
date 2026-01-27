@@ -17,7 +17,7 @@ use tracing::debug;
 
 use crate::core::service_items::ServiceItem;
 
-#[must_use] 
+#[must_use]
 pub const fn service<Message: Clone + 'static>(
     service: &Vec<ServiceItem>,
 ) -> Service<'_, Message> {
@@ -35,7 +35,7 @@ pub struct Service<'a, Message> {
 }
 
 impl<'a, Message: Clone + 'static> Service<'a, Message> {
-    #[must_use] 
+    #[must_use]
     pub const fn new(service: &'a Vec<ServiceItem>) -> Self {
         Self {
             service,

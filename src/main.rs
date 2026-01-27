@@ -707,16 +707,13 @@ impl cosmic::Application for App {
 
     fn dialog(&self) -> Option<Element<'_, Self::Message>> {
         let cosmic::cosmic_theme::Spacing {
-            space_none,
-            space_xxxs,
             space_xxs,
-            space_xs,
             space_s,
-            space_m,
             space_l,
             space_xl,
             space_xxl,
             space_xxxl,
+            ..
         } = cosmic::theme::spacing();
         if self.searching {
             let items: Vec<Element<Message>> = self
@@ -1052,7 +1049,7 @@ impl cosmic::Application for App {
                         let slide_index = self.current_item.1;
                         let item_index = self.current_item.0;
                         let mut tasks = vec![];
-                        if let Some(item) =
+                        if let Some(_item) =
                             self.service.get(item_index)
                         {
                             if slide_index != 0 {

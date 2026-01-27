@@ -7,7 +7,7 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    Acquire, FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
+    FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
     pool::PoolConnection, query, sqlite::SqliteRow,
 };
 use tracing::{debug, error};
@@ -58,7 +58,7 @@ pub enum VerseName {
 }
 
 impl VerseName {
-    #[must_use] 
+    #[must_use]
     pub fn get_name(&self) -> String {
         match self {
             Self::Verse { number, .. } => {
@@ -129,7 +129,7 @@ impl AsMimeTypes for VerseName {
 
     fn as_bytes(
         &self,
-        mime_type: &str,
+        _mime_type: &str,
     ) -> Option<std::borrow::Cow<'static, [u8]>> {
         let ron = ron::ser::to_string(self).ok()?;
         Some(Cow::from(ron.into_bytes()))
@@ -143,7 +143,7 @@ impl Default for VerseName {
 }
 
 impl From<&Song> for Value {
-    fn from(value: &Song) -> Self {
+    fn from(_value: &Song) -> Self {
         Self::List(vec![Self::Symbol(Symbol("song".into()))])
     }
 }
@@ -373,7 +373,7 @@ fn lyrics_to_verse(
 
 pub fn lisp_to_song(list: Vec<Value>) -> Song {
     const DEFAULT_SONG_ID: i32 = 0;
-    const DEFAULT_SONG_LOCATION: usize = 0;
+    // const DEFAULT_SONG_LOCATION: usize = 0;
 
     let id = if let Some(key_pos) = list
         .iter()
@@ -717,16 +717,14 @@ pub async fn update_song_in_db(
 }
 
 impl Song {
-    #[must_use] 
+    #[must_use]
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
-        self.verse_map
-            .as_ref()
-            .and_then(|verse_map| {
-                verse_map
-                    .get(verse)
-                    .cloned()
-                    .map(|lyric| lyric.trim_end().to_string())
-            })
+        self.verse_map.as_ref().and_then(|verse_map| {
+            verse_map
+                .get(verse)
+                .cloned()
+                .map(|lyric| lyric.trim_end().to_string())
+        })
     }
 
     pub fn set_lyrics<T: Into<String>>(
@@ -815,9 +813,10 @@ impl Song {
     ) {
         self.set_lyrics(&verse, lyric);
         if let Some(verses) = self.verses.as_mut()
-            && let Some(old_verse) = verses.get_mut(index) {
-                *old_verse = verse;
-            }
+            && let Some(old_verse) = verses.get_mut(index)
+        {
+            *old_verse = verse;
+        }
 
         if let Some(verses) = &self.verses {
             let mut new_lyrics = String::new();

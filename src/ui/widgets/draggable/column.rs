@@ -101,13 +101,13 @@ where
     Theme: Catalog,
 {
     /// Creates an empty [`Column`].
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::from_vec(Vec::new())
     }
 
     /// Creates a [`Column`] with the given capacity.
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self::from_vec(Vec::with_capacity(capacity))
     }
@@ -130,7 +130,7 @@ where
     ///
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
     /// call [`Column::width`] or [`Column::height`] accordingly.
-    #[must_use] 
+    #[must_use]
     pub fn from_vec(
         children: Vec<Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
@@ -896,7 +896,7 @@ impl Catalog for cosmic::Theme {
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn default(theme: &Theme) -> Style {
     Style {
         scale: 1.05,

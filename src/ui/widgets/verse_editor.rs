@@ -27,7 +27,7 @@ pub enum Action {
 }
 
 impl VerseEditor {
-    #[must_use] 
+    #[must_use]
     pub fn new(verse: VerseName, lyric: String) -> Self {
         Self {
             verse_name: verse,
@@ -50,16 +50,7 @@ impl VerseEditor {
 
     pub fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
-            space_none,
-            space_xxxs,
-            space_xxs,
-            space_xs,
-            space_s,
-            space_m,
-            space_l,
-            space_xl,
-            space_xxl,
-            space_xxxl,
+            space_s, space_m, ..
         } = theme::spacing();
 
         let verse_title =

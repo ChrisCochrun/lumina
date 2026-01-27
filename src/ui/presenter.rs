@@ -271,7 +271,9 @@ impl Presenter {
         let audio = items
             .first()
             .and_then(|item| {
-                item.slides.first().map(super::super::core::slide::Slide::audio)
+                item.slides
+                    .first()
+                    .map(super::super::core::slide::Slide::audio)
             })
             .flatten();
 
@@ -984,28 +986,28 @@ impl Presenter {
 
         if let Some(map) = &self.slide_action_map
             && let Some(actions) = map.get(&(item_index, slide_index))
-            {
-                for action in actions {
-                    match action {
-                        slide_actions::Action::Obs { action } => {
-                            debug!("found obs slide actions");
-                            if let Some(obs) = &self.obs_client {
-                                let obs = Arc::clone(obs);
-                                let action = action.to_owned();
-                                let task = Task::perform(
-                                    async move { action.run(obs).await },
-                                    |res| {
-                                        debug!(?res);
-                                        Message::None
-                                    },
-                                );
-                                tasks.push(task);
-                            }
+        {
+            for action in actions {
+                match action {
+                    slide_actions::Action::Obs { action } => {
+                        debug!("found obs slide actions");
+                        if let Some(obs) = &self.obs_client {
+                            let obs = Arc::clone(obs);
+                            let action = action.to_owned();
+                            let task = Task::perform(
+                                async move { action.run(obs).await },
+                                |res| {
+                                    debug!(?res);
+                                    Message::None
+                                },
+                            );
+                            tasks.push(task);
                         }
-                        slide_actions::Action::Other => todo!(),
                     }
+                    slide_actions::Action::Other => todo!(),
                 }
             }
+        }
         Task::batch(tasks)
     }
 }

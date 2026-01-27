@@ -132,7 +132,7 @@ impl<'a> Library {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_song(&self, index: i32) -> Option<&Song> {
         self.song_library.get_item(index)
     }
@@ -813,7 +813,7 @@ impl<'a> Library {
         Action::None
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing { space_s, .. } =
             cosmic::theme::spacing();
@@ -1263,17 +1263,17 @@ impl<'a> Library {
         items.into_iter().map(|item| item.1).collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_video(&self, index: i32) -> Option<&Video> {
         self.video_library.get_item(index)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_image(&self, index: i32) -> Option<&Image> {
         self.image_library.get_item(index)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_presentation(
         &self,
         index: i32,
@@ -1281,7 +1281,10 @@ impl<'a> Library {
         self.presentation_library.get_item(index)
     }
 
-    pub const fn set_modifiers(&mut self, modifiers: Option<Modifiers>) {
+    pub const fn set_modifiers(
+        &mut self,
+        modifiers: Option<Modifiers>,
+    ) {
         self.modifiers_pressed = modifiers;
     }
 

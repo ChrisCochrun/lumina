@@ -1,4 +1,3 @@
-pub mod song_search;
 pub mod content;
 pub mod file;
 pub mod images;
@@ -9,6 +8,7 @@ pub mod service_items;
 pub mod settings;
 pub mod slide;
 pub mod slide_actions;
+pub mod song_search;
 pub mod songs;
 pub mod thumbnail;
 pub mod videos;

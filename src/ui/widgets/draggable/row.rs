@@ -95,13 +95,13 @@ where
     Theme: Catalog,
 {
     /// Creates an empty [`Row`].
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::from_vec(Vec::new())
     }
 
     /// Creates a [`Row`] with the given capacity.
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self::from_vec(Vec::with_capacity(capacity))
     }
@@ -124,7 +124,7 @@ where
     ///
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
     /// call [`Row::width`] or [`Row::height`] accordingly.
-    #[must_use] 
+    #[must_use]
     pub fn from_vec(
         children: Vec<Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
@@ -257,7 +257,9 @@ where
     /// Turns the [`Row`] into a [`Wrapping`] row.
     ///
     /// The original alignment of the [`Row`] is preserved per row wrapped.
-    pub const fn wrap(self) -> Wrapping<'a, Message, Theme, Renderer> {
+    pub const fn wrap(
+        self,
+    ) -> Wrapping<'a, Message, Theme, Renderer> {
         Wrapping { row: self }
     }
 
@@ -314,8 +316,7 @@ where
     }
 }
 
-impl<Message, Renderer> Default
-    for Row<'_, Message, Theme, Renderer>
+impl<Message, Renderer> Default for Row<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Theme: Catalog,
@@ -1044,7 +1045,7 @@ impl Catalog for cosmic::Theme {
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn default(theme: &cosmic::Theme) -> Style {
     Style {
         scale: 1.05,

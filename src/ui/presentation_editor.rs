@@ -80,7 +80,7 @@ impl menu::Action for MenuAction {
 }
 
 impl PresentationEditor {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             presentation: None,
@@ -205,9 +205,9 @@ impl PresentationEditor {
                 if let Some(presentation) = self.presentation.as_ref()
                     && let PresKind::Pdf { ending_index, .. } =
                         presentation.kind
-                    {
-                        last_index = ending_index;
-                    }
+                {
+                    last_index = ending_index;
+                }
 
                 if next_index > last_index {
                     return Action::None;
@@ -248,9 +248,9 @@ impl PresentationEditor {
                 if let Some(presentation) = self.presentation.as_ref()
                     && let PresKind::Pdf { starting_index, .. } =
                         presentation.kind
-                    {
-                        first_index = starting_index;
-                    }
+                {
+                    first_index = starting_index;
+                }
 
                 if previous_index < first_index {
                     return Action::None;

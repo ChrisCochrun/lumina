@@ -334,8 +334,7 @@ impl Model<Presentation> {
                             presentation.ending_index,
                         ) {
                             PresKind::Pdf {
-                                starting_index: starting_index
-                                    as i32,
+                                starting_index: starting_index as i32,
                                 ending_index: ending_index as i32,
                             }
                         } else {
