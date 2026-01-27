@@ -1,3 +1,4 @@
+pub mod song_search;
 pub mod content;
 pub mod file;
 pub mod images;

@@ -44,6 +44,9 @@ zstd = "0.13.3"
 fastrand = "2.3.0"
 obws = "0.14.0"
 derive_more = { version = "2.1.1", features = ["debug"] }
+reqwest = "0.13.1"
+scraper = "0.25.0"
+itertools = "0.14.0"
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
 
