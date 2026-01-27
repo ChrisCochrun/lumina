@@ -697,7 +697,7 @@ impl SongEditor {
                 .direction(Direction::Horizontal(Scrollbar::new()))
                 .spacing(space_s),
             horizontal_space(),
-            verse_chips_edit_toggle.width(Length::Fixed(50.0))
+            verse_chips_edit_toggle
         ])
         .padding(space_s)
         .width(Length::Fill)

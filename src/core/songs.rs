@@ -220,7 +220,7 @@ const VERSE_KEYWORDS: [&str; 24] = [
 
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        let Some((verses, verse_map)) =
+        let Some((mut verses, verse_map)) =
             lyrics_to_verse(row.try_get(8)?).ok()
         else {
             return Err(sqlx::Error::ColumnDecode {
@@ -232,12 +232,12 @@ impl FromRow<'_, SqliteRow> for Song {
             });
         };
 
-        let mut verses = vec![];
-        let verse_order: String = {
+        let verse_order: Vec<String> = {
             let vo: &str = row.try_get(0)?;
             if let Ok(verse_order_vec) =
                 ron::de::from_str::<Vec<VerseName>>(vo)
             {
+                debug!(?verse_order_vec);
                 verses = verse_order_vec;
                 vo.split(' ')
                     .map(std::string::ToString::to_string)
@@ -753,7 +753,7 @@ impl Song {
         }
         if let Some(raw_lyrics) = self.lyrics.clone() {
             let raw_lyrics = raw_lyrics.as_str();
-            let verse_order = self.verse_order.clone();
+            let verse_order = self.verses.clone();
 
             let mut lyric_map = HashMap::new();
             let mut verse_title = String::new();
@@ -775,19 +775,7 @@ impl Song {
             lyric_map.insert(verse_title, lyric);
 
             for verse in verse_order.unwrap_or_default() {
-                let mut verse_name = "";
-                for word in VERSE_KEYWORDS {
-                    let end_verse =
-                        verse.get(1..2).unwrap_or_default();
-                    let beg_verse =
-                        verse.get(0..1).unwrap_or_default();
-                    if word.starts_with(beg_verse)
-                        && word.ends_with(end_verse)
-                    {
-                        verse_name = word;
-                        continue;
-                    }
-                }
+                let verse_name = &verse.get_name();
                 if let Some(lyric) = lyric_map.get(verse_name) {
                     if lyric.contains("\n\n") {
                         let split_lyrics: Vec<&str> =
