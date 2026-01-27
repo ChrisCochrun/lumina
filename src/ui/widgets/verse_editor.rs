@@ -1,9 +1,8 @@
 use cosmic::{
-    Apply, Element, Task,
-    iced::{Border, Length, alignment::Vertical},
-    iced_widget::{column, row},
+    Element, Task,
+    iced_widget::column,
     theme,
-    widget::{container, icon, text, text_editor},
+    widget::{container, text, text_editor},
 };
 
 use crate::core::songs::VerseName;

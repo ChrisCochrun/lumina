@@ -101,22 +101,22 @@ impl TextPrimitive {
 impl Primitive for TextPrimitive {
     fn prepare(
         &self,
-        device: &cosmic::iced::wgpu::Device,
-        queue: &cosmic::iced::wgpu::Queue,
-        format: cosmic::iced::wgpu::TextureFormat,
-        storage: &mut cosmic::iced_widget::shader::Storage,
-        bounds: &Rectangle,
-        viewport: &cosmic::iced_wgpu::graphics::Viewport,
+        _device: &cosmic::iced::wgpu::Device,
+        _queue: &cosmic::iced::wgpu::Queue,
+        _format: cosmic::iced::wgpu::TextureFormat,
+        _storage: &mut cosmic::iced_widget::shader::Storage,
+        _bounds: &Rectangle,
+        _viewport: &cosmic::iced_wgpu::graphics::Viewport,
     ) {
         todo!()
     }
 
     fn render(
         &self,
-        encoder: &mut cosmic::iced::wgpu::CommandEncoder,
-        storage: &cosmic::iced_widget::shader::Storage,
-        target: &cosmic::iced::wgpu::TextureView,
-        clip_bounds: &Rectangle<u32>,
+        _encoder: &mut cosmic::iced::wgpu::CommandEncoder,
+        _storage: &cosmic::iced_widget::shader::Storage,
+        _target: &cosmic::iced::wgpu::TextureView,
+        _clip_bounds: &Rectangle<u32>,
     ) {
         todo!()
     }

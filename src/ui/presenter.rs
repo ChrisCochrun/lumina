@@ -798,7 +798,7 @@ impl Presenter {
             },
         );
         let scrollable =
-            scrollable(container(Row::from_vec(items)).style(|t| {
+            scrollable(container(Row::from_vec(items)).style(|_t| {
                 let style = container::Style::default();
                 style.border(Border::default().width(2))
             }))

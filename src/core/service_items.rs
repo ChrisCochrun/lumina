@@ -174,7 +174,7 @@ impl From<&Value> for ServiceItem {
                             _ => false,
                         })
                         .map_or_else(|| 1, |pos| pos + 1);
-                    if let Some(content) =
+                    if let Some(_content) =
                         list.iter().position(|v| match v {
                             Value::List(list)
                                 if list.iter().next()

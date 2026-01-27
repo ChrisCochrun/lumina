@@ -165,10 +165,10 @@ impl<Message: Clone + 'static>
         event: Event,
         layout: layout::Layout<'_>,
         cursor: mouse::Cursor,
-        renderer: &cosmic::Renderer,
-        clipboard: &mut dyn Clipboard,
+        _renderer: &cosmic::Renderer,
+        _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        viewport: &Rectangle,
+        _viewport: &Rectangle,
     ) -> event::Status {
         let state = tree.state.downcast_mut::<State>();
 
@@ -205,7 +205,7 @@ impl<Message: Clone + 'static>
                                 {
                                     shell.publish(on_start.clone())
                                 }
-                                let offset = Vector::new(
+                                let _offset = Vector::new(
                                     left_pressed_position.x
                                         - layout.bounds().x,
                                     left_pressed_position.y
@@ -278,16 +278,16 @@ impl<Message: Clone + 'static>
 
     fn draw(
         &self,
-        tree: &Tree,
-        renderer: &mut cosmic::Renderer,
-        theme: &cosmic::Theme,
-        renderer_style: &renderer::Style,
-        layout: layout::Layout<'_>,
-        cursor_position: mouse::Cursor,
-        viewport: &Rectangle,
+        _tree: &Tree,
+        _renderer: &mut cosmic::Renderer,
+        _theme: &cosmic::Theme,
+        _renderer_style: &renderer::Style,
+        _layout: layout::Layout<'_>,
+        _cursor_position: mouse::Cursor,
+        _viewport: &Rectangle,
     ) {
         // let state = tree.state.downcast_mut::<State>();
-        for item in self.service {}
+        for _item in self.service {}
     }
 
     // fn overlay<'b>(

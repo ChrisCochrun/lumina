@@ -161,7 +161,7 @@ impl<'a> Library {
                     self.library_open.unwrap_or(LibraryKind::Song);
                 match kind {
                     LibraryKind::Song => {
-                        let song = Song::default();
+                        let _song = Song::default();
                         let task = Task::future(self.db.acquire()).and_then(move |db| {
                             Task::perform(add_song_to_db(db), move |res| {
                                 match res {
@@ -652,7 +652,7 @@ impl<'a> Library {
                 let mut tasks = Vec::new();
                 let last_item = &items.last();
                 let after_task = match last_item {
-                    Some(ServiceItemKind::Image(image)) => {
+                    Some(ServiceItemKind::Image(_image)) => {
                         Task::done(Message::OpenItem(Some((
                             LibraryKind::Image,
                             self.image_library.items.len() as i32 - 1,
@@ -801,7 +801,7 @@ impl<'a> Library {
                             };
                             error!(?e);
                         }
-                        ServiceItemKind::Content(slide) => todo!(),
+                        ServiceItemKind::Content(_slide) => todo!(),
                     }
                 }
                 return Action::Task(
@@ -860,7 +860,7 @@ impl<'a> Library {
             warn!(?mimes);
             Message::None
         })
-        .on_finish(|mime, data, action, _, _| {
+        .on_finish(|mime, data, _action, _, _| {
             // warn!(?mime, ?data, ?action);
             match mime.as_str() {
                 "text/uri-list" => {

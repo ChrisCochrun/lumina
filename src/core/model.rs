@@ -1,8 +1,4 @@
-use std::{
-    borrow::Cow,
-    mem::replace,
-    path::{Path, PathBuf},
-};
+use std::{borrow::Cow, mem::replace, path::PathBuf};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::{IntoDiagnostic, Result, miette};
@@ -32,7 +28,7 @@ pub enum LibraryKind {
 pub struct KindWrapper(pub (LibraryKind, i32));
 
 impl From<PathBuf> for LibraryKind {
-    fn from(value: PathBuf) -> Self {
+    fn from(_value: PathBuf) -> Self {
         todo!()
     }
 }
@@ -83,7 +79,7 @@ impl<T> Model<T> {
         Ok(())
     }
 
-    pub fn add_to_db(&mut self, item: T) -> Result<()> {
+    pub fn add_to_db(&mut self, _item: T) -> Result<()> {
         todo!()
     }
 

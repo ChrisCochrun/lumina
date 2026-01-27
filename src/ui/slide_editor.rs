@@ -61,7 +61,7 @@ struct EditorProgram {
 impl SlideEditor {
     pub fn view(
         &self,
-        font: Font,
+        _font: Font,
     ) -> cosmic::Element<'_, SlideWidget> {
         container(
             widget::canvas(&self.program)
@@ -81,11 +81,11 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
 
     fn draw(
         &self,
-        state: &Self::State,
+        _state: &Self::State,
         renderer: &Renderer,
-        theme: &cosmic::Theme,
+        _theme: &cosmic::Theme,
         bounds: cosmic::iced::Rectangle,
-        cursor: cosmic::iced_core::mouse::Cursor,
+        _cursor: cosmic::iced_core::mouse::Cursor,
     ) -> Vec<canvas::Geometry<Renderer>> {
         // We prepare a new `Frame`
         let mut frame = canvas::Frame::new(renderer, bounds.size());
@@ -154,8 +154,8 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                     delta,
                 } => debug!(?delta, "scroll wheel"),
             },
-            canvas::Event::Touch(event) => debug!("test"),
-            canvas::Event::Keyboard(event) => debug!("test"),
+            canvas::Event::Touch(_event) => debug!("test"),
+            canvas::Event::Keyboard(_event) => debug!("test"),
         }
         (canvas::event::Status::Ignored, None)
     }

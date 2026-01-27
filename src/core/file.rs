@@ -118,7 +118,7 @@ pub async fn save(
     tar.finish().into_diagnostic()
 }
 
-async fn clear_temp_dir(temp_dir: &Path) -> Result<()> {
+async fn clear_temp_dir(_temp_dir: &Path) -> Result<()> {
     todo!()
 }
 

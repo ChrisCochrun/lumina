@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Read},
+    io::{self},
     path::PathBuf,
     sync::Arc,
 };
@@ -36,7 +36,7 @@ use tracing::{debug, error};
 use crate::{
     Background, BackgroundKind,
     core::{
-        service_items::{ServiceItem, ServiceTrait},
+        service_items::ServiceTrait,
         slide::Slide,
         songs::{Song, VerseName},
     },
@@ -44,10 +44,7 @@ use crate::{
         presenter::slide_view,
         slide_editor::SlideEditor,
         text_svg,
-        widgets::{
-            draggable,
-            verse_editor::{self, VerseEditor},
-        },
+        widgets::verse_editor::{self, VerseEditor},
     },
 };
 
@@ -677,7 +674,7 @@ impl SongEditor {
                                 Message::ChipHovered(None)
                             })
                             .on_finish(
-                                move |mime, data, action, x, y| {
+                                move |mime, data, action, _x, _y| {
                                     debug!(mime, ?data, ?action);
                                     Message::ChipDropped((index, data, mime))
                                 },
@@ -723,7 +720,7 @@ impl SongEditor {
             column![verse_label, verse_order].spacing(space_s);
 
         let lyric_title = text::heading("Lyrics");
-        let lyric_input = column![
+        let _lyric_input = column![
             lyric_title,
             text_editor(&self.lyrics)
                 .on_action(Message::ChangeLyrics)
@@ -773,7 +770,6 @@ impl SongEditor {
             space_s,
             space_m,
             space_l,
-            space_xl,
             space_xxxl,
             ..
         } = theme::spacing();

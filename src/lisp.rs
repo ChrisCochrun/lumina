@@ -43,7 +43,7 @@ mod test {
         images::Image,
         kinds::ServiceItemKind,
         service_items::ServiceTrait,
-        slide::{Background, Slide, SlideBuilder, TextAlignment},
+        slide::{Background, TextAlignment},
         songs::Song,
         videos::Video,
     };

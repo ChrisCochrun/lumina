@@ -15,12 +15,11 @@ use cosmic::{
     widget::{Image, image::Handle},
 };
 use rapidhash::v3::rapidhash_v3;
-use rayon::str::ParallelString;
 use resvg::{
     tiny_skia::{self, Pixmap},
     usvg::{Tree, fontdb},
 };
-use tracing::{debug, error, warn};
+use tracing::error;
 
 use crate::TextAlignment;
 

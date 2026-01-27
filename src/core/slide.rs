@@ -180,7 +180,7 @@ impl TryFrom<PathBuf> for Background {
                     _ => Err(ParseError::NonBackgroundFile),
                 }
             }
-            Err(e) => {
+            Err(_e) => {
                 // error!("Couldn't canonicalize: {e} {:?}", path);
                 Err(ParseError::CannotCanonicalize)
             }
@@ -260,7 +260,7 @@ impl From<String> for BackgroundKind {
 }
 
 impl From<&Slide> for Value {
-    fn from(value: &Slide) -> Self {
+    fn from(_value: &Slide) -> Self {
         Self::List(vec![Self::Symbol(Symbol("slide".into()))])
     }
 }
@@ -485,7 +485,7 @@ fn lisp_to_text(lisp: &Value) -> impl Into<String> {
 pub fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {
-            let kind = list[0].clone();
+            let _kind = list[0].clone();
             if let Some(source) = list.iter().position(|v| {
                 v == &Value::Keyword(Keyword::from("source"))
             }) {
@@ -749,10 +749,10 @@ mod test {
         let slide = read_to_string("./test_presentation.ron")
             .expect("Problem getting file read");
         match ron::from_str::<Vec<Slide>>(&slide) {
-            Ok(s) => {
+            Ok(_s) => {
                 assert!(true)
             }
-            Err(e) => {
+            Err(_e) => {
                 assert!(false)
             }
         }

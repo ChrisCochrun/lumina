@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     io,
-    ops::{Range, RangeBounds},
+    ops::RangeBounds,
     path::{Path, PathBuf},
 };
 

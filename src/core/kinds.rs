@@ -53,7 +53,7 @@ impl ServiceItemKind {
             ServiceItemKind::Presentation(presentation) => {
                 presentation.title.to_string()
             }
-            ServiceItemKind::Content(slide) => todo!(),
+            ServiceItemKind::Content(_slide) => todo!(),
         }
     }
 
@@ -65,7 +65,7 @@ impl ServiceItemKind {
             ServiceItemKind::Presentation(presentation) => {
                 presentation.to_service_item()
             }
-            ServiceItemKind::Content(slide) => {
+            ServiceItemKind::Content(_slide) => {
                 todo!()
             }
         }

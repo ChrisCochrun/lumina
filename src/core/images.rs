@@ -48,7 +48,7 @@ impl From<&Path> for Image {
 }
 
 impl From<&Image> for Value {
-    fn from(value: &Image) -> Self {
+    fn from(_value: &Image) -> Self {
         Self::List(vec![Self::Symbol(Symbol("image".into()))])
     }
 }
