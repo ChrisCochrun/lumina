@@ -98,8 +98,7 @@ impl PresentationEditor {
         match message {
             Message::ChangePresentation(presentation) => {
                 self.update_entire_presentation(&presentation);
-                if let Some(presentation) = self.presentation.clone()
-                {
+                if let Some(presentation) = &self.presentation {
                     let task;
                     if let PresKind::Pdf {
                         starting_index,
@@ -165,8 +164,7 @@ impl PresentationEditor {
             }
             Message::ChangePresentationFile(presentation) => {
                 self.update_entire_presentation(&presentation);
-                if let Some(presentation) = self.presentation.clone()
-                {
+                if let Some(presentation) = &self.presentation {
                     let mut task;
                     if let PresKind::Pdf {
                         starting_index,
@@ -201,7 +199,18 @@ impl PresentationEditor {
             Message::NextPage => {
                 let next_index =
                     self.current_slide_index.unwrap_or_default() + 1;
-                if next_index > self.page_count.unwrap_or_default() {
+                let mut last_index =
+                    self.page_count.unwrap_or_default();
+                if let Some(presentation) = self.presentation.as_ref()
+                {
+                    if let PresKind::Pdf { ending_index, .. } =
+                        presentation.kind
+                    {
+                        last_index = ending_index;
+                    }
+                };
+
+                if next_index > last_index {
                     return Action::None;
                 }
                 self.current_slide =
@@ -235,7 +244,18 @@ impl PresentationEditor {
             Message::PrevPage => {
                 let previous_index =
                     self.current_slide_index.unwrap_or_default() - 1;
-                if previous_index < 0 {
+                let mut first_index =
+                    self.page_count.unwrap_or_default();
+                if let Some(presentation) = self.presentation.as_ref()
+                {
+                    if let PresKind::Pdf { starting_index, .. } =
+                        presentation.kind
+                    {
+                        first_index = starting_index;
+                    }
+                };
+
+                if previous_index < first_index {
                     return Action::None;
                 }
                 self.current_slide =
