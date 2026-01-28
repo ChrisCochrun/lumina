@@ -592,7 +592,14 @@ impl Model<Song> {
                 for song in s {
                     match Song::from_row(&song) {
                         Ok(song) => {
-                            let _ = self.add_item(song);
+                            match update_song_in_db(song.clone(), db)
+                                .await
+                            {
+                                Ok(_) => {
+                                    let _ = self.add_item(song);
+                                }
+                                Err(e) => error!(?e),
+                            }
                         }
                         Err(e) => {
                             error!("Could not convert song: {e}");
