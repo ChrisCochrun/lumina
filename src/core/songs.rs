@@ -578,21 +578,22 @@ impl Model<Song> {
             items: vec![],
             kind: LibraryKind::Song,
         };
-        let mut db = db.acquire().await.expect("probs");
 
-        model.load_from_db(&mut db).await;
+        model.load_from_db(db).await;
         model
     }
 
-    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
+    pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(db).await;
+        let db1 = db.acquire().await.unwrap();
+        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
                 for song in s {
+                    let db2 = db.acquire().await.unwrap();
                     match Song::from_row(&song) {
                         Ok(song) => {
-                            match update_song_in_db(song.clone(), db)
+                            match update_song_in_db(song.clone(), db2)
                                 .await
                             {
                                 Ok(_) => {
@@ -996,9 +997,18 @@ You saved my soul"
         song_model
     }
 
+    async fn add_db() -> Result<SqlitePool> {
+        let mut data = dirs::data_local_dir().unwrap();
+        data.push("lumina");
+        data.push("library-db.sqlite3");
+        let mut db_url = String::from("sqlite://");
+        db_url.push_str(data.to_str().unwrap());
+        SqlitePool::connect(&db_url).await.into_diagnostic()
+    }
+
     #[tokio::test]
     async fn test_db_and_model() {
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap();
         let mut song_model = model().await;
         song_model.load_from_db(&mut db).await;
         if let Some(song) = song_model.find(|s| s.id == 7) {
@@ -1023,7 +1033,7 @@ You saved my soul"
 
     #[tokio::test]
     async fn test_update() {
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap();
         let song = test_song();
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
