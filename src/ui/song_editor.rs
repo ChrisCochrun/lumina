@@ -44,7 +44,10 @@ use crate::{
         presenter::slide_view,
         slide_editor::SlideEditor,
         text_svg,
-        widgets::verse_editor::{self, VerseEditor},
+        widgets::{
+            draggable,
+            verse_editor::{self, VerseEditor},
+        },
     },
 };
 
@@ -113,6 +116,7 @@ pub enum Message {
     OpenStrokeColorPicker,
     ChipHovered(Option<usize>),
     ChipDropped((usize, Vec<u8>, String)),
+    ChipReorder(draggable::DragEvent),
 }
 
 impl SongEditor {
@@ -434,6 +438,23 @@ impl SongEditor {
                     }
                 }
             }
+            Message::ChipReorder(event) => match event {
+                draggable::DragEvent::Picked { index } => (),
+                draggable::DragEvent::Dropped {
+                    index,
+                    target_index,
+                    drop_position,
+                } => {
+                    if let Some(mut song) = self.song.clone()
+                        && let Some(verses) = song.verses.as_mut()
+                    {
+                        let verse = verses.remove(index);
+                        verses.insert(target_index, verse);
+                        self.update_song(song);
+                    }
+                }
+                draggable::DragEvent::Canceled { index } => (),
+            },
             Message::None => (),
         }
         Action::None
@@ -606,15 +627,18 @@ impl SongEditor {
             })
             .on_press(Message::EditVerseOrder);
 
-        let verse_options =
-            container(scrollable(row(verse_chips)).direction(
-                Direction::Horizontal(
-                    Scrollbar::new().spacing(space_s),
-                ),
-            ))
-            .padding(space_s)
-            .width(Length::Fill)
-            .class(theme::Container::Primary);
+        let verse_options = container(
+            scrollable(
+                draggable::row(verse_chips)
+                    .on_drag(|event| Message::ChipReorder(event)),
+            )
+            .direction(Direction::Horizontal(
+                Scrollbar::new().spacing(space_s),
+            )),
+        )
+        .padding(space_s)
+        .width(Length::Fill)
+        .class(theme::Container::Primary);
 
         let verse_order_items: Vec<Element<Message>> = if let Some(
             song,
@@ -1043,6 +1067,7 @@ fn verse_chip(verse: VerseName) -> Element<'static, ()> {
             todo!()
         }
         VerseName::Other { .. } => (other_color, dark_text),
+        VerseName::Blank => (other_color, dark_text),
     };
 
     text(name)

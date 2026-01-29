@@ -55,6 +55,7 @@ pub enum VerseName {
     Outro { number: usize },
     Instrumental { number: usize },
     Other { number: usize },
+    Blank,
 }
 
 impl VerseName {
@@ -106,6 +107,7 @@ impl VerseName {
                 string.push_str(&number.to_string());
                 string
             }
+            Self::Blank => "Blank".to_string(),
         }
     }
 }
@@ -862,6 +864,7 @@ impl Song {
                     VerseName::Other { number } => {
                         format!("Other {number}")
                     }
+                    VerseName::Blank => "Blank".into(),
                 };
 
                 new_lyrics.push_str(&verse_name);
