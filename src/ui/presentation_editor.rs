@@ -106,16 +106,16 @@ impl PresentationEditor {
                         ending_index,
                     } = presentation.kind.clone()
                     {
+                        let range = starting_index..=ending_index;
+                        let path = presentation.path.clone();
                         task = Task::perform(
-                            get_pages(
-                                starting_index..=ending_index,
-                                presentation.path.clone(),
-                            ),
+                            async move { get_pages(range, path) },
                             Message::AddSlides,
                         );
                     } else {
+                        let path = presentation.path.clone();
                         task = Task::perform(
-                            get_pages(.., presentation.path.clone()),
+                            async move { get_pages(.., path) },
                             Message::AddSlides,
                         );
                     }
@@ -172,16 +172,16 @@ impl PresentationEditor {
                         ending_index,
                     } = presentation.kind.clone()
                     {
+                        let range = starting_index..=ending_index;
+                        let path = presentation.path.clone();
                         task = Task::perform(
-                            get_pages(
-                                starting_index..=ending_index,
-                                presentation.path.clone(),
-                            ),
+                            async move { get_pages(range, path) },
                             Message::AddSlides,
                         );
                     } else {
+                        let path = presentation.path.clone();
                         task = Task::perform(
-                            get_pages(.., presentation.path.clone()),
+                            async move { get_pages(.., path) },
                             Message::AddSlides,
                         );
                     }
@@ -607,7 +607,7 @@ impl Default for PresentationEditor {
     }
 }
 
-async fn get_pages(
+fn get_pages(
     range: impl RangeBounds<i32>,
     presentation_path: impl AsRef<Path>,
 ) -> Option<Vec<Handle>> {
