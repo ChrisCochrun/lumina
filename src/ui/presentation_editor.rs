@@ -101,19 +101,18 @@ impl PresentationEditor {
                 self.update_entire_presentation(&presentation);
                 if let Some(presentation) = &self.presentation {
                     let task;
+                    let path = presentation.path.clone();
                     if let PresKind::Pdf {
                         starting_index,
                         ending_index,
                     } = presentation.kind.clone()
                     {
                         let range = starting_index..=ending_index;
-                        let path = presentation.path.clone();
                         task = Task::perform(
                             async move { get_pages(range, path) },
                             Message::AddSlides,
                         );
                     } else {
-                        let path = presentation.path.clone();
                         task = Task::perform(
                             async move { get_pages(.., path) },
                             Message::AddSlides,
@@ -167,19 +166,18 @@ impl PresentationEditor {
                 self.update_entire_presentation(&presentation);
                 if let Some(presentation) = &self.presentation {
                     let mut task;
+                    let path = presentation.path.clone();
                     if let PresKind::Pdf {
                         starting_index,
                         ending_index,
                     } = presentation.kind.clone()
                     {
                         let range = starting_index..=ending_index;
-                        let path = presentation.path.clone();
                         task = Task::perform(
                             async move { get_pages(range, path) },
                             Message::AddSlides,
                         );
                     } else {
-                        let path = presentation.path.clone();
                         task = Task::perform(
                             async move { get_pages(.., path) },
                             Message::AddSlides,
