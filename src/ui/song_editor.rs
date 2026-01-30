@@ -81,6 +81,7 @@ pub struct SongEditor {
     verses: Option<Vec<VerseEditor>>,
     hovered_verse_chip: Option<usize>,
     stroke_color_picker_open: bool,
+    dragging_verse_chip: bool,
 }
 
 pub enum Action {
@@ -117,6 +118,7 @@ pub enum Message {
     ChipHovered(Option<usize>),
     ChipDropped((usize, Vec<u8>, String)),
     ChipReorder(draggable::DragEvent),
+    DraggingChipStart,
 }
 
 impl SongEditor {
@@ -194,6 +196,7 @@ impl SongEditor {
             verses: None,
             editing_verse_order: false,
             hovered_verse_chip: None,
+            dragging_verse_chip: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -456,6 +459,9 @@ impl SongEditor {
                 }
                 draggable::DragEvent::Canceled { index } => (),
             },
+            Message::DraggingChipStart => {
+                self.dragging_verse_chip = !self.dragging_verse_chip;
+            }
             Message::None => (),
         }
         Action::None
@@ -585,9 +591,15 @@ impl SongEditor {
                             dnd_source::<Message, Box<VerseName>>(
                                 verse_chip_wrapped.clone(),
                             )
-                            .on_start(Some(Message::None))
-                            .on_finish(Some(Message::None))
-                            .on_cancel(Some(Message::None))
+                            .on_start(Some(
+                                Message::DraggingChipStart,
+                            ))
+                            .on_finish(Some(
+                                Message::DraggingChipStart,
+                            ))
+                            .on_cancel(Some(
+                                Message::DraggingChipStart,
+                            ))
                             .drag_content(move || Box::new(verse))
                             .drag_icon(
                                 move |_| {
@@ -706,14 +718,20 @@ impl SongEditor {
             vec![]
         };
 
-        let verse_order = container(row![
-            scrollable(
+        let verse_order_items = if self.dragging_verse_chip {
+            Element::from(row(verse_order_items).spacing(space_s))
+        } else {
+            Element::from(
                 draggable::row(verse_order_items)
                     .on_drag(|event| Message::ChipReorder(event))
-                    .spacing(space_s)
+                    .spacing(space_s),
             )
-            .direction(Direction::Horizontal(Scrollbar::new()))
-            .spacing(space_s),
+        };
+
+        let verse_order = container(row![
+            scrollable(verse_order_items)
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .spacing(space_s),
             horizontal_space(),
             verse_chips_edit_toggle
         ])

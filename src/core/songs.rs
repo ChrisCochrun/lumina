@@ -721,7 +721,7 @@ pub async fn update_song_in_db(
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
-    debug!(?item);
+    // debug!(?item);
     let verse_order =
         ron::ser::to_string(&item.verses).into_diagnostic()?;
 
