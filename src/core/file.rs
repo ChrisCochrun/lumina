@@ -19,7 +19,7 @@ pub async fn save(
 ) -> Result<()> {
     let path = path.as_ref();
     let save_file = File::create(path).into_diagnostic()?;
-    let ron = process_service_items(&list).await?;
+    let ron = process_service_items(&list)?;
 
     let encoder = Encoder::new(save_file, 3).unwrap();
     let mut tar = Builder::new(encoder);
@@ -122,9 +122,7 @@ async fn clear_temp_dir(_temp_dir: &Path) -> Result<()> {
     todo!()
 }
 
-async fn process_service_items(
-    items: &Vec<ServiceItem>,
-) -> Result<String> {
+fn process_service_items(items: &Vec<ServiceItem>) -> Result<String> {
     Ok(items
         .iter()
         .filter_map(|item| {
