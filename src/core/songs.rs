@@ -182,7 +182,30 @@ impl ServiceTrait for Song {
     }
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
-        let lyrics = self.get_lyrics()?;
+        // let lyrics = self.get_lyrics()?;
+        let lyrics: Vec<String> = if let Some(verses) =
+            self.verses.as_ref()
+            && let Some(map) = self.verse_map.as_ref()
+        {
+            verses
+                .iter()
+                .filter_map(|verse| {
+                    map.get(verse).and_then(|lyric| {
+                        let lyric =
+                            lyric.to_owned().trim().to_string();
+                        let multi_lyric = lyric.split("\n\n");
+                        let lyric: Vec<String> = multi_lyric
+                            .map(|lyric| lyric.trim().to_string())
+                            .collect();
+                        Some(lyric)
+                    })
+                })
+                .flatten()
+                .collect()
+        } else {
+            vec![]
+        };
+        debug!(?lyrics);
         let slides: Vec<Slide> = lyrics
             .iter()
             .map(|l| {
@@ -237,11 +260,12 @@ impl FromRow<'_, SqliteRow> for Song {
 
         let verse_order: Vec<String> = {
             let vo: &str = row.try_get(0)?;
+            debug!(?vo);
             if let Ok(verse_order_vec) =
-                ron::de::from_str::<Vec<VerseName>>(vo)
+                ron::de::from_str::<Option<Vec<VerseName>>>(vo)
             {
                 debug!(?verse_order_vec);
-                verses = verse_order_vec;
+                verses = verse_order_vec.unwrap_or_default();
                 vo.split(' ')
                     .map(std::string::ToString::to_string)
                     .collect()
@@ -367,6 +391,7 @@ fn lyrics_to_verse(
             _ => VerseName::Other { number: 99 },
         };
         verse_list.push(verse);
+        let lyric = lyric.trim().to_string();
         verse_map.insert(verse, lyric);
     }
 

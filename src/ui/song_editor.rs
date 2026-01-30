@@ -450,7 +450,8 @@ impl SongEditor {
                     {
                         let verse = verses.remove(index);
                         verses.insert(target_index, verse);
-                        self.update_song(song);
+                        debug!(?verses);
+                        return self.update_song(song);
                     }
                 }
                 draggable::DragEvent::Canceled { index } => (),
@@ -628,13 +629,11 @@ impl SongEditor {
             .on_press(Message::EditVerseOrder);
 
         let verse_options = container(
-            scrollable(
-                draggable::row(verse_chips)
-                    .on_drag(|event| Message::ChipReorder(event)),
-            )
-            .direction(Direction::Horizontal(
-                Scrollbar::new().spacing(space_s),
-            )),
+            scrollable(row(verse_chips).spacing(space_s)).direction(
+                Direction::Horizontal(
+                    Scrollbar::new().spacing(space_s),
+                ),
+            ),
         )
         .padding(space_s)
         .width(Length::Fill)
@@ -708,9 +707,13 @@ impl SongEditor {
         };
 
         let verse_order = container(row![
-            scrollable(row(verse_order_items).spacing(space_s))
-                .direction(Direction::Horizontal(Scrollbar::new()))
-                .spacing(space_s),
+            scrollable(
+                draggable::row(verse_order_items)
+                    .on_drag(|event| Message::ChipReorder(event))
+                    .spacing(space_s)
+            )
+            .direction(Direction::Horizontal(Scrollbar::new()))
+            .spacing(space_s),
             horizontal_space(),
             verse_chips_edit_toggle
         ])
