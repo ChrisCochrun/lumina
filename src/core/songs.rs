@@ -246,9 +246,22 @@ const VERSE_KEYWORDS: [&str; 24] = [
 
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        let Some((mut verses, verse_map)) =
-            lyrics_to_verse(row.try_get(8)?).ok()
-        else {
+        let lyrics: String = row.try_get(8)?;
+        // let Some((mut verses, mut verse_map)) =
+        //     lyrics_to_verse(lyrics.clone()).ok()
+        // else {
+        //     return Err(sqlx::Error::ColumnDecode {
+        //         index: "8".into(),
+        //         source: miette!(
+        //             "Couldn't decode the song into verses"
+        //         )
+        //         .into(),
+        //     });
+        // };
+
+        let Ok(verse_map) = ron::de::from_str::<
+            Option<HashMap<VerseName, String>>,
+        >(lyrics.as_ref()) else {
             return Err(sqlx::Error::ColumnDecode {
                 index: "8".into(),
                 source: miette!(
@@ -257,29 +270,30 @@ impl FromRow<'_, SqliteRow> for Song {
                 .into(),
             });
         };
+        let verse_order: &str = row.try_get(0)?;
+        let Ok(verses) =
+            ron::de::from_str::<Option<Vec<VerseName>>>(verse_order)
+        else {
+            return Err(sqlx::Error::ColumnDecode {
+                index: "0".into(),
+                source: miette!(
+                    "Couldn't decode the song into verses"
+                )
+                .into(),
+            });
+        };
 
         let verse_order: Vec<String> = {
-            let vo: &str = row.try_get(0)?;
-            debug!(?vo);
-            if let Ok(verse_order_vec) =
-                ron::de::from_str::<Option<Vec<VerseName>>>(vo)
-            {
-                debug!(?verse_order_vec);
-                verses = verse_order_vec.unwrap_or_default();
-                vo.split(' ')
-                    .map(std::string::ToString::to_string)
-                    .collect()
-            } else {
-                vo.split(' ')
-                    .map(std::string::ToString::to_string)
-                    .collect()
-            }
+            verse_order
+                .split(' ')
+                .map(std::string::ToString::to_string)
+                .collect()
         };
 
         Ok(Self {
             id: row.try_get(12)?,
             title: row.try_get(5)?,
-            lyrics: row.try_get(8)?,
+            lyrics: Some(lyrics),
             author: row.try_get(10)?,
             ccli: row.try_get(9)?,
             audio: Some(PathBuf::from({
@@ -317,8 +331,8 @@ impl FromRow<'_, SqliteRow> for Song {
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
             stroke_size: None,
-            verses: Some(verses),
-            verse_map: Some(verse_map),
+            verses,
+            verse_map,
         })
     }
 }
@@ -719,6 +733,9 @@ pub async fn update_song_in_db(
         .background
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
+    let lyrics =
+        ron::ser::to_string(&item.verse_map).into_diagnostic()?;
+
     // let text_alignment = item.text_alignment.map(|ta| match ta {
     //     TextAlignment::TopLeft => todo!(),
     //     TextAlignment::TopCenter => todo!(),
@@ -735,7 +752,7 @@ pub async fn update_song_in_db(
         r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10 WHERE id = $1"#,
         item.id,
         item.title,
-        item.lyrics,
+        lyrics,
         item.author,
         item.ccli,
         verse_order,
