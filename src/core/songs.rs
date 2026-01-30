@@ -43,7 +43,16 @@ pub struct Song {
 }
 
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    Hash,
+    PartialOrd,
+    Ord,
 )]
 pub enum VerseName {
     Verse { number: usize },

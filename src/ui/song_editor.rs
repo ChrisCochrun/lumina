@@ -30,6 +30,7 @@ use cosmic::{
 use derive_more::Debug;
 use dirs::font_dir;
 use iced_video_player::Video;
+use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, error};
 
@@ -259,8 +260,9 @@ impl SongEditor {
                     },
                     Message::UpdateSlides,
                 );
-                self.verses = song.verse_map.map(|vec| {
-                    vec.into_iter()
+                self.verses = song.verse_map.map(|map| {
+                    map.into_iter()
+                        .sorted()
                         .map(|(verse_name, lyric)| {
                             VerseEditor::new(verse_name, lyric)
                         })
@@ -581,6 +583,7 @@ impl SongEditor {
             if let Some(verse_map) = &song.verse_map {
                 verse_map
                     .keys()
+                    .sorted()
                     .map(|verse| {
                         let verse = *verse;
                         let chip =
