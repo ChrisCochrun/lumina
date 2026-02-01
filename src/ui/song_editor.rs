@@ -6,6 +6,10 @@ use std::{
 
 use cosmic::{
     Apply, Element, Task,
+    cosmic_theme::palette::{
+        FromColor, Hsv,
+        rgb::{Rgb, Rgba},
+    },
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
@@ -171,7 +175,7 @@ impl SongEditor {
             fonts_combo: combo_box::State::new(fonts),
             title: String::new(),
             font: String::new(),
-            font_size: 60,
+            font_size: 100,
             font_sizes: combo_box::State::new(font_sizes),
             font_size_open: false,
             font_selector_open: false,
@@ -204,6 +208,7 @@ impl SongEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
+                let mut tasks = vec![];
                 self.song = Some(song.clone());
                 let song_slides = song.clone().to_slides();
                 self.title = song.title;
@@ -211,6 +216,17 @@ impl SongEditor {
                 self.font_selector_open = false;
                 self.editing_verse_order = false;
                 self.stroke_color_picker_open = false;
+                if let Some(stroke_size) = song.stroke_size {
+                    self.stroke_size = stroke_size;
+                }
+                if let Some(stroke_color) = song.stroke_color {
+                    let color = Hsv::from_color(stroke_color);
+                    tasks.push(
+                        self.stroke_color_model.update::<Message>(
+                            ColorPickerUpdate::ActiveColor(color),
+                        ),
+                    );
+                }
                 if let Some(font) = song.font {
                     self.font = font;
                 }
@@ -244,26 +260,7 @@ impl SongEditor {
                 self.song_slides = None;
                 let font_db = Arc::clone(&self.font_db);
 
-                // let slides = song_slides.ok();
-                // let mut task = Task::none();
-                // if let Some(slides) = slides {
-                //     for (index, mut slide) in
-                //         slides.into_iter().enumerate()
-                //     {
-                //         let font_db = Arc::clone(&font_db);
-                //         task = task.chain(Task::perform(
-                //             async move {
-                //                 text_svg::text_svg_generator(
-                //                     &mut slide, font_db,
-                //                 );
-                //                 (index, slide)
-                //             },
-                //             Message::UpdateSlide,
-                //         ));
-                //     }
-                // }
-
-                let task = Task::perform(
+                tasks.push(Task::perform(
                     async move {
                         song_slides
                             .ok()
@@ -281,7 +278,7 @@ impl SongEditor {
                             .unwrap_or_default()
                     },
                     Message::UpdateSlides,
-                );
+                ));
 
                 self.verses = song.verse_map.map(|map| {
                     map.into_iter()
@@ -291,7 +288,7 @@ impl SongEditor {
                         })
                         .collect()
                 });
-                return Action::Task(task);
+                return Action::Task(Task::batch(tasks));
             }
             Message::ChangeFont(font) => {
                 self.font = font.clone();
@@ -383,10 +380,15 @@ impl SongEditor {
                 }
             }
             Message::UpdateStrokeColor(update) => {
-                debug!(color = ?self.stroke_color_model.get_applied_color());
-                return Action::Task(
-                    self.stroke_color_model.update(update),
-                );
+                let task = self.stroke_color_model.update(update);
+                if let Some(song) = self.song.as_mut()
+                    && let Some(color) =
+                        self.stroke_color_model.get_applied_color()
+                {
+                    debug!(?color);
+                    song.stroke_color = Some(color.into());
+                }
+                return Action::Task(task);
             }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);

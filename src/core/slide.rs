@@ -1,4 +1,6 @@
-use cosmic::widget::image::Handle;
+use cosmic::{
+    cosmic_theme::palette::rgb::Rgba, widget::image::Handle,
+};
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
@@ -23,6 +25,8 @@ pub struct Slide {
     text: String,
     font: String,
     font_size: i32,
+    stroke_size: i32,
+    stroke_color: Rgba,
     text_alignment: TextAlignment,
     audio: Option<PathBuf>,
     video_loop: bool,

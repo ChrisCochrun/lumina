@@ -2,7 +2,10 @@ use std::{
     borrow::Cow, collections::HashMap, option::Option, path::PathBuf,
 };
 
-use cosmic::iced::{Color, clipboard::mime::AsMimeTypes};
+use cosmic::{
+    cosmic_theme::palette::rgb::Rgba,
+    iced::{Color, clipboard::mime::AsMimeTypes},
+};
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
@@ -23,7 +26,7 @@ use super::{
 };
 
 #[derive(
-    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
+    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
 )]
 pub struct Song {
     pub id: i32,
@@ -38,10 +41,10 @@ pub struct Song {
     pub font: Option<String>,
     pub font_size: Option<i32>,
     pub stroke_size: Option<i32>,
-    pub stroke_color: Option<String>,
+    pub stroke_color: Option<Rgba>,
     pub shadow_size: Option<i32>,
     pub shadow_offset: Option<(i32, i32)>,
-    pub shadow_color: Option<String>,
+    pub shadow_color: Option<Rgba>,
     pub verses: Option<Vec<VerseName>>,
     pub verse_map: Option<HashMap<VerseName, String>>,
 }
