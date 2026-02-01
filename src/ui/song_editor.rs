@@ -1100,6 +1100,7 @@ impl SongEditor {
             let video =
                 Video::try_from(background).ok().map(|mut v| {
                     v.set_looping(true);
+                    v.set_paused(true);
                     v
                 });
             // debug!(?video);
