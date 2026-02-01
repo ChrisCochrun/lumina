@@ -2,7 +2,7 @@ use std::{
     borrow::Cow, collections::HashMap, option::Option, path::PathBuf,
 };
 
-use cosmic::iced::clipboard::mime::AsMimeTypes;
+use cosmic::iced::{Color, clipboard::mime::AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
@@ -38,6 +38,10 @@ pub struct Song {
     pub font: Option<String>,
     pub font_size: Option<i32>,
     pub stroke_size: Option<i32>,
+    pub stroke_color: Option<String>,
+    pub shadow_size: Option<i32>,
+    pub shadow_offset: Option<(i32, i32)>,
+    pub shadow_color: Option<String>,
     pub verses: Option<Vec<VerseName>>,
     pub verse_map: Option<HashMap<VerseName, String>>,
 }
@@ -342,6 +346,7 @@ impl FromRow<'_, SqliteRow> for Song {
             stroke_size: None,
             verses,
             verse_map,
+            ..Default::default()
         })
     }
 }
@@ -1133,6 +1138,7 @@ You saved my soul"
             stroke_size: None,
             verses: Some(vec![]),
             verse_map: None,
+            ..Default::default()
         }
     }
 

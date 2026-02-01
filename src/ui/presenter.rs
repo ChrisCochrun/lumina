@@ -205,7 +205,7 @@ impl Presenter {
         gst::init().into_diagnostic()?;
 
         let pipeline = format!(
-            r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
+            r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
             url.as_str()
         );
 
@@ -1050,100 +1050,84 @@ pub(crate) fn slide_view<'a>(
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'a, Message> {
-    let res = responsive(move |size| {
+    responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
-
-        let text: Element<Message> =
-            if let Some(text) = &slide.text_svg {
-                if let Some(handle) = &text.handle {
-                    image(handle)
-                        .content_fit(ContentFit::ScaleDown)
-                        .width(Length::Shrink)
-                        .height(Length::Shrink)
-                        .into()
-                } else {
-                    Space::with_width(0).into()
-                }
-            } else {
-                Space::with_width(0).into()
-            };
         let black = Container::new(Space::new(0, 0))
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
             })
             .clip(true)
             .width(width)
-            .height(size.height);
-        let background = match slide.background().kind {
+            .height(Length::Fill);
+        let mut stack = stack(vec![black.into()]);
+
+        match slide.background().kind {
             BackgroundKind::Image => {
                 let path = slide.background().path.clone();
-                Container::new(
-                    image(path)
-                        .content_fit(ContentFit::Cover)
-                        .width(width)
-                        .height(size.height),
-                )
-                .center(Length::Shrink)
-                .clip(true)
-            }
-            BackgroundKind::Video => {
-                if delegate {
-                    Container::new(Space::new(0, 0))
-                        .style(|_| {
-                            container::background(Background::Color(
-                                Color::BLACK,
-                            ))
-                        })
-                        .center(Length::Fill)
-                        .clip(true)
-                        .width(width)
-                        .height(size.height)
-                } else if let Some(video) = &video {
+                stack = stack.push(
                     Container::new(
-                        VideoPlayer::new(video)
-                            .mouse_hidden(hide_mouse)
+                        image(path)
+                            .content_fit(ContentFit::Contain)
                             .width(width)
-                            .height(size.height)
-                            .on_end_of_stream(Message::EndVideo)
-                            .on_new_frame(Message::VideoFrame)
-                            .on_missing_plugin(Message::MissingPlugin)
-                            .on_warning(|w| {
-                                Message::Error(w.to_string())
-                            })
-                            .on_error(|e| {
-                                Message::Error(e.to_string())
-                            })
-                            .content_fit(ContentFit::Cover),
+                            .height(Length::Fill),
                     )
                     .center(Length::Fill)
-                    .clip(true)
-                    // Container::new(Space::new(0, 0))
-                } else {
-                    Container::new(Space::new(0, 0))
+                    .clip(true),
+                );
+            }
+            BackgroundKind::Video => {
+                if let Some(video) = &video
+                    && !delegate
+                {
+                    stack = stack.push(
+                        Container::new(
+                            VideoPlayer::new(video)
+                                .mouse_hidden(hide_mouse)
+                                .width(width)
+                                .height(Length::Fill)
+                                .on_end_of_stream(Message::EndVideo)
+                                .on_new_frame(Message::VideoFrame)
+                                .on_missing_plugin(
+                                    Message::MissingPlugin,
+                                )
+                                .on_warning(|w| {
+                                    Message::Error(w.to_string())
+                                })
+                                .on_error(|e| {
+                                    Message::Error(e.to_string())
+                                })
+                                .content_fit(ContentFit::Contain),
+                        )
+                        .center(Length::Fill)
+                        .clip(true),
+                    );
                 }
             }
             BackgroundKind::Pdf => {
                 if let Some(pdf) = slide.pdf_page() {
-                    Container::new(
-                        image(pdf).content_fit(ContentFit::Contain),
-                    )
-                    .center(Length::Fill)
-                    .clip(true)
-                } else {
-                    Container::new(Space::new(0.0, 0.0))
+                    stack = stack.push(
+                        Container::new(
+                            image(pdf)
+                                .content_fit(ContentFit::Contain),
+                        )
                         .center(Length::Fill)
-                        .clip(true)
+                        .clip(true),
+                    );
                 }
             }
             BackgroundKind::Html => todo!(),
         };
-        let stack = stack!(
-            black,
-            background.center_x(Length::Fill),
-            container(text).center(Length::Fill)
-        );
+        if let Some(text) = &slide.text_svg {
+            if let Some(handle) = &text.handle {
+                stack = stack.push(
+                    image(handle)
+                        .content_fit(ContentFit::ScaleDown)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                );
+            }
+        };
         Container::new(stack).center(Length::Fill).into()
-    });
-
-    res.into()
+    })
+    .into()
 }

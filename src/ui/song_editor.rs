@@ -102,6 +102,7 @@ pub enum Message {
     ChangeLyrics(text_editor::Action),
     ChangeBackground(Result<PathBuf, SongError>),
     UpdateSlides(Vec<Slide>),
+    UpdateSlide((usize, Slide)),
     PickBackground,
     Edit(bool),
     None,
@@ -240,7 +241,28 @@ impl SongEditor {
                 }
                 self.background_video(&song.background);
                 self.background = song.background.clone();
+                self.song_slides = None;
                 let font_db = Arc::clone(&self.font_db);
+
+                // let slides = song_slides.ok();
+                // let mut task = Task::none();
+                // if let Some(slides) = slides {
+                //     for (index, mut slide) in
+                //         slides.into_iter().enumerate()
+                //     {
+                //         let font_db = Arc::clone(&font_db);
+                //         task = task.chain(Task::perform(
+                //             async move {
+                //                 text_svg::text_svg_generator(
+                //                     &mut slide, font_db,
+                //                 );
+                //                 (index, slide)
+                //             },
+                //             Message::UpdateSlide,
+                //         ));
+                //     }
+                // }
+
                 let task = Task::perform(
                     async move {
                         song_slides
@@ -260,6 +282,7 @@ impl SongEditor {
                     },
                     Message::UpdateSlides,
                 );
+
                 self.verses = song.verse_map.map(|map| {
                     map.into_iter()
                         .sorted()
@@ -367,6 +390,18 @@ impl SongEditor {
             }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);
+            }
+            Message::UpdateSlide((index, slide)) => {
+                if let Some(slides) = self.song_slides.as_mut() {
+                    if let Some(_old) = slides.get(index) {
+                        let _ = slides.remove(index);
+                        slides.insert(index, slide);
+                    } else {
+                        slides.push(slide);
+                    }
+                } else {
+                    self.song_slides = Some(vec![slide]);
+                }
             }
             Message::UpdateSong(song) => {
                 self.song = Some(song.clone());
@@ -1009,6 +1044,32 @@ impl SongEditor {
         let font_db = Arc::clone(&self.font_db);
         let update_task =
             Task::done(Message::UpdateSong(song.clone()));
+
+        // need to test to see which of these methods yields faster
+        // text_svg slide creation. There is a small thought in me that
+        // believes it's better for the user to see the slides being added
+        // one by one, rather than all at once, but that isn't how
+        // the task appears to happen.
+
+        // let slides = song.to_slides().ok();
+        // let mut task = vec![];
+        // if let Some(slides) = slides {
+        //     for (index, mut slide) in slides.into_iter().enumerate() {
+        //         let font_db = Arc::clone(&font_db);
+        //         task.push(Task::perform(
+        //             async move {
+        //                 text_svg::text_svg_generator(
+        //                     &mut slide, font_db,
+        //                 );
+        //                 (index, slide)
+        //             },
+        //             Message::UpdateSlide,
+        //         ));
+        //     }
+        // }
+
+        // I think this implementation is faster
+
         let task = Task::perform(
             async move {
                 song.to_slides()
@@ -1028,6 +1089,7 @@ impl SongEditor {
             },
             Message::UpdateSlides,
         );
+
         Action::Task(task.chain(update_task))
     }
 
