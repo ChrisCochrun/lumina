@@ -125,6 +125,7 @@ pub enum Message {
     ChipDropped((usize, Vec<u8>, String)),
     ChipReorder(draggable::DragEvent),
     DraggingChipStart,
+    ChipDroppedEnd((Vec<u8>, String)),
 }
 
 impl SongEditor {
@@ -480,6 +481,27 @@ impl SongEditor {
                     }
                 }
             }
+            Message::ChipDroppedEnd((data, mime)) => {
+                self.hovered_verse_chip = None;
+                match VerseName::try_from((data, mime)) {
+                    Ok(verse) => {
+                        if let Some(song) = self.song.as_mut()
+                            && let Some(verses) = song.verses.as_mut()
+                        {
+                            verses.push(verse);
+                            let song = song.clone();
+                            return self.update_song(song);
+                        } else {
+                            error!(
+                                "No verses in this song or no song here"
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        error!(?e, "Couldn't convert verse back");
+                    }
+                }
+            }
             Message::ChipReorder(event) => match event {
                 draggable::DragEvent::Picked { index } => (),
                 draggable::DragEvent::Dropped {
@@ -768,21 +790,50 @@ impl SongEditor {
             )
         };
 
-        let verse_order = container(
-            row![
+        let mut verse_order_row;
+
+        if self.dragging_verse_chip {
+            let ending_dnd_dest = dnd_destination(
+                horizontal_space().height(19),
+                vec!["application/verse".into()],
+            )
+            .on_enter(|_, _, _| {
+                debug!("Entering the space");
+                Message::ChipHovered(None)
+            })
+            .on_leave(|| Message::ChipHovered(None))
+            .on_finish(
+                move |mime, data, _action, _x, _y| {
+                    Message::ChipDroppedEnd((data, mime))
+                },
+            );
+            verse_order_row = row![
+                scrollable(verse_order_items)
+                    .direction(
+                        Direction::Horizontal(Scrollbar::new())
+                    )
+                    .spacing(space_s),
+                ending_dnd_dest
+            ]
+            .width(Length::Fill);
+        } else {
+            verse_order_row = row![
                 scrollable(verse_order_items)
                     .direction(
                         Direction::Horizontal(Scrollbar::new())
                     )
                     .width(Length::Fill)
                     .spacing(space_s),
-                verse_chips_edit_toggle
             ]
-            .width(Length::Fill),
-        )
-        .padding(space_s)
-        .width(Length::Fill)
-        .class(theme::Container::Primary);
+            .width(Length::Fill);
+        }
+        verse_order_row =
+            verse_order_row.push(verse_chips_edit_toggle);
+
+        let verse_order = container(verse_order_row)
+            .padding(space_s)
+            .width(Length::Fill)
+            .class(theme::Container::Primary);
 
         let verse_order = container(
             column![
