@@ -1199,52 +1199,37 @@ fn verse_chip(
         ..
     } = theme::spacing();
 
-    let (
-        verse_color,
-        chorus_color,
-        bridge_color,
-        instrumental_color,
-        other_color,
-    ) = {
-        (
-            color!(0xf26430),
-            color!(0x3A86ff),
-            color!(0x47e5bc),
-            color!(0xd90368),
-            color!(0xffd400),
-        )
-    };
+    const VERSE_COLOR: cosmic::iced::Color = color!(0xf26430);
+    const CHORUS_COLOR: cosmic::iced::Color = color!(0x3A86ff);
+    const BRIDGE_COLOR: cosmic::iced::Color = color!(0x47e5bc);
+    const INSTRUMENTAL_COLOR: cosmic::iced::Color = color!(0xd90368);
+    const OTHER_COLOR: cosmic::iced::Color = color!(0xffd400);
 
     let name = verse.get_name();
     let dark_text = Color::BLACK;
     let light_text = Color::WHITE;
     let (background_color, text_color) = match verse {
-        VerseName::Verse { .. } => (verse_color, light_text),
+        VerseName::Verse { .. } => (VERSE_COLOR, light_text),
         VerseName::PreChorus { .. } => {
-            (instrumental_color, light_text)
+            (INSTRUMENTAL_COLOR, light_text)
         }
-        VerseName::Chorus { .. } => (chorus_color, light_text),
+        VerseName::Chorus { .. } => (CHORUS_COLOR, light_text),
         VerseName::PostChorus { .. } => {
             todo!()
         }
-        VerseName::Bridge { .. } => (bridge_color, dark_text),
-        VerseName::Intro { .. } => (other_color, dark_text),
-        VerseName::Outro { .. } => (other_color, dark_text),
+        VerseName::Bridge { .. } => (BRIDGE_COLOR, dark_text),
+        VerseName::Intro { .. } => (OTHER_COLOR, dark_text),
+        VerseName::Outro { .. } => (OTHER_COLOR, dark_text),
         VerseName::Instrumental { .. } => {
             todo!()
         }
-        VerseName::Other { .. } => (other_color, dark_text),
-        VerseName::Blank => (other_color, dark_text),
+        VerseName::Other { .. } => (OTHER_COLOR, dark_text),
+        VerseName::Blank => (OTHER_COLOR, dark_text),
     };
 
-    let final_chip = if let Some(index) = index {
-        let text = text(name);
-        let button = button::icon(icon::from_name("view-close"))
-            .icon_size(19)
-            .padding(space_none)
-            .on_press(Message::RemoveVerse(index));
-        let row = row![text, button].spacing(space_s);
-        row.apply(container)
+    if let Some(index) = index {
+        let text = text(name)
+            .apply(container)
             .padding(
                 Padding::new(space_xxs.into())
                     .right(space_s)
@@ -1259,7 +1244,21 @@ fn verse_chip(
                     .border(
                         Border::default().rounded(space_m).width(2),
                     )
-            })))
+            })));
+        let button = button::icon(icon::from_name("view-close"))
+            .icon_size(19)
+            .padding(space_none)
+            .on_press(Message::RemoveVerse(index))
+            .class(theme::Button::Destructive);
+        stack![
+            text,
+            button
+                .apply(container)
+                .padding([0, space_xxs, 0, 0])
+                .align_right(Length::Fill)
+                .center_y(Length::Fill)
+        ]
+        .into()
     } else {
         text(name)
             .apply(container)
@@ -1278,8 +1277,8 @@ fn verse_chip(
                         Border::default().rounded(space_m).width(2),
                     )
             })))
-    };
-    final_chip.into()
+            .into()
+    }
 }
 
 impl Default for SongEditor {
