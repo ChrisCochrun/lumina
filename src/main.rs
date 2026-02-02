@@ -1548,9 +1548,10 @@ impl cosmic::Application for App {
                     && let Err(e) = self.settings.set_obs_url(
                         config,
                         url::Url::parse(&url).ok(),
-                    ) {
-                        error!(?e, "Can't write to disk obs url");
-                    }
+                    )
+                {
+                    error!(?e, "Can't write to disk obs url");
+                }
                 Task::none()
             }
             Message::SetObsConnection(url) => {
@@ -1578,7 +1579,7 @@ impl cosmic::Application for App {
     fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
             space_none,
-            
+
             space_s,
             ..
         } = cosmic::theme::spacing();
@@ -1952,7 +1953,6 @@ where
                 let visual_item = if self.hovered_dnd.is_some_and(|h| h == index) {
                     let divider = divider::horizontal::default().class(theme::Rule::custom(|t| {
                         let color = t.cosmic().accent_color();
-                        
                         cosmic::iced_widget::rule::Style {
                             color: color.into(),
                             width: 2,
@@ -2063,7 +2063,8 @@ where
             draggable::column::column(list)
                 .spacing(10)
                 .on_drag(|event| match event {
-                    draggable::DragEvent::Picked { .. } => {
+                    draggable::DragEvent::Picked { .. }
+                    | draggable::DragEvent::Canceled { .. } => {
                         Message::None
                     }
                     draggable::DragEvent::Dropped {
@@ -2071,9 +2072,6 @@ where
                         target_index,
                         ..
                     } => Message::ReorderService(index, target_index),
-                    draggable::DragEvent::Canceled { .. } => {
-                        Message::None
-                    }
                 })
                 .style(|t| draggable::column::Style {
                     scale: 1.05,
@@ -2145,11 +2143,10 @@ where
                                 error!(?url, "invalid file URL");
                                 continue;
                             };
-                            let item = ServiceItem::try_from(path);
-                            match item {
-                                Ok(item) => items.push(item),
-                                Err(e) => error!(?e),
-                            }
+                            ServiceItem::try_from(path).map_or_else(
+                                |e| error!(?e),
+                                |item| items.push(item),
+                            );
                         }
                         Message::AddServiceItemsFiles(
                             last_index, items,
@@ -2167,12 +2164,11 @@ where
 
 async fn save_as_dialog() -> Result<PathBuf> {
     let dialog = save::Dialog::new();
+
     save::file(dialog).await.into_diagnostic().map(|response| {
-        match response.url() {
-            Some(url) => Ok(url.to_file_path().unwrap()),
-            None => {
-                Err(miette!("Can't convert url of file to a path"))
-            }
-        }
+        response.url().map_or_else(
+            || Err(miette!("Can't convert url of file to a path")),
+            |url| Ok(url.to_file_path().unwrap()),
+        )
     })?
 }
