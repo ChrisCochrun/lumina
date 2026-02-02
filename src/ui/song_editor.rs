@@ -614,20 +614,21 @@ impl SongEditor {
         //         .label("Verse Order")
         //         .on_input(Message::ChangeVerseOrder);
 
-        let verse_chips: Vec<Element<Message>> = if let Some(song) =
-            &self.song
-        {
-            if let Some(verse_map) = &song.verse_map {
-                verse_map
-                    .keys()
-                    .sorted()
-                    .map(|verse| {
-                        let verse = *verse;
-                        let chip =
-                            verse_chip(verse).map(|()| Message::None);
-                        let verse_chip_wrapped =
-                            RcElementWrapper::<Message>::new(chip);
-                        Element::from(
+        let verse_option_chips: Vec<Element<Message>> =
+            if let Some(song) = &self.song {
+                if let Some(verse_map) = &song.verse_map {
+                    verse_map
+                        .keys()
+                        .sorted()
+                        .map(|verse| {
+                            let verse = *verse;
+                            let chip = verse_chip(verse)
+                                .map(|()| Message::None);
+                            let verse_chip_wrapped =
+                                RcElementWrapper::<Message>::new(
+                                    chip,
+                                );
+                            Element::from(
                             dnd_source::<Message, Box<VerseName>>(
                                 verse_chip_wrapped.clone(),
                             )
@@ -663,14 +664,24 @@ impl SongEditor {
                                 },
                             ),
                         )
-                    })
-                    .collect()
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                }
             } else {
                 vec![]
-            }
-        } else {
-            vec![]
-        };
+            };
+
+        let verse_options = container(
+            scrollable(row(verse_option_chips).spacing(space_s))
+                .direction(Direction::Horizontal(
+                    Scrollbar::new().spacing(space_s),
+                )),
+        )
+        .padding(space_s)
+        .width(Length::Fill)
+        .class(theme::Container::Primary);
 
         let verse_chips_edit_toggle =
             button::icon(if self.editing_verse_order {
@@ -679,17 +690,6 @@ impl SongEditor {
                 icon::from_name("edit")
             })
             .on_press(Message::EditVerseOrder);
-
-        let verse_options = container(
-            scrollable(row(verse_chips).spacing(space_s)).direction(
-                Direction::Horizontal(
-                    Scrollbar::new().spacing(space_s),
-                ),
-            ),
-        )
-        .padding(space_s)
-        .width(Length::Fill)
-        .class(theme::Container::Primary);
 
         let verse_order_items: Vec<Element<Message>> = if let Some(
             song,
@@ -768,13 +768,18 @@ impl SongEditor {
             )
         };
 
-        let verse_order = container(row![
-            scrollable(verse_order_items)
-                .direction(Direction::Horizontal(Scrollbar::new()))
-                .spacing(space_s),
-            horizontal_space(),
-            verse_chips_edit_toggle
-        ])
+        let verse_order = container(
+            row![
+                scrollable(verse_order_items)
+                    .direction(
+                        Direction::Horizontal(Scrollbar::new())
+                    )
+                    .width(Length::Fill)
+                    .spacing(space_s),
+                verse_chips_edit_toggle
+            ]
+            .width(Length::Fill),
+        )
         .padding(space_s)
         .width(Length::Fill)
         .class(theme::Container::Primary);
