@@ -222,11 +222,11 @@ impl SongEditor {
                     self.stroke_size = stroke_size;
                 }
                 if let Some(stroke_color) = song.stroke_color {
-                    let color = Hsv::from_color(stroke_color);
-                    tasks.push(
-                        self.stroke_color_model.update::<Message>(
-                            ColorPickerUpdate::ActiveColor(color),
-                        ),
+                    self.stroke_color_model = ColorPickerModel::new(
+                        "hex",
+                        "rgb",
+                        Some(Color::BLACK),
+                        Some(stroke_color.into()),
                     );
                 }
                 if let Some(font) = song.font {
@@ -1118,8 +1118,6 @@ impl SongEditor {
     }
 
     fn update_song(&mut self, song: Song) -> Action {
-        self.song = Some(song.clone());
-
         let font_db = Arc::clone(&self.font_db);
         let update_task =
             Task::done(Message::UpdateSong(song.clone()));
