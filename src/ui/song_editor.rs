@@ -369,14 +369,17 @@ impl SongEditor {
             }
             Message::PauseVideo => {
                 if let Some(video) = &mut self.video {
-                    let paused = video.paused();
-                    video.set_paused(!paused);
+                    video.set_paused(!video.paused());
                 }
             }
             Message::UpdateStrokeSize(size) => {
                 self.stroke_size = size;
                 if let Some(song) = &mut self.song {
-                    song.stroke_size = Some(size);
+                    if size == 0 {
+                        song.stroke_size = None;
+                    } else {
+                        song.stroke_size = Some(size);
+                    }
                     let song = song.to_owned();
                     return self.update_song(song);
                 }
