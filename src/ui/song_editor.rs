@@ -6,10 +6,7 @@ use std::{
 
 use cosmic::{
     Apply, Element, Task,
-    cosmic_theme::palette::{
-        FromColor, Hsv,
-        rgb::{Rgb, Rgba},
-    },
+    cosmic_theme::palette::{FromColor, Hsv},
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
@@ -27,8 +24,8 @@ use cosmic::{
         ColorPickerModel, RcElementWrapper, button,
         color_picker::{self, ColorPickerUpdate},
         combo_box, container, dnd_destination, dnd_source, dropdown,
-        horizontal_space, icon, popover, progress_bar, scrollable,
-        text, text_editor, text_input, tooltip,
+        horizontal_space, icon, mouse_area, popover, progress_bar,
+        scrollable, text, text_editor, text_input, tooltip,
     },
 };
 use derive_more::Debug;
@@ -85,6 +82,7 @@ pub struct SongEditor {
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
     hovered_verse_chip: Option<usize>,
+    hovered_dnd_verse_chip: Option<usize>,
     stroke_color_picker_open: bool,
     dragging_verse_chip: bool,
 }
@@ -122,10 +120,12 @@ pub enum Message {
     EditVerseOrder,
     OpenStrokeColorPicker,
     ChipHovered(Option<usize>),
+    ChipDndHovered(Option<usize>),
     ChipDropped((usize, Vec<u8>, String)),
     ChipReorder(draggable::DragEvent),
     DraggingChipStart,
     ChipDroppedEnd((Vec<u8>, String)),
+    RemoveVerse(usize),
 }
 
 impl SongEditor {
@@ -202,6 +202,7 @@ impl SongEditor {
             stroke_color_picker_open: false,
             verses: None,
             editing_verse_order: false,
+            hovered_dnd_verse_chip: None,
             hovered_verse_chip: None,
             dragging_verse_chip: false,
         }
@@ -457,11 +458,25 @@ impl SongEditor {
             Message::EditVerseOrder => {
                 self.editing_verse_order = !self.editing_verse_order;
             }
+            Message::RemoveVerse(index) => {
+                if let Some(mut song) = self.song.clone() {
+                    song.verses.as_mut().map_or_else(
+                        || (),
+                        |verses| {
+                            verses.remove(index);
+                        },
+                    );
+                    return self.update_song(song);
+                }
+            }
             Message::ChipHovered(index) => {
                 self.hovered_verse_chip = index;
             }
+            Message::ChipDndHovered(index) => {
+                self.hovered_dnd_verse_chip = index;
+            }
             Message::ChipDropped((index, data, mime)) => {
-                self.hovered_verse_chip = None;
+                self.hovered_dnd_verse_chip = None;
                 match VerseName::try_from((data, mime)) {
                     Ok(verse) => {
                         if let Some(song) = self.song.as_mut() {
@@ -482,7 +497,7 @@ impl SongEditor {
                 }
             }
             Message::ChipDroppedEnd((data, mime)) => {
-                self.hovered_verse_chip = None;
+                self.hovered_dnd_verse_chip = None;
                 match VerseName::try_from((data, mime)) {
                     Ok(verse) => {
                         if let Some(song) = self.song.as_mut()
@@ -644,8 +659,7 @@ impl SongEditor {
                         .sorted()
                         .map(|verse| {
                             let verse = *verse;
-                            let chip = verse_chip(verse)
-                                .map(|()| Message::None);
+                            let chip = verse_chip(verse, None);
                             let verse_chip_wrapped =
                                 RcElementWrapper::<Message>::new(
                                     chip,
@@ -724,10 +738,14 @@ impl SongEditor {
                     .enumerate()
                     .map(|(index, verse)| {
                         let verse = *verse;
+                        let hovered_chip = self.hovered_verse_chip.filter(|hovered_index| hovered_index == &index);
                         let mut chip =
-                            verse_chip(verse).map(|()| Message::None);
+                            verse_chip(verse, hovered_chip).apply(mouse_area)
+                            .on_enter(Message::ChipHovered(Some(index)))
+                            .on_exit(Message::ChipHovered(None))
+                            .into();
                         if let Some(hovered_chip) =
-                            self.hovered_verse_chip
+                            self.hovered_dnd_verse_chip
                             && index == hovered_chip {
                                 let phantom_chip = horizontal_space().width(60).height(19)
                                     .apply(container)
@@ -759,10 +777,10 @@ impl SongEditor {
                             )
                             .on_enter(move |x, y, mimes| {
                                 debug!(x, y, ?mimes);
-                                Message::ChipHovered(Some(index))
+                                Message::ChipDndHovered(Some(index))
                             })
                             .on_leave(move || {
-                                Message::ChipHovered(None)
+                                Message::ChipDndHovered(None)
                             })
                             .on_finish(
                                 move |mime, data, action, _x, _y| {
@@ -799,9 +817,9 @@ impl SongEditor {
             )
             .on_enter(|_, _, _| {
                 debug!("Entering the space");
-                Message::ChipHovered(None)
+                Message::ChipDndHovered(None)
             })
-            .on_leave(|| Message::ChipHovered(None))
+            .on_leave(|| Message::ChipDndHovered(None))
             .on_finish(
                 move |mime, data, _action, _x, _y| {
                     Message::ChipDroppedEnd((data, mime))
@@ -1169,8 +1187,12 @@ impl SongEditor {
     }
 }
 
-fn verse_chip(verse: VerseName) -> Element<'static, ()> {
+fn verse_chip(
+    verse: VerseName,
+    index: Option<usize>,
+) -> Element<'static, Message> {
     let cosmic::cosmic_theme::Spacing {
+        space_none,
         space_s,
         space_m,
         space_xxs,
@@ -1215,22 +1237,49 @@ fn verse_chip(verse: VerseName) -> Element<'static, ()> {
         VerseName::Blank => (other_color, dark_text),
     };
 
-    text(name)
-        .apply(container)
-        .padding(
-            Padding::new(space_xxs.into())
-                .right(space_s)
-                .left(space_s),
-        )
-        .class(theme::Container::Custom(Box::new(move |_t| {
-            container::Style::default()
-                .background(ContainerBackground::Color(
-                    background_color,
-                ))
-                .color(text_color)
-                .border(Border::default().rounded(space_m).width(2))
-        })))
-        .into()
+    let final_chip = if let Some(index) = index {
+        let text = text(name);
+        let button = button::icon(icon::from_name("view-close"))
+            .icon_size(19)
+            .padding(space_none)
+            .on_press(Message::RemoveVerse(index));
+        let row = row![text, button].spacing(space_s);
+        row.apply(container)
+            .padding(
+                Padding::new(space_xxs.into())
+                    .right(space_s)
+                    .left(space_s),
+            )
+            .class(theme::Container::Custom(Box::new(move |_t| {
+                container::Style::default()
+                    .background(ContainerBackground::Color(
+                        background_color,
+                    ))
+                    .color(text_color)
+                    .border(
+                        Border::default().rounded(space_m).width(2),
+                    )
+            })))
+    } else {
+        text(name)
+            .apply(container)
+            .padding(
+                Padding::new(space_xxs.into())
+                    .right(space_s)
+                    .left(space_s),
+            )
+            .class(theme::Container::Custom(Box::new(move |_t| {
+                container::Style::default()
+                    .background(ContainerBackground::Color(
+                        background_color,
+                    ))
+                    .color(text_color)
+                    .border(
+                        Border::default().rounded(space_m).width(2),
+                    )
+            })))
+    };
+    final_chip.into()
 }
 
 impl Default for SongEditor {
