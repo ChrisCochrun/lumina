@@ -28,7 +28,7 @@ gstreamer-app = "0.23"
 # gstreamer-allocators = "0.23"
 # cosmic-time = { git = "https://githubg.com/pop-os/cosmic-time" }
 url = "2"
-colors-transform = "0.2.11"
+# colors-transform = "0.2.11"
 rayon = "1.11.0"
 resvg = "0.45.1"
 image = "0.25.8"

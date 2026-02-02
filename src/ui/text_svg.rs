@@ -5,8 +5,8 @@ use std::{
     sync::Arc,
 };
 
-use colors_transform::Rgb;
 use cosmic::{
+    cosmic_theme::palette::Srgb,
     iced::{
         ContentFit, Length, Size,
         font::{Style, Weight},
@@ -14,11 +14,13 @@ use cosmic::{
     prelude::*,
     widget::{Image, image::Handle},
 };
+use miette::{IntoDiagnostic, Result};
 use rapidhash::v3::rapidhash_v3;
 use resvg::{
     tiny_skia::{self, Pixmap},
     usvg::{Tree, fontdb},
 };
+use serde::{Deserialize, Serialize};
 use tracing::error;
 
 use crate::TextAlignment;
@@ -66,7 +68,9 @@ pub struct Font {
     size: u8,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Hash)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize,
+)]
 pub struct Shadow {
     pub offset_x: i16,
     pub offset_y: i16,
@@ -74,7 +78,9 @@ pub struct Shadow {
     pub color: Color,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Hash)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize,
+)]
 pub struct Stroke {
     size: u16,
     color: Color,
@@ -84,8 +90,8 @@ pub enum Message {
     None,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Color(Rgb);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Color(Srgb);
 
 impl From<cosmic::font::Font> for Font {
     fn from(value: cosmic::font::Font) -> Self {
@@ -160,14 +166,20 @@ impl Font {
 
 impl Hash for Color {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_css_hex_string().hash(state);
+        self.to_css_hex_string().hash(state);
     }
 }
 
 impl Color {
+    pub fn to_css_hex_string(&self) -> String {
+        format!("#{:x}", self.0.into_format::<u8>())
+    }
+
     pub fn from_hex_str(color: impl AsRef<str>) -> Self {
-        match Rgb::from_hex_str(color.as_ref()) {
-            Ok(rgb) => Self(rgb),
+        let color = color.as_ref();
+        let color: Result<Srgb<u8>> = color.parse().into_diagnostic();
+        match color {
+            Ok(srgb) => Self(srgb.into()),
             Err(e) => {
                 error!("error in making color from hex_str: {:?}", e);
                 Self::default()
@@ -182,12 +194,15 @@ impl From<&str> for Color {
     }
 }
 
+impl From<String> for Color {
+    fn from(value: String) -> Self {
+        Self::from_hex_str(value)
+    }
+}
+
 impl Default for Color {
     fn default() -> Self {
-        Self(
-            Rgb::from_hex_str("#000")
-                .expect("This is not a hex color"),
-        )
+        Self(Srgb::new(0.0, 0.0, 0.0))
     }
 }
 
@@ -196,7 +211,7 @@ impl Display for Color {
         &self,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_css_hex_string())
+        write!(f, "{}", self.to_css_hex_string())
     }
 }
 
