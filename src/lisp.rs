@@ -180,7 +180,11 @@ mod test {
             font_size: Some(60),
             stroke_size: Some(2),
             verses: None,
-            verse_map: None
+            verse_map: None,
+            stroke_color: todo!(),
+            shadow_size: todo!(),
+            shadow_offset: todo!(),
+            shadow_color: todo!(),
         }
     }
 }
