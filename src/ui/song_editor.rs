@@ -463,7 +463,15 @@ impl SongEditor {
                 self.editing_verse_order = !self.editing_verse_order;
             }
             Message::AddVerse((verse, lyric)) => {
-                todo!()
+                let verse_editor =
+                    VerseEditor::new(verse.clone(), lyric.clone());
+                if let Some(verses) = self.verses.as_mut() {
+                    verses.push(verse_editor);
+                }
+                if let Some(mut song) = self.song.clone() {
+                    song.add_verse(verse, lyric);
+                    return self.update_song(song);
+                }
             }
             Message::RemoveVerse(index) => {
                 if let Some(mut song) = self.song.clone() {
@@ -899,7 +907,7 @@ impl SongEditor {
                         })
                     },
                 ))
-                .spacing(space_l),
+                .spacing(space_m),
             )
         } else {
             Element::from(horizontal_space())
@@ -912,15 +920,31 @@ impl SongEditor {
         .height(Length::Fill)
         .direction(Direction::Vertical(Scrollbar::new()));
 
-        column![
-            title_input,
-            author_input,
-            verse_order,
-            verse_scroller
+        let verse_add_message = self.song.as_ref().map_or_else(
+            || Message::None,
+            |song| {
+                Message::AddVerse((
+                    song.get_next_verse_name(),
+                    "".to_string(),
+                ))
+            },
+        );
+        let verse_toolbar = column![
+            row![
+                text::heading("Verses").width(Length::Fill),
+                button::icon(icon::from_name("add"))
+                    .on_press(verse_add_message)
+            ],
+            verse_scroller.height(Length::Fill)
         ]
-        .spacing(space_m)
-        .width(Length::FillPortion(2))
-        .into()
+        .apply(container)
+        .padding(space_s)
+        .class(theme::Container::Card);
+
+        column![title_input, author_input, verse_order, verse_toolbar]
+            .spacing(space_m)
+            .width(Length::FillPortion(2))
+            .into()
     }
 
     fn toolbar(&self) -> Element<Message> {
