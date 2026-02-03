@@ -26,7 +26,7 @@ pub struct Slide {
     font: String,
     font_size: i32,
     stroke_size: i32,
-    stroke_color: Rgba,
+    stroke_color: Option<Rgba>,
     text_alignment: TextAlignment,
     audio: Option<PathBuf>,
     video_loop: bool,
@@ -756,8 +756,8 @@ mod test {
             Ok(_s) => {
                 assert!(true)
             }
-            Err(_e) => {
-                assert!(false)
+            Err(e) => {
+                assert!(false, "{:?}", e)
             }
         }
     }
