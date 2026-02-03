@@ -1,12 +1,6 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO Make sure updating verse updates the lyrics too
-[[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
-
-This is necessary so that the entire song gets changed and we can propogate those changes then back to the db.
-
-There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * TODO [#A] Need to fix tests now that the basic app is working
 Lots of them have been tweaked to be completing now, but there is more work to do and several need to likely be a lot more robust.
 
@@ -15,6 +9,12 @@ Still failing 4 tests, all to do with the db or lisp. I might throw out the lisp
 * TODO [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
 
+* TODO [#A] Make sure updating verse updates the lyrics too
+[[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
+
+This is necessary so that the entire song gets changed and we can propogate those changes then back to the db.
+
+There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
