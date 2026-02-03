@@ -662,7 +662,10 @@ impl Model<Song> {
                             }
                         }
                         Err(e) => {
-                            error!("Could not convert song: {e}");
+                            error!(
+                                song_empty = song.is_empty(),
+                                "Could not convert song: {e}: If the song doesn't have any verses, that would be why"
+                            );
                         }
                     }
                 }
