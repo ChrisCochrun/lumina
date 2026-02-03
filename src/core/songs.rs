@@ -807,6 +807,30 @@ impl Song {
     }
 
     pub fn get_lyrics(&self) -> Result<Vec<String>> {
+        // ---------------------------------
+        // new implementation
+        // ---------------------------------
+
+        if let Some(verses) = self.verses.as_ref() {
+            let mut lyrics = vec![];
+            for verse in verses {
+                if verse == &VerseName::Blank {
+                    lyrics.push("".into());
+                    continue;
+                }
+                if let Some(lyric) = self.get_lyric(verse) {
+                    lyrics.push(lyric)
+                }
+            }
+            return Ok(lyrics);
+        } else {
+            return Err(miette!("No verses in this song yet"));
+        }
+
+        // ---------------------------------
+        // old implementation
+        // ---------------------------------
+
         let mut lyric_list = Vec::new();
         if self.lyrics.is_none() {
             return Err(miette!("There is no lyrics here"));
@@ -953,6 +977,80 @@ mod test {
     #[test]
     pub fn test_song_lyrics() {
         let mut song = Song::default();
+        let mut map = HashMap::new();
+        map.insert(
+            VerseName::Verse { number: 1 },
+            "When You found me,
+I was so blind
+My sin was before me,
+I was swallowed by pride"
+                .into(),
+        );
+        map.insert(
+            VerseName::Chorus { number: 1 },
+            "But out of the darkness,
+You brought me to Your light
+You showed me new mercy
+And opened up my eyes"
+                .into(),
+        );
+        map.insert(
+            VerseName::Chorus { number: 2 },
+            "From the day
+You saved my soul
+'Til the very moment
+When I come home
+
+I'll sing, I'll dance,
+My heart will overflow
+From the day
+You saved my soul"
+                .into(),
+        );
+        map.insert(
+            VerseName::Verse { number: 2 },
+            "Where brilliant light
+Is all around
+And endless joy
+Is the only sound"
+                .into(),
+        );
+        map.insert(
+            VerseName::Chorus { number: 3 },
+            "Oh, rest my heart
+Forever now
+Oh, in Your arms
+I'll always be found"
+                .into(),
+        );
+        map.insert(
+            VerseName::Other { number: 1 },
+            "From the Day
+I Am They"
+                .into(),
+        );
+        map.insert(
+            VerseName::Bridge { number: 1 },
+            "My love is Yours
+My heart is Yours
+My life is Yours
+Forever
+
+My love is Yours
+My heart is Yours
+My life is Yours
+Forever"
+                .into(),
+        );
+        map.insert(
+            VerseName::Outro { number: 1 },
+            "Oh Oh Oh
+From the day
+You saved my soul"
+                .into(),
+        );
+        map.insert(VerseName::Blank, "".into());
+        song.verse_map = Some(map);
         song.lyrics = Some(
             "Verse 1
 When You found me,
@@ -1013,6 +1111,22 @@ From the day
 You saved my soul"
                 .to_string(),
         );
+        song.verses = Some(vec![
+            VerseName::Other { number: 1 },
+            VerseName::Verse { number: 1 },
+            VerseName::Chorus { number: 1 },
+            VerseName::Chorus { number: 2 },
+            VerseName::Blank,
+            VerseName::Verse { number: 2 },
+            VerseName::Chorus { number: 3 },
+            VerseName::Chorus { number: 2 },
+            VerseName::Blank,
+            VerseName::Bridge { number: 1 },
+            VerseName::Chorus { number: 2 },
+            VerseName::Chorus { number: 2 },
+            VerseName::Outro { number: 1 },
+            VerseName::Blank,
+        ]);
         song.verse_order =
             "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
                 .to_string()
@@ -1027,19 +1141,17 @@ You saved my soul"
                         "From the Day\nI Am They",
                         "When You found me,\nI was so blind\nMy sin was before me,\nI was swallowed by pride",
                         "But out of the darkness,\nYou brought me to Your light\nYou showed me new mercy\nAnd opened up my eyes",
-                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
-                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home\n\nI'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "",
                         "Where brilliant light\nIs all around\nAnd endless joy\nIs the only sound",
                         "Oh, rest my heart\nForever now\nOh, in Your arms\nI'll always be found",
-                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
-                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
-                        "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever",
-                        "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever",
-                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
-                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
-                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home",
-                        "I'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
-                        "Oh Oh Oh\nFrom the day\nYou saved my soul\n"
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home\n\nI'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "",
+                        "My love is Yours\nMy heart is Yours\nMy life is Yours\nForever\n\nMy love is Yours\nMy heart is Yours\nMy life is Yours\nForever",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home\n\nI'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "From the day\nYou saved my soul\n'Til the very moment\nWhen I come home\n\nI'll sing, I'll dance,\nMy heart will overflow\nFrom the day\nYou saved my soul",
+                        "Oh Oh Oh\nFrom the day\nYou saved my soul",
+                        ""
                     ],
                     lyrics
                 );
