@@ -1119,9 +1119,6 @@ impl SongEditor {
 
     fn update_song(&mut self, song: Song) -> Action {
         let font_db = Arc::clone(&self.font_db);
-        let update_task =
-            Task::done(Message::UpdateSong(song.clone()));
-
         // need to test to see which of these methods yields faster
         // text_svg slide creation. There is a small thought in me that
         // believes it's better for the user to see the slides being added
@@ -1147,27 +1144,27 @@ impl SongEditor {
 
         // I think this implementation is faster
 
-        let task = Task::perform(
-            async move {
-                song.to_slides()
-                    .ok()
-                    .map(move |v| {
-                        v.into_par_iter()
-                            .map(move |mut s| {
-                                text_svg::text_svg_generator(
-                                    &mut s,
-                                    Arc::clone(&font_db),
-                                );
-                                s
-                            })
-                            .collect::<Vec<Slide>>()
-                    })
-                    .unwrap_or_default()
-            },
-            Message::UpdateSlides,
-        );
+        let mut tasks = Vec::with_capacity(2);
+        if let Ok(slides) = song.to_slides() {
+            tasks.push(Task::perform(
+                async move {
+                    slides
+                        .into_par_iter()
+                        .map(move |mut s| {
+                            text_svg::text_svg_generator(
+                                &mut s,
+                                Arc::clone(&font_db),
+                            );
+                            s
+                        })
+                        .collect::<Vec<Slide>>()
+                },
+                Message::UpdateSlides,
+            ));
+        }
+        tasks.push(Task::done(Message::UpdateSong(song)));
 
-        Action::Task(task.chain(update_task))
+        Action::Task(Task::batch(tasks))
     }
 
     fn background_video(&mut self, background: &Option<Background>) {
