@@ -8,8 +8,6 @@ default:
     just --list
 build:
     cargo build
-sbuild:
-    sccache cargo build
 run:
     cargo run -- {{ui}}
 run-release:
