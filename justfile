@@ -1,4 +1,5 @@
 ui := "-i"
+verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 
 export RUSTC_WRAPPER := "sccache"
@@ -11,17 +12,17 @@ build:
 build-release:
     cargo build --release
 run:
-    cargo run -- {{ui}}
+    cargo run -- {{verbose}} {{ui}}
 run-release:
-    cargo run --release -- {{ui}}
+    cargo run --release -- {{verbose}} {{ui}}
 run-file:
-    cargo run -- {{ui}} {{file}}
+    cargo run -- {{verbose}} {{ui}} {{file}}
 clean:
     cargo clean
 test:
     cargo test --benches --tests --all-features -- --nocapture
 profile:
-    cargo flamegraph -- {{ui}}
+    cargo flamegraph -- {{verbose}} {{ui}}
 
 alias b := build
 alias r := run

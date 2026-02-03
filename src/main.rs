@@ -72,15 +72,26 @@ struct Cli {
     #[arg(short = 'i', long)]
     ui: bool,
     file: Option<PathBuf>,
+    #[arg(short = 'v', long)]
+    verbose: bool,
 }
 
 fn main() -> Result<()> {
     let timer = tracing_subscriber::fmt::time::ChronoLocal::new(
         "%Y-%m-%d_%I:%M:%S%.6f %P".to_owned(),
     );
+    let args = Cli::parse();
+
+    let default_directive = if args.verbose {
+        "lumina=debug"
+    } else {
+        "lumina=info"
+    };
+
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
-        .parse_lossy("lumina=debug");
+        .parse_lossy(default_directive);
+
     tracing_subscriber::FmtSubscriber::builder()
         .pretty()
         .with_line_number(true)
@@ -89,8 +100,6 @@ fn main() -> Result<()> {
         .with_target(true)
         .with_timer(timer)
         .init();
-
-    let args = Cli::parse();
 
     let (config_handler, config) = match cosmic_config::Config::new(
         App::APP_ID,
