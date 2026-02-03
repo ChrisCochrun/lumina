@@ -80,12 +80,11 @@ fn main() -> Result<()> {
     );
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
-        .parse_lossy("lumina=debug");
+        .parse_lossy("lumina=debug, clap_builder=error");
     tracing_subscriber::FmtSubscriber::builder()
         .pretty()
         .with_line_number(true)
         .with_level(true)
-        .with_target(true)
         .with_env_filter(filter)
         .with_target(true)
         .with_timer(timer)
@@ -117,7 +116,7 @@ fn main() -> Result<()> {
 
     let settings;
     if args.ui {
-        debug!("main view");
+        debug!(target: "lumina", "main view");
         settings = Settings::default().debug(false).is_daemon(true);
     } else {
         debug!("window view");
