@@ -1,24 +1,25 @@
 ui := "-i"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 
-export RUSTC_WRAPPER=sccache
+export RUSTC_WRAPPER := "sccache"
+export RUST_LOG := "debug"
 
 default:
     just --list
 build:
-    RUST_LOG=debug cargo build
+    cargo build
 sbuild:
-    RUST_LOG=debug sccache cargo build
+    sccache cargo build
 run:
-    RUST_LOG=debug cargo run -- {{ui}}
+    cargo run -- {{ui}}
 run-release:
-    RUST_LOG=debug cargo run --release -- {{ui}}
+    cargo run --release -- {{ui}}
 run-file:
-    RUST_LOG=debug cargo run -- {{ui}} {{file}}
+    cargo run -- {{ui}} {{file}}
 clean:
-    RUST_LOG=debug cargo clean
+    cargo clean
 test:
-    RUST_LOG=debug cargo test --benches --tests --all-features -- --nocapture
+    cargo test --benches --tests --all-features -- --nocapture
 profile:
     cargo flamegraph -- {{ui}}
 
