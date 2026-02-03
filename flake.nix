@@ -30,6 +30,7 @@
             "rustc"
             "rustfmt"
           ])
+          cargo-nextest
           rust-analyzer
           vulkan-loader
           wayland

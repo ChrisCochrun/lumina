@@ -1141,6 +1141,17 @@ You saved my soul"
         }
     }
 
+    #[test]
+    fn test_song_slide_speed() {
+        let song = test_song();
+        let slides = song.to_slides();
+        if let Ok(slides) = slides {
+            assert!(true, "{:?}", slides);
+        } else {
+            assert!(false, "Slides failed");
+        }
+    }
+
     #[tokio::test]
     async fn test_song_from_db() {
         let song = test_song();
