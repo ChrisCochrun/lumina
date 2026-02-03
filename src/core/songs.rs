@@ -664,7 +664,7 @@ impl Model<Song> {
                         Err(e) => {
                             error!(
                                 song_empty = song.is_empty(),
-                                "Could not convert song: {e}: If the song doesn't have any verses, that would be why"
+                                "Could not convert song: {e}: the song is likely broken from an old format if it isn't empty"
                             );
                         }
                     }
