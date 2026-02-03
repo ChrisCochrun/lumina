@@ -80,7 +80,7 @@ fn main() -> Result<()> {
     );
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
-        .parse_lossy("lumina=debug, clap_builder=error");
+        .parse_lossy("lumina=debug");
     tracing_subscriber::FmtSubscriber::builder()
         .pretty()
         .with_line_number(true)
