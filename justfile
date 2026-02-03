@@ -1,6 +1,8 @@
 ui := "-i"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 
+export RUSTC_WRAPPER=sccache
+
 default:
     just --list
 build:
@@ -13,8 +15,6 @@ run-release:
     RUST_LOG=debug cargo run --release -- {{ui}}
 run-file:
     RUST_LOG=debug cargo run -- {{ui}} {{file}}
-srun:
-    RUSTC_WRAPPER=sccache RUST_LOG=debug cargo run -- {{ui}}
 clean:
     RUST_LOG=debug cargo clean
 test:
@@ -26,5 +26,4 @@ alias b := build
 alias r := run
 alias rr := run-release
 alias rf := run-file
-alias sr := srun
 alias c := clean
