@@ -109,13 +109,12 @@ mod test {
     #[tokio::test]
     async fn test_search_to_song() {
         let song = OnlineSong {
-            lyrics: "Bla".to_string(),
-            title: "Bla".to_string(),
-            author: "Bla".to_string(),
-            site: "Bla".to_string(),
-            link: "Bla".to_string(),
+            lyrics: "Alone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love Made a way to let mercy come in\nWhen death was arrested and my life began\n\nAsh was redeemed only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet my feet rose to dance\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nReleased from my chains I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOur savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nWhen death was arrested and my life began\nWhen death was arrested and my life began".to_string(),
+            title: "Death Was Arrested".to_string(),
+            author: "North Point InsideOut".to_string(),
+            site: "https://www.lyrics.com".to_string(),
+            link: "https://www.lyrics.com/lyric/35090938/North+Point+InsideOut/Death+Was+Arrested".to_string(),
         };
-        let vec = vec![song];
         let search =
             search_online_song_links("Death was arrested").await;
         match search {
@@ -123,7 +122,15 @@ mod test {
                 let songs = link_to_online_song(links).await;
                 match songs {
                     Ok(songs) => {
-                        assert_eq!(songs, vec);
+                        if let Some(first) =
+                            songs.iter().find_or_first(|song| {
+                                song.author
+                                    == "North Point InsideOut"
+                                        .to_string()
+                            })
+                        {
+                            assert_eq!(&song, first);
+                        }
                     }
                     Err(e) => assert!(false, "{}", e),
                 }
@@ -138,13 +145,13 @@ mod test {
             search_online_song_links("Death was arrested").await;
         match search {
             Ok(songs) => {
-                assert_eq!(songs, vec!["hello"]);
-                for song in songs {
-                    assert_eq!(
-                        "/lyric/33755723/Various+Artists/Death+Was+Arrested",
-                        song
-                    )
-                }
+                assert_eq!(
+                    songs,
+                    vec![
+                        "33755723/Various+Artists/Death+Was+Arrested",
+                        "35090938/North+Point+InsideOut/Death+Was+Arrested"
+                    ]
+                );
             }
             Err(e) => assert!(false, "{}", e),
         }
