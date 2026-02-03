@@ -14,7 +14,7 @@ run-release:
 run-file:
     RUST_LOG=debug cargo run -- {{ui}} {{file}}
 srun:
-    RUST_LOG=debug sccache cargo run -- {{ui}} {{file}}
+    RUSTC_WRAPPER=sccache RUST_LOG=debug cargo run -- {{ui}}
 clean:
     RUST_LOG=debug cargo clean
 test:
