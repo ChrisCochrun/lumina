@@ -125,6 +125,7 @@ pub enum Message {
     ChipReorder(draggable::DragEvent),
     DraggingChipStart,
     ChipDroppedEnd((Vec<u8>, String)),
+    AddVerse((VerseName, String)),
     RemoveVerse(usize),
 }
 
@@ -460,6 +461,9 @@ impl SongEditor {
             }
             Message::EditVerseOrder => {
                 self.editing_verse_order = !self.editing_verse_order;
+            }
+            Message::AddVerse((verse, lyric)) => {
+                todo!()
             }
             Message::RemoveVerse(index) => {
                 if let Some(mut song) = self.song.clone() {

@@ -969,6 +969,82 @@ impl Song {
             self.lyrics = Some(new_lyrics);
         }
     }
+
+    pub fn get_next_verse_name(&self) -> VerseName {
+        if let Some(verse_names) = &self.verses {
+            let verses: Vec<&VerseName> = verse_names
+                .iter()
+                .filter(|verse| match verse {
+                    VerseName::Verse { .. } => true,
+                    _ => false,
+                })
+                .sorted()
+                .collect();
+            let choruses: Vec<&VerseName> = verse_names
+                .iter()
+                .filter(|verse| match verse {
+                    VerseName::Chorus { .. } => true,
+                    _ => false,
+                })
+                .collect();
+            let bridges: Vec<&VerseName> = verse_names
+                .iter()
+                .filter(|verse| match verse {
+                    VerseName::Bridge { .. } => true,
+                    _ => false,
+                })
+                .collect();
+            if verses.len() == 0 {
+                return VerseName::Verse { number: 1 };
+            } else if choruses.len() == 0 {
+                return VerseName::Chorus { number: 1 };
+            } else if verses.len() == 1 {
+                let verse_number =
+                    if let Some(last_verse) = verses.iter().last() {
+                        match last_verse {
+                            VerseName::Verse { number } => *number,
+                            _ => 0,
+                        }
+                    } else {
+                        0
+                    };
+                if verse_number > 1 {
+                    return VerseName::Verse { number: 1 };
+                }
+                return VerseName::Verse { number: 2 };
+            } else if bridges.len() == 0 {
+                return VerseName::Bridge { number: 1 };
+            } else {
+                if let Some(last_verse) = verses.iter().last() {
+                    match last_verse {
+                        VerseName::Verse { number } => {
+                            return VerseName::Verse {
+                                number: number + 1,
+                            };
+                        }
+                        _ => (),
+                    }
+                }
+                VerseName::Verse { number: 1 }
+            }
+        } else {
+            VerseName::Verse { number: 1 }
+        }
+    }
+
+    pub fn add_verse(
+        &mut self,
+        verse: VerseName,
+        lyric: impl Into<String>,
+    ) {
+        let lyric: String = lyric.into();
+        self.set_lyrics(&verse, lyric);
+        if let Some(verses) = self.verses.as_mut() {
+            verses.push(verse);
+        } else {
+            self.verses = Some(vec![verse]);
+        };
+    }
 }
 
 #[cfg(test)]
@@ -1224,6 +1300,56 @@ You saved my soul"
             Value::List(v) => v.first().unwrap().clone(),
             _ => Value::Nil,
         }
+    }
+
+    #[test]
+    fn test_verse_names_and_adding() {
+        let mut song = Song::default();
+        song.verses = Some(vec![]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 1 });
+        song.verses = Some(vec![VerseName::Verse { number: 1 }]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Chorus { number: 1 });
+        song.verses = Some(vec![
+            VerseName::Verse { number: 1 },
+            VerseName::Chorus { number: 1 },
+        ]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 2 });
+        song.verses = Some(vec![
+            VerseName::Chorus { number: 1 },
+            VerseName::Verse { number: 2 },
+        ]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 1 });
+        song.verses = Some(vec![
+            VerseName::Verse { number: 1 },
+            VerseName::Chorus { number: 1 },
+            VerseName::Verse { number: 2 },
+        ]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Bridge { number: 1 });
+        song.verses = Some(vec![
+            VerseName::Verse { number: 1 },
+            VerseName::Chorus { number: 1 },
+            VerseName::Verse { number: 2 },
+            VerseName::Bridge { number: 1 },
+        ]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 3 });
+        song.verses = Some(vec![
+            VerseName::Verse { number: 1 },
+            VerseName::Chorus { number: 1 },
+            VerseName::Verse { number: 2 },
+            VerseName::Verse { number: 3 },
+            VerseName::Bridge { number: 1 },
+        ]);
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 4 });
+        song.add_verse(VerseName::Verse { number: 4 }, "");
+        let name = song.get_next_verse_name();
+        assert_eq!(name, VerseName::Verse { number: 5 });
     }
 
     // #[test]
