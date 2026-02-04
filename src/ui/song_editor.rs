@@ -10,7 +10,7 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, Vector, alignment::Vertical, color,
+        Padding, Vector, alignment::Vertical, color, task,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
@@ -85,6 +85,7 @@ pub struct SongEditor {
     hovered_dnd_verse_chip: Option<usize>,
     stroke_color_picker_open: bool,
     dragging_verse_chip: bool,
+    update_slide_handle: Option<task::Handle>,
 }
 
 pub enum Action {
@@ -206,6 +207,7 @@ impl SongEditor {
             hovered_dnd_verse_chip: None,
             hovered_verse_chip: None,
             dragging_verse_chip: false,
+            update_slide_handle: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -398,6 +400,7 @@ impl SongEditor {
             }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);
+                self.update_slide_handle = None;
             }
             Message::UpdateSlide((index, slide)) => {
                 if let Some(slides) = self.song_slides.as_mut() {
@@ -1174,7 +1177,10 @@ impl SongEditor {
 
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
-            tasks.push(Task::perform(
+            if let Some(handle) = &self.update_slide_handle {
+                handle.abort();
+            };
+            let (task, handle) = Task::perform(
                 async move {
                     slides
                         .into_par_iter()
@@ -1188,7 +1194,10 @@ impl SongEditor {
                         .collect::<Vec<Slide>>()
                 },
                 Message::UpdateSlides,
-            ));
+            )
+            .abortable();
+            self.update_slide_handle = Some(handle);
+            tasks.push(task);
         }
         tasks.push(Task::done(Message::UpdateSong(song)));
 
