@@ -4,7 +4,7 @@ use std::{
 
 use cosmic::{
     cosmic_theme::palette::rgb::Rgba,
-    iced::{Color, clipboard::mime::AsMimeTypes},
+    iced::clipboard::mime::AsMimeTypes,
 };
 use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
@@ -207,14 +207,14 @@ impl ServiceTrait for Song {
             verses
                 .iter()
                 .filter_map(|verse| {
-                    map.get(verse).and_then(|lyric| {
+                    map.get(verse).map(|lyric| {
                         let lyric =
                             lyric.to_owned().trim().to_string();
                         let multi_lyric = lyric.split("\n\n");
                         let lyric: Vec<String> = multi_lyric
                             .map(|lyric| lyric.trim().to_string())
                             .collect();
-                        Some(lyric)
+                        lyric
                     })
                 })
                 .flatten()
@@ -276,7 +276,7 @@ impl FromRow<'_, SqliteRow> for Song {
         //     });
         // };
 
-        let Ok(mut verse_map) = ron::de::from_str::<
+        let Ok(verse_map) = ron::de::from_str::<
             Option<HashMap<VerseName, String>>,
         >(lyrics.as_ref()) else {
             return Err(sqlx::Error::ColumnDecode {
@@ -1015,10 +1015,10 @@ impl Song {
                     _ => false,
                 })
                 .collect();
-            if verses.len() == 0 {
-                return VerseName::Verse { number: 1 };
-            } else if choruses.len() == 0 {
-                return VerseName::Chorus { number: 1 };
+            if verses.is_empty() {
+                VerseName::Verse { number: 1 }
+            } else if choruses.is_empty() {
+                VerseName::Chorus { number: 1 }
             } else if verses.len() == 1 {
                 let verse_number =
                     if let Some(last_verse) = verses.iter().last() {
@@ -1032,20 +1032,16 @@ impl Song {
                 if verse_number > 1 {
                     return VerseName::Verse { number: 1 };
                 }
-                return VerseName::Verse { number: 2 };
-            } else if bridges.len() == 0 {
-                return VerseName::Bridge { number: 1 };
+                VerseName::Verse { number: 2 }
+            } else if bridges.is_empty() {
+                VerseName::Bridge { number: 1 }
             } else {
-                if let Some(last_verse) = verses.iter().last() {
-                    match last_verse {
-                        VerseName::Verse { number } => {
-                            return VerseName::Verse {
-                                number: number + 1,
-                            };
-                        }
-                        _ => (),
+                if let Some(last_verse) = verses.iter().last()
+                    && let VerseName::Verse { number } = last_verse {
+                        return VerseName::Verse {
+                            number: number + 1,
+                        };
                     }
-                }
                 VerseName::Verse { number: 1 }
             }
         } else {

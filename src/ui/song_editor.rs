@@ -6,7 +6,6 @@ use std::{
 
 use cosmic::{
     Apply, Element, Task,
-    cosmic_theme::palette::{FromColor, Hsv},
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
@@ -467,7 +466,7 @@ impl SongEditor {
             }
             Message::AddVerse((verse, lyric)) => {
                 let verse_editor =
-                    VerseEditor::new(verse.clone(), lyric.clone());
+                    VerseEditor::new(verse, lyric.clone());
                 if let Some(verses) = self.verses.as_mut() {
                     verses.push(verse_editor);
                 }
@@ -821,7 +820,7 @@ impl SongEditor {
         } else {
             Element::from(
                 draggable::row(verse_order_items)
-                    .on_drag(|event| Message::ChipReorder(event))
+                    .on_drag(Message::ChipReorder)
                     .spacing(space_s),
             )
         };

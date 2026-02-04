@@ -126,7 +126,6 @@ mod test {
                             songs.iter().find_or_first(|song| {
                                 song.author
                                     == "North Point InsideOut"
-                                        .to_string()
                             })
                         {
                             assert_eq!(&song, first);

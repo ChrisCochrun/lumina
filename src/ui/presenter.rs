@@ -1117,16 +1117,15 @@ pub(crate) fn slide_view<'a>(
             }
             BackgroundKind::Html => todo!(),
         };
-        if let Some(text) = &slide.text_svg {
-            if let Some(handle) = &text.handle {
+        if let Some(text) = &slide.text_svg
+            && let Some(handle) = &text.handle {
                 stack = stack.push(
                     image(handle)
                         .content_fit(ContentFit::ScaleDown)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 );
-            }
-        };
+            };
         Container::new(stack).center(Length::Fill).into()
     })
     .into()
