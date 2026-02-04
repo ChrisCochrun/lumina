@@ -76,6 +76,70 @@ pub enum VerseName {
 }
 
 impl VerseName {
+    pub fn from_string(name: String) -> Self {
+        match name.as_str() {
+            "Verse" => Self::Verse { number: 1 },
+            "Pre-Chorus" => Self::PreChorus { number: 1 },
+            "Chorus" => Self::Chorus { number: 1 },
+            "Post-Chorus" => Self::PostChorus { number: 1 },
+            "Bridge" => Self::Bridge { number: 1 },
+            "Intro" => Self::Intro { number: 1 },
+            "Outro" => Self::Outro { number: 1 },
+            "Instrumental" => Self::Instrumental { number: 1 },
+            "Other" => Self::Other { number: 1 },
+            "Blank" => Self::Blank,
+            _ => Self::Blank,
+        }
+    }
+
+    pub fn all_names() -> Vec<String> {
+        vec![
+            "Verse".into(),
+            "Pre-Chorus".into(),
+            "Chorus".into(),
+            "Post-Chorus".into(),
+            "Bridge".into(),
+            "Intro".into(),
+            "Outro".into(),
+            "Instrumental".into(),
+            "Other".into(),
+            "Blank".into(),
+        ]
+    }
+
+    pub fn next(&self) -> Self {
+        match self {
+            Self::Verse { number } => {
+                Self::Verse { number: number + 1 }
+            }
+            Self::PreChorus { number } => {
+                Self::PreChorus { number: number + 1 }
+            }
+            Self::Chorus { number } => {
+                Self::Chorus { number: number + 1 }
+            }
+            Self::PostChorus { number } => {
+                Self::PostChorus { number: number + 1 }
+            }
+            Self::Bridge { number } => {
+                Self::Bridge { number: number + 1 }
+            }
+            Self::Intro { number } => {
+                Self::Intro { number: number + 1 }
+            }
+            Self::Outro { number } => {
+                Self::Outro { number: number + 1 }
+            }
+            Self::Instrumental { number } => {
+                Self::Instrumental { number: number + 1 }
+            }
+            Self::Other { number } => {
+                Self::Other { number: number + 1 }
+            }
+            Self::Blank => Self::Blank,
+        }
+    }
+
     #[must_use]
     pub fn get_name(&self) -> String {
         match self {
@@ -1037,11 +1101,10 @@ impl Song {
                 VerseName::Bridge { number: 1 }
             } else {
                 if let Some(last_verse) = verses.iter().last()
-                    && let VerseName::Verse { number } = last_verse {
-                        return VerseName::Verse {
-                            number: number + 1,
-                        };
-                    }
+                    && let VerseName::Verse { number } = last_verse
+                {
+                    return VerseName::Verse { number: number + 1 };
+                }
                 VerseName::Verse { number: 1 }
             }
         } else {
@@ -1061,6 +1124,40 @@ impl Song {
         } else {
             self.verses = Some(vec![verse]);
         };
+    }
+
+    pub(crate) fn verse_name_from_str(
+        &self,
+        verse_name: String,        // chorus 2
+        old_verse_name: VerseName, // v4
+    ) -> VerseName {
+        if old_verse_name.get_name() == verse_name {
+            return old_verse_name;
+        };
+        if let Some(verses) =
+            self.verse_map.clone().map(|verse_map| {
+                verse_map.into_keys().collect::<Vec<VerseName>>()
+            })
+        {
+            verses
+                .into_iter()
+                .filter(|verse| {
+                    verse
+                        .get_name()
+                        .split_whitespace()
+                        .next()
+                        .unwrap()
+                        == &verse_name
+                })
+                .sorted()
+                .last()
+                .map_or_else(
+                    || VerseName::from_string(verse_name),
+                    |verse_name| verse_name.next(),
+                )
+        } else {
+            VerseName::from_string(verse_name)
+        }
     }
 }
 

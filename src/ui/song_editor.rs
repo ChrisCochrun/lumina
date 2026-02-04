@@ -441,6 +441,25 @@ impl SongEditor {
                                 },
                             ));
                         }
+                        verse_editor::Action::UpdateVerseName(
+                            verse_name,
+                        ) => {
+                            if let Some(mut song) = self.song.clone()
+                            {
+                                let verse_name = song
+                                    .verse_name_from_str(
+                                        verse_name,
+                                        verse.verse_name.clone(),
+                                    );
+                                let lyric = verse.lyric.clone();
+
+                                song.update_verse(
+                                    index, verse_name, lyric,
+                                );
+
+                                return self.update_song(song);
+                            }
+                        }
                         verse_editor::Action::UpdateVerse(verse) => {
                             if let Some(mut song) = self.song.clone()
                             {
