@@ -94,7 +94,7 @@ impl VerseEditor {
         let lyric = text_editor(&self.content)
             .on_action(Message::UpdateLyric)
             .padding(space_m)
-            .class(cosmic::theme::iced::TextEditor::Custom(Box::new(
+            .class(theme::iced::TextEditor::Custom(Box::new(
                 move |t, s| {
                     let neutral = t.cosmic().palette.neutral_9;
                     let mut base_style = text_editor::Style {
