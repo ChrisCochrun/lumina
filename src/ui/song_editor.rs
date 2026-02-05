@@ -446,29 +446,39 @@ impl SongEditor {
                         ) => {
                             if let Some(mut song) = self.song.clone()
                             {
+                                let old_verse_name = verse.verse_name.clone();
                                 let verse_name = song
                                     .verse_name_from_str(
                                         verse_name,
-                                        verse.verse_name.clone(),
+                                        old_verse_name,
                                     );
                                 let lyric = verse.lyric.clone();
 
-                                song.update_verse(
+                                song.update_verse_name(
                                     index, verse_name, lyric,
                                 );
 
                                 return self.update_song(song);
                             }
                         }
-                        verse_editor::Action::UpdateVerse(verse) => {
+                        verse_editor::Action::UpdateVerse((
+                            verse,
+                            lyric,
+                        )) => {
                             if let Some(mut song) = self.song.clone()
                             {
-                                let (verse, lyric) = verse;
                                 song.update_verse(
                                     index, verse, lyric,
                                 );
                                 return self.update_song(song);
                             }
+                        }
+                        verse_editor::Action::DeleteVerse(verse) => {
+                            if let Some(mut song) = self.song.clone()
+                            {
+                                song.delete_verse(verse);
+                                return self.update_song(song);
+                            };
                         }
                         verse_editor::Action::None => (),
                     }
@@ -678,6 +688,9 @@ impl SongEditor {
         let author_input = text_input("author", &self.author)
             .on_input(Message::ChangeAuthor)
             .label("Song Author");
+
+        let top_input_row =
+            row![title_input, author_input].spacing(space_m);
 
         //         let verse_input = text_input(
         //             "Verse
@@ -962,7 +975,7 @@ impl SongEditor {
         .padding(space_s)
         .class(theme::Container::Card);
 
-        column![title_input, author_input, verse_order, verse_toolbar]
+        column![top_input_row, verse_order, verse_toolbar]
             .spacing(space_m)
             .width(Length::FillPortion(2))
             .into()
@@ -1193,6 +1206,14 @@ impl SongEditor {
 
         // I think this implementation is faster
 
+        self.verses = song.verse_map.as_ref().map(|map| {
+            map.into_iter()
+                .sorted()
+                .map(|(verse_name, lyric)| {
+                    VerseEditor::new(*verse_name, lyric.to_string())
+                })
+                .collect()
+        });
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
             if let Some(handle) = &self.update_slide_handle {

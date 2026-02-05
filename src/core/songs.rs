@@ -981,6 +981,19 @@ impl Song {
         }
     }
 
+    pub fn update_verse_name(
+        &mut self,
+        verse: VerseName,
+        old_verse: &VerseName,
+    ) {
+        if let Some(verse_map) = self.verse_map.as_mut()
+            && let Some(lyric) = verse_map.remove(old_verse)
+        {
+            verse_map.insert(verse, lyric);
+        }
+        todo!("need to finish update the versename in the vec")
+    }
+
     // TODO update_verse needs to also change the lyrics for the song such that
     // the song can be sent to the db and it's lyrics will actually change. Or we
     // could have the update_song_in_db function recreate the lyrics from the new
@@ -1157,6 +1170,15 @@ impl Song {
                 )
         } else {
             VerseName::from_string(verse_name)
+        }
+    }
+
+    pub(crate) fn delete_verse(&mut self, verse: VerseName) {
+        if let Some(verses) = self.verses.as_mut() {
+            verses.retain(|inner| inner != &verse);
+        }
+        if let Some(map) = self.verse_map.as_mut() {
+            let _ = map.remove(&verse);
         }
     }
 }

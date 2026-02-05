@@ -26,6 +26,7 @@ pub enum Message {
     UpdateLyric(text_editor::Action),
     UpdateVerseName(String),
     EditVerseName,
+    DeleteVerse(VerseName),
     None,
 }
 
@@ -33,6 +34,7 @@ pub enum Action {
     Task(Task<Message>),
     UpdateVerse((VerseName, String)),
     UpdateVerseName(String),
+    DeleteVerse(VerseName),
     None,
 }
 
@@ -65,6 +67,7 @@ impl VerseEditor {
                 self.editing_verse_name = !self.editing_verse_name;
                 Action::None
             }
+            Message::DeleteVerse(verse) => Action::DeleteVerse(verse),
             Message::None => Action::None,
         }
     }
@@ -80,7 +83,7 @@ impl VerseEditor {
         let delete_button = button::text("Delete")
             .trailing_icon(icon::from_name("view-close"))
             .class(theme::Button::Destructive)
-            .on_press(Message::None);
+            .on_press(Message::DeleteVerse(self.verse_name));
         let combo = combo_box(
             &self.verse_name_combo,
             "Verse 1",
