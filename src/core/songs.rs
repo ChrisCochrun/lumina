@@ -871,16 +871,16 @@ impl Song {
     ) {
         let lyric_copy = lyrics.into();
         if let Some(verse_map) = self.verse_map.as_mut() {
-            debug!(?verse_map, "should update");
+            // debug!(?verse_map, "should update");
             verse_map
                 .entry(*verse)
                 .and_modify(|old_lyrics| {
                     *old_lyrics = lyric_copy.clone()
                 })
                 .or_insert(lyric_copy);
-            debug!(?verse_map, "should be updated");
+            // debug!(?verse_map, "should be updated");
         } else {
-            debug!(?self.verse_map, "should create");
+            // debug!(?self.verse_map, "should create");
             let mut verse_map = HashMap::new();
             verse_map
                 .entry(*verse)
@@ -890,7 +890,7 @@ impl Song {
                 .or_insert(lyric_copy);
             self.verse_map = Some(verse_map);
         }
-        debug!(?self.verse_map);
+        // debug!(?self.verse_map);
     }
 
     pub fn get_lyrics(&self) -> Result<Vec<String>> {
@@ -991,7 +991,15 @@ impl Song {
         {
             verse_map.insert(verse, lyric);
         }
-        todo!("need to finish update the versename in the vec")
+        let Some(verses) = self.verses.clone() else {
+            return;
+        };
+        let mut new_verses: Vec<VerseName> = verses
+            .into_iter()
+            .filter(|verse| verse != old_verse)
+            .collect();
+        new_verses.push(verse);
+        self.verses = Some(new_verses)
     }
 
     // TODO update_verse needs to also change the lyrics for the song such that

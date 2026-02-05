@@ -54,11 +54,16 @@ impl VerseEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::UpdateLyric(action) => {
-                self.content.perform(action);
-                let lyrics = self.content.text();
-                self.lyric = lyrics.clone();
-                let verse = self.verse_name;
-                Action::UpdateVerse((verse, lyrics))
+                self.content.perform(action.clone());
+                match action {
+                    text_editor::Action::Edit(_edit) => {
+                        let lyrics = self.content.text();
+                        self.lyric = lyrics.clone();
+                        let verse = self.verse_name;
+                        Action::UpdateVerse((verse, lyrics))
+                    }
+                    _ => Action::None,
+                }
             }
             Message::UpdateVerseName(verse_name) => {
                 Action::UpdateVerseName(verse_name)
@@ -94,57 +99,64 @@ impl VerseEditor {
         let verse_title =
             row![combo, horizontal_space(), delete_button];
 
-        let lyric = text_editor(&self.content)
-            .on_action(Message::UpdateLyric)
-            .padding(space_m)
-            .class(theme::iced::TextEditor::Custom(Box::new(
-                move |t, s| {
-                    let neutral = t.cosmic().palette.neutral_9;
-                    let mut base_style = text_editor::Style {
-                        background: Background::Color(
-                            t.cosmic()
-                                .background
-                                .small_widget
-                                .with_alpha(0.25)
+        let lyric: Element<Message> = if self.verse_name
+            == VerseName::Blank
+        {
+            horizontal_space().into()
+        } else {
+            text_editor(&self.content)
+                .on_action(Message::UpdateLyric)
+                .padding(space_m)
+                .class(theme::iced::TextEditor::Custom(Box::new(
+                    move |t, s| {
+                        let neutral = t.cosmic().palette.neutral_9;
+                        let mut base_style = text_editor::Style {
+                            background: Background::Color(
+                                t.cosmic()
+                                    .background
+                                    .small_widget
+                                    .with_alpha(0.25)
+                                    .into(),
+                            ),
+                            border: Border::default()
+                                .rounded(space_s)
+                                .width(2)
+                                .color(
+                                    t.cosmic().bg_component_divider(),
+                                ),
+                            icon: t
+                                .cosmic()
+                                .primary_component_color()
                                 .into(),
-                        ),
-                        border: Border::default()
+                            placeholder: neutral
+                                .with_alpha(0.7)
+                                .into(),
+                            value: neutral.into(),
+                            selection: t.cosmic().accent.base.into(),
+                        };
+                        let hovered_border = Border::default()
                             .rounded(space_s)
-                            .width(2)
-                            .color(t.cosmic().bg_component_divider()),
-                        icon: t
-                            .cosmic()
-                            .primary_component_color()
-                            .into(),
-                        placeholder: neutral.with_alpha(0.7).into(),
-                        value: neutral.into(),
-                        selection: t.cosmic().accent.base.into(),
-                    };
-                    let hovered_border = Border::default()
-                        .rounded(space_s)
-                        .width(3)
-                        .color(t.cosmic().accent.hover);
-                    match s {
-                        text_editor::Status::Active => base_style,
-                        text_editor::Status::Hovered => {
-                            base_style.border = hovered_border;
-                            base_style
+                            .width(3)
+                            .color(t.cosmic().accent.hover);
+                        match s {
+                            text_editor::Status::Active => base_style,
+                            text_editor::Status::Hovered => {
+                                base_style.border = hovered_border;
+                                base_style
+                            }
+                            text_editor::Status::Focused => {
+                                base_style.border = hovered_border;
+                                base_style
+                            }
+                            text_editor::Status::Disabled => {
+                                base_style
+                            }
                         }
-                        text_editor::Status::Focused => {
-                            base_style.border = hovered_border;
-                            base_style
-                        }
-                        text_editor::Status::Disabled => base_style,
-                    }
-                },
-            )))
-            // .style(|theme, status| {
-            //     let mut style =
-            //         text_editor::default(theme, status);
-            //     style.border = Border::default().rounded(space_s);
-            //     style
-            // })
-            .height(150);
+                    },
+                )))
+                .height(150)
+                .into()
+        };
 
         container(column![verse_title, lyric].spacing(space_s))
             .padding(space_s)

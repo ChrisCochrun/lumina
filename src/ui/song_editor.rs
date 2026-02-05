@@ -14,7 +14,7 @@ use cosmic::{
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
-        column, row,
+        column, horizontal_rule, row,
         scrollable::{Direction, Scrollbar},
         stack, vertical_rule,
     },
@@ -446,16 +446,17 @@ impl SongEditor {
                         ) => {
                             if let Some(mut song) = self.song.clone()
                             {
-                                let old_verse_name = verse.verse_name.clone();
+                                let old_verse_name =
+                                    verse.verse_name.clone();
                                 let verse_name = song
                                     .verse_name_from_str(
                                         verse_name,
                                         old_verse_name,
                                     );
-                                let lyric = verse.lyric.clone();
 
                                 song.update_verse_name(
-                                    index, verse_name, lyric,
+                                    verse_name,
+                                    &old_verse_name,
                                 );
 
                                 return self.update_song(song);
@@ -934,11 +935,16 @@ impl SongEditor {
             Element::from(
                 column(verse_list.iter().enumerate().map(
                     |(index, v)| {
-                        v.view().map(move |message| {
-                            Message::VerseEditorMessage((
-                                index, message,
-                            ))
-                        })
+                        column![
+                            v.view().map(move |message| {
+                                Message::VerseEditorMessage((
+                                    index, message,
+                                ))
+                            }),
+                            horizontal_rule(2)
+                        ]
+                        .spacing(space_m)
+                        .into()
                     },
                 ))
                 .spacing(space_m),
