@@ -23,9 +23,10 @@ use cosmic::{
         ColorPickerModel, RcElementWrapper, button,
         color_picker::{self, ColorPickerUpdate},
         combo_box, container, divider, dnd_destination, dnd_source,
-        dropdown, horizontal_space, icon, mouse_area, popover,
-        progress_bar, scrollable, text, text_editor, text_input,
-        tooltip,
+        dropdown,
+        grid::{self, widget::Assignment},
+        horizontal_space, icon, mouse_area, popover, progress_bar,
+        scrollable, text, text_editor, text_input, tooltip,
     },
 };
 use derive_more::Debug;
@@ -39,7 +40,7 @@ use crate::{
     Background, BackgroundKind,
     core::{
         service_items::ServiceTrait,
-        slide::Slide,
+        slide::{Slide, TextAlignment},
         songs::{Song, VerseName},
     },
     ui::{
@@ -86,6 +87,7 @@ pub struct SongEditor {
     stroke_color_picker_open: bool,
     dragging_verse_chip: bool,
     update_slide_handle: Option<task::Handle>,
+    alignment_popup: bool,
 }
 
 pub enum Action {
@@ -128,6 +130,8 @@ pub enum Message {
     ChipDroppedEnd((Vec<u8>, String)),
     AddVerse((VerseName, String)),
     RemoveVerse(usize),
+    AlignmentPopupOpen,
+    SetTextAlignment(TextAlignment),
 }
 
 impl SongEditor {
@@ -208,6 +212,7 @@ impl SongEditor {
             hovered_verse_chip: None,
             dragging_verse_chip: false,
             update_slide_handle: None,
+            alignment_popup: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -220,6 +225,7 @@ impl SongEditor {
                 self.font_size_open = false;
                 self.font_selector_open = false;
                 self.editing_verse_order = false;
+                self.alignment_popup = false;
                 self.stroke_color_picker_open = false;
                 if let Some(stroke_size) = song.stroke_size {
                     self.stroke_size = stroke_size;
@@ -588,6 +594,15 @@ impl SongEditor {
             },
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
+            }
+            Message::AlignmentPopupOpen => {
+                self.alignment_popup = !self.alignment_popup;
+            }
+            Message::SetTextAlignment(alignment) => {
+                if let Some(mut song) = self.song.clone() {
+                    song.text_alignment = Some(alignment);
+                    return self.update_song(song);
+                }
             }
             Message::None => (),
         }
@@ -1158,16 +1173,149 @@ impl SongEditor {
                 stroke_color_button.popup(stroke_color_picker);
         }
 
-        let text_alignment_button = tooltip(
+        let text_alignment_popover = popover(tooltip(
             button::icon(
                 icon::from_name("align-on-canvas").symbolic(true),
             )
             .label("Text Alignment")
             .padding(space_s)
-            .on_press(Message::None),
+            .on_press(Message::AlignmentPopupOpen),
             "Set where text should be on slide",
             tooltip::Position::Bottom,
-        );
+        ))
+        .modal(false)
+        .position(popover::Position::Bottom)
+        .on_close(Message::AlignmentPopupOpen);
+
+        let text_alignment_popup = if self.alignment_popup {
+            text_alignment_popover.popup(
+                grid::grid()
+                    .row_spacing(space_s)
+                    .column_spacing(space_s)
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_top_left",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::TopLeft,
+                            ),
+                        ),
+                        |a| a.column(0).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_top",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::TopCenter,
+                            ),
+                        ),
+                        |a| a.column(1).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_top_right",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::TopRight,
+                            ),
+                        ),
+                        |a| a.column(2).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_left",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::MiddleLeft,
+                            ),
+                        ),
+                        |a| a.column(0).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_center",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::MiddleCenter,
+                            ),
+                        ),
+                        |a| a.column(1).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_right",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::MiddleRight,
+                            ),
+                        ),
+                        |a| a.column(2).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_bottom_left",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::BottomLeft,
+                            ),
+                        ),
+                        |a| a.column(0).row(2),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_bottom",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::BottomCenter,
+                            ),
+                        ),
+                        |a| a.column(1).row(2),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name(
+                            "boundingbox_bottom_right",
+                        ))
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(
+                            Message::SetTextAlignment(
+                                TextAlignment::BottomRight,
+                            ),
+                        ),
+                        |a| a.column(2).row(2),
+                    )
+                    .apply(container)
+                    .padding(space_s)
+                    .class(theme::Container::Background),
+            )
+        } else {
+            text_alignment_popover
+        };
 
         let background_selector = tooltip(
             button::icon(
@@ -1201,7 +1349,7 @@ impl SongEditor {
             text::body("Stroke Color:"),
             stroke_color_button,
             divider::vertical::default().height(space_l),
-            text_alignment_button,
+            text_alignment_popup,
             horizontal_space(),
             background_selector
         ]
