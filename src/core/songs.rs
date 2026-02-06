@@ -264,32 +264,18 @@ impl ServiceTrait for Song {
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
         // let lyrics = self.get_lyrics()?;
-        let lyrics: Vec<String> = if let Some(verses) =
-            self.verses.as_ref()
-            && let Some(map) = self.verse_map.as_ref()
-        {
-            verses
-                .iter()
-                .filter_map(|verse| {
-                    map.get(verse).map(|lyric| {
-                        let lyric =
-                            lyric.to_owned().trim().to_string();
-                        let multi_lyric = lyric.split("\n\n");
-                        let lyric: Vec<String> = multi_lyric
-                            .map(|lyric| lyric.trim().to_string())
-                            .collect();
-                        lyric
-                    })
-                })
-                .flatten()
-                .collect()
-        } else {
-            vec![]
-        };
+        let lyrics: Vec<String> = self
+            .verses
+            .as_ref()
+            .ok_or(miette!("There are no verses assigned yet."))?
+            .iter()
+            .filter_map(|verse| self.get_lyric(verse))
+            .collect();
+
         debug!(?lyrics);
         let slides: Vec<Slide> = lyrics
             .iter()
-            .map(|l| {
+            .filter_map(|l| {
                 SlideBuilder::new()
                     .background(
                         self.background.clone().unwrap_or_default(),
@@ -305,7 +291,7 @@ impl ServiceTrait for Song {
                     .video_end_time(0.0)
                     .text(l)
                     .build()
-                    .unwrap_or_default()
+                    .ok()
             })
             .collect();
 

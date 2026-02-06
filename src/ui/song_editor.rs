@@ -454,6 +454,8 @@ impl SongEditor {
                                         old_verse_name,
                                     );
 
+                                verse.verse_name = verse_name;
+
                                 song.update_verse_name(
                                     verse_name,
                                     &old_verse_name,
@@ -468,9 +470,10 @@ impl SongEditor {
                         )) => {
                             if let Some(mut song) = self.song.clone()
                             {
-                                song.update_verse(
-                                    index, verse, lyric,
-                                );
+                                song.set_lyrics(&verse, lyric);
+                                // song.update_verse(
+                                //     index, verse, lyric,
+                                // );
                                 return self.update_song(song);
                             }
                         }
@@ -1144,13 +1147,16 @@ impl SongEditor {
                 stroke_color_button.popup(stroke_color_picker);
         }
 
-        let background_selector = button::icon(
-            icon::from_name("folder-pictures-symbolic").scale(2),
-        )
-        .label("Background")
-        .tooltip("Select an image or video background")
-        .on_press(Message::PickBackground)
-        .padding(space_s);
+        let background_selector = tooltip(
+            button::icon(
+                icon::from_name("folder-pictures-symbolic").scale(2),
+            )
+            .label("Background")
+            .on_press(Message::PickBackground)
+            .padding(space_s),
+            "Select an image or video background",
+            tooltip::Position::Bottom,
+        );
 
         // let stroke_size_selector = tooltip(
         //     stroke_popup,
@@ -1211,15 +1217,6 @@ impl SongEditor {
         // }
 
         // I think this implementation is faster
-
-        self.verses = song.verse_map.as_ref().map(|map| {
-            map.into_iter()
-                .sorted()
-                .map(|(verse_name, lyric)| {
-                    VerseEditor::new(*verse_name, lyric.to_string())
-                })
-                .collect()
-        });
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
             if let Some(handle) = &self.update_slide_handle {

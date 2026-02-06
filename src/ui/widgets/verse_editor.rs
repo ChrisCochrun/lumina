@@ -1,7 +1,7 @@
 use cosmic::{
     Element, Task,
     cosmic_theme::palette::WithAlpha,
-    iced::{Background, Border, Color},
+    iced::{Background, Border, Color, Point},
     iced_widget::{column, row},
     theme,
     widget::{
@@ -86,7 +86,9 @@ impl VerseEditor {
         } = theme::spacing();
 
         let delete_button = button::text("Delete")
-            .trailing_icon(icon::from_name("view-close"))
+            .trailing_icon(
+                icon::from_name("view-close").symbolic(true),
+            )
             .class(theme::Button::Destructive)
             .on_press(Message::DeleteVerse(self.verse_name));
         let combo = combo_box(
@@ -162,5 +164,14 @@ impl VerseEditor {
             .padding(space_s)
             .class(theme::Container::Card)
             .into()
+    }
+
+    // TODO not done yet. This doesn't work, need to find a way to either reset the
+    // cursor position or not make new widgets
+    pub fn set_cursor_position(&mut self, position: (usize, usize)) {
+        self.content.perform(text_editor::Action::Click(Point::new(
+            position.0 as f32,
+            position.1 as f32,
+        )));
     }
 }
