@@ -16,7 +16,7 @@ use cosmic::{
     iced_widget::{
         column, row,
         scrollable::{Direction, Scrollbar},
-        stack, vertical_rule,
+        stack,
     },
     theme,
     widget::{
@@ -1181,15 +1181,15 @@ impl SongEditor {
             font_selector,
             // text::body("Font Size:"),
             font_size,
-            vertical_rule(1).height(space_l),
+            divider::vertical::default().height(space_l),
             bold_button,
             italic_button,
             underline_button,
-            vertical_rule(1).height(space_l),
+            divider::vertical::default().height(space_l),
             stroke_size_selector,
             text::body("Stroke Color:"),
             stroke_color_button,
-            vertical_rule(1).height(space_l),
+            divider::vertical::default().height(space_l),
             horizontal_space(),
             background_selector
         ]
