@@ -14,7 +14,7 @@ use cosmic::{
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
-        column, horizontal_rule, row,
+        column, row,
         scrollable::{Direction, Scrollbar},
         stack, vertical_rule,
     },
