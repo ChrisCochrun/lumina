@@ -279,45 +279,56 @@ impl TextSvg {
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
 
-        let (text_anchor, starting_y_position) = match self.alignment
-        {
-            TextAlignment::TopLeft => ("start", 0.0),
-            TextAlignment::TopCenter => ("middle", 0.0),
-            TextAlignment::TopRight => ("end", 0.0),
-            TextAlignment::MiddleLeft => {
-                let middle_position = size.height / 2.0;
-                let position = half_lines
-                    .mul_add(-text_and_line_spacing, middle_position);
-                ("start", position)
-            }
-            TextAlignment::MiddleCenter => {
-                let middle_position = size.height / 2.0;
-                let position = half_lines
-                    .mul_add(-text_and_line_spacing, middle_position);
-                ("middle", position)
-            }
-            TextAlignment::MiddleRight => {
-                let middle_position = size.height / 2.0;
-                let position = half_lines
-                    .mul_add(-text_and_line_spacing, middle_position);
-                ("end", position)
-            }
-            TextAlignment::BottomLeft => {
-                let position = size.height
-                    - (total_lines as f32 * text_and_line_spacing);
-                ("start", position)
-            }
-            TextAlignment::BottomCenter => {
-                let position = size.height
-                    - (total_lines as f32 * text_and_line_spacing);
-                ("middle", position)
-            }
-            TextAlignment::BottomRight => {
-                let position = size.height
-                    - (total_lines as f32 * text_and_line_spacing);
-                ("end", position)
-            }
-        };
+        let (text_anchor, starting_y_position, x_position) =
+            match self.alignment {
+                TextAlignment::TopLeft => ("start", font_size, "0"),
+                TextAlignment::TopCenter => {
+                    ("middle", font_size, "50%")
+                }
+                TextAlignment::TopRight => ("end", font_size, "100%"),
+                TextAlignment::MiddleLeft => {
+                    let middle_position = size.height / 2.0;
+                    let position = half_lines.mul_add(
+                        -text_and_line_spacing,
+                        middle_position,
+                    );
+                    ("start", position, "0")
+                }
+                TextAlignment::MiddleCenter => {
+                    let middle_position = size.height / 2.0;
+                    let position = half_lines.mul_add(
+                        -text_and_line_spacing,
+                        middle_position,
+                    );
+                    ("middle", position, "50%")
+                }
+                TextAlignment::MiddleRight => {
+                    let middle_position = size.height / 2.0;
+                    let position = half_lines.mul_add(
+                        -text_and_line_spacing,
+                        middle_position,
+                    );
+                    ("end", position, "100%")
+                }
+                TextAlignment::BottomLeft => {
+                    let position = size.height
+                        - (total_lines as f32
+                            * text_and_line_spacing);
+                    ("start", position, "0")
+                }
+                TextAlignment::BottomCenter => {
+                    let position = size.height
+                        - (total_lines as f32
+                            * text_and_line_spacing);
+                    ("middle", position, "50%")
+                }
+                TextAlignment::BottomRight => {
+                    let position = size.height
+                        - (total_lines as f32
+                            * text_and_line_spacing);
+                    ("end", position, "100%")
+                }
+            };
 
         final_svg.push_str(&format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height));
 
@@ -337,7 +348,7 @@ impl TextSvg {
         //     "<style> text { letter-spacing: 0em; } </style>",
         // );
 
-        final_svg.push_str(&format!("<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", text_anchor, self.font.name, font_size, self.fill));
+        final_svg.push_str(&format!("<text x=\"{}\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", x_position, text_anchor, self.font.name, font_size, self.fill));
 
         if let Some(stroke) = &self.stroke {
             final_svg.push_str(&format!(
@@ -353,7 +364,7 @@ impl TextSvg {
             .enumerate()
             .map(|(index, text)| {
                 format!(
-                    "<tspan x=\"50%\" y=\"{}\">{}</tspan>",
+                    "<tspan y=\"{}\">{}</tspan>",
                     (index as f32).mul_add(
                         text_and_line_spacing,
                         starting_y_position
