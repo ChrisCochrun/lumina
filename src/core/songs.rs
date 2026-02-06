@@ -270,6 +270,13 @@ impl ServiceTrait for Song {
             .ok_or(miette!("There are no verses assigned yet."))?
             .iter()
             .filter_map(|verse| self.get_lyric(verse))
+            .map(|lyric| {
+                lyric
+                    .split("\n\n")
+                    .map(|s| s.trim_end_matches("\n").to_string())
+                    .collect::<Vec<String>>()
+            })
+            .flatten()
             .collect();
 
         debug!(?lyrics);
@@ -804,8 +811,15 @@ pub async fn update_song_in_db(
         .background
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
-    let lyrics =
-        ron::ser::to_string(&item.verse_map).into_diagnostic()?;
+    let lyrics = item.verse_map.map(|map| {
+        map.iter()
+            .map(|(name, lyric)| {
+                let lyric = lyric.trim_end_matches("\n").to_string();
+                (name.to_owned(), lyric)
+            })
+            .collect::<HashMap<VerseName, String>>()
+    });
+    let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
     // let text_alignment = item.text_alignment.map(|ta| match ta {
     //     TextAlignment::TopLeft => todo!(),
@@ -842,12 +856,12 @@ pub async fn update_song_in_db(
 impl Song {
     #[must_use]
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
-        self.verse_map.as_ref().and_then(|verse_map| {
-            verse_map
-                .get(verse)
-                .cloned()
-                .map(|lyric| lyric.trim_end().to_string())
-        })
+        let lyric = self.verse_map.as_ref().and_then(|verse_map| {
+            verse_map.get(verse).cloned().map(|lyric| {
+                lyric.trim().trim_end_matches("\n").to_string()
+            })
+        });
+        lyric
     }
 
     pub fn set_lyrics<T: Into<String>>(
@@ -855,7 +869,7 @@ impl Song {
         verse: &VerseName,
         lyrics: T,
     ) {
-        let lyric_copy = lyrics.into();
+        let lyric_copy = lyrics.into().trim().to_string();
         if let Some(verse_map) = self.verse_map.as_mut() {
             // debug!(?verse_map, "should update");
             verse_map
@@ -868,12 +882,7 @@ impl Song {
         } else {
             // debug!(?self.verse_map, "should create");
             let mut verse_map = HashMap::new();
-            verse_map
-                .entry(*verse)
-                .and_modify(|old_lyrics| {
-                    *old_lyrics = lyric_copy.clone()
-                })
-                .or_insert(lyric_copy);
+            verse_map.insert(*verse, lyric_copy);
             self.verse_map = Some(verse_map);
         }
         // debug!(?self.verse_map);
