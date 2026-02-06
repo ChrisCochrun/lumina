@@ -273,7 +273,7 @@ impl ServiceTrait for Song {
             .map(|lyric| {
                 lyric
                     .split("\n\n")
-                    .map(|s| s.trim_end_matches("\n").to_string())
+                    .map(|s| s.to_string())
                     .collect::<Vec<String>>()
             })
             .flatten()
