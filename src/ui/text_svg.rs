@@ -276,11 +276,48 @@ impl TextSvg {
         let font_size = f32::from(self.font.size);
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
-        let middle_position = size.height / 2.0;
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
-        let starting_y_position = half_lines
-            .mul_add(-text_and_line_spacing, middle_position);
+
+        let (text_anchor, starting_y_position) = match self.alignment
+        {
+            TextAlignment::TopLeft => ("start", 0.0),
+            TextAlignment::TopCenter => ("middle", 0.0),
+            TextAlignment::TopRight => ("end", 0.0),
+            TextAlignment::MiddleLeft => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position);
+                ("start", position)
+            }
+            TextAlignment::MiddleCenter => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position);
+                ("middle", position)
+            }
+            TextAlignment::MiddleRight => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position);
+                ("end", position)
+            }
+            TextAlignment::BottomLeft => {
+                let position = size.height
+                    - (total_lines as f32 * text_and_line_spacing);
+                ("start", position)
+            }
+            TextAlignment::BottomCenter => {
+                let position = size.height
+                    - (total_lines as f32 * text_and_line_spacing);
+                ("middle", position)
+            }
+            TextAlignment::BottomRight => {
+                let position = size.height
+                    - (total_lines as f32 * text_and_line_spacing);
+                ("end", position)
+            }
+        };
 
         final_svg.push_str(&format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height));
 
@@ -295,7 +332,12 @@ impl TextSvg {
         }
         final_svg.push_str("</defs>");
 
-        final_svg.push_str(&format!("<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", self.font.name, font_size, self.fill));
+        // This would be how to apply kerning
+        // final_svg.push_str(
+        //     "<style> text { letter-spacing: 0em; } </style>",
+        // );
+
+        final_svg.push_str(&format!("<text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", text_anchor, self.font.name, font_size, self.fill));
 
         if let Some(stroke) = &self.stroke {
             final_svg.push_str(&format!(

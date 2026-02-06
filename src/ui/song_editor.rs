@@ -1158,6 +1158,17 @@ impl SongEditor {
                 stroke_color_button.popup(stroke_color_picker);
         }
 
+        let text_alignment_button = tooltip(
+            button::icon(
+                icon::from_name("align-on-canvas").symbolic(true),
+            )
+            .label("Text Alignment")
+            .padding(space_s)
+            .on_press(Message::None),
+            "Set where text should be on slide",
+            tooltip::Position::Bottom,
+        );
+
         let background_selector = tooltip(
             button::icon(
                 icon::from_name("folder-pictures-symbolic").scale(2),
@@ -1190,6 +1201,7 @@ impl SongEditor {
             text::body("Stroke Color:"),
             stroke_color_button,
             divider::vertical::default().height(space_l),
+            text_alignment_button,
             horizontal_space(),
             background_selector
         ]
