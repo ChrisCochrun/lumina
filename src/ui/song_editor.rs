@@ -22,9 +22,10 @@ use cosmic::{
     widget::{
         ColorPickerModel, RcElementWrapper, button,
         color_picker::{self, ColorPickerUpdate},
-        combo_box, container, dnd_destination, dnd_source, dropdown,
-        horizontal_space, icon, mouse_area, popover, progress_bar,
-        scrollable, text, text_editor, text_input, tooltip,
+        combo_box, container, divider, dnd_destination, dnd_source,
+        dropdown, horizontal_space, icon, mouse_area, popover,
+        progress_bar, scrollable, text, text_editor, text_input,
+        tooltip,
     },
 };
 use derive_more::Debug;
@@ -944,7 +945,7 @@ impl SongEditor {
                                     index, message,
                                 ))
                             }),
-                            horizontal_rule(2)
+                            divider::horizontal::heavy()
                         ]
                         .spacing(space_m)
                         .into()
@@ -975,9 +976,19 @@ impl SongEditor {
         let verse_toolbar = column![
             row![
                 text::heading("Verses").width(Length::Fill),
-                button::icon(icon::from_name("add"))
+                button::text("Import")
+                    .trailing_icon(
+                        icon::from_name("browser-download")
+                            .symbolic(true)
+                    )
+                    .on_press(Message::None),
+                button::text("Add Verse")
+                    .trailing_icon(
+                        icon::from_name("add").symbolic(true)
+                    )
                     .on_press(verse_add_message)
-            ],
+            ]
+            .padding(space_m),
             verse_scroller.height(Length::Fill)
         ]
         .apply(container)
@@ -986,7 +997,7 @@ impl SongEditor {
 
         column![top_input_row, verse_order, verse_toolbar]
             .spacing(space_m)
-            .width(Length::FillPortion(2))
+            .width(Length::Fill)
             .into()
     }
 
