@@ -114,17 +114,17 @@
         defaultPackage = naersk'.buildPackage {
           src = self;
           gitSubmodules = true;
-          # gitAllRefs = true;
-          # submodules = true;
-          # singleStep = true;
+          gitAllRefs = true;
+          submodules = true;
+          singleStep = true;
         };
         packages = {
           default = naersk'.buildPackage {
             src = self;
             gitSubmodules = true;
-            # gitAllRefs = true;
-            # submodules = true;
-            # singleStep = true;
+            gitAllRefs = true;
+            submodules = true;
+            singleStep = true;
           };
         };
       }
