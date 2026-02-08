@@ -6,6 +6,7 @@
     naersk.url = "github:nix-community/naersk";
     flake-utils.url = "github:numtide/flake-utils";
     fenix.url = "github:nix-community/fenix";
+    crane.url = "github:ipetkov/crane";
   };
 
   outputs =
@@ -19,6 +20,7 @@
           overlays = [ fenix.overlays.default ];
           # overlays = [cargo2nix.overlays.default];
         };
+        craneLib = crane.mkLib pkgs;
         naersk' = pkgs.callPackage naersk { };
         nbi = with pkgs; [
           # Rust tools
@@ -111,20 +113,61 @@
               # LIBCLANG_PATH = "${pkgs.clang}";
               DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
             };
-        defaultPackage = naersk'.buildPackage {
-          src = self;
-          gitSubmodules = true;
-          gitAllRefs = true;
-          submodules = true;
-          singleStep = true;
+        defaultPackage = craneLib.buildPackage {
+          src = craneLib.cleanCargoSource ./.;
+          buildInputs = bi;
+          nativeBuildInputs = nbi;
+          LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
+            with pkgs;
+            pkgs.lib.makeLibraryPath [
+              pkgs.alsa-lib
+              pkgs.gst_all_1.gst-libav
+              pkgs.gst_all_1.gstreamer
+              pkgs.gst_all_1.gst-plugins-bad
+              pkgs.gst_all_1.gst-plugins-good
+              pkgs.gst_all_1.gst-plugins-ugly
+              pkgs.gst_all_1.gst-plugins-base
+              pkgs.gst_all_1.gst-plugins-rs
+              pkgs.gst_all_1.gst-vaapi
+              pkgs.glib
+              pkgs.fontconfig
+              pkgs.vulkan-loader
+              pkgs.wayland
+              pkgs.wayland-protocols
+              pkgs.libxkbcommon
+              pkgs.mupdf
+              pkgs.libclang
+            ]
+          }";
         };
         packages = {
-          default = naersk'.buildPackage {
-            src = self;
-            gitSubmodules = true;
-            gitAllRefs = true;
-            submodules = true;
-            singleStep = true;
+          default = craneLib.buildPackage {
+
+            src = craneLib.cleanCargoSource ./.;
+            buildInputs = bi;
+            nativeBuildInputs = nbi;
+            LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
+              with pkgs;
+              pkgs.lib.makeLibraryPath [
+                pkgs.alsa-lib
+                pkgs.gst_all_1.gst-libav
+                pkgs.gst_all_1.gstreamer
+                pkgs.gst_all_1.gst-plugins-bad
+                pkgs.gst_all_1.gst-plugins-good
+                pkgs.gst_all_1.gst-plugins-ugly
+                pkgs.gst_all_1.gst-plugins-base
+                pkgs.gst_all_1.gst-plugins-rs
+                pkgs.gst_all_1.gst-vaapi
+                pkgs.glib
+                pkgs.fontconfig
+                pkgs.vulkan-loader
+                pkgs.wayland
+                pkgs.wayland-protocols
+                pkgs.libxkbcommon
+                pkgs.mupdf
+                pkgs.libclang
+              ]
+            }";
           };
         };
       }
