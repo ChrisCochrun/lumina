@@ -279,20 +279,20 @@ impl TextSvg {
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
 
-        let (text_anchor, starting_y_position, x_position) =
+        let (text_anchor, starting_y_position, text_x_position) =
             match self.alignment {
-                TextAlignment::TopLeft => ("start", font_size, "0"),
+                TextAlignment::TopLeft => ("start", font_size, "10"),
                 TextAlignment::TopCenter => {
-                    ("middle", font_size, "50%")
+                    ("middle", font_size, "990")
                 }
-                TextAlignment::TopRight => ("end", font_size, "100%"),
+                TextAlignment::TopRight => ("end", font_size, "1910"),
                 TextAlignment::MiddleLeft => {
                     let middle_position = size.height / 2.0;
                     let position = half_lines.mul_add(
                         -text_and_line_spacing,
                         middle_position,
                     );
-                    ("start", position, "0")
+                    ("start", position, "10")
                 }
                 TextAlignment::MiddleCenter => {
                     let middle_position = size.height / 2.0;
@@ -300,7 +300,7 @@ impl TextSvg {
                         -text_and_line_spacing,
                         middle_position,
                     );
-                    ("middle", position, "50%")
+                    ("middle", position, "990")
                 }
                 TextAlignment::MiddleRight => {
                     let middle_position = size.height / 2.0;
@@ -308,29 +308,29 @@ impl TextSvg {
                         -text_and_line_spacing,
                         middle_position,
                     );
-                    ("end", position, "100%")
+                    ("end", position, "1910")
                 }
                 TextAlignment::BottomLeft => {
                     let position = size.height
                         - (total_lines as f32
                             * text_and_line_spacing);
-                    ("start", position, "0")
+                    ("start", position, "10")
                 }
                 TextAlignment::BottomCenter => {
                     let position = size.height
                         - (total_lines as f32
                             * text_and_line_spacing);
-                    ("middle", position, "50%")
+                    ("middle", position, "990")
                 }
                 TextAlignment::BottomRight => {
                     let position = size.height
                         - (total_lines as f32
                             * text_and_line_spacing);
-                    ("end", position, "100%")
+                    ("end", position, "1910")
                 }
             };
 
-        final_svg.push_str(&format!("<svg viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height));
+        final_svg.push_str(&format!("<svg width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height, size.width, size.height));
 
         if let Some(shadow) = &self.shadow {
             final_svg.push_str(&format!(
@@ -348,7 +348,7 @@ impl TextSvg {
         //     "<style> text { letter-spacing: 0em; } </style>",
         // );
 
-        final_svg.push_str(&format!("<text x=\"{}\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", x_position, text_anchor, self.font.name, font_size, self.fill));
+        final_svg.push_str(&format!("<text x=\"0\" y=\"50%\" transform=\"translate({}, 0)\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", text_x_position, text_anchor, self.font.name, font_size, self.fill));
 
         if let Some(stroke) = &self.stroke {
             final_svg.push_str(&format!(
@@ -358,13 +358,13 @@ impl TextSvg {
         }
         final_svg.push_str(" style=\"filter:url(#shadow);\">");
 
-        let text_pieces: Vec<String> = self
+        let text: String = self
             .text
             .lines()
             .enumerate()
             .map(|(index, text)| {
                 format!(
-                    "<tspan y=\"{}\">{}</tspan>",
+                    "<tspan x=\"0\" y=\"{}\">{}</tspan>",
                     (index as f32).mul_add(
                         text_and_line_spacing,
                         starting_y_position
@@ -373,7 +373,6 @@ impl TextSvg {
                 )
             })
             .collect();
-        let text: String = text_pieces.join("\n");
         final_svg.push_str(&text);
 
         final_svg.push_str("</text></svg>");
