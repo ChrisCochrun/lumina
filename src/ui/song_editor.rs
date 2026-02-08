@@ -9,7 +9,7 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, Vector, alignment::Vertical, color, task,
+        Padding, Shadow, Vector, alignment::Vertical, color, task,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
@@ -1027,6 +1027,24 @@ impl SongEditor {
             ..
         } = theme::spacing();
 
+        let floating_container_style = |t: &cosmic::Theme| {
+            cosmic::widget::container::Style::default()
+                .shadow(Shadow {
+                    color: Color::BLACK,
+                    offset: Vector { x: 0.0, y: 0.0 },
+                    blur_radius: 5.0,
+                })
+                .border(
+                    Border::default()
+                        .width(1)
+                        .color(t.cosmic().primary_container_divider())
+                        .rounded(t.cosmic().radius_s()),
+                )
+                .background(cosmic::iced::Background::Color(
+                    t.cosmic().primary_container_color().into(),
+                ))
+        };
+
         let selected_font = &self.font;
         let selected_font_size = if self.font_size > 0 {
             Some(&self.font_size.to_string())
@@ -1167,7 +1185,9 @@ impl SongEditor {
                 .apply(container)
                 .width(Length::Fixed(230.0))
                 .height(Length::Fixed(400.0))
-                .class(theme::Container::Secondary);
+                .class(theme::Container::custom(
+                    floating_container_style,
+                ));
 
             stroke_color_button =
                 stroke_color_button.popup(stroke_color_picker);
@@ -1311,7 +1331,9 @@ impl SongEditor {
                     )
                     .apply(container)
                     .padding(space_s)
-                    .class(theme::Container::Background),
+                    .class(theme::Container::custom(
+                        floating_container_style,
+                    )),
             )
         } else {
             text_alignment_popover

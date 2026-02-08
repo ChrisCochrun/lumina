@@ -320,7 +320,7 @@ const VERSE_KEYWORDS: [&str; 24] = [
 
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        let lyrics: String = row.try_get(8)?;
+        let lyrics: &str = row.try_get(8)?;
         // let Some((mut verses, mut verse_map)) =
         //     lyrics_to_verse(lyrics.clone()).ok()
         // else {
@@ -335,7 +335,7 @@ impl FromRow<'_, SqliteRow> for Song {
 
         let Ok(verse_map) = ron::de::from_str::<
             Option<HashMap<VerseName, String>>,
-        >(lyrics.as_ref()) else {
+        >(lyrics) else {
             return Err(sqlx::Error::ColumnDecode {
                 index: "8".into(),
                 source: miette!(
@@ -367,7 +367,7 @@ impl FromRow<'_, SqliteRow> for Song {
         Ok(Self {
             id: row.try_get(12)?,
             title: row.try_get(5)?,
-            lyrics: Some(lyrics),
+            lyrics: Some(lyrics.to_string()),
             author: row.try_get(10)?,
             ccli: row.try_get(9)?,
             audio: Some(PathBuf::from({
@@ -380,8 +380,9 @@ impl FromRow<'_, SqliteRow> for Song {
                 Background::try_from(string).ok()
             },
             text_alignment: Some({
-                let horizontal_alignment: String = row.try_get(3)?;
-                let vertical_alignment: String = row.try_get(4)?;
+                let horizontal_alignment: String = row.try_get(4)?;
+                let vertical_alignment: String = row.try_get(3)?;
+                debug!(horizontal_alignment, vertical_alignment);
                 match (
                     horizontal_alignment.to_lowercase().as_str(),
                     vertical_alignment.to_lowercase().as_str(),
@@ -821,20 +822,23 @@ pub async fn update_song_in_db(
     });
     let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
-    // let text_alignment = item.text_alignment.map(|ta| match ta {
-    //     TextAlignment::TopLeft => todo!(),
-    //     TextAlignment::TopCenter => todo!(),
-    //     TextAlignment::TopRight => todo!(),
-    //     TextAlignment::MiddleLeft => todo!(),
-    //     TextAlignment::MiddleCenter => todo!(),
-    //     TextAlignment::MiddleRight => todo!(),
-    //     TextAlignment::BottomLeft => todo!(),
-    //     TextAlignment::BottomCenter => todo!(),
-    //     TextAlignment::BottomRight => todo!(),
-    // })
+    let (vertical_alignment, horizontal_alignment) = item
+        .text_alignment
+        .map(|ta| match ta {
+            TextAlignment::TopLeft => ("top", "left"),
+            TextAlignment::TopCenter => ("top", "center"),
+            TextAlignment::TopRight => ("top", "right"),
+            TextAlignment::MiddleLeft => ("center", "left"),
+            TextAlignment::MiddleCenter => ("center", "center"),
+            TextAlignment::MiddleRight => ("center", "right"),
+            TextAlignment::BottomLeft => ("bottom", "left"),
+            TextAlignment::BottomCenter => ("bottom", "center"),
+            TextAlignment::BottomRight => ("bottom", "right"),
+        })
+        .unwrap_or_else(|| ("center", "center"));
 
     query!(
-        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10 WHERE id = $1"#,
+        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12 WHERE id = $1"#,
         item.id,
         item.title,
         lyrics,
@@ -844,7 +848,9 @@ pub async fn update_song_in_db(
         audio,
         item.font,
         item.font_size,
-        background
+        background,
+        vertical_alignment,
+        horizontal_alignment
     )
         .execute(&mut db.detach())
         .await
