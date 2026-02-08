@@ -112,11 +112,19 @@
               DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
             };
         defaultPackage = naersk'.buildPackage {
-          src = ./.;
+          src = self;
+          gitSubmodules = true;
+          # gitAllRefs = true;
+          # submodules = true;
+          # singleStep = true;
         };
         packages = {
           default = naersk'.buildPackage {
-            src = ./.;
+            src = self;
+            gitSubmodules = true;
+            # gitAllRefs = true;
+            # submodules = true;
+            # singleStep = true;
           };
         };
       }
