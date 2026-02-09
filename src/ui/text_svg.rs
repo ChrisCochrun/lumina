@@ -263,7 +263,7 @@ impl TextSvg {
         self
     }
 
-    pub fn build(mut self) -> Self {
+    pub fn build(mut self, size: Size) -> Self {
         // debug!("starting...");
 
         let mut path = dirs::data_local_dir().unwrap();
@@ -272,20 +272,25 @@ impl TextSvg {
 
         let mut final_svg = String::with_capacity(1024);
 
-        let size = Size::new(1920.0, 1080.0);
-        let font_size = f32::from(self.font.size);
+        let font_scale = size.height / 1080.0;
+        let font_size = f32::from(self.font.size) * font_scale;
         let total_lines = self.text.lines().count();
         let half_lines = (total_lines / 2) as f32;
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
 
+        let center_y = (size.width / 2.0).to_string();
+        let x_width_padded = (size.width - 10.0).to_string();
+
         let (text_anchor, starting_y_position, text_x_position) =
             match self.alignment {
                 TextAlignment::TopLeft => ("start", font_size, "10"),
                 TextAlignment::TopCenter => {
-                    ("middle", font_size, "990")
+                    ("middle", font_size, center_y.as_str())
                 }
-                TextAlignment::TopRight => ("end", font_size, "1910"),
+                TextAlignment::TopRight => {
+                    ("end", font_size, x_width_padded.as_str())
+                }
                 TextAlignment::MiddleLeft => {
                     let middle_position = size.height / 2.0;
                     let position = half_lines.mul_add(
@@ -300,7 +305,7 @@ impl TextSvg {
                         -text_and_line_spacing,
                         middle_position,
                     );
-                    ("middle", position, "990")
+                    ("middle", position, center_y.as_str())
                 }
                 TextAlignment::MiddleRight => {
                     let middle_position = size.height / 2.0;
@@ -308,7 +313,7 @@ impl TextSvg {
                         -text_and_line_spacing,
                         middle_position,
                     );
-                    ("end", position, "1910")
+                    ("end", position, x_width_padded.as_str())
                 }
                 TextAlignment::BottomLeft => {
                     let position = size.height
@@ -320,13 +325,13 @@ impl TextSvg {
                     let position = size.height
                         - (total_lines as f32
                             * text_and_line_spacing);
-                    ("middle", position, "990")
+                    ("middle", position, center_y.as_str())
                 }
                 TextAlignment::BottomRight => {
                     let position = size.height
                         - (total_lines as f32
                             * text_and_line_spacing);
-                    ("end", position, "1910")
+                    ("end", position, x_width_padded.as_str())
                 }
             };
 
@@ -481,7 +486,7 @@ pub fn text_svg_generator(
                     .size(slide.font_size().try_into().unwrap()),
             )
             .fontdb(Arc::clone(&fontdb))
-            .build();
+            .build(Size::new(1280.0, 720.0));
         slide.text_svg = Some(text_svg);
     }
 }
