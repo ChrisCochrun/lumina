@@ -20,7 +20,8 @@
           # overlays = [cargo2nix.overlays.default];
         };
         naersk' = pkgs.callPackage naersk { };
-        nbi = with pkgs; [
+
+        nativeBuildInputs = with pkgs; [
           # Rust tools
           alejandra
           (pkgs.fenix.stable.withComponents [
@@ -40,7 +41,7 @@
           sccache
         ];
 
-        bi = with pkgs; [
+        buildInputs = with pkgs; [
           gcc
           stdenv
           gnumake
@@ -76,6 +77,29 @@
           sqlx-cli
           cargo-watch
         ];
+
+        LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
+          with pkgs;
+          pkgs.lib.makeLibraryPath [
+            pkgs.alsa-lib
+            pkgs.gst_all_1.gst-libav
+            pkgs.gst_all_1.gstreamer
+            pkgs.gst_all_1.gst-plugins-bad
+            pkgs.gst_all_1.gst-plugins-good
+            pkgs.gst_all_1.gst-plugins-ugly
+            pkgs.gst_all_1.gst-plugins-base
+            pkgs.gst_all_1.gst-plugins-rs
+            pkgs.gst_all_1.gst-vaapi
+            pkgs.glib
+            pkgs.fontconfig
+            pkgs.vulkan-loader
+            pkgs.wayland
+            pkgs.wayland-protocols
+            pkgs.libxkbcommon
+            pkgs.mupdf
+            pkgs.libclang
+          ]
+        }";
       in
       rec {
         devShell =
@@ -84,38 +108,17 @@
               # stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
             }
             {
-              nativeBuildInputs = nbi;
-              buildInputs = bi;
-              LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
-                with pkgs;
-                pkgs.lib.makeLibraryPath [
-                  pkgs.alsa-lib
-                  pkgs.gst_all_1.gst-libav
-                  pkgs.gst_all_1.gstreamer
-                  pkgs.gst_all_1.gst-plugins-bad
-                  pkgs.gst_all_1.gst-plugins-good
-                  pkgs.gst_all_1.gst-plugins-ugly
-                  pkgs.gst_all_1.gst-plugins-base
-                  pkgs.gst_all_1.gst-plugins-rs
-                  pkgs.gst_all_1.gst-vaapi
-                  pkgs.glib
-                  pkgs.fontconfig
-                  pkgs.vulkan-loader
-                  pkgs.wayland
-                  pkgs.wayland-protocols
-                  pkgs.libxkbcommon
-                  pkgs.mupdf
-                  pkgs.libclang
-                ]
-              }";
+              inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
               # LIBCLANG_PATH = "${pkgs.clang}";
               DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
             };
         defaultPackage = naersk'.buildPackage {
+          inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
           src = ./.;
         };
         packages = {
           default = naersk'.buildPackage {
+            inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
             src = ./.;
           };
         };
