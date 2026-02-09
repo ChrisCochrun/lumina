@@ -6,7 +6,7 @@ use std::{
 };
 
 use cosmic::{
-    cosmic_theme::palette::Srgb,
+    cosmic_theme::palette::{IntoColor, Srgb, rgb::Rgba},
     iced::{
         ContentFit, Length, Size,
         font::{Style, Weight},
@@ -25,7 +25,7 @@ use tracing::error;
 
 use crate::TextAlignment;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TextSvg {
     text: String,
     font: Font,
@@ -33,7 +33,9 @@ pub struct TextSvg {
     stroke: Option<Stroke>,
     fill: Color,
     alignment: TextAlignment,
+    #[serde(skip)]
     pub handle: Option<Handle>,
+    #[serde(skip)]
     fontdb: Arc<resvg::usvg::fontdb::Database>,
 }
 
@@ -60,7 +62,9 @@ impl Hash for TextSvg {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize,
+)]
 pub struct Font {
     name: String,
     weight: Weight,
@@ -185,6 +189,19 @@ impl Color {
                 Self::default()
             }
         }
+    }
+}
+
+impl From<Rgba> for Color {
+    fn from(value: Rgba) -> Self {
+        let rgba: Srgb = value.into_color();
+        Self(rgba)
+    }
+}
+
+impl From<Srgb> for Color {
+    fn from(value: Srgb) -> Self {
+        Self(value)
     }
 }
 

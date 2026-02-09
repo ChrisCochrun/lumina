@@ -12,7 +12,7 @@ use std::{
 };
 use tracing::error;
 
-use crate::ui::text_svg::TextSvg;
+use crate::ui::text_svg::{Shadow, Stroke, TextSvg};
 
 use super::songs::Song;
 
@@ -25,18 +25,17 @@ pub struct Slide {
     text: String,
     font: String,
     font_size: i32,
-    stroke_size: i32,
-    stroke_color: Option<Rgba>,
+    stroke: Option<Stroke>,
+    shadow: Option<Shadow>,
     text_alignment: TextAlignment,
     audio: Option<PathBuf>,
     video_loop: bool,
     video_start_time: f32,
     video_end_time: f32,
     pdf_index: u32,
+    pub text_svg: Option<TextSvg>,
     #[serde(skip)]
     pdf_page: Option<Handle>,
-    #[serde(skip)]
-    pub text_svg: Option<TextSvg>,
 }
 
 #[derive(
