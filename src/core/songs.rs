@@ -321,6 +321,7 @@ const VERSE_KEYWORDS: [&str; 24] = [
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let lyrics: &str = row.try_get(8)?;
+
         // let Some((mut verses, mut verse_map)) =
         //     lyrics_to_verse(lyrics.clone()).ok()
         // else {
