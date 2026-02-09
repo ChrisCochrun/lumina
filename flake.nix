@@ -69,8 +69,6 @@
           vulkan-loader
           vulkan-tools
           libGL
-          cargo-flamegraph
-          bacon
 
           fontconfig
           glib
@@ -87,50 +85,48 @@
           mupdf
           # yt-dlp
 
-          just
-          sqlx-cli
-          cargo-watch
+        ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            # Additional darwin specific inputs can be set here
+            pkgs.libiconv
         ];
 
         ldLibPaths = "$LD_LIBRARY_PATH:${
           with pkgs;
-          pkgs.lib.makeLibraryPath [
-            pkgs.alsa-lib
-            pkgs.gst_all_1.gst-libav
-            pkgs.gst_all_1.gstreamer
-            pkgs.gst_all_1.gst-plugins-bad
-            pkgs.gst_all_1.gst-plugins-good
-            pkgs.gst_all_1.gst-plugins-ugly
-            pkgs.gst_all_1.gst-plugins-base
-            pkgs.gst_all_1.gst-plugins-rs
-            pkgs.gst_all_1.gst-vaapi
-            pkgs.glib
-            pkgs.fontconfig
-            pkgs.vulkan-loader
-            pkgs.wayland
-            pkgs.wayland-protocols
-            pkgs.libxkbcommon
-            pkgs.mupdf
-            pkgs.libclang
+          lib.makeLibraryPath [
+            alsa-lib
+            gst_all_1.gst-libav
+            gst_all_1.gstreamer
+            gst_all_1.gst-plugins-bad
+            gst_all_1.gst-plugins-good
+            gst_all_1.gst-plugins-ugly
+            gst_all_1.gst-plugins-base
+            gst_all_1.gst-plugins-rs
+            gst_all_1.gst-vaapi
+            glib
+            fontconfig
+            vulkan-loader
+            wayland
+            wayland-protocols
+            libxkbcommon
+            mupdf
+            libclang
           ]
         }";
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
  
         commonArgs = {
           inherit src;
           strictDeps = true;
-
           nativeBuildInputs = nbi;
           buildInputs = bi;
-
           LD_LIBRARY_PATH = ldLibPaths;
         };
+
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
         lumina = craneLib.buildPackage (
           commonArgs
           // {
             inherit cargoArtifacts;
-            doInstallCargoArtifacts = true;
 
             nativeBuildInputs = (commonArgs.nativeBuildInputs or [ ]) ++ [
               pkgs.sqlx-cli
@@ -146,18 +142,20 @@
 
       in
       rec {
-        devShell =
-          pkgs.mkShell.override
-            {
-              # stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
-            }
-            {
-              nativeBuildInputs = nbi;
-              buildInputs = bi;
-              LD_LIBRARY_PATH = ldLibPaths;
-              # LIBCLANG_PATH = "${pkgs.clang}";
-              DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-            };
+        checks = {
+          inherit lumina;
+        };
+        devShells.default = craneLib.devShell {
+          checks = self.checks.${system};
+          inputsFrom = [ lumina ];
+          packages = with pkgs; [
+            sqlx-cli
+            cargo-flamegraph
+            bacon
+            just
+            cargo-watch
+          ];
+        };
         packages.default = lumina;
       }
     );
