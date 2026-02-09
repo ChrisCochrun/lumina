@@ -20,8 +20,21 @@
           overlays = [ fenix.overlays.default ];
           # overlays = [cargo2nix.overlays.default];
         };
-        craneLib = crane.mkLib pkgs;
+        inherit (pkgs) lib;
+        craneLib = (crane.mkLib pkgs).overrideToolchain fenix.packages.${system}.stable.toolchain;
         naersk' = pkgs.callPackage naersk { };
+
+        unfilteredRoot = ./.; # The original, unfiltered source
+        src = lib.fileset.toSource {
+          root = unfilteredRoot;
+          fileset = lib.fileset.unions [
+            # Default files from crane (Rust and cargo files)
+            (craneLib.fileset.commonCargoSources unfilteredRoot)
+            # Include all the .sql migrations as well
+            ./migrations
+          ];
+        };
+
         nbi = with pkgs; [
           # Rust tools
           alejandra
@@ -37,7 +50,6 @@
           vulkan-loader
           wayland
           wayland-protocols
-          libxkbcommon
           pkg-config
           sccache
         ];
@@ -51,6 +63,7 @@
           cmake
           clang
           libclang
+          libxkbcommon
           makeWrapper
           vulkan-headers
           vulkan-loader
@@ -78,6 +91,59 @@
           sqlx-cli
           cargo-watch
         ];
+
+        ldLibPaths = "$LD_LIBRARY_PATH:${
+          with pkgs;
+          pkgs.lib.makeLibraryPath [
+            pkgs.alsa-lib
+            pkgs.gst_all_1.gst-libav
+            pkgs.gst_all_1.gstreamer
+            pkgs.gst_all_1.gst-plugins-bad
+            pkgs.gst_all_1.gst-plugins-good
+            pkgs.gst_all_1.gst-plugins-ugly
+            pkgs.gst_all_1.gst-plugins-base
+            pkgs.gst_all_1.gst-plugins-rs
+            pkgs.gst_all_1.gst-vaapi
+            pkgs.glib
+            pkgs.fontconfig
+            pkgs.vulkan-loader
+            pkgs.wayland
+            pkgs.wayland-protocols
+            pkgs.libxkbcommon
+            pkgs.mupdf
+            pkgs.libclang
+          ]
+        }";
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+ 
+        commonArgs = {
+          inherit src;
+          strictDeps = true;
+
+          nativeBuildInputs = nbi;
+          buildInputs = bi;
+
+          LD_LIBRARY_PATH = ldLibPaths;
+        };
+
+        lumina = craneLib.buildPackage (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+            doInstallCargoArtifacts = true;
+
+            nativeBuildInputs = (commonArgs.nativeBuildInputs or [ ]) ++ [
+              pkgs.sqlx-cli
+            ];
+
+            preBuild = ''
+              export DATABASE_URL=sqlite:./db.sqlite3
+              sqlx database create
+              sqlx migrate run
+            '';
+          }
+        );
+
       in
       rec {
         devShell =
@@ -88,88 +154,11 @@
             {
               nativeBuildInputs = nbi;
               buildInputs = bi;
-              LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
-                with pkgs;
-                pkgs.lib.makeLibraryPath [
-                  pkgs.alsa-lib
-                  pkgs.gst_all_1.gst-libav
-                  pkgs.gst_all_1.gstreamer
-                  pkgs.gst_all_1.gst-plugins-bad
-                  pkgs.gst_all_1.gst-plugins-good
-                  pkgs.gst_all_1.gst-plugins-ugly
-                  pkgs.gst_all_1.gst-plugins-base
-                  pkgs.gst_all_1.gst-plugins-rs
-                  pkgs.gst_all_1.gst-vaapi
-                  pkgs.glib
-                  pkgs.fontconfig
-                  pkgs.vulkan-loader
-                  pkgs.wayland
-                  pkgs.wayland-protocols
-                  pkgs.libxkbcommon
-                  pkgs.mupdf
-                  pkgs.libclang
-                ]
-              }";
+              LD_LIBRARY_PATH = ldLibPaths;
               # LIBCLANG_PATH = "${pkgs.clang}";
               DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
             };
-        defaultPackage = craneLib.buildPackage {
-          src = craneLib.cleanCargoSource ./.;
-          buildInputs = bi;
-          nativeBuildInputs = nbi;
-          LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
-            with pkgs;
-            pkgs.lib.makeLibraryPath [
-              pkgs.alsa-lib
-              pkgs.gst_all_1.gst-libav
-              pkgs.gst_all_1.gstreamer
-              pkgs.gst_all_1.gst-plugins-bad
-              pkgs.gst_all_1.gst-plugins-good
-              pkgs.gst_all_1.gst-plugins-ugly
-              pkgs.gst_all_1.gst-plugins-base
-              pkgs.gst_all_1.gst-plugins-rs
-              pkgs.gst_all_1.gst-vaapi
-              pkgs.glib
-              pkgs.fontconfig
-              pkgs.vulkan-loader
-              pkgs.wayland
-              pkgs.wayland-protocols
-              pkgs.libxkbcommon
-              pkgs.mupdf
-              pkgs.libclang
-            ]
-          }";
-        };
-        packages = {
-          default = craneLib.buildPackage {
-
-            src = craneLib.cleanCargoSource ./.;
-            buildInputs = bi;
-            nativeBuildInputs = nbi;
-            LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
-              with pkgs;
-              pkgs.lib.makeLibraryPath [
-                pkgs.alsa-lib
-                pkgs.gst_all_1.gst-libav
-                pkgs.gst_all_1.gstreamer
-                pkgs.gst_all_1.gst-plugins-bad
-                pkgs.gst_all_1.gst-plugins-good
-                pkgs.gst_all_1.gst-plugins-ugly
-                pkgs.gst_all_1.gst-plugins-base
-                pkgs.gst_all_1.gst-plugins-rs
-                pkgs.gst_all_1.gst-vaapi
-                pkgs.glib
-                pkgs.fontconfig
-                pkgs.vulkan-loader
-                pkgs.wayland
-                pkgs.wayland-protocols
-                pkgs.libxkbcommon
-                pkgs.mupdf
-                pkgs.libclang
-              ]
-            }";
-          };
-        };
+        packages.default = lumina;
       }
     );
 }
