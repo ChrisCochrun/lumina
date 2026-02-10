@@ -1422,8 +1422,9 @@ impl SongEditor {
                 handle.abort();
             };
             let size = slides.len();
-            let (task, handle) = Task::run(
-                channel(size, |mut sender| async move {
+            let (task, handle) = Task::stream(channel(
+                size,
+                |mut sender| async move {
                     let mut slides = slides.into_iter().enumerate();
                     loop {
                         if let Some((index, mut slide)) =
@@ -1443,11 +1444,11 @@ impl SongEditor {
                             break;
                         }
                     }
-                }),
-                |(index, slide)| {
-                    Message::UpdateSlide((index, slide.to_owned()))
                 },
-            )
+            ))
+            .then(|(index, slide)| {
+                Task::done(Message::UpdateSlide((index, slide)))
+            })
             .abortable();
 
             // let (task, handle) = Task::perform(
