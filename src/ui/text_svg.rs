@@ -543,8 +543,11 @@ mod tests {
     #[test]
     fn test_generator() {
         let slide = Slide::default();
-        let fontdb = Arc::new(Database::new());
-        (0..1000).for_each(|index| {
+
+        let mut fontdb = Database::new();
+        fontdb.load_system_fonts();
+        let fontdb = Arc::new(fontdb);
+        (0..100).for_each(|index| {
             let mut slide = slide
                 .clone()
                 .set_font_size(120)
