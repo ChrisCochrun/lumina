@@ -23,8 +23,10 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space, container, context_menu, image,
-        menu, mouse_area, responsive, scrollable, text,
+        Container, Id, Row, Space,
+        aspect_ratio::aspect_ratio_container, container,
+        context_menu, image, menu, mouse_area, responsive,
+        scrollable, text,
     },
 };
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
