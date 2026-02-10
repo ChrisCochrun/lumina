@@ -63,13 +63,6 @@ features = ["wgpu"]
 # [profile.dev]
 # opt-level = 3
 
-[dev.dependencies]
-criterion = "0.3"
-
-[[bench]]
-name = "lumina_bench"
-harness = false
-
 [profile.release]
 opt-level = 3
 debug = true
