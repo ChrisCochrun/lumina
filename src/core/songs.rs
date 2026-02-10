@@ -1338,11 +1338,11 @@ You saved my soul"
     }
 
     async fn add_db() -> Result<SqlitePool> {
-        let mut data = dirs::data_local_dir().unwrap();
-        data.push("lumina");
-        data.push("library-db.sqlite3");
-        let mut db_url = String::from("sqlite://");
-        db_url.push_str(data.to_str().unwrap());
+        // let mut data = dirs::data_local_dir().unwrap();
+        // data.push("lumina");
+        // data.push("library-db.sqlite3");
+        let mut db_url = String::from("sqlite://./test.db");
+        // db_url.push_str(data.to_str().unwrap());
         SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 

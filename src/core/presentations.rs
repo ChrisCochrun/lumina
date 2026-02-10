@@ -521,13 +521,22 @@ mod test {
         assert_eq!(pres.get_kind(), &PresKind::Generic)
     }
 
+    async fn add_db() -> Result<SqlitePool> {
+        // let mut data = dirs::data_local_dir().unwrap();
+        // data.push("lumina");
+        // data.push("library-db.sqlite3");
+        let mut db_url = String::from("sqlite://./test.db");
+        // db_url.push_str(data.to_str().unwrap());
+        SqlitePool::connect(&db_url).await.into_diagnostic()
+    }
+
     #[tokio::test]
     async fn test_db_and_model() {
         let mut presentation_model: Model<Presentation> = Model {
             items: vec![],
             kind: LibraryKind::Presentation,
         };
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap().acquire().await.unwrap();
         presentation_model.load_from_db(&mut db).await;
         if let Some(presentation) =
             presentation_model.find(|p| p.id == 54)
