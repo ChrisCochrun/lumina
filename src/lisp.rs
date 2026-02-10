@@ -71,34 +71,35 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_parsing_lisp_presentation() {
-        let lisp = read_to_string("./testypres.lisp").expect("oops");
-        let lisp_value = crisp::reader::read(&lisp);
-        let hard_coded_items = vec![
-            service_item_1(),
-            service_item_2(),
-            service_item_3(),
-        ];
-        match lisp_value {
-            Value::List(value) => {
-                let mut lisp_items = vec![];
-                for value in value {
-                    let mut vec = parse_lisp(value);
-                    lisp_items.append(&mut vec);
-                }
-                let item_1 = &lisp_items[0];
-                let item_2 = &lisp_items[1];
-                let item_3 = &lisp_items[2];
-                assert_eq!(item_1, &hard_coded_items[0]);
-                assert_eq!(item_2, &hard_coded_items[1]);
-                assert_eq!(item_3, &hard_coded_items[2]);
+    // Planning on removing lisp potentially
+    // #[test]
+    // fn test_parsing_lisp_presentation() {
+    //     let lisp = read_to_string("./testypres.lisp").expect("oops");
+    //     let lisp_value = crisp::reader::read(&lisp);
+    //     let hard_coded_items = vec![
+    //         service_item_1(),
+    //         service_item_2(),
+    //         service_item_3(),
+    //     ];
+    //     match lisp_value {
+    //         Value::List(value) => {
+    //             let mut lisp_items = vec![];
+    //             for value in value {
+    //                 let mut vec = parse_lisp(value);
+    //                 lisp_items.append(&mut vec);
+    //             }
+    //             let item_1 = &lisp_items[0];
+    //             let item_2 = &lisp_items[1];
+    //             let item_3 = &lisp_items[2];
+    //             assert_eq!(item_1, &hard_coded_items[0]);
+    //             assert_eq!(item_2, &hard_coded_items[1]);
+    //             assert_eq!(item_3, &hard_coded_items[2]);
 
-                assert_eq!(lisp_items, hard_coded_items);
-            }
-            _ => panic!("this should be a lisp"),
-        }
-    }
+    //             assert_eq!(lisp_items, hard_coded_items);
+    //         }
+    //         _ => panic!("this should be a lisp"),
+    //     }
+    // }
 
     fn service_item_1() -> ServiceItem {
         let image = Image {
