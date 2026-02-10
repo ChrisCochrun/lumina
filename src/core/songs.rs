@@ -1380,7 +1380,7 @@ You saved my soul"
     #[tokio::test]
     async fn test_song_from_db() {
         let song = test_song();
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap().acquire().await.unwrap();
         let result = get_song_from_db(7, &mut db).await;
         match result {
             Ok(db_song) => {

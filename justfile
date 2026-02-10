@@ -20,7 +20,7 @@ run-file:
 clean:
     cargo clean
 test:
-    cargo test --benches --tests --all-features -- --nocapture
+    cargo nextest run
 profile:
     samply record cargo run --release -- {{verbose}} {{ui}}
 

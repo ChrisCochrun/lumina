@@ -269,7 +269,9 @@ mod test {
     fn test_image(title: String) -> Image {
         Image {
             title,
-            path: PathBuf::from("~/pics/camprules2024.mp4"),
+            path: PathBuf::from(
+                "/home/chris/pics/memes/no-i-dont-think.gif",
+            ),
             ..Default::default()
         }
     }
@@ -280,10 +282,10 @@ mod test {
             items: vec![],
             kind: LibraryKind::Image,
         };
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap().acquire().await.unwrap();
         image_model.load_from_db(&mut db).await;
-        if let Some(image) = image_model.find(|i| i.id == 3) {
-            let test_image = test_image("nccq5".into());
+        if let Some(image) = image_model.find(|i| i.id == 23) {
+            let test_image = test_image("no-i-dont-think.gif".into());
             assert_eq!(test_image.title, image.title);
         } else {
             assert!(false);
@@ -316,5 +318,10 @@ mod test {
                 e
             ),
         }
+    }
+
+    async fn add_db() -> Result<SqlitePool> {
+        let db_url = String::from("sqlite://./test.db");
+        SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 }

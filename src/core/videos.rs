@@ -310,7 +310,9 @@ mod test {
     fn test_video(title: String) -> Video {
         Video {
             title,
-            path: PathBuf::from("~/vids/camprules2024.mp4"),
+            path: PathBuf::from(
+                "/home/chris/docs/notes/lessons/christ-our-hope.mp4",
+            ),
             ..Default::default()
         }
     }
@@ -321,13 +323,10 @@ mod test {
             items: vec![],
             kind: LibraryKind::Video,
         };
-        let mut db = crate::core::model::get_db().await;
+        let mut db = add_db().await.unwrap().acquire().await.unwrap();
         video_model.load_from_db(&mut db).await;
-        if let Some(video) = video_model.find(|v| v.id == 73) {
-            let test_video = test_video(
-                "Getting started with Tokio. The ultimate starter guide to writing async Rust."
-                    .into(),
-            );
+        if let Some(video) = video_model.find(|v| v.id == 2) {
+            let test_video = test_video("christ-our-hope.mp4".into());
             assert_eq!(test_video.title, video.title);
         } else {
             assert!(false);
@@ -360,5 +359,10 @@ mod test {
                 e
             ),
         }
+    }
+
+    async fn add_db() -> Result<SqlitePool> {
+        let db_url = String::from("sqlite://./test.db");
+        SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 }

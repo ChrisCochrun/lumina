@@ -506,12 +506,13 @@ mod test {
 
     fn test_presentation() -> Presentation {
         Presentation {
-            id: 54,
-            title: "20240327T133649--12-isaiah-and-jesus__lesson_project_tfc".into(),
-            path: PathBuf::from(
-                "file:///home/chris/docs/notes/lessons/20240327T133649--12-isaiah-and-jesus__lesson_project_tfc.html",
-            ),
-            kind: PresKind::Html,
+            id: 4,
+            title: "mzt52.pdf".into(),
+            path: PathBuf::from("/home/chris/docs/mzt52.pdf"),
+            kind: PresKind::Pdf {
+                starting_index: 0,
+                ending_index: 67,
+            },
         }
     }
 
@@ -522,11 +523,7 @@ mod test {
     }
 
     async fn add_db() -> Result<SqlitePool> {
-        // let mut data = dirs::data_local_dir().unwrap();
-        // data.push("lumina");
-        // data.push("library-db.sqlite3");
         let mut db_url = String::from("sqlite://./test.db");
-        // db_url.push_str(data.to_str().unwrap());
         SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 
@@ -539,7 +536,7 @@ mod test {
         let mut db = add_db().await.unwrap().acquire().await.unwrap();
         presentation_model.load_from_db(&mut db).await;
         if let Some(presentation) =
-            presentation_model.find(|p| p.id == 54)
+            presentation_model.find(|p| p.id == 4)
         {
             let test_presentation = test_presentation();
             assert_eq!(&test_presentation, presentation);
