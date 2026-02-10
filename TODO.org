@@ -9,12 +9,6 @@ Still failing 4 tests, all to do with the db or lisp. I might throw out the lisp
 * TODO [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
 
-* TODO [#A] Make sure updating verse updates the lyrics too
-[[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
-
-This is necessary so that the entire song gets changed and we can propogate those changes then back to the db.
-
-There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
@@ -28,6 +22,7 @@ This is working but the right click context menu is all the way on the edge of t
 This will need to be matched on for the =TextAlignment= from the user
 
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
+
 * TODO [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
@@ -68,6 +63,12 @@ Reordering is finished
 ** DONE Presenter
 
 * DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
+* DONE [#A] Make sure updating verse updates the lyrics too
+[[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
+
+This is necessary so that the entire song gets changed and we can propogate those changes then back to the db.
+
+There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * DONE Build a presentation editor
 
 * DONE Build library to see all available songs, images, videos, presentations, and slides
