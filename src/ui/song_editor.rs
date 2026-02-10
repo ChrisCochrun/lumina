@@ -9,7 +9,11 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, Shadow, Vector, alignment::Vertical, color, task,
+        Padding, Shadow, Vector,
+        alignment::Vertical,
+        color,
+        futures::{StreamExt, stream},
+        task,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
@@ -419,6 +423,7 @@ impl SongEditor {
                 } else {
                     self.song_slides = Some(vec![slide]);
                 }
+                self.update_slide_handle = None;
             }
             Message::UpdateSong(song) => {
                 self.song = Some(song.clone());
@@ -1385,6 +1390,7 @@ impl SongEditor {
     }
 
     fn update_song(&mut self, song: Song) -> Action {
+        use cosmic::iced_futures::stream::channel;
         let font_db = Arc::clone(&self.font_db);
         // need to test to see which of these methods yields faster
         // text_svg slide creation. There is a small thought in me that
@@ -1415,22 +1421,51 @@ impl SongEditor {
             if let Some(handle) = &self.update_slide_handle {
                 handle.abort();
             };
-            let (task, handle) = Task::perform(
-                async move {
-                    slides
-                        .into_par_iter()
-                        .map(move |mut s| {
+            let size = slides.len();
+            let (task, handle) = Task::run(
+                channel(size, |mut sender| async move {
+                    let mut slides = slides.into_iter().enumerate();
+                    loop {
+                        if let Some((index, mut slide)) =
+                            slides.next()
+                        {
                             text_svg::text_svg_generator(
-                                &mut s,
+                                &mut slide,
                                 Arc::clone(&font_db),
                             );
-                            s
-                        })
-                        .collect::<Vec<Slide>>()
+                            if let Err(e) =
+                                sender.start_send((index, slide))
+                            {
+                                error!(?e);
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }),
+                |(index, slide)| {
+                    Message::UpdateSlide((index, slide.to_owned()))
                 },
-                Message::UpdateSlides,
             )
             .abortable();
+
+            // let (task, handle) = Task::perform(
+            //     async move {
+            //         slides
+            //             .into_par_iter()
+            //             .map(move |mut s| {
+            //                 text_svg::text_svg_generator(
+            //                     &mut s,
+            //                     Arc::clone(&font_db),
+            //                 );
+            //                 s
+            //             })
+            //             .collect::<Vec<Slide>>()
+            //     },
+            //     Message::UpdateSlides,
+            // )
+            // .abortable();
             self.update_slide_handle = Some(handle);
             tasks.push(task);
         }
