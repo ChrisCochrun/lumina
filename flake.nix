@@ -32,6 +32,7 @@
             "rustfmt"
           ])
           cargo-nextest
+          cargo-criterion
           rust-analyzer
           vulkan-loader
           wayland

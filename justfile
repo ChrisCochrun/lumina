@@ -22,6 +22,7 @@ clean:
 test:
     cargo nextest run
 bench:
+    export NEXTEST_EXPERIMENTAL_BENCHMARKS=1
     cargo nextest bench
 profile:
     samply record cargo run --release -- {{verbose}} {{ui}}
