@@ -1425,38 +1425,40 @@ impl SongEditor {
                 handle.abort();
             };
             let size = slides.len();
-            let (task, handle) = stream(stream::iter(
-                slides.into_iter().enumerate().map(
-                    move |(index, mut slide)| {
-                        text_svg::text_svg_generator(
-                            &mut slide,
-                            Arc::clone(&font_db),
-                        );
-                        (index, slide)
-                    },
-                ),
-            ))
-            .then(|(index, slide)| {
-                Task::done(Message::UpdateSlide((index, slide)))
-            })
+
+            // let (task, handle) = stream(stream::iter(
+            //     slides.into_iter().enumerate().map(
+            //         move |(index, mut slide)| {
+            //             text_svg::text_svg_generator(
+            //                 &mut slide,
+            //                 Arc::clone(&font_db),
+            //             );
+            //             (index, slide)
+            //         },
+            //     ),
+            // ))
+            // .then(|(index, slide)| {
+            //     Task::done(Message::UpdateSlide((index, slide)))
+            // })
+            // .abortable();
+
+            let (task, handle) = Task::perform(
+                async move {
+                    slides
+                        .into_par_iter()
+                        .map(move |mut s| {
+                            text_svg::text_svg_generator(
+                                &mut s,
+                                Arc::clone(&font_db),
+                            );
+                            s
+                        })
+                        .collect::<Vec<Slide>>()
+                },
+                Message::UpdateSlides,
+            )
             .abortable();
 
-            // let (task, handle) = Task::perform(
-            //     async move {
-            //         slides
-            //             .into_par_iter()
-            //             .map(move |mut s| {
-            //                 text_svg::text_svg_generator(
-            //                     &mut s,
-            //                     Arc::clone(&font_db),
-            //                 );
-            //                 s
-            //             })
-            //             .collect::<Vec<Slide>>()
-            //     },
-            //     Message::UpdateSlides,
-            // )
-            // .abortable();
             self.update_slide_handle = Some(handle);
             tasks.push(task);
         }
