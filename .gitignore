@@ -8,3 +8,6 @@ data.db
 /perf.data
 /perf.data.old
 .aider*
+
+test.db-shm
+test.db-wal
