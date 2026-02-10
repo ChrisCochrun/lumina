@@ -24,7 +24,7 @@
         nativeBuildInputs = with pkgs; [
           # Rust tools
           alejandra
-          (pkgs.fenix.stable.withComponents [
+          (pkgs.fenix.default.withComponents [
             "cargo"
             "clippy"
             "rust-src"
@@ -33,7 +33,7 @@
           ])
           cargo-nextest
           cargo-criterion
-          rust-analyzer
+          rust-analyzer-nightly
           vulkan-loader
           wayland
           wayland-protocols

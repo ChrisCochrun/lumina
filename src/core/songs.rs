@@ -1509,26 +1509,24 @@ You saved my soul"
             .map(|index| {
                 let mut song = song.clone();
                 song.id = index;
-                if let Some(map) = song.verse_map.as_mut() {
-                    map.entry(VerseName::Verse { number: 1 })
-                        .and_modify(|lyric| {
-                            lyric.push_str(&index.to_string());
-                        });
-                }
                 song
             })
             .collect();
         let fontdb = Arc::new(fontdb::Database::new());
         songs.into_par_iter().for_each(|song| {
             let slides = song.to_slides().unwrap();
-            for mut slide in slides {
+            slides.into_par_iter().for_each(|mut slide| {
                 text_svg_generator_with_cache(
                     &mut slide,
                     Arc::clone(&fontdb),
                     false,
                 );
-                assert!(slide.text_svg.is_some());
-            }
+                assert!(
+                    slide
+                        .text_svg
+                        .is_some_and(|svg| svg.handle.is_some())
+                )
+            });
         });
     }
 

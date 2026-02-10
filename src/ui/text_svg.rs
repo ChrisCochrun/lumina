@@ -532,3 +532,34 @@ pub fn text_svg_generator_with_cache(
         slide.text_svg = Some(text_svg);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::slide::Slide;
+
+    use super::*;
+    use resvg::usvg::fontdb::Database;
+
+    #[test]
+    fn test_generator() {
+        let slide = Slide::default();
+        let fontdb = Arc::new(Database::new());
+        (0..1000).for_each(|index| {
+            let mut slide = slide
+                .clone()
+                .set_font_size(120)
+                .set_font("Quicksand")
+                .set_text(index.to_string());
+            text_svg_generator_with_cache(
+                &mut slide,
+                Arc::clone(&fontdb),
+                false,
+            );
+            assert!(
+                slide
+                    .text_svg
+                    .is_some_and(|svg| svg.handle.is_some())
+            )
+        });
+    }
+}
