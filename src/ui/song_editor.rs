@@ -1390,7 +1390,9 @@ impl SongEditor {
     }
 
     fn update_song(&mut self, song: Song) -> Action {
-        use cosmic::iced_futures::stream::channel;
+        use cosmic::iced_futures::futures::stream;
+        // use cosmic::iced_futures::futures::{Stream, StreamExt};
+        // use cosmic::iced_futures::stream::channel;
         let font_db = Arc::clone(&self.font_db);
         // need to test to see which of these methods yields faster
         // text_svg slide creation. There is a small thought in me that
@@ -1422,29 +1424,16 @@ impl SongEditor {
                 handle.abort();
             };
             let size = slides.len();
-            let (task, handle) = Task::stream(channel(
-                size,
-                |mut sender| async move {
-                    let mut slides = slides.into_iter().enumerate();
-                    loop {
-                        if let Some((index, mut slide)) =
-                            slides.next()
-                        {
-                            text_svg::text_svg_generator(
-                                &mut slide,
-                                Arc::clone(&font_db),
-                            );
-                            if let Err(e) =
-                                sender.start_send((index, slide))
-                            {
-                                error!(?e);
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                },
+            let (task, handle) = Task::stream(stream::iter(
+                slides.into_iter().enumerate().map(
+                    move |(index, mut slide)| {
+                        text_svg::text_svg_generator(
+                            &mut slide,
+                            Arc::clone(&font_db),
+                        );
+                        (index, slide)
+                    },
+                ),
             ))
             .then(|(index, slide)| {
                 Task::done(Message::UpdateSlide((index, slide)))
