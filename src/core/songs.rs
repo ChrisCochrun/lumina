@@ -1195,10 +1195,14 @@ impl Song {
 
 #[cfg(test)]
 mod test {
-    use std::fs::read_to_string;
+    use std::{fs::read_to_string, sync::Arc};
+
+    use crate::ui::text_svg::text_svg_generator_with_cache;
 
     use super::*;
     use pretty_assertions::assert_eq;
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
+    use resvg::usvg::fontdb;
 
     #[test]
     pub fn test_song_lyrics() {
@@ -1496,6 +1500,36 @@ You saved my soul"
         song.add_verse(VerseName::Verse { number: 4 }, "");
         let name = song.get_next_verse_name();
         assert_eq!(name, VerseName::Verse { number: 5 });
+    }
+
+    #[tokio::test]
+    async fn test_song_to_slide() {
+        let song = test_song();
+        let songs: Vec<Song> = (0..100)
+            .map(|index| {
+                let mut song = song.clone();
+                song.id = index;
+                if let Some(map) = song.verse_map.as_mut() {
+                    map.entry(VerseName::Verse { number: 1 })
+                        .and_modify(|lyric| {
+                            lyric.push_str(&index.to_string());
+                        });
+                }
+                song
+            })
+            .collect();
+        let fontdb = Arc::new(fontdb::Database::new());
+        songs.into_par_iter().for_each(|song| {
+            let slides = song.to_slides().unwrap();
+            for mut slide in slides {
+                text_svg_generator_with_cache(
+                    &mut slide,
+                    Arc::clone(&fontdb),
+                    false,
+                );
+                assert!(slide.text_svg.is_some());
+            }
+        });
     }
 
     // extern crate test;

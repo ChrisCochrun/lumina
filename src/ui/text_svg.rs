@@ -280,7 +280,7 @@ impl TextSvg {
         self
     }
 
-    pub fn build(mut self, size: Size) -> Self {
+    pub fn build(mut self, size: Size, cache: bool) -> Self {
         // debug!("starting...");
 
         let mut path = dirs::data_local_dir().unwrap();
@@ -411,17 +411,18 @@ impl TextSvg {
         //     text
         // ));
 
-        let hashed_title = rapidhash_v3(final_svg.as_bytes());
-        path.push(PathBuf::from(hashed_title.to_string()));
-        path.set_extension("png");
+        if cache {
+            let hashed_title = rapidhash_v3(final_svg.as_bytes());
+            path.push(PathBuf::from(hashed_title.to_string()));
+            path.set_extension("png");
 
-        if path.exists() {
-            // debug!("cached");
-            let handle = Handle::from_path(path);
-            self.handle = Some(handle);
-            return self;
+            if path.exists() {
+                // debug!("cached");
+                let handle = Handle::from_path(path);
+                self.handle = Some(handle);
+                return self;
+            }
         }
-
         // debug!("text string built...");
         let resvg_tree = Tree::from_data(
             final_svg.as_bytes(),
@@ -438,8 +439,11 @@ impl TextSvg {
                 .expect("opops");
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
-        if let Err(e) = pixmap.save_png(&path) {
-            error!(?e, "Couldn't save a copy of the text");
+
+        if cache {
+            if let Err(e) = pixmap.save_png(&path) {
+                error!(?e, "Couldn't save a copy of the text");
+            }
         }
 
         // debug!("saved");
@@ -503,7 +507,28 @@ pub fn text_svg_generator(
                     .size(slide.font_size().try_into().unwrap()),
             )
             .fontdb(Arc::clone(&fontdb))
-            .build(Size::new(1280.0, 720.0));
+            .build(Size::new(1280.0, 720.0), true);
+        slide.text_svg = Some(text_svg);
+    }
+}
+
+pub fn text_svg_generator_with_cache(
+    slide: &mut crate::core::slide::Slide,
+    fontdb: Arc<fontdb::Database>,
+    cache: bool,
+) {
+    if !slide.text().is_empty() {
+        let text_svg = TextSvg::new(slide.text())
+            .alignment(slide.text_alignment())
+            .fill("#fff")
+            .shadow(shadow(2, 2, 5, "#000000"))
+            .stroke(stroke(3, "#000"))
+            .font(
+                Font::from(slide.font())
+                    .size(slide.font_size().try_into().unwrap()),
+            )
+            .fontdb(Arc::clone(&fontdb))
+            .build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
     }
 }
