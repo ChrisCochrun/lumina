@@ -76,6 +76,7 @@
           just
           sqlx-cli
           cargo-watch
+          samply
         ];
 
         LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${

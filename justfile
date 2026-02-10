@@ -22,7 +22,7 @@ clean:
 test:
     cargo test --benches --tests --all-features -- --nocapture
 profile:
-    cargo flamegraph --profile release -- {{verbose}} {{ui}}
+    samply record cargo run --release -- {{verbose}} {{ui}}
 
 alias b := build
 alias r := run
