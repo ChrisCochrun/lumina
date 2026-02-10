@@ -58,7 +58,6 @@ pub async fn link_to_online_song(
             .map(std::string::ToString::to_string)
             .collect::<Vec<String>>();
         let link = format!("https://www.lyrics.com/lyric/{link}");
-        dbg!(&link);
         let _id = &parts[0];
         let author = &parts[1].replace('+', " ");
         let title = &parts[2].replace('+', " ");
@@ -78,14 +77,10 @@ pub async fn link_to_online_song(
 
         let lyrics = document
             .select(&lyric_selector)
-            .map(|a| {
-                dbg!(&a);
-                a.text().collect::<String>()
-            })
+            .map(|a| a.text().collect::<String>())
             .dedup()
             .next();
 
-        dbg!(&lyrics);
         if let Some(lyrics) = lyrics {
             let song = OnlineSong {
                 lyrics,
@@ -124,8 +119,7 @@ mod test {
                     Ok(songs) => {
                         if let Some(first) =
                             songs.iter().find_or_first(|song| {
-                                song.author
-                                    == "North Point InsideOut"
+                                song.author == "North Point InsideOut"
                             })
                         {
                             assert_eq!(&song, first);
