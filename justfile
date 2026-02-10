@@ -21,6 +21,8 @@ clean:
     cargo clean
 test:
     cargo nextest run
+bench:
+    cargo nextest bench
 profile:
     samply record cargo run --release -- {{verbose}} {{ui}}
 
