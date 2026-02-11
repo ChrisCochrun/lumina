@@ -531,7 +531,7 @@ pub fn text_svg_generator_with_cache(
         };
         let text_svg =
             text_svg.font(font).fontdb(Arc::clone(&fontdb));
-        debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
+        // debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
         let text_svg =
             text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
