@@ -81,7 +81,7 @@ pub struct SongEditor {
     song_slides: Option<Vec<Slide>>,
     slide_state: SlideEditor,
     stroke_sizes: combo_box::State<i32>,
-    stroke_size: i32,
+    stroke_size: u16,
     stroke_open: bool,
     #[debug(skip)]
     stroke_color_model: ColorPickerModel,
@@ -117,7 +117,7 @@ pub enum Message {
     None,
     ChangeAuthor(String),
     PauseVideo,
-    UpdateStrokeSize(i32),
+    UpdateStrokeSize(u16),
     UpdateStrokeColor(ColorPickerUpdate),
     OpenStroke,
     CloseStroke,
@@ -310,7 +310,7 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.font = Some(font);
                     let song = song.to_owned();
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeFontSize(size) => {
@@ -318,7 +318,7 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.font_size = Some(size as i32);
                     let song = song.to_owned();
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeTitle(title) => {
@@ -326,7 +326,7 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.title = title;
                     let song = song.to_owned();
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeVerseOrder(verse_order) => {
@@ -337,7 +337,7 @@ impl SongEditor {
                         .map(std::borrow::ToOwned::to_owned)
                         .collect();
                     song.verse_order = Some(verse_order);
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeLyrics(action) => {
@@ -347,7 +347,7 @@ impl SongEditor {
 
                 if let Some(mut song) = self.song.clone() {
                     song.lyrics = Some(lyrics);
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::Edit(edit) => {
@@ -359,7 +359,7 @@ impl SongEditor {
                 self.author = author.clone();
                 if let Some(mut song) = self.song.clone() {
                     song.author = Some(author);
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeBackground(Ok(path)) => {
@@ -368,7 +368,7 @@ impl SongEditor {
                     let background = Background::try_from(path).ok();
                     self.background_video(&background);
                     song.background = background;
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChangeBackground(Err(error)) => {
@@ -394,19 +394,21 @@ impl SongEditor {
                         song.stroke_size = Some(size);
                     }
                     let song = song.to_owned();
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::UpdateStrokeColor(update) => {
-                let task = self.stroke_color_model.update(update);
-                if let Some(song) = self.song.as_mut()
+                let mut tasks = Vec::with_capacity(2);
+                tasks.push(self.stroke_color_model.update(update));
+                if let Some(mut song) = self.song.clone()
                     && let Some(color) =
                         self.stroke_color_model.get_applied_color()
                 {
                     debug!(?color);
                     song.stroke_color = Some(color.into());
+                    tasks.push(self.update_song(song));
                 }
-                return Action::Task(task);
+                return Action::Task(Task::batch(tasks));
             }
             Message::UpdateSlides(slides) => {
                 self.song_slides = Some(slides);
@@ -473,7 +475,9 @@ impl SongEditor {
                                     &old_verse_name,
                                 );
 
-                                return self.update_song(song);
+                                return Action::Task(
+                                    self.update_song(song),
+                                );
                             }
                         }
                         verse_editor::Action::UpdateVerse((
@@ -486,14 +490,18 @@ impl SongEditor {
                                 // song.update_verse(
                                 //     index, verse, lyric,
                                 // );
-                                return self.update_song(song);
+                                return Action::Task(
+                                    self.update_song(song),
+                                );
                             }
                         }
                         verse_editor::Action::DeleteVerse(verse) => {
                             if let Some(mut song) = self.song.clone()
                             {
                                 song.delete_verse(verse);
-                                return self.update_song(song);
+                                return Action::Task(
+                                    self.update_song(song),
+                                );
                             };
                         }
                         verse_editor::Action::None => (),
@@ -517,7 +525,7 @@ impl SongEditor {
                 }
                 if let Some(mut song) = self.song.clone() {
                     song.add_verse(verse, lyric);
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::RemoveVerse(index) => {
@@ -528,7 +536,7 @@ impl SongEditor {
                             verses.remove(index);
                         },
                     );
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::ChipHovered(index) => {
@@ -546,7 +554,9 @@ impl SongEditor {
                             {
                                 verses.insert(index, verse);
                                 let song = song.clone();
-                                return self.update_song(song);
+                                return Action::Task(
+                                    self.update_song(song),
+                                );
                             }
                             error!("No verses in this song?");
                         } else {
@@ -567,7 +577,9 @@ impl SongEditor {
                         {
                             verses.push(verse);
                             let song = song.clone();
-                            return self.update_song(song);
+                            return Action::Task(
+                                self.update_song(song),
+                            );
                         } else {
                             error!(
                                 "No verses in this song or no song here"
@@ -592,7 +604,7 @@ impl SongEditor {
                         let verse = verses.remove(index);
                         verses.insert(target_index, verse);
                         debug!(?verses);
-                        return self.update_song(song);
+                        return Action::Task(self.update_song(song));
                     }
                 }
                 draggable::DragEvent::Canceled { index } => (),
@@ -606,7 +618,7 @@ impl SongEditor {
             Message::SetTextAlignment(alignment) => {
                 if let Some(mut song) = self.song.clone() {
                     song.text_alignment = Some(alignment);
-                    return self.update_song(song);
+                    return Action::Task(self.update_song(song));
                 }
             }
             Message::None => (),
@@ -1147,7 +1159,7 @@ impl SongEditor {
             dropdown(
                 &["0", "1", "2", "3", "4", "5", "6", "7"],
                 Some(self.stroke_size as usize),
-                |i| Message::UpdateStrokeSize(i as i32),
+                |i| Message::UpdateStrokeSize(i as u16),
             )
             .gap(5.0),
         ]
@@ -1389,11 +1401,11 @@ impl SongEditor {
         self.editing
     }
 
-    fn update_song(&mut self, song: Song) -> Action {
-        use cosmic::iced_futures::futures::stream;
+    fn update_song(&mut self, song: Song) -> Task<Message> {
+        // use cosmic::iced_futures::futures::stream;
         // use cosmic::iced_futures::futures::{Stream, StreamExt};
         // use cosmic::iced_futures::stream::channel;
-        use cosmic::task::stream;
+        // use cosmic::task::stream;
         let font_db = Arc::clone(&self.font_db);
         // need to test to see which of these methods yields faster
         // text_svg slide creation. There is a small thought in me that
@@ -1464,7 +1476,7 @@ impl SongEditor {
         }
         tasks.push(Task::done(Message::UpdateSong(song)));
 
-        Action::Task(Task::batch(tasks))
+        Task::batch(tasks)
     }
 
     fn background_video(&mut self, background: &Option<Background>) {

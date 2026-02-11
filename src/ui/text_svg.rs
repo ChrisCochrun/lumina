@@ -21,7 +21,7 @@ use resvg::{
     usvg::{Tree, fontdb},
 };
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::TextAlignment;
 
@@ -378,7 +378,11 @@ impl TextSvg {
                 stroke.color, stroke.size
             ));
         }
-        final_svg.push_str(" style=\"filter:url(#shadow);\">");
+
+        if self.shadow.is_some() {
+            final_svg.push_str(" style=\"filter:url(#shadow);\"");
+        }
+        final_svg.push_str(">");
 
         let text: String = self
             .text
@@ -496,20 +500,7 @@ pub fn text_svg_generator(
     slide: &mut crate::core::slide::Slide,
     fontdb: Arc<fontdb::Database>,
 ) {
-    if !slide.text().is_empty() {
-        let text_svg = TextSvg::new(slide.text())
-            .alignment(slide.text_alignment())
-            .fill("#fff")
-            .shadow(shadow(2, 2, 5, "#000000"))
-            .stroke(stroke(3, "#000"))
-            .font(
-                Font::from(slide.font())
-                    .size(slide.font_size().try_into().unwrap()),
-            )
-            .fontdb(Arc::clone(&fontdb))
-            .build(Size::new(1280.0, 720.0), true);
-        slide.text_svg = Some(text_svg);
-    }
+    text_svg_generator_with_cache(slide, fontdb, true);
 }
 
 pub fn text_svg_generator_with_cache(
@@ -518,17 +509,31 @@ pub fn text_svg_generator_with_cache(
     cache: bool,
 ) {
     if !slide.text().is_empty() {
+        let font = if let Some(font) = slide.font() {
+            font
+        } else {
+            Font::default()
+        };
         let text_svg = TextSvg::new(slide.text())
             .alignment(slide.text_alignment())
-            .fill("#fff")
-            .shadow(shadow(2, 2, 5, "#000000"))
-            .stroke(stroke(3, "#000"))
-            .font(
-                Font::from(slide.font())
-                    .size(slide.font_size().try_into().unwrap()),
-            )
-            .fontdb(Arc::clone(&fontdb))
-            .build(Size::new(1280.0, 720.0), cache);
+            .fill(
+                slide.text_color().unwrap_or_else(|| "#fff".into()),
+            );
+        let text_svg = if let Some(stroke) = slide.stroke() {
+            text_svg.stroke(stroke)
+        } else {
+            text_svg
+        };
+        let text_svg = if let Some(shadow) = slide.shadow() {
+            text_svg.shadow(shadow)
+        } else {
+            text_svg
+        };
+        let text_svg =
+            text_svg.font(font).fontdb(Arc::clone(&fontdb));
+        debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
+        let text_svg =
+            text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
     }
 }
@@ -538,6 +543,7 @@ mod tests {
     use crate::core::slide::Slide;
 
     use super::*;
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb::Database;
 
     #[test]
@@ -547,12 +553,12 @@ mod tests {
         let mut fontdb = Database::new();
         fontdb.load_system_fonts();
         let fontdb = Arc::new(fontdb);
-        (0..100).for_each(|index| {
+        (0..40).into_par_iter().for_each(|_| {
             let mut slide = slide
                 .clone()
                 .set_font_size(120)
                 .set_font("Quicksand")
-                .set_text(index.to_string());
+                .set_text("This is the first slide of text\nAnd we are singing\nTo save the world!");
             text_svg_generator_with_cache(
                 &mut slide,
                 Arc::clone(&fontdb),

@@ -1,6 +1,4 @@
-use cosmic::{
-    cosmic_theme::palette::rgb::Rgba, widget::image::Handle,
-};
+use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
@@ -12,7 +10,7 @@ use std::{
 };
 use tracing::error;
 
-use crate::ui::text_svg::{Shadow, Stroke, TextSvg};
+use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};
 
 use super::songs::Song;
 
@@ -23,11 +21,12 @@ pub struct Slide {
     id: i32,
     pub(crate) background: Background,
     text: String,
-    font: String,
+    font: Option<Font>,
     font_size: i32,
     stroke: Option<Stroke>,
     shadow: Option<Shadow>,
     text_alignment: TextAlignment,
+    text_color: Option<Color>,
     audio: Option<PathBuf>,
     video_loop: bool,
     video_start_time: f32,
@@ -280,7 +279,7 @@ impl Slide {
     }
 
     pub fn set_font(mut self, font: impl AsRef<str>) -> Self {
-        self.font = font.as_ref().into();
+        self.font = Some(font.as_ref().into());
         self
     }
 
@@ -315,7 +314,7 @@ impl Slide {
         self.font_size
     }
 
-    pub fn font(&self) -> String {
+    pub fn font(&self) -> Option<Font> {
         self.font.clone()
     }
 
@@ -329,6 +328,18 @@ impl Slide {
 
     pub fn pdf_page(&self) -> Option<Handle> {
         self.pdf_page.clone()
+    }
+
+    pub fn text_color(&self) -> Option<Color> {
+        self.text_color.clone()
+    }
+
+    pub fn stroke(&self) -> Option<Stroke> {
+        self.stroke.clone()
+    }
+
+    pub fn shadow(&self) -> Option<Shadow> {
+        self.shadow.clone()
     }
 
     pub const fn pdf_index(&self) -> u32 {
@@ -543,9 +554,12 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
 pub struct SlideBuilder {
     background: Option<Background>,
     text: Option<String>,
-    font: Option<String>,
+    font: Option<Font>,
     font_size: Option<i32>,
     audio: Option<PathBuf>,
+    stroke: Option<Stroke>,
+    shadow: Option<Shadow>,
+    text_color: Option<Color>,
     text_alignment: Option<TextAlignment>,
     video_loop: Option<bool>,
     video_start_time: Option<f32>,
@@ -584,18 +598,47 @@ impl SlideBuilder {
         self
     }
 
+    pub(crate) fn text_color(
+        mut self,
+        text_color: impl Into<Color>,
+    ) -> Self {
+        let _ = self.text_color.insert(text_color.into());
+        self
+    }
+
     pub(crate) fn audio(mut self, audio: impl Into<PathBuf>) -> Self {
         let _ = self.audio.insert(audio.into());
         self
     }
 
-    pub(crate) fn font(mut self, font: impl Into<String>) -> Self {
+    pub(crate) fn font(mut self, font: impl Into<Font>) -> Self {
         let _ = self.font.insert(font.into());
         self
     }
 
     pub(crate) fn font_size(mut self, font_size: i32) -> Self {
         let _ = self.font_size.insert(font_size);
+        self
+    }
+
+    pub(crate) fn color(mut self, color: impl Into<Color>) -> Self {
+        let _ = self.text_color.insert(color.into());
+        self
+    }
+
+    pub(crate) fn stroke(
+        mut self,
+        stroke: impl Into<Stroke>,
+    ) -> Self {
+        let _ = self.stroke.insert(stroke.into());
+        self
+    }
+
+    pub(crate) fn shadow(
+        mut self,
+        shadow: impl Into<Shadow>,
+    ) -> Self {
+        let _ = self.shadow.insert(shadow.into());
         self
     }
 
@@ -656,9 +699,6 @@ impl SlideBuilder {
         let Some(text) = self.text else {
             return Err(miette!("No text"));
         };
-        let Some(font) = self.font else {
-            return Err(miette!("No font"));
-        };
         let Some(font_size) = self.font_size else {
             return Err(miette!("No font_size"));
         };
@@ -677,10 +717,13 @@ impl SlideBuilder {
         Ok(Slide {
             background,
             text,
-            font,
+            font: self.font,
             font_size,
             text_alignment,
             audio: self.audio,
+            stroke: self.stroke,
+            shadow: self.shadow,
+            text_color: self.text_color,
             video_loop,
             video_start_time,
             video_end_time,
@@ -710,7 +753,7 @@ mod test {
             text: "This is frodo".to_string(),
             background: Background::try_from("~/pics/frodo.jpg")
                 .unwrap(),
-            font: "Quicksand".to_string(),
+            font: Some("Quicksand".to_string().into()),
             font_size: 140,
             ..Default::default()
         }
@@ -723,7 +766,7 @@ mod test {
                 "~/vids/test/camprules2024.mp4",
             )
             .unwrap(),
-            font: "Quicksand".to_string(),
+            font: Some("Quicksand".to_string().into()),
             ..Default::default()
         }
     }

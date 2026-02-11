@@ -458,8 +458,12 @@ impl Presenter {
                 // self.current_slide_index = slide;
                 debug!("cloning slide...");
                 self.current_slide = slide.clone();
-                let _ =
-                    self.update(Message::ChangeFont(slide.font()));
+                let font = if let Some(font) = slide.font() {
+                    font.get_name()
+                } else {
+                    "".into()
+                };
+                let _ = self.update(Message::ChangeFont(font));
                 debug!("changing video now...");
                 if !backgrounds_match {
                     if let Some(video) = &mut self.video {

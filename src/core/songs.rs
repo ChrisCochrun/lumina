@@ -3,7 +3,7 @@ use std::{
 };
 
 use cosmic::{
-    cosmic_theme::palette::rgb::Rgba,
+    cosmic_theme::palette::{IntoColor, Srgb, rgb::Rgba},
     iced::clipboard::mime::AsMimeTypes,
 };
 use crisp::types::{Keyword, Symbol, Value};
@@ -16,7 +16,11 @@ use sqlx::{
 };
 use tracing::{debug, error};
 
-use crate::{Slide, SlideBuilder, core::slide};
+use crate::{
+    Slide, SlideBuilder,
+    core::slide,
+    ui::text_svg::{self, Color, Font, Stroke, shadow, stroke},
+};
 
 use super::{
     content::Content,
@@ -41,11 +45,12 @@ pub struct Song {
     pub text_alignment: Option<TextAlignment>,
     pub font: Option<String>,
     pub font_size: Option<i32>,
-    pub stroke_size: Option<i32>,
-    pub stroke_color: Option<Rgba>,
-    pub shadow_size: Option<i32>,
-    pub shadow_offset: Option<(i32, i32)>,
-    pub shadow_color: Option<Rgba>,
+    pub text_color: Option<Srgb>,
+    pub stroke_size: Option<u16>,
+    pub stroke_color: Option<Srgb>,
+    pub shadow_size: Option<u16>,
+    pub shadow_offset: Option<(i16, i16)>,
+    pub shadow_color: Option<Srgb>,
     pub verses: Option<Vec<VerseName>>,
     pub verse_map: Option<HashMap<VerseName, String>>,
 }
@@ -283,14 +288,57 @@ impl ServiceTrait for Song {
         let slides: Vec<Slide> = lyrics
             .iter()
             .filter_map(|l| {
-                SlideBuilder::new()
+                let font =
+                    Font::default()
+                        .name(
+                            self.font
+                                .clone()
+                                .unwrap_or_else(|| "Calibri".into()),
+                        )
+                        .size(self.font_size.unwrap_or_else(|| 100)
+                            as u8);
+                let stroke_size =
+                    self.stroke_size.unwrap_or_default();
+                let stroke: Stroke = stroke(
+                    stroke_size,
+                    self.stroke_color
+                        .map(|color| Color::from(color))
+                        .unwrap_or_default(),
+                );
+                let shadow_size =
+                    self.shadow_size.unwrap_or_default();
+                let shadow = shadow(
+                    self.shadow_offset.unwrap_or_default().0,
+                    self.shadow_offset.unwrap_or_default().1,
+                    shadow_size,
+                    self.shadow_color
+                        .map(|color| Color::from(color))
+                        .unwrap_or_default(),
+                );
+                let builder = SlideBuilder::new();
+                let builder = if shadow_size > 0 {
+                    builder.shadow(shadow)
+                } else {
+                    builder
+                };
+                let builder = if stroke_size > 0 {
+                    builder.stroke(stroke)
+                } else {
+                    builder
+                };
+                builder
                     .background(
                         self.background.clone().unwrap_or_default(),
                     )
-                    .font(self.font.clone().unwrap_or_default())
+                    .font(font)
                     .font_size(self.font_size.unwrap_or_default())
                     .text_alignment(
                         self.text_alignment.unwrap_or_default(),
+                    )
+                    .text_color(
+                        self.text_color.unwrap_or_else(|| {
+                            Srgb::new(1.0, 1.0, 1.0)
+                        }),
                     )
                     .audio(self.audio.clone().unwrap_or_default())
                     .video_loop(true)
