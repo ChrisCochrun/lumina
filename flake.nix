@@ -6,6 +6,7 @@
     naersk.url = "github:nix-community/naersk";
     flake-utils.url = "github:numtide/flake-utils";
     fenix.url = "github:nix-community/fenix";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
   outputs =
@@ -14,26 +15,34 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ fenix.overlays.default ];
+          inherit system overlays;
+          # overlays = [ rust-overlay.overlays.default ];
           # overlays = [cargo2nix.overlays.default];
         };
         naersk' = pkgs.callPackage naersk { };
 
+        # toolchain = (with pkgs.fenix.default; [cargo clippy rust-std rust-src rustc rustfmt rust-analyzer-nightly]);
+            
+
         nativeBuildInputs = with pkgs; [
           # Rust tools
-          alejandra
-          (pkgs.fenix.default.withComponents [
-            "cargo"
-            "clippy"
-            "rust-std"
-            "rustc"
-            "rustfmt"
-          ])
+          # toolchain
+          # (pkgs.fenix.default.withComponents [
+          #   "cargo"
+          #   "clippy"
+          #   "rust-std"
+          #   # "rust-src"
+          #   "rustc"
+          #   "rustfmt"
+          # ])
+          (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+            extensions = [ "rust-src" "rust-analyzer" "clippy" ];
+          }))
           cargo-nextest
           cargo-criterion
-          rust-analyzer-nightly
+          # rust-analyzer-nightly
           vulkan-loader
           wayland
           wayland-protocols
@@ -113,6 +122,7 @@
               inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
               # LIBCLANG_PATH = "${pkgs.clang}";
               DATABASE_URL = "sqlite://./test.db";
+              # RUST_SRC_PATH = "${toolchain.rust-src}/lib/rustlib/src/rust/library";
             };
         defaultPackage = naersk'.buildPackage {
           inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
