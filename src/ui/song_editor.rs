@@ -481,6 +481,7 @@ impl SongEditor {
                             {
                                 let old_verse_name =
                                     verse.verse_name.clone();
+
                                 let verse_name = song
                                     .verse_name_from_str(
                                         verse_name,

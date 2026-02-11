@@ -1082,7 +1082,11 @@ impl Song {
         if let Some(verse_map) = self.verse_map.as_mut()
             && let Some(lyric) = verse_map.remove(old_verse)
         {
-            verse_map.insert(verse, lyric);
+            if verse == VerseName::Blank {
+                verse_map.insert(verse, "".into());
+            } else {
+                verse_map.insert(verse, lyric);
+            }
         }
         let Some(verses) = self.verses.clone() else {
             return;
