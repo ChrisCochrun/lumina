@@ -27,7 +27,7 @@
           (pkgs.fenix.default.withComponents [
             "cargo"
             "clippy"
-            "rust-src"
+            "rust-std"
             "rustc"
             "rustfmt"
           ])
@@ -112,7 +112,7 @@
             {
               inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
               # LIBCLANG_PATH = "${pkgs.clang}";
-              DATABASE_URL = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
+              DATABASE_URL = "sqlite://./test.db";
             };
         defaultPackage = naersk'.buildPackage {
           inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
