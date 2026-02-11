@@ -489,6 +489,10 @@ impl SongEditor {
 
                                 verse.verse_name = verse_name;
 
+                                if verse_name == VerseName::Blank {
+                                    verse.lyric = "".into();
+                                }
+
                                 song.update_verse_name(
                                     verse_name,
                                     &old_verse_name,
@@ -518,6 +522,19 @@ impl SongEditor {
                             if let Some(mut song) = self.song.clone()
                             {
                                 song.delete_verse(verse);
+                                if let Some(verses) =
+                                    self.verses.as_mut()
+                                {
+                                    if let Some(verse) = verses
+                                        .iter()
+                                        .position(|inner_verse| {
+                                            inner_verse.verse_name
+                                                == verse
+                                        })
+                                    {
+                                        verses.remove(verse);
+                                    }
+                                }
                                 return Action::Task(
                                     self.update_song(song),
                                 );
