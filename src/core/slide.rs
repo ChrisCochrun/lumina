@@ -298,6 +298,21 @@ impl Slide {
         self
     }
 
+    pub const fn set_stroke(mut self, stroke: Stroke) -> Self {
+        self.stroke = Some(stroke);
+        self
+    }
+
+    pub const fn set_shadow(mut self, shadow: Shadow) -> Self {
+        self.shadow = Some(shadow);
+        self
+    }
+
+    pub const fn set_text_color(mut self, color: Color) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
     pub const fn background(&self) -> &Background {
         &self.background
     }

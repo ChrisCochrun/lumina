@@ -553,11 +553,13 @@ mod tests {
         let mut fontdb = Database::new();
         fontdb.load_system_fonts();
         let fontdb = Arc::new(fontdb);
-        (0..40).into_par_iter().for_each(|_| {
+        (0..400).into_par_iter().for_each(|_| {
             let mut slide = slide
                 .clone()
                 .set_font_size(120)
                 .set_font("Quicksand")
+                .set_shadow(shadow(5, 5, 5, "#000"))
+                .set_stroke(stroke(9, "#000"))
                 .set_text("This is the first slide of text\nAnd we are singing\nTo save the world!");
             text_svg_generator_with_cache(
                 &mut slide,

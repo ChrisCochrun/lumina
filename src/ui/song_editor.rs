@@ -109,7 +109,7 @@ pub enum Message {
     ChangeSong(Song),
     UpdateSong(Song),
     ChangeFont(String),
-    ChangeFontSize(usize),
+    ChangeFontSize(String),
     ChangeTitle(String),
     ChangeVerseOrder(String),
     ChangeLyrics(text_editor::Action),
@@ -331,11 +331,13 @@ impl SongEditor {
                 }
             }
             Message::ChangeFontSize(size) => {
-                self.font_size = size;
-                if let Some(song) = &mut self.song {
-                    song.font_size = Some(size as i32);
-                    let song = song.to_owned();
-                    return Action::Task(self.update_song(song));
+                if let Ok(size) = size.parse() {
+                    self.font_size = size;
+                    if let Some(song) = &mut self.song {
+                        song.font_size = Some(size as i32);
+                        let song = song.to_owned();
+                        return Action::Task(self.update_song(song));
+                    }
                 }
             }
             Message::ChangeTitle(title) => {
@@ -1132,18 +1134,18 @@ impl SongEditor {
                 ))
         };
 
-        let selected_font = &self.font;
-        let selected_font_size = if self.font_size > 0 {
-            Some(&self.font_size.to_string())
-        } else {
-            None
-        };
+        let selected_font = self
+            .song
+            .as_ref()
+            .map(|song| song.font.as_ref())
+            .flatten();
+
         let font_selector = tooltip(
             stack![
                 combo_box(
                     &self.fonts_combo,
                     "Font",
-                    Some(selected_font),
+                    selected_font,
                     Message::ChangeFont,
                 )
                 .on_open(Message::FontSelectorOpen(true))
@@ -1167,18 +1169,22 @@ impl SongEditor {
             tooltip::Position::Bottom,
         )
         .gap(10);
+
+        let selected_font_size = self
+            .song
+            .as_ref()
+            .map(|song| song.font_size.map(|size| size.to_string()))
+            .flatten();
+
         let font_size = tooltip(
             stack![
                 combo_box(
                     &self.font_sizes,
                     "Font Size",
-                    selected_font_size,
-                    |size| {
-                        Message::ChangeFontSize(
-                            size.parse().expect("Should be a number"),
-                        )
-                    },
+                    selected_font_size.as_ref(),
+                    Message::ChangeFontSize,
                 )
+                .on_input(Message::ChangeFontSize)
                 .on_open(Message::FontSizeOpen(true))
                 .on_close(Message::FontSizeOpen(false))
                 .width(space_xxxl),

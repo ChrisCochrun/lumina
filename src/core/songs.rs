@@ -454,7 +454,34 @@ impl FromRow<'_, SqliteRow> for Song {
             }),
             font: row.try_get(6)?,
             font_size: row.try_get(1)?,
-            stroke_size: None,
+            stroke_size: row.try_get("stroke_size").ok(),
+            stroke_color: row
+                .try_get("stroke_color")
+                .ok()
+                .map(|color: String| {
+                    debug!(color);
+                    ron::de::from_str::<Option<Srgb>>(&color).ok()
+                })
+                .flatten()
+                .flatten(),
+            shadow_size: row.try_get("shadow_size").ok(),
+            shadow_color: row
+                .try_get("shadow_color")
+                .ok()
+                .map(|color: String| {
+                    debug!(color);
+                    ron::de::from_str::<Option<Srgb>>(&color).ok()
+                })
+                .flatten()
+                .flatten(),
+            shadow_offset: Some((
+                row.try_get("shadow_offset_x")
+                    .ok()
+                    .unwrap_or_default(),
+                row.try_get("shadow_offset_y")
+                    .ok()
+                    .unwrap_or_default(),
+            )),
             verses,
             verse_map,
             ..Default::default()
@@ -886,8 +913,18 @@ pub async fn update_song_in_db(
         })
         .unwrap_or_else(|| ("center", "center"));
 
+    let stroke_size = item.stroke_size.unwrap_or_default();
+    let shadow_size = item.shadow_size.unwrap_or_default();
+    let (shadow_offset_x, shadow_offset_y) =
+        item.shadow_offset.unwrap_or_default();
+
+    let stroke_color =
+        ron::ser::to_string(&item.stroke_color).into_diagnostic()?;
+    let shadow_color =
+        ron::ser::to_string(&item.shadow_color).into_diagnostic()?;
+
     query!(
-        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12 WHERE id = $1"#,
+        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18 WHERE id = $1"#,
         item.id,
         item.title,
         lyrics,
@@ -899,7 +936,13 @@ pub async fn update_song_in_db(
         item.font_size,
         background,
         vertical_alignment,
-        horizontal_alignment
+        horizontal_alignment,
+        stroke_color,
+        shadow_color,
+        stroke_size,
+        shadow_size,
+        shadow_offset_x,
+        shadow_offset_y
     )
         .execute(&mut db.detach())
         .await
