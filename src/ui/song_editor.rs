@@ -687,7 +687,8 @@ impl SongEditor {
                         )
                         .map(|_| Message::None),
                     )
-                    .height(250)
+                    .max_height(400)
+                    .height(400)
                     .center_x(Length::Fill)
                     .padding([0, 20])
                     .clip(true)
@@ -1157,7 +1158,10 @@ impl SongEditor {
                     .symbolic(true)
             ),
             dropdown(
-                &["0", "1", "2", "3", "4", "5", "6", "7"],
+                &[
+                    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                    "10", "11", "12", "13", "14", "15"
+                ],
                 Some(self.stroke_size as usize),
                 |i| Message::UpdateStrokeSize(i as u16),
             )
