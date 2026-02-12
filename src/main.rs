@@ -857,6 +857,12 @@ impl cosmic::Application for App {
                 modal
             );
             Some(mouse_stack.into())
+        } else if self.song_editor.importing() {
+            Some(
+                self.song_editor
+                    .import_view()
+                    .map(|message| Message::SongEditor(message)),
+            )
         } else {
             None
         }

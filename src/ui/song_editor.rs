@@ -96,6 +96,7 @@ pub struct SongEditor {
     #[debug(skip)]
     shadow_color_model: ColorPickerModel,
     shadow_tools_open: bool,
+    importing: bool,
 }
 
 pub enum Action {
@@ -233,6 +234,7 @@ impl SongEditor {
                 Some(Color::BLACK),
             ),
             shadow_tools_open: false,
+            importing: false,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -1651,8 +1653,16 @@ impl SongEditor {
         .into()
     }
 
+    pub fn import_view(&self) -> Element<Message> {
+        todo!("need to add an import view")
+    }
+
     pub const fn editing(&self) -> bool {
         self.editing
+    }
+
+    pub const fn importing(&self) -> bool {
+        self.importing
     }
 
     fn update_song(&mut self, song: Song) -> Task<Message> {
