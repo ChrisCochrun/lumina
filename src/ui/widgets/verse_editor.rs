@@ -1,7 +1,7 @@
 use cosmic::{
     Element, Task,
     cosmic_theme::palette::WithAlpha,
-    iced::{Background, Border, Color, Point},
+    iced::{Background, Border, Point},
     iced_widget::{column, row},
     theme,
     widget::{

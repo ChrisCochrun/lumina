@@ -9,11 +9,8 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, Shadow, Vector,
-        alignment::Vertical,
-        color,
-        futures::{StreamExt, stream},
-        task,
+        Padding, Shadow, Vector, alignment::Vertical, color,
+        futures::StreamExt, task,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,

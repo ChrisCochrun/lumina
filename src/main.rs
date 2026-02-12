@@ -1,4 +1,4 @@
-use clap::{Parser, command};
+use clap::Parser;
 use core::service_items::ServiceItem;
 use core::slide::{
     Background, BackgroundKind, Slide, SlideBuilder, TextAlignment,
@@ -178,6 +178,7 @@ struct App {
     obs_connection: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 enum Message {
     Present(presenter::Message),
