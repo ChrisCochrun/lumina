@@ -175,7 +175,7 @@ impl Hash for Color {
 }
 
 impl Color {
-    #[must_use] 
+    #[must_use]
     pub fn to_css_hex_string(&self) -> String {
         format!("#{:x}", self.0.into_format::<u8>())
     }
@@ -334,15 +334,18 @@ impl TextSvg {
                     ("end", position, x_width_padded.as_str())
                 }
                 TextAlignment::BottomLeft => {
-                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                    let position = (total_lines as f32)
+                        .mul_add(-text_and_line_spacing, size.height);
                     ("start", position, "10")
                 }
                 TextAlignment::BottomCenter => {
-                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                    let position = (total_lines as f32)
+                        .mul_add(-text_and_line_spacing, size.height);
                     ("middle", position, center_y.as_str())
                 }
                 TextAlignment::BottomRight => {
-                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                    let position = (total_lines as f32)
+                        .mul_add(-text_and_line_spacing, size.height);
                     ("end", position, x_width_padded.as_str())
                 }
             };
@@ -439,10 +442,9 @@ impl TextSvg {
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if cache
-            && let Err(e) = pixmap.save_png(&path) {
-                error!(?e, "Couldn't save a copy of the text");
-            }
+        if cache && let Err(e) = pixmap.save_png(&path) {
+            error!(?e, "Couldn't save a copy of the text");
+        }
 
         // debug!("saved");
         // let handle = Handle::from_path(path);

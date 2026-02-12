@@ -80,7 +80,7 @@ pub enum VerseName {
 }
 
 impl VerseName {
-    #[must_use] 
+    #[must_use]
     pub fn from_string(name: String) -> Self {
         match name.as_str() {
             "Verse" => Self::Verse { number: 1 },
@@ -97,7 +97,7 @@ impl VerseName {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn all_names() -> Vec<String> {
         vec![
             "Verse".into(),
@@ -113,7 +113,7 @@ impl VerseName {
         ]
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn next(&self) -> Self {
         match self {
             Self::Verse { number } => {
@@ -289,15 +289,13 @@ impl ServiceTrait for Song {
         let slides: Vec<Slide> = lyrics
             .iter()
             .filter_map(|l| {
-                let font =
-                    Font::default()
-                        .name(
-                            self.font
-                                .clone()
-                                .unwrap_or_else(|| "Calibri".into()),
-                        )
-                        .size(self.font_size.unwrap_or(100)
-                            as u8);
+                let font = Font::default()
+                    .name(
+                        self.font
+                            .clone()
+                            .unwrap_or_else(|| "Calibri".into()),
+                    )
+                    .size(self.font_size.unwrap_or(100) as u8);
                 let stroke_size =
                     self.stroke_size.unwrap_or_default();
                 let stroke: Stroke = stroke(
@@ -901,18 +899,21 @@ pub async fn update_song_in_db(
     });
     let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
-    let (vertical_alignment, horizontal_alignment) = item
-        .text_alignment.map_or_else(|| ("center", "center"), |ta| match ta {
-            TextAlignment::TopLeft => ("top", "left"),
-            TextAlignment::TopCenter => ("top", "center"),
-            TextAlignment::TopRight => ("top", "right"),
-            TextAlignment::MiddleLeft => ("center", "left"),
-            TextAlignment::MiddleCenter => ("center", "center"),
-            TextAlignment::MiddleRight => ("center", "right"),
-            TextAlignment::BottomLeft => ("bottom", "left"),
-            TextAlignment::BottomCenter => ("bottom", "center"),
-            TextAlignment::BottomRight => ("bottom", "right"),
-        });
+    let (vertical_alignment, horizontal_alignment) =
+        item.text_alignment.map_or_else(
+            || ("center", "center"),
+            |ta| match ta {
+                TextAlignment::TopLeft => ("top", "left"),
+                TextAlignment::TopCenter => ("top", "center"),
+                TextAlignment::TopRight => ("top", "right"),
+                TextAlignment::MiddleLeft => ("center", "left"),
+                TextAlignment::MiddleCenter => ("center", "center"),
+                TextAlignment::MiddleRight => ("center", "right"),
+                TextAlignment::BottomLeft => ("bottom", "left"),
+                TextAlignment::BottomCenter => ("bottom", "center"),
+                TextAlignment::BottomRight => ("bottom", "right"),
+            },
+        );
 
     let stroke_size = item.stroke_size.unwrap_or_default();
     let shadow_size = item.shadow_size.unwrap_or_default();
@@ -966,7 +967,6 @@ pub async fn update_song_in_db(
 impl Song {
     #[must_use]
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
-        
         self.verse_map.as_ref().and_then(|verse_map| {
             verse_map.get(verse).cloned().map(|lyric| {
                 lyric.trim().trim_end_matches('\n').to_string()
@@ -1184,7 +1184,7 @@ impl Song {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_next_verse_name(&self) -> VerseName {
         if let Some(verse_names) = &self.verses {
             let verses: Vec<&VerseName> = verse_names

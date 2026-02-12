@@ -478,8 +478,7 @@ impl SongEditor {
                         ) => {
                             if let Some(mut song) = self.song.clone()
                             {
-                                let old_verse_name =
-                                    verse.verse_name;
+                                let old_verse_name = verse.verse_name;
 
                                 let verse_name = song
                                     .verse_name_from_str(
@@ -530,9 +529,9 @@ impl SongEditor {
                                             inner_verse.verse_name
                                                 == verse
                                         })
-                                    {
-                                        verses.remove(verse);
-                                    }
+                                {
+                                    verses.remove(verse);
+                                }
                                 return Action::Task(
                                     self.update_song(song),
                                 );
@@ -1148,10 +1147,8 @@ impl SongEditor {
                 ))
         };
 
-        let selected_font = self
-            .song
-            .as_ref()
-            .and_then(|song| song.font.as_ref());
+        let selected_font =
+            self.song.as_ref().and_then(|song| song.font.as_ref());
 
         let font_selector = tooltip(
             stack![
@@ -1183,10 +1180,10 @@ impl SongEditor {
         )
         .gap(10);
 
-        let selected_font_size = self
-            .song
-            .as_ref()
-            .and_then(|song| song.font_size.map(|size| size.to_string()));
+        let selected_font_size =
+            self.song.as_ref().and_then(|song| {
+                song.font_size.map(|size| size.to_string())
+            });
 
         let font_size = tooltip(
             stack![
@@ -1361,11 +1358,9 @@ impl SongEditor {
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                 "10", "11", "12", "13", "14", "15",
             ],
-            self.song
-                .as_ref()
-                .and_then(|song| {
-                    song.shadow_size.map(|size| size as usize)
-                }),
+            self.song.as_ref().and_then(|song| {
+                song.shadow_size.map(|size| size as usize)
+            }),
             |i| Message::UpdateShadowSize(i as u16),
         )
         .gap(5.0);
@@ -1376,11 +1371,9 @@ impl SongEditor {
                 "10", "11", "12", "13", "14", "15", "16", "17", "18",
                 "19", "20",
             ],
-            self.song
-                .as_ref()
-                .and_then(|song| {
-                    song.shadow_offset.map(|offset| offset.0 as usize)
-                }),
+            self.song.as_ref().and_then(|song| {
+                song.shadow_offset.map(|offset| offset.0 as usize)
+            }),
             |i| Message::UpdateShadowOffsetX(i as i16),
         )
         .gap(5.0);
@@ -1391,11 +1384,9 @@ impl SongEditor {
                 "10", "11", "12", "13", "14", "15", "16", "17", "18",
                 "19", "20",
             ],
-            self.song
-                .as_ref()
-                .and_then(|song| {
-                    song.shadow_offset.map(|offset| offset.1 as usize)
-                }),
+            self.song.as_ref().and_then(|song| {
+                song.shadow_offset.map(|offset| offset.1 as usize)
+            }),
             |i| Message::UpdateShadowOffsetY(i as i16),
         )
         .gap(5.0);

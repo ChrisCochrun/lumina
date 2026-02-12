@@ -1512,14 +1512,15 @@ impl cosmic::Application for App {
             }
             Message::Save => {
                 let service = self.service.clone();
-                let file = self.file.clone();
+                let file1 = self.file.clone();
+                let file2 = self.file.clone();
                 Task::perform(
-                    file::save(service, file.clone()),
+                    async move { file::save(service, file1) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!(
                                 "saving file to: {:?}",
-                                file
+                                file2
                             );
                             cosmic::Action::None
                         }
