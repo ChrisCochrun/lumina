@@ -3,8 +3,7 @@ use std::{
 };
 
 use cosmic::{
-    cosmic_theme::palette::{IntoColor, Srgb, rgb::Rgba},
-    iced::clipboard::mime::AsMimeTypes,
+    cosmic_theme::palette::Srgb, iced::clipboard::mime::AsMimeTypes,
 };
 use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
@@ -19,7 +18,7 @@ use tracing::{debug, error};
 use crate::{
     Slide, SlideBuilder,
     core::slide,
-    ui::text_svg::{self, Color, Font, Stroke, shadow, stroke},
+    ui::text_svg::{Color, Font, Stroke, shadow, stroke},
 };
 
 use super::{
@@ -368,7 +367,7 @@ const VERSE_KEYWORDS: [&str; 24] = [
 
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        let lyrics: &str = row.try_get(8)?;
+        let lyrics: &str = row.try_get("lyrics")?;
 
         // let Some((mut verses, mut verse_map)) =
         //     lyrics_to_verse(lyrics.clone()).ok()
@@ -393,7 +392,7 @@ impl FromRow<'_, SqliteRow> for Song {
                 .into(),
             });
         };
-        let verse_order: &str = row.try_get(0)?;
+        let verse_order: &str = row.try_get("verse_order")?;
         let Ok(verses) =
             ron::de::from_str::<Option<Vec<VerseName>>>(verse_order)
         else {
@@ -413,25 +412,59 @@ impl FromRow<'_, SqliteRow> for Song {
                 .collect()
         };
 
+        let stroke_size = match row.try_get("stroke_size") {
+            Ok(size) => Some(size),
+            Err(e) => {
+                error!(?e);
+                None
+            }
+        };
+        let stroke_color = row
+            .try_get("stroke_color")
+            .ok()
+            .map(|color: String| {
+                ron::de::from_str::<Option<Srgb>>(&color).ok()
+            })
+            .flatten()
+            .flatten();
+        let shadow_size = row.try_get("shadow_size").ok();
+        let shadow_color = row
+            .try_get("shadow_color")
+            .ok()
+            .map(|color: String| {
+                ron::de::from_str::<Option<Srgb>>(&color).ok()
+            })
+            .flatten()
+            .flatten();
+        let shadow_offset = match (
+            row.try_get("shadow_offset_x").ok(),
+            row.try_get("shadow_offset_y").ok(),
+        ) {
+            (Some(x), Some(y)) => Some((x, y)),
+            _ => None,
+        };
+
         Ok(Self {
-            id: row.try_get(12)?,
-            title: row.try_get(5)?,
+            id: row.try_get("id")?,
+            title: row.try_get("title")?,
             lyrics: Some(lyrics.to_string()),
-            author: row.try_get(10)?,
-            ccli: row.try_get(9)?,
+            author: row.try_get("author")?,
+            ccli: row.try_get("ccli")?,
             audio: Some(PathBuf::from({
-                let string: String = row.try_get(11)?;
+                let string: String = row.try_get("audio")?;
                 string
             })),
             verse_order: Some(verse_order),
             background: {
-                let string: String = row.try_get(7)?;
+                let string: String = row.try_get("background")?;
                 Background::try_from(string).ok()
             },
             text_alignment: Some({
-                let horizontal_alignment: String = row.try_get(4)?;
-                let vertical_alignment: String = row.try_get(3)?;
-                debug!(horizontal_alignment, vertical_alignment);
+                let horizontal_alignment: String =
+                    row.try_get("horizontal_text_alignment")?;
+                let vertical_alignment: String =
+                    row.try_get("vertical_text_alignment")?;
+                // debug!(horizontal_alignment, vertical_alignment);
                 match (
                     horizontal_alignment.to_lowercase().as_str(),
                     vertical_alignment.to_lowercase().as_str(),
@@ -452,36 +485,13 @@ impl FromRow<'_, SqliteRow> for Song {
                     _ => TextAlignment::MiddleCenter,
                 }
             }),
-            font: row.try_get(6)?,
-            font_size: row.try_get(1)?,
-            stroke_size: row.try_get("stroke_size").ok(),
-            stroke_color: row
-                .try_get("stroke_color")
-                .ok()
-                .map(|color: String| {
-                    debug!(color);
-                    ron::de::from_str::<Option<Srgb>>(&color).ok()
-                })
-                .flatten()
-                .flatten(),
-            shadow_size: row.try_get("shadow_size").ok(),
-            shadow_color: row
-                .try_get("shadow_color")
-                .ok()
-                .map(|color: String| {
-                    debug!(color);
-                    ron::de::from_str::<Option<Srgb>>(&color).ok()
-                })
-                .flatten()
-                .flatten(),
-            shadow_offset: Some((
-                row.try_get("shadow_offset_x")
-                    .ok()
-                    .unwrap_or_default(),
-                row.try_get("shadow_offset_y")
-                    .ok()
-                    .unwrap_or_default(),
-            )),
+            font: row.try_get("font")?,
+            font_size: row.try_get("font_size")?,
+            stroke_size,
+            stroke_color,
+            shadow_size,
+            shadow_color,
+            shadow_offset,
             verses,
             verse_map,
             ..Default::default()
@@ -779,21 +789,14 @@ impl Model<Song> {
     pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
         let db1 = db.acquire().await.unwrap();
-        let result = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32"  from songs"#).fetch_all(&mut db1.detach()).await;
+        let result = query(r#"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs"#).fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
                 for song in s {
-                    let db2 = db.acquire().await.unwrap();
+                    // let db2 = db.acquire().await.unwrap();
                     match Song::from_row(&song) {
                         Ok(song) => {
-                            match update_song_in_db(song.clone(), db2)
-                                .await
-                            {
-                                Ok(_) => {
-                                    let _ = self.add_item(song);
-                                }
-                                Err(e) => error!(?e),
-                            }
+                            let _ = self.add_item(song);
                         }
                         Err(e) => {
                             error!(
@@ -923,7 +926,16 @@ pub async fn update_song_in_db(
     let shadow_color =
         ron::ser::to_string(&item.shadow_color).into_diagnostic()?;
 
-    query!(
+    // debug!(
+    //     ?stroke_size,
+    //     ?stroke_color,
+    //     ?shadow_size,
+    //     ?shadow_color,
+    //     ?shadow_offset_x,
+    //     ?shadow_offset_y
+    // );
+
+    let result = query!(
         r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18 WHERE id = $1"#,
         item.id,
         item.title,
@@ -935,8 +947,8 @@ pub async fn update_song_in_db(
         item.font,
         item.font_size,
         background,
-        vertical_alignment,
         horizontal_alignment,
+        vertical_alignment,
         stroke_color,
         shadow_color,
         stroke_size,
@@ -947,6 +959,8 @@ pub async fn update_song_in_db(
         .execute(&mut db.detach())
         .await
         .into_diagnostic()?;
+
+    debug!(rows_affected = ?result.rows_affected());
 
     Ok(())
 }
