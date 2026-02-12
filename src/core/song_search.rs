@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd, Ord, Eq)]
 pub struct OnlineSong {
@@ -24,9 +24,14 @@ pub async fn search_online_song_links(
             .into_diagnostic()?;
 
     let document = scraper::Html::parse_document(&html);
-    let best_matches_selector =
-        scraper::Selector::parse(".best-matches").unwrap();
-    let lyric_selector = scraper::Selector::parse("a").unwrap();
+    let Ok(best_matches_selector) =
+        scraper::Selector::parse(".best-matches")
+    else {
+        return Err(miette!("error in finding matches"));
+    };
+    let Ok(lyric_selector) = scraper::Selector::parse("a") else {
+        return Err(miette!("error in finding a links"));
+    };
 
     Ok(document
         .select(&best_matches_selector)
@@ -72,8 +77,11 @@ pub async fn link_to_online_song(
             .into_diagnostic()?;
 
         let document = scraper::Html::parse_document(&html);
-        let lyric_selector =
-            scraper::Selector::parse(".lyric-body").unwrap();
+        let Ok(lyric_selector) =
+            scraper::Selector::parse(".lyric-body")
+        else {
+            return Err(miette!("error in finding lyric-body",));
+        };
 
         let lyrics = document
             .select(&lyric_selector)
