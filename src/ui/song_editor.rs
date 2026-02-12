@@ -25,7 +25,7 @@ use cosmic::{
         color_picker::{self, ColorPickerUpdate},
         combo_box, container, divider, dnd_destination, dnd_source,
         dropdown,
-        grid::{self, widget::Assignment},
+        grid::{self},
         horizontal_space, icon, mouse_area, popover, progress_bar,
         scrollable, spin_button, text, text_editor, text_input,
         tooltip,
@@ -479,7 +479,7 @@ impl SongEditor {
                             if let Some(mut song) = self.song.clone()
                             {
                                 let old_verse_name =
-                                    verse.verse_name.clone();
+                                    verse.verse_name;
 
                                 let verse_name = song
                                     .verse_name_from_str(
@@ -490,7 +490,7 @@ impl SongEditor {
                                 verse.verse_name = verse_name;
 
                                 if verse_name == VerseName::Blank {
-                                    verse.lyric = "".into();
+                                    verse.lyric = String::new();
                                 }
 
                                 song.update_verse_name(
@@ -524,8 +524,7 @@ impl SongEditor {
                                 song.delete_verse(verse);
                                 if let Some(verses) =
                                     self.verses.as_mut()
-                                {
-                                    if let Some(verse) = verses
+                                    && let Some(verse) = verses
                                         .iter()
                                         .position(|inner_verse| {
                                             inner_verse.verse_name
@@ -534,11 +533,10 @@ impl SongEditor {
                                     {
                                         verses.remove(verse);
                                     }
-                                }
                                 return Action::Task(
                                     self.update_song(song),
                                 );
-                            };
+                            }
                         }
                         verse_editor::Action::None => (),
                     }
@@ -616,11 +614,10 @@ impl SongEditor {
                             return Action::Task(
                                 self.update_song(song),
                             );
-                        } else {
-                            error!(
-                                "No verses in this song or no song here"
-                            );
                         }
+                        error!(
+                            "No verses in this song or no song here"
+                        );
                     }
                     Err(e) => {
                         error!(?e, "Couldn't convert verse back");
@@ -628,11 +625,11 @@ impl SongEditor {
                 }
             }
             Message::ChipReorder(event) => match event {
-                draggable::DragEvent::Picked { index } => (),
+                draggable::DragEvent::Picked { index: _ } => (),
                 draggable::DragEvent::Dropped {
                     index,
                     target_index,
-                    drop_position,
+                    drop_position: _,
                 } => {
                     if let Some(mut song) = self.song.clone()
                         && let Some(verses) = song.verses.as_mut()
@@ -643,7 +640,7 @@ impl SongEditor {
                         return Action::Task(self.update_song(song));
                     }
                 }
-                draggable::DragEvent::Canceled { index } => (),
+                draggable::DragEvent::Canceled { index: _ } => (),
             },
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
@@ -1090,7 +1087,7 @@ impl SongEditor {
             |song| {
                 Message::AddVerse((
                     song.get_next_verse_name(),
-                    "".to_string(),
+                    String::new(),
                 ))
             },
         );
@@ -1154,8 +1151,7 @@ impl SongEditor {
         let selected_font = self
             .song
             .as_ref()
-            .map(|song| song.font.as_ref())
-            .flatten();
+            .and_then(|song| song.font.as_ref());
 
         let font_selector = tooltip(
             stack![
@@ -1190,8 +1186,7 @@ impl SongEditor {
         let selected_font_size = self
             .song
             .as_ref()
-            .map(|song| song.font_size.map(|size| size.to_string()))
-            .flatten();
+            .and_then(|song| song.font_size.map(|size| size.to_string()));
 
         let font_size = tooltip(
             stack![
@@ -1321,14 +1316,13 @@ impl SongEditor {
             .width(Length::Fixed(400.0))
             .build("Recent Colors", "Copy", "Copied");
 
-        let shadow_size_spinner = spin_button::vertical(
+        let _shadow_size_spinner = spin_button::vertical(
             "Shadow Size",
             self.song
                 .as_ref()
-                .map(|song| {
+                .and_then(|song| {
                     song.shadow_size.map(|size| size as usize)
                 })
-                .flatten()
                 .unwrap_or_default(),
             1,
             0,
@@ -1336,32 +1330,30 @@ impl SongEditor {
             |i| Message::UpdateShadowSize(i as u16),
         );
 
-        let shadow_offset_x_spinner = spin_button::vertical(
+        let _shadow_offset_x_spinner = spin_button::vertical(
             "Offset X",
             self.song
                 .as_ref()
-                .map(|song| song.shadow_offset)
-                .flatten()
+                .and_then(|song| song.shadow_offset)
                 .map(|offset| offset.0)
                 .unwrap_or_default(),
             1,
             0,
             50,
-            |i| Message::UpdateShadowOffsetX(i as i16),
+            Message::UpdateShadowOffsetX,
         );
 
-        let shadow_offset_y_spinner = spin_button::vertical(
+        let _shadow_offset_y_spinner = spin_button::vertical(
             "Offset Y",
             self.song
                 .as_ref()
-                .map(|song| song.shadow_offset)
-                .flatten()
+                .and_then(|song| song.shadow_offset)
                 .map(|offset| offset.1)
                 .unwrap_or_default(),
             1,
             0,
             50,
-            |i| Message::UpdateShadowOffsetY(i as i16),
+            Message::UpdateShadowOffsetY,
         );
 
         let shadow_size_dropdown = dropdown(
@@ -1371,10 +1363,9 @@ impl SongEditor {
             ],
             self.song
                 .as_ref()
-                .map(|song| {
+                .and_then(|song| {
                     song.shadow_size.map(|size| size as usize)
-                })
-                .flatten(),
+                }),
             |i| Message::UpdateShadowSize(i as u16),
         )
         .gap(5.0);
@@ -1387,10 +1378,9 @@ impl SongEditor {
             ],
             self.song
                 .as_ref()
-                .map(|song| {
+                .and_then(|song| {
                     song.shadow_offset.map(|offset| offset.0 as usize)
-                })
-                .flatten(),
+                }),
             |i| Message::UpdateShadowOffsetX(i as i16),
         )
         .gap(5.0);
@@ -1403,10 +1393,9 @@ impl SongEditor {
             ],
             self.song
                 .as_ref()
-                .map(|song| {
+                .and_then(|song| {
                     song.shadow_offset.map(|offset| offset.1 as usize)
-                })
-                .flatten(),
+                }),
             |i| Message::UpdateShadowOffsetY(i as i16),
         )
         .gap(5.0);
@@ -1696,8 +1685,8 @@ impl SongEditor {
         if let Ok(slides) = song.to_slides() {
             if let Some(handle) = &self.update_slide_handle {
                 handle.abort();
-            };
-            let size = slides.len();
+            }
+            let _size = slides.len();
 
             // let (task, handle) = stream(stream::iter(
             //     slides.into_iter().enumerate().map(

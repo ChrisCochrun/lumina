@@ -862,7 +862,7 @@ impl cosmic::Application for App {
             Some(
                 self.song_editor
                     .import_view()
-                    .map(|message| Message::SongEditor(message)),
+                    .map(Message::SongEditor),
             )
         } else {
             None

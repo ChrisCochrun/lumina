@@ -80,6 +80,7 @@ pub enum VerseName {
 }
 
 impl VerseName {
+    #[must_use] 
     pub fn from_string(name: String) -> Self {
         match name.as_str() {
             "Verse" => Self::Verse { number: 1 },
@@ -96,6 +97,7 @@ impl VerseName {
         }
     }
 
+    #[must_use] 
     pub fn all_names() -> Vec<String> {
         vec![
             "Verse".into(),
@@ -111,6 +113,7 @@ impl VerseName {
         ]
     }
 
+    #[must_use] 
     pub fn next(&self) -> Self {
         match self {
             Self::Verse { number } => {
@@ -274,13 +277,12 @@ impl ServiceTrait for Song {
             .ok_or(miette!("There are no verses assigned yet."))?
             .iter()
             .filter_map(|verse| self.get_lyric(verse))
-            .map(|lyric| {
+            .flat_map(|lyric| {
                 lyric
                     .split("\n\n")
-                    .map(|s| s.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect::<Vec<String>>()
             })
-            .flatten()
             .collect();
 
         debug!(?lyrics);
@@ -294,14 +296,14 @@ impl ServiceTrait for Song {
                                 .clone()
                                 .unwrap_or_else(|| "Calibri".into()),
                         )
-                        .size(self.font_size.unwrap_or_else(|| 100)
+                        .size(self.font_size.unwrap_or(100)
                             as u8);
                 let stroke_size =
                     self.stroke_size.unwrap_or_default();
                 let stroke: Stroke = stroke(
                     stroke_size,
                     self.stroke_color
-                        .map(|color| Color::from(color))
+                        .map(Color::from)
                         .unwrap_or_default(),
                 );
                 let shadow_size =
@@ -311,7 +313,7 @@ impl ServiceTrait for Song {
                     self.shadow_offset.unwrap_or_default().1,
                     shadow_size,
                     self.shadow_color
-                        .map(|color| Color::from(color))
+                        .map(Color::from)
                         .unwrap_or_default(),
                 );
                 let builder = SlideBuilder::new();
@@ -422,19 +424,17 @@ impl FromRow<'_, SqliteRow> for Song {
         let stroke_color = row
             .try_get("stroke_color")
             .ok()
-            .map(|color: String| {
+            .and_then(|color: String| {
                 ron::de::from_str::<Option<Srgb>>(&color).ok()
             })
-            .flatten()
             .flatten();
         let shadow_size = row.try_get("shadow_size").ok();
         let shadow_color = row
             .try_get("shadow_color")
             .ok()
-            .map(|color: String| {
+            .and_then(|color: String| {
                 ron::de::from_str::<Option<Srgb>>(&color).ok()
             })
-            .flatten()
             .flatten();
         let shadow_offset = match (
             row.try_get("shadow_offset_x").ok(),
@@ -789,7 +789,7 @@ impl Model<Song> {
     pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
         let db1 = db.acquire().await.unwrap();
-        let result = query(r#"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs"#).fetch_all(&mut db1.detach()).await;
+        let result = query(r"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs").fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
                 for song in s {
@@ -894,7 +894,7 @@ pub async fn update_song_in_db(
     let lyrics = item.verse_map.map(|map| {
         map.iter()
             .map(|(name, lyric)| {
-                let lyric = lyric.trim_end_matches("\n").to_string();
+                let lyric = lyric.trim_end_matches('\n').to_string();
                 (name.to_owned(), lyric)
             })
             .collect::<HashMap<VerseName, String>>()
@@ -902,8 +902,7 @@ pub async fn update_song_in_db(
     let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
     let (vertical_alignment, horizontal_alignment) = item
-        .text_alignment
-        .map(|ta| match ta {
+        .text_alignment.map_or_else(|| ("center", "center"), |ta| match ta {
             TextAlignment::TopLeft => ("top", "left"),
             TextAlignment::TopCenter => ("top", "center"),
             TextAlignment::TopRight => ("top", "right"),
@@ -913,8 +912,7 @@ pub async fn update_song_in_db(
             TextAlignment::BottomLeft => ("bottom", "left"),
             TextAlignment::BottomCenter => ("bottom", "center"),
             TextAlignment::BottomRight => ("bottom", "right"),
-        })
-        .unwrap_or_else(|| ("center", "center"));
+        });
 
     let stroke_size = item.stroke_size.unwrap_or_default();
     let shadow_size = item.shadow_size.unwrap_or_default();
@@ -968,12 +966,12 @@ pub async fn update_song_in_db(
 impl Song {
     #[must_use]
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
-        let lyric = self.verse_map.as_ref().and_then(|verse_map| {
+        
+        self.verse_map.as_ref().and_then(|verse_map| {
             verse_map.get(verse).cloned().map(|lyric| {
-                lyric.trim().trim_end_matches("\n").to_string()
+                lyric.trim().trim_end_matches('\n').to_string()
             })
-        });
-        lyric
+        })
     }
 
     pub fn set_lyrics<T: Into<String>>(
@@ -987,7 +985,7 @@ impl Song {
             verse_map
                 .entry(*verse)
                 .and_modify(|old_lyrics| {
-                    *old_lyrics = lyric_copy.clone()
+                    *old_lyrics = lyric_copy.clone();
                 })
                 .or_insert(lyric_copy);
             // debug!(?verse_map, "should be updated");
@@ -1009,17 +1007,16 @@ impl Song {
             let mut lyrics = vec![];
             for verse in verses {
                 if verse == &VerseName::Blank {
-                    lyrics.push("".into());
+                    lyrics.push(String::new());
                     continue;
                 }
                 if let Some(lyric) = self.get_lyric(verse) {
-                    lyrics.push(lyric)
+                    lyrics.push(lyric);
                 }
             }
             return Ok(lyrics);
-        } else {
-            return Err(miette!("No verses in this song yet"));
         }
+        return Err(miette!("No verses in this song yet"));
 
         // ---------------------------------
         // old implementation
@@ -1097,7 +1094,7 @@ impl Song {
             && let Some(lyric) = verse_map.remove(old_verse)
         {
             if verse == VerseName::Blank {
-                verse_map.insert(verse, "".into());
+                verse_map.insert(verse, String::new());
             } else {
                 verse_map.insert(verse, lyric);
             }
@@ -1110,7 +1107,7 @@ impl Song {
             .filter(|verse| verse != old_verse)
             .collect();
         new_verses.push(verse);
-        self.verses = Some(new_verses)
+        self.verses = Some(new_verses);
     }
 
     // TODO update_verse needs to also change the lyrics for the song such that
@@ -1187,6 +1184,7 @@ impl Song {
         }
     }
 
+    #[must_use] 
     pub fn get_next_verse_name(&self) -> VerseName {
         if let Some(verse_names) = &self.verses {
             let verses: Vec<&VerseName> = verse_names
@@ -1255,7 +1253,7 @@ impl Song {
             verses.push(verse);
         } else {
             self.verses = Some(vec![verse]);
-        };
+        }
     }
 
     pub(crate) fn verse_name_from_str(
@@ -1265,7 +1263,7 @@ impl Song {
     ) -> VerseName {
         if old_verse_name.get_name() == verse_name {
             return old_verse_name;
-        };
+        }
         if let Some(verses) =
             self.verse_map.clone().map(|verse_map| {
                 verse_map.into_keys().collect::<Vec<VerseName>>()
@@ -1279,7 +1277,7 @@ impl Song {
                         .split_whitespace()
                         .next()
                         .unwrap()
-                        == &verse_name
+                        == verse_name
                 })
                 .sorted()
                 .last()

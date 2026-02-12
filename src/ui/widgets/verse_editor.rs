@@ -5,8 +5,8 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        button, combo_box, container, horizontal_space, icon, text,
-        text_editor, text_input,
+        button, combo_box, container, horizontal_space, icon,
+        text_editor,
     },
 };
 
@@ -79,7 +79,7 @@ impl VerseEditor {
 
     pub fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
-            space_xxs,
+            space_xxs: _,
             space_s,
             space_m,
             ..

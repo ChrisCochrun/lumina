@@ -21,7 +21,7 @@ use resvg::{
     usvg::{Tree, fontdb},
 };
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::TextAlignment;
 
@@ -175,6 +175,7 @@ impl Hash for Color {
 }
 
 impl Color {
+    #[must_use] 
     pub fn to_css_hex_string(&self) -> String {
         format!("#{:x}", self.0.into_format::<u8>())
     }
@@ -333,21 +334,15 @@ impl TextSvg {
                     ("end", position, x_width_padded.as_str())
                 }
                 TextAlignment::BottomLeft => {
-                    let position = size.height
-                        - (total_lines as f32
-                            * text_and_line_spacing);
+                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
                     ("start", position, "10")
                 }
                 TextAlignment::BottomCenter => {
-                    let position = size.height
-                        - (total_lines as f32
-                            * text_and_line_spacing);
+                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
                     ("middle", position, center_y.as_str())
                 }
                 TextAlignment::BottomRight => {
-                    let position = size.height
-                        - (total_lines as f32
-                            * text_and_line_spacing);
+                    let position = (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
                     ("end", position, x_width_padded.as_str())
                 }
             };
@@ -382,7 +377,7 @@ impl TextSvg {
         if self.shadow.is_some() {
             final_svg.push_str(" style=\"filter:url(#shadow);\"");
         }
-        final_svg.push_str(">");
+        final_svg.push('>');
 
         let text: String = self
             .text
@@ -444,11 +439,10 @@ impl TextSvg {
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if cache {
-            if let Err(e) = pixmap.save_png(&path) {
+        if cache
+            && let Err(e) = pixmap.save_png(&path) {
                 error!(?e, "Couldn't save a copy of the text");
             }
-        }
 
         // debug!("saved");
         // let handle = Handle::from_path(path);
@@ -509,11 +503,7 @@ pub fn text_svg_generator_with_cache(
     cache: bool,
 ) {
     if !slide.text().is_empty() {
-        let font = if let Some(font) = slide.font() {
-            font
-        } else {
-            Font::default()
-        };
+        let font = slide.font().unwrap_or_default();
         let text_svg = TextSvg::new(slide.text())
             .alignment(slide.text_alignment())
             .fill(

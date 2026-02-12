@@ -23,8 +23,7 @@ use cosmic::{
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space,
-        aspect_ratio::aspect_ratio_container, container,
+        Container, Id, Row, Space, container,
         context_menu, image, menu, mouse_area, responsive,
         scrollable, text,
     },
@@ -461,7 +460,7 @@ impl Presenter {
                 let font = if let Some(font) = slide.font() {
                     font.get_name()
                 } else {
-                    "".into()
+                    String::new()
                 };
                 let _ = self.update(Message::ChangeFont(font));
                 debug!("changing video now...");
@@ -1122,7 +1121,7 @@ pub(crate) fn slide_view<'a>(
                 }
             }
             BackgroundKind::Html => todo!(),
-        };
+        }
         if let Some(text) = &slide.text_svg
             && let Some(handle) = &text.handle
         {
@@ -1132,7 +1131,7 @@ pub(crate) fn slide_view<'a>(
                     .width(Length::Fill)
                     .height(Length::Fill),
             );
-        };
+        }
         Container::new(stack).center(Length::Fill).into()
     })
     .into()

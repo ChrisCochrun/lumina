@@ -1259,7 +1259,7 @@ impl<'a> Library {
             })
             .collect();
 
-        items.sort_by(|a, b| a.0.cmp(&b.0));
+        items.sort_by_key(|a| a.0);
         items.into_iter().map(|item| item.1).collect()
     }
 
@@ -1294,7 +1294,7 @@ impl<'a> Library {
         let Some(items) = self.selected_items.as_mut() else {
             return Action::None;
         };
-        items.sort_by(|(_, index), (_, other)| index.cmp(other));
+        items.sort_by_key(|(_, index)| *index);
         let tasks: Vec<Task<Message>> = items
             .iter()
             .rev()
