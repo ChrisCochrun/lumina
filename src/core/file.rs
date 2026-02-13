@@ -16,12 +16,16 @@ use zstd::Encoder;
 pub fn save(
     list: Vec<ServiceItem>,
     path: impl AsRef<Path>,
+    overwrite: bool,
 ) -> Result<()> {
     let path = path.as_ref();
+    if overwrite && path.exists() {
+        fs::remove_file(path).into_diagnostic()?;
+    }
     let save_file = File::create(path).into_diagnostic()?;
     let ron = process_service_items(&list)?;
 
-    let encoder = Encoder::new(save_file, 3).unwrap();
+    let encoder = Encoder::new(save_file, 3).unwrap().auto_finish();
     let mut tar = Builder::new(encoder);
     let mut temp_dir = dirs::data_dir().unwrap();
     temp_dir.push("lumina");
@@ -36,12 +40,26 @@ pub fn save(
     match fs::File::options()
         .read(true)
         .write(true)
+        .create(true)
         .open(service_file)
     {
         Ok(mut f) => {
-            f.write(ron.as_bytes()).into_diagnostic()?;
+            match f.write(ron.as_bytes()) {
+                Ok(size) => {
+                    dbg!(size);
+                }
+                Err(e) => {
+                    error!(?e);
+                    dbg!(&e);
+                    return Err(miette!("PROBS: {e}"));
+                }
+            }
             match tar.append_file("serviceitems.ron", &mut f) {
-                Ok(_) => (),
+                Ok(_) => {
+                    dbg!(
+                        "should have added serviceitems.ron to the file"
+                    );
+                }
                 Err(e) => {
                     error!(?e);
                     dbg!(&e);
@@ -94,35 +112,18 @@ pub fn save(
                 todo!()
             }
         }
-        if let Some(file) = audio {
-            let audio_file =
-                temp_dir.join(file.file_name().expect(
-                    "Audio file couldn't be added to temp_dir",
-                ));
-            if let Ok(file) = file.strip_prefix("file://") {
-                let mut file =
-                    fs::File::open(&audio_file).into_diagnostic()?;
-                tar.append_file("", &mut file).into_diagnostic()?;
-            } else {
-                let mut file =
-                    fs::File::open(&audio_file).into_diagnostic()?;
-                tar.append_file("", &mut file).into_diagnostic()?;
-            }
+        if let Some(path) = audio {
+            let file_name = path.file_name().unwrap_or_default();
+            let mut file = fs::File::open(&path).into_diagnostic()?;
+            tar.append_file(file_name, &mut file)
+                .into_diagnostic()?;
         }
-        if let Some(file) = background {
-            let background_file =
-                temp_dir.join(file.path.file_name().expect(
-                    "Background file couldn't be added to temp_dir",
-                ));
-            if let Ok(file) = file.path.strip_prefix("file://") {
-                let mut file = fs::File::open(&background_file)
-                    .into_diagnostic()?;
-                tar.append_file("", &mut file).into_diagnostic()?;
-            } else {
-                let mut file = fs::File::open(&background_file)
-                    .into_diagnostic()?;
-                tar.append_file("", &mut file).into_diagnostic()?;
-            }
+        if let Some(background) = background {
+            let path = background.path;
+            let file_name = path.file_name().unwrap_or_default();
+            let mut file = fs::File::open(&path).into_diagnostic()?;
+            tar.append_file(file_name, &mut file)
+                .into_diagnostic()?;
         }
     }
     // match tar.append_dir_all(path, &temp_dir) {
@@ -365,8 +366,22 @@ mod test {
         let path =
             PathBuf::from("/home/chris/dev/lumina-iced/test.pres");
         let list = get_items();
-        match save(list, path) {
-            Ok(_) => assert!(true),
+        match save(list, &path, true) {
+            Ok(_) => {
+                assert!(true);
+                assert!(path.is_file());
+                let Ok(file) = fs::File::open(path) else {
+                    return assert!(false, "couldn't open file");
+                };
+                let Ok(size) = file.metadata().map(|data| data.len())
+                else {
+                    return assert!(
+                        false,
+                        "couldn't get file metadata"
+                    );
+                };
+                assert!(size > 0);
+            }
             Err(e) => assert!(false, "{e}"),
         }
     }

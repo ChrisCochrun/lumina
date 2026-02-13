@@ -1515,7 +1515,7 @@ impl cosmic::Application for App {
                 let file1 = self.file.clone();
                 let file2 = self.file.clone();
                 Task::perform(
-                    async move { file::save(service, file1) },
+                    async move { file::save(service, file1, true) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!(
