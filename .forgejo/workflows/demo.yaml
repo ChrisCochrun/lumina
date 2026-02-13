@@ -1,18 +1,12 @@
 on: [push]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: host
     steps:
       - name: checkout
         uses: actions/checkout@v3
 
       - run: | 
-          apt update
-          apt install sudo
-          apt install just
+          nix develop
 
-      - uses: https://github.com/cachix/install-nix-action@v27
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - run: nix develop --command just test
+      - run: just test
