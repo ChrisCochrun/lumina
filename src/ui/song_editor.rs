@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     io::{self},
     path::PathBuf,
     sync::Arc,
@@ -65,9 +66,9 @@ pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
     font_db: Arc<fontdb::Database>,
-    fonts_combo: combo_box::State<String>,
+    fonts_combo: combo_box::State<Face>,
     font_sizes: combo_box::State<String>,
-    font: String,
+    font: Option<Face>,
     author: String,
     audio: PathBuf,
     font_size: usize,
@@ -110,7 +111,7 @@ pub enum Action {
 pub enum Message {
     ChangeSong(Song),
     UpdateSong(Song),
-    ChangeFont(String),
+    ChangeFont(Face),
     ChangeFontStyle,
     ChangeFontSize(String),
     ChangeTitle(String),
@@ -151,16 +152,43 @@ pub enum Message {
     ChangeFontWeight,
 }
 
+#[derive(Debug, Clone)]
+struct Face(fontdb::FaceInfo);
+
+impl Display for Face {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        let name = self.0.families[0].0.clone().trim().to_string();
+        let weight = match self.0.weight.0 {
+            0..=100 => " Thin",
+            101..=200 => " Extra Light",
+            201..=300 => " Light",
+            301..=500 => "",
+            501..=600 => " Semi Bold",
+            601..=700 => " Bold",
+            701..=800 => " Extra Bold",
+            801..=1000 => " Black",
+            _ => "",
+        };
+        let style = match self.0.style {
+            fontdb::Style::Normal => "",
+            fontdb::Style::Italic => " Italic",
+            fontdb::Style::Oblique => " Oblique",
+        };
+        // need to figure out how to parse this out and then back into something
+
+        f.write_str(&format!("{name}{weight}{style}"))
+    }
+}
+
 impl SongEditor {
     pub fn new(font_db: Arc<fontdb::Database>) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
-        let mut fonts: Vec<String> = font_db
-            .faces()
-            .map(|f| f.families[0].0.clone().trim().to_string())
-            .collect();
-        fonts.sort();
-        fonts.dedup();
+        let fonts: Vec<Face> =
+            font_db.faces().map(|f| Face(f.clone())).collect();
         let stroke_sizes = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let font_sizes = vec![
             "5".to_string(),
@@ -198,7 +226,7 @@ impl SongEditor {
             font_db,
             fonts_combo: combo_box::State::new(fonts),
             title: String::new(),
-            font: String::new(),
+            font: None,
             font_size: 100,
             font_sizes: combo_box::State::new(font_sizes),
             font_size_open: false,
@@ -265,7 +293,19 @@ impl SongEditor {
                     );
                 }
                 if let Some(font) = song.font {
-                    self.font = font;
+                    if let Some(id) =
+                        self.font_db.query(&fontdb::Query {
+                            families: &[fontdb::Family::Name(&font)],
+                            weight: fontdb::Weight::NORMAL,
+                            stretch: fontdb::Stretch::Normal,
+                            style: fontdb::Style::Normal,
+                        })
+                        && let Some(font) = self.font_db.face(id)
+                    {
+                        self.font = Some(Face(font.clone()));
+                    } else {
+                        self.font = None;
+                    }
                 }
                 if let Some(font_size) = song.font_size {
                     self.font_size = font_size as usize;
@@ -328,9 +368,9 @@ impl SongEditor {
                 return Action::Task(Task::batch(tasks));
             }
             Message::ChangeFont(font) => {
-                self.font = font.clone();
+                self.font = Some(font.clone());
                 if let Some(song) = &mut self.song {
-                    song.font = Some(font);
+                    song.font = Some(font.0.families[0].0.clone());
                     let song = song.to_owned();
                     return Action::Task(self.update_song(song));
                 }
@@ -1193,15 +1233,15 @@ impl SongEditor {
                 ))
         };
 
-        let selected_font =
-            self.song.as_ref().and_then(|song| song.font.as_ref());
+        // let selected_font =
+        //     self.song.as_ref().and_then(|song| song.font.as_ref());
 
         let font_selector = tooltip(
             stack![
                 combo_box(
                     &self.fonts_combo,
                     "Font",
-                    selected_font,
+                    self.font.as_ref(),
                     Message::ChangeFont,
                 )
                 .on_open(Message::FontSelectorOpen(true))

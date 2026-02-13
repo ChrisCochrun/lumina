@@ -37,6 +37,7 @@ The problem with this approach is that every change to a song's text or font met
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later
 
 * TODO Font in the song editor doesn't always use the original version
+There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
