@@ -187,8 +187,13 @@ impl SongEditor {
     pub fn new(font_db: Arc<fontdb::Database>) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
-        let fonts: Vec<Face> =
-            font_db.faces().map(|f| Face(f.clone())).collect();
+        let fonts: Vec<Face> = font_db
+            .faces()
+            .sorted_by(|a, b| {
+                Ord::cmp(&a.families[0].0, &b.families[0].0)
+            })
+            .map(|f| Face(f.clone()))
+            .collect();
         let stroke_sizes = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let font_sizes = vec![
             "5".to_string(),
