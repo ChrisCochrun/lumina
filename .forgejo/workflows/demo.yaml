@@ -6,7 +6,5 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - run: | 
-          nix develop
-
+      - run: nix develop
       - run: just test
