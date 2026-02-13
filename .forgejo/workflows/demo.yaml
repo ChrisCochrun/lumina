@@ -1,7 +1,7 @@
 on: [push]
 jobs:
   test:
-    runs-on: native
+    runs-on: nixos-latest
     steps:
       - name: checkout
         uses: actions/checkout@v3
