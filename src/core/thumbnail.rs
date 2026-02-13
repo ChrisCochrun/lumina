@@ -91,13 +91,13 @@ mod test {
 
     #[test]
     fn test_bg_video_creation() {
-        let video = Path::new("/home/chris/vids/moms-funeral.mp4");
+        let video = Path::new("./res/bigbuckbunny.mp4");
         let screenshot = bg_path_from_video(video);
         let screenshot_string =
             screenshot.to_str().expect("Should be thing");
         assert_eq!(
             screenshot_string,
-            "/home/chris/.local/share/lumina/thumbnails/moms-funeral.png"
+            "/home/chris/.local/share/lumina/thumbnails/bigbuckbunny.png"
         );
 
         // let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -115,15 +115,13 @@ mod test {
 
     #[test]
     fn test_bg_not_same() {
-        let video = Path::new(
-            "/home/chris/vids/All WebDev Sucks and you know it.webm",
-        );
+        let video = Path::new("./res/bigbuckbunny.mp4");
         let screenshot = bg_path_from_video(video);
         let screenshot_string =
             screenshot.to_str().expect("Should be thing");
         assert_ne!(
             screenshot_string,
-            "/home/chris/.local/share/lumina/thumbnails/All WebDev Sucks and you know it.webm"
+            "./res/All WebDev Sucks and you know it.png"
         );
     }
 }
