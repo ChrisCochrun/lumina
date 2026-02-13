@@ -3,7 +3,11 @@ use std::{
 };
 
 use cosmic::{
-    cosmic_theme::palette::Srgb, iced::clipboard::mime::AsMimeTypes,
+    cosmic_theme::palette::Srgb,
+    iced::{
+        clipboard::mime::AsMimeTypes,
+        font::{Style, Weight},
+    },
 };
 use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
@@ -44,6 +48,8 @@ pub struct Song {
     pub text_alignment: Option<TextAlignment>,
     pub font: Option<String>,
     pub font_size: Option<i32>,
+    pub font_weight: Option<Weight>,
+    pub font_style: Option<Style>,
     pub text_color: Option<Srgb>,
     pub stroke_size: Option<u16>,
     pub stroke_color: Option<Srgb>,
@@ -294,6 +300,12 @@ impl ServiceTrait for Song {
                         self.font
                             .clone()
                             .unwrap_or_else(|| "Calibri".into()),
+                    )
+                    .style(
+                        self.font_style.clone().unwrap_or_default(),
+                    )
+                    .weight(
+                        self.font_weight.clone().unwrap_or_default(),
                     )
                     .size(self.font_size.unwrap_or(100) as u8);
                 let stroke_size =

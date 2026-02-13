@@ -9,8 +9,12 @@ use cosmic::{
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{
         Background as ContainerBackground, Border, Color, Length,
-        Padding, Shadow, Vector, alignment::Vertical, color,
-        futures::StreamExt, task,
+        Padding, Shadow, Vector,
+        alignment::Vertical,
+        color,
+        font::{Style, Weight},
+        futures::StreamExt,
+        task,
     },
     iced_core::widget::tree,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
@@ -107,6 +111,7 @@ pub enum Message {
     ChangeSong(Song),
     UpdateSong(Song),
     ChangeFont(String),
+    ChangeFontStyle,
     ChangeFontSize(String),
     ChangeTitle(String),
     ChangeVerseOrder(String),
@@ -143,6 +148,7 @@ pub enum Message {
     UpdateShadowSize(u16),
     UpdateShadowOffsetX(i16),
     UpdateShadowOffsetY(i16),
+    ChangeFontWeight,
 }
 
 impl SongEditor {
@@ -151,10 +157,10 @@ impl SongEditor {
         debug!(?fonts);
         let mut fonts: Vec<String> = font_db
             .faces()
-            .map(|f| f.families[0].0.clone())
+            .map(|f| f.families[0].0.clone().trim().to_string())
             .collect();
-        fonts.dedup();
         fonts.sort();
+        fonts.dedup();
         let stroke_sizes = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let font_sizes = vec![
             "5".to_string(),
@@ -326,6 +332,46 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.font = Some(font);
                     let song = song.to_owned();
+                    return Action::Task(self.update_song(song));
+                }
+            }
+            Message::ChangeFontStyle => {
+                if let Some(song) = &mut self.song {
+                    if let Some(font_style) = &mut song.font_style {
+                        match font_style {
+                            cosmic::iced::font::Style::Normal => {
+                                *font_style = Style::Italic;
+                            }
+                            cosmic::iced::font::Style::Italic => {
+                                *font_style = Style::Normal;
+                            }
+                            cosmic::iced::font::Style::Oblique => {
+                                *font_style = Style::Normal;
+                            }
+                        }
+                    } else {
+                        song.font_style = Some(Style::Italic);
+                    }
+                    let song = song.clone();
+                    return Action::Task(self.update_song(song));
+                }
+            }
+            Message::ChangeFontWeight => {
+                if let Some(song) = &mut self.song {
+                    if let Some(font_weight) = &mut song.font_weight {
+                        match font_weight {
+                            Weight::Normal => {
+                                *font_weight = Weight::Bold
+                            }
+                            Weight::Bold => {
+                                *font_weight = Weight::Normal
+                            }
+                            _ => *font_weight = Weight::Normal,
+                        }
+                    } else {
+                        song.font_weight = Some(Weight::Bold);
+                    }
+                    let song = song.clone();
                     return Action::Task(self.update_song(song));
                 }
             }
@@ -1218,13 +1264,23 @@ impl SongEditor {
 
         let bold_button = tooltip(
             button::icon(icon::from_name("format-text-bold"))
-                .on_press(Message::None),
+                .selected(self.song.as_ref().is_some_and(|song| {
+                    song.font_weight.is_some_and(|font_weight| {
+                        font_weight == Weight::Bold
+                    })
+                }))
+                .on_press(Message::ChangeFontWeight),
             "Bold",
             tooltip::Position::Bottom,
         );
         let italic_button = tooltip(
             button::icon(icon::from_name("format-text-italic"))
-                .on_press(Message::None),
+                .selected(self.song.as_ref().is_some_and(|song| {
+                    song.font_style.is_some_and(|font_style| {
+                        font_style == Style::Italic
+                    })
+                }))
+                .on_press(Message::ChangeFontStyle),
             "Italicize",
             tooltip::Position::Bottom,
         );

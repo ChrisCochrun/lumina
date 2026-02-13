@@ -21,7 +21,7 @@ use resvg::{
     usvg::{Tree, fontdb},
 };
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::TextAlignment;
 
@@ -350,6 +350,24 @@ impl TextSvg {
                 }
             };
 
+        let font_style = match self.font.style {
+            Style::Normal => "normal",
+            Style::Italic => "italic",
+            Style::Oblique => "oblique",
+        };
+
+        let font_weight = match self.font.weight {
+            Weight::Thin => "lighter",
+            Weight::ExtraLight => "lighter",
+            Weight::Light => "lighter",
+            Weight::Normal => "normal",
+            Weight::Medium => "normal",
+            Weight::Semibold => "bold",
+            Weight::Bold => "bold",
+            Weight::ExtraBold => "bolder",
+            Weight::Black => "bolder",
+        };
+
         final_svg.push_str(&format!("<svg width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height, size.width, size.height));
 
         if let Some(shadow) = &self.shadow {
@@ -368,7 +386,15 @@ impl TextSvg {
         //     "<style> text { letter-spacing: 0em; } </style>",
         // );
 
-        final_svg.push_str(&format!("<text x=\"0\" y=\"50%\" transform=\"translate({}, 0)\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-weight=\"bold\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ", text_x_position, text_anchor, self.font.name, font_size, self.fill));
+        final_svg.push_str(&format!("<text x=\"0\" y=\"50%\" transform=\"translate({}, 0)\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-style=\"{}\" font-weight=\"{}\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ",
+                                    text_x_position,
+                                    text_anchor,
+                                    font_style,
+                                    font_weight,
+                                    self.font.name,
+                                    font_size,
+                                    self.fill
+        ));
 
         if let Some(stroke) = &self.stroke {
             final_svg.push_str(&format!(
@@ -523,7 +549,7 @@ pub fn text_svg_generator_with_cache(
         };
         let text_svg =
             text_svg.font(font).fontdb(Arc::clone(&fontdb));
-        // debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
+        debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
         let text_svg =
             text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
