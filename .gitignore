@@ -12,4 +12,5 @@ data.db
 test.db-shm
 test.db-wal
 test.lum
+test.pres
 profile.json.gz
