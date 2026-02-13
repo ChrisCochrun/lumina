@@ -1,7 +1,7 @@
 on: [push]
 jobs:
   test:
-    runs-on: host
+    runs-on: native
     steps:
       - name: checkout
         uses: actions/checkout@v3
