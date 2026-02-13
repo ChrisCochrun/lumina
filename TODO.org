@@ -13,9 +13,6 @@ This is working but the right click context menu is all the way on the edge of t
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
 
-* TODO [#B] Functions for text alignments
-This will need to be matched on for the =TextAlignment= from the user
-
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 
 * TODO [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
@@ -49,6 +46,9 @@ Since strings are allocated on the heap, I've changed how to construct the svg s
 This is limited by the fact that I need to develop this in cosmic. I am honestly thinking that I'll need to build my own drag and drop system or at least work with system76 to fix their dnd system on other systems.
 
 This needs lots more attention
+
+* DONE [#B] Functions for text alignments
+This will need to be matched on for the =TextAlignment= from the user
 
 * DONE [#A] Add removal and reordering of service_items
 Reordering is finished
