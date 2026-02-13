@@ -769,7 +769,7 @@ pub async fn get_song_from_db(
     index: i32,
     db: &mut SqliteConnection,
 ) -> Result<Song> {
-    let row = query(r#"SELECT verse_order as "verse_order!", font_size as "font_size!: i32", background_type as "background_type!", horizontal_text_alignment as "horizontal_text_alignment!", vertical_text_alignment as "vertical_text_alignment!", title as "title!", font as "font!", background as "background!", lyrics as "lyrics!", ccli as "ccli!", author as "author!", audio as "audio!", id as "id: i32" from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
+    let row = query(r#"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, id from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
     Song::from_row(&row).into_diagnostic()
 }
 
