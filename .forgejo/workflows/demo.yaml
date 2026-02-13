@@ -3,5 +3,5 @@ jobs:
   test:
     runs-on: nixos-latest
     steps:
-      - run: nix develop
+      - run: nix --extra-experimental-features nix-command develop
       - run: just test
