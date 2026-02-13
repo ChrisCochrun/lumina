@@ -3,7 +3,7 @@ jobs:
   test:
     runs-on: nixos-latest
     steps:
-      - run: nix-shell -p nodejs_24
+      - run: nix-env --install nodejs_24
       - name: checkout
         uses: actions/checkout@v4
       - run: nix --extra-experimental-features nix-command develop
