@@ -2,9 +2,7 @@ use cosmic::iced::Point;
 
 pub use self::column::column;
 pub use self::row::row;
-#[allow(clippy::all)]
 pub mod column;
-#[allow(clippy::all)]
 pub mod row;
 
 #[derive(Debug, Clone)]
