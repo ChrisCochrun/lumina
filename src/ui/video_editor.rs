@@ -59,7 +59,7 @@ impl VideoEditor {
                 self.update_entire_video(&video);
             }
             Message::ChangeTitle(title) => {
-                self.title = title.clone();
+                self.title.clone_from(&title);
                 if let Some(video) = &self.core_video {
                     let mut video = video.clone();
                     video.title = title;
@@ -135,12 +135,10 @@ impl VideoEditor {
             container(horizontal_space())
         };
 
-        let video_player = self
-            .video
-            .as_ref()
-            .map_or(Element::from(Space::new(0, 0)), |video| {
-                Element::from(VideoPlayer::new(video))
-            });
+        let video_player = self.video.as_ref().map_or_else(
+            || Element::from(Space::new(0, 0)),
+            |video| Element::from(VideoPlayer::new(video)),
+        );
 
         let video_section = column![video_player, video_elements]
             .spacing(cosmic::theme::spacing().space_s);
@@ -185,13 +183,13 @@ impl VideoEditor {
                 .map(|url| Video::new(&url).expect("Should be here"))
         else {
             self.video = None;
-            self.title = video.title.clone();
+            self.title.clone_from(&video.title);
             self.core_video = Some(video.clone());
             return;
         };
         player_video.set_paused(true);
         self.video = Some(player_video);
-        self.title = video.title.clone();
+        self.title.clone_from(&video.title);
         self.core_video = Some(video.clone());
     }
 }
@@ -217,7 +215,9 @@ async fn pick_video() -> Result<PathBuf, VideoError> {
             error!(?e);
             VideoError::DialogClosed
         })
-        .map(|file| file.url().to_file_path().unwrap())
+        .map(|file| {
+            file.url().to_file_path().expect("Should be a file here")
+        })
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

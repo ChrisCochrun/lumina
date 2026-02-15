@@ -1,5 +1,6 @@
 use std::{
-    fmt::Display,
+    fmt::{Display, Write},
+    fs,
     hash::{Hash, Hasher},
     path::PathBuf,
     sync::Arc,
@@ -12,7 +13,7 @@ use cosmic::{
         font::{Style, Weight},
     },
     prelude::*,
-    widget::{Image, image::Handle},
+    widget::{Image, Space, image::Handle},
 };
 use miette::{IntoDiagnostic, Result};
 use rapidhash::v3::rapidhash_v3;
@@ -146,16 +147,19 @@ impl Font {
         self.style
     }
 
+    #[must_use]
     pub fn weight(mut self, weight: impl Into<Weight>) -> Self {
         self.weight = weight.into();
         self
     }
 
+    #[must_use]
     pub fn style(mut self, style: impl Into<Style>) -> Self {
         self.style = style.into();
         self
     }
 
+    #[must_use]
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
@@ -180,6 +184,7 @@ impl Color {
         format!("#{:x}", self.0.into_format::<u8>())
     }
 
+    #[must_use]
     pub fn from_hex_str(color: impl AsRef<str>) -> Self {
         let color = color.as_ref();
         let color: Result<Srgb<u8>> = color.parse().into_diagnostic();
@@ -234,6 +239,7 @@ impl Display for Color {
 }
 
 impl TextSvg {
+    #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -243,36 +249,43 @@ impl TextSvg {
 
     // pub fn build(self)
 
+    #[must_use]
     pub fn fill(mut self, color: impl Into<Color>) -> Self {
         self.fill = color.into();
         self
     }
 
+    #[must_use]
     pub fn shadow(mut self, shadow: impl Into<Shadow>) -> Self {
         self.shadow = Some(shadow.into());
         self
     }
 
+    #[must_use]
     pub fn stroke(mut self, stroke: impl Into<Stroke>) -> Self {
         self.stroke = Some(stroke.into());
         self
     }
 
+    #[must_use]
     pub fn font(mut self, font: impl Into<Font>) -> Self {
         self.font = font.into();
         self
     }
 
+    #[must_use]
     pub fn text(mut self, text: impl AsRef<str>) -> Self {
         self.text = text.as_ref().to_string();
         self
     }
 
+    #[must_use]
     pub fn fontdb(mut self, fontdb: Arc<fontdb::Database>) -> Self {
         self.fontdb = fontdb;
         self
     }
 
+    #[must_use]
     pub const fn alignment(
         mut self,
         alignment: TextAlignment,
@@ -281,12 +294,20 @@ impl TextSvg {
         self
     }
 
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::too_many_lines)]
     pub fn build(mut self, size: Size, cache: bool) -> Self {
         // debug!("starting...");
 
-        let mut path = dirs::data_local_dir().unwrap();
+        let Some(mut path) = dirs::cache_dir() else {
+            error!("Cannot find the cache dir");
+            return self;
+        };
         path.push(PathBuf::from("lumina"));
         path.push(PathBuf::from("temp"));
+        let _ = fs::create_dir_all(&path);
 
         let mut final_svg = String::with_capacity(1024);
 
@@ -357,27 +378,29 @@ impl TextSvg {
         };
 
         let font_weight = match self.font.weight {
-            Weight::Thin => "lighter",
-            Weight::ExtraLight => "lighter",
-            Weight::Light => "lighter",
-            Weight::Normal => "normal",
-            Weight::Medium => "normal",
-            Weight::Semibold => "bold",
-            Weight::Bold => "bold",
-            Weight::ExtraBold => "bolder",
-            Weight::Black => "bolder",
+            Weight::Thin | Weight::ExtraLight | Weight::Light => {
+                "lighter"
+            }
+            Weight::Normal | Weight::Medium => "normal",
+            Weight::Semibold | Weight::Bold => "bold",
+            Weight::ExtraBold | Weight::Black => "bolder",
         };
 
-        final_svg.push_str(&format!("<svg width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>", size.width, size.height, size.width, size.height));
+        let _ = write!(
+            final_svg,
+            "<svg width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\" xmlns=\"http://www.w3.org/2000/svg\"><defs>",
+            size.width, size.height, size.width, size.height
+        );
 
         if let Some(shadow) = &self.shadow {
-            final_svg.push_str(&format!(
+            let _ = write!(
+                final_svg,
                 "<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
                 shadow.offset_x,
                 shadow.offset_y,
                 shadow.spread,
                 shadow.color
-            ));
+            );
         }
         final_svg.push_str("</defs>");
 
@@ -386,21 +409,24 @@ impl TextSvg {
         //     "<style> text { letter-spacing: 0em; } </style>",
         // );
 
-        final_svg.push_str(&format!("<text x=\"0\" y=\"50%\" transform=\"translate({}, 0)\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-style=\"{}\" font-weight=\"{}\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ",
-                                    text_x_position,
-                                    text_anchor,
-                                    font_style,
-                                    font_weight,
-                                    self.font.name,
-                                    font_size,
-                                    self.fill
-        ));
+        let _ = write!(
+            final_svg,
+            "<text x=\"0\" y=\"50%\" transform=\"translate({}, 0)\" dominant-baseline=\"middle\" text-anchor=\"{}\" font-style=\"{}\" font-weight=\"{}\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\" ",
+            text_x_position,
+            text_anchor,
+            font_style,
+            font_weight,
+            self.font.name,
+            font_size,
+            self.fill
+        );
 
         if let Some(stroke) = &self.stroke {
-            final_svg.push_str(&format!(
+            let _ = write!(
+                final_svg,
                 "stroke=\"{}\" stroke-width=\"{}px\" stroke-linejoin=\"arcs\" paint-order=\"stroke\"",
                 stroke.color, stroke.size
-            ));
+            );
         }
 
         if self.shadow.is_some() {
@@ -409,7 +435,8 @@ impl TextSvg {
         final_svg.push('>');
 
         for (index, text) in self.text.lines().enumerate() {
-            let tspan = format!(
+            let _ = write!(
+                final_svg,
                 "<tspan x=\"0\" y=\"{}\">{}</tspan>",
                 (index as f32).mul_add(
                     text_and_line_spacing,
@@ -417,7 +444,6 @@ impl TextSvg {
                 ),
                 text
             );
-            final_svg.push_str(&tspan);
         }
 
         final_svg.push_str("</text></svg>");
@@ -447,44 +473,57 @@ impl TextSvg {
             }
         }
         // debug!("text string built...");
-        let resvg_tree = Tree::from_data(
+        let Ok(resvg_tree) = Tree::from_data(
             final_svg.as_bytes(),
             &resvg::usvg::Options {
                 fontdb: Arc::clone(&self.fontdb),
                 ..Default::default()
             },
-        )
-        .expect("Woops mama");
+        ) else {
+            error!("Couldn't parse the svg into a tree");
+            return self;
+        };
         // debug!("parsed");
         let transform = tiny_skia::Transform::default();
-        let mut pixmap =
-            Pixmap::new(size.width as u32, size.height as u32)
-                .expect("opops");
+
+        #[allow(clippy::cast_sign_loss)]
+        let (size_width, size_height) =
+            (size.width as u32, size.height as u32);
+
+        let Some(mut pixmap) = Pixmap::new(size_width, size_height)
+        else {
+            error!("Couldn't create a new pixmap from size");
+            return self;
+        };
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if cache && let Err(e) = pixmap.save_png(&path) {
-            error!(?e, "Couldn't save a copy of the text");
+        if cache {
+            if let Err(e) = pixmap.save_png(&path) {
+                error!(?e, "Couldn't save a copy of the text");
+            }
         }
 
         // debug!("saved");
         // let handle = Handle::from_path(path);
-        let handle = Handle::from_rgba(
-            size.width as u32,
-            size.height as u32,
-            pixmap.take(),
-        );
+        let handle =
+            Handle::from_rgba(size_width, size_height, pixmap.take());
         self.handle = Some(handle);
         // debug!("stored");
         self
     }
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
-        Image::new(self.handle.clone().unwrap())
-            .content_fit(ContentFit::Cover)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        self.handle.clone().map_or_else(
+            || Element::from(Space::new(Length::Fill, Length::Fill)),
+            |handle| {
+                Image::new(handle)
+                    .content_fit(ContentFit::Cover)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            },
+        )
     }
 }
 
@@ -515,14 +554,14 @@ pub fn color(color: impl AsRef<str>) -> Color {
 
 pub fn text_svg_generator(
     slide: &mut crate::core::slide::Slide,
-    fontdb: Arc<fontdb::Database>,
+    fontdb: &Arc<fontdb::Database>,
 ) {
     text_svg_generator_with_cache(slide, fontdb, true);
 }
 
 pub fn text_svg_generator_with_cache(
     slide: &mut crate::core::slide::Slide,
-    fontdb: Arc<fontdb::Database>,
+    fontdb: &Arc<fontdb::Database>,
     cache: bool,
 ) {
     if !slide.text().is_empty() {
@@ -542,8 +581,7 @@ pub fn text_svg_generator_with_cache(
         } else {
             text_svg
         };
-        let text_svg =
-            text_svg.font(font).fontdb(Arc::clone(&fontdb));
+        let text_svg = text_svg.font(font).fontdb(Arc::clone(fontdb));
         debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
         let text_svg =
             text_svg.build(Size::new(1280.0, 720.0), cache);
@@ -576,7 +614,7 @@ mod tests {
                 .set_text("This is the first slide of text\nAnd we are singing\nTo save the world!");
             text_svg_generator_with_cache(
                 &mut slide,
-                Arc::clone(&fontdb),
+                &fontdb,
                 false,
             );
             assert!(

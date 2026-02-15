@@ -87,7 +87,9 @@ pub struct SongEditor {
     ccli: String,
     song_slides: Option<Vec<Slide>>,
     slide_state: SlideEditor,
-    stroke_sizes: combo_box::State<i32>,
+    stroke_sizes: [String; 16],
+    shadow_sizes: [String; 16],
+    shadow_offset_sizes: [String; 21],
     stroke_size: u16,
     stroke_open: bool,
     #[debug(skip)]
@@ -129,7 +131,7 @@ pub enum Message {
     None,
     ChangeAuthor(String),
     PauseVideo,
-    UpdateStrokeSize(u16),
+    UpdateStrokeSize(usize),
     UpdateStrokeColor(ColorPickerUpdate),
     OpenStroke,
     CloseStroke,
@@ -150,9 +152,9 @@ pub enum Message {
     SetTextAlignment(TextAlignment),
     OpenShadowTools,
     UpdateShadowColor(ColorPickerUpdate),
-    UpdateShadowSize(u16),
-    UpdateShadowOffsetX(i16),
-    UpdateShadowOffsetY(i16),
+    UpdateShadowSize(usize),
+    UpdateShadowOffsetX(usize),
+    UpdateShadowOffsetY(usize),
     ChangeFontWeight,
 }
 
@@ -249,7 +251,65 @@ impl SongEditor {
             ccli: String::new(),
             slide_state: SlideEditor::default(),
             song_slides: None,
-            stroke_sizes: combo_box::State::new(stroke_sizes),
+            stroke_sizes: [
+                "0".to_string(),
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+                "6".to_string(),
+                "7".to_string(),
+                "8".to_string(),
+                "9".to_string(),
+                "10".to_string(),
+                "11".to_string(),
+                "12".to_string(),
+                "13".to_string(),
+                "14".to_string(),
+                "15".to_string(),
+            ],
+            shadow_sizes: [
+                "0".to_string(),
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+                "6".to_string(),
+                "7".to_string(),
+                "8".to_string(),
+                "9".to_string(),
+                "10".to_string(),
+                "11".to_string(),
+                "12".to_string(),
+                "13".to_string(),
+                "14".to_string(),
+                "15".to_string(),
+            ],
+            shadow_offset_sizes: [
+                "0".to_string(),
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+                "6".to_string(),
+                "7".to_string(),
+                "8".to_string(),
+                "9".to_string(),
+                "10".to_string(),
+                "11".to_string(),
+                "12".to_string(),
+                "13".to_string(),
+                "14".to_string(),
+                "15".to_string(),
+                "16".to_string(),
+                "17".to_string(),
+                "18".to_string(),
+                "19".to_string(),
+                "20".to_string(),
+            ],
             stroke_size: 0,
             stroke_open: false,
             stroke_color_model: ColorPickerModel::new(
@@ -341,7 +401,7 @@ impl SongEditor {
                     self.lyrics =
                         text_editor::Content::with_text(&lyrics);
                 }
-                self.background_video(&song.background);
+                self.background_video(song.background.as_ref());
                 self.background = song.background.clone();
                 self.song_slides = None;
                 let font_db = Arc::clone(&self.font_db);
@@ -354,8 +414,7 @@ impl SongEditor {
                                 v.into_par_iter()
                                     .map(move |mut s| {
                                         text_svg::text_svg_generator(
-                                            &mut s,
-                                            Arc::clone(&font_db),
+                                            &mut s, &font_db,
                                         );
                                         s
                                     })
@@ -477,7 +536,7 @@ impl SongEditor {
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
                     let background = Background::try_from(path).ok();
-                    self.background_video(&background);
+                    self.background_video(background.as_ref());
                     song.background = background;
                     return Action::Task(self.update_song(song));
                 }
@@ -496,14 +555,14 @@ impl SongEditor {
                     video.set_paused(!video.paused());
                 }
             }
-            Message::UpdateStrokeSize(size) => {
-                self.stroke_size = size;
-                if let Some(song) = &mut self.song {
-                    if size == 0 {
-                        song.stroke_size = None;
-                    } else {
-                        song.stroke_size = Some(size);
-                    }
+            Message::UpdateStrokeSize(index) => {
+                if let Some(song) = &mut self.song
+                    && let Some(size_string) =
+                        self.stroke_sizes.get(index)
+                    && let Ok(size) = size_string.parse::<u16>()
+                {
+                    song.stroke_size =
+                        if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
                     return Action::Task(self.update_song(song));
                 }
@@ -745,19 +804,24 @@ impl SongEditor {
                     return Action::Task(self.update_song(song));
                 }
             }
-            Message::UpdateShadowSize(size) => {
-                if let Some(song) = &mut self.song {
-                    if size == 0 {
-                        song.shadow_size = None;
-                    } else {
-                        song.shadow_size = Some(size);
-                    }
+            Message::UpdateShadowSize(index) => {
+                if let Some(song) = &mut self.song
+                    && let Some(size_string) =
+                        self.shadow_sizes.get(index)
+                    && let Ok(size) = size_string.parse::<u16>()
+                {
+                    song.shadow_size =
+                        if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
                     return Action::Task(self.update_song(song));
                 }
             }
-            Message::UpdateShadowOffsetX(x) => {
-                if let Some(mut song) = self.song.clone() {
+            Message::UpdateShadowOffsetX(index) => {
+                if let Some(mut song) = self.song.clone()
+                    && let Some(x_string) =
+                        self.shadow_offset_sizes.get(index)
+                    && let Ok(x) = x_string.parse::<i16>()
+                {
                     if let Some((offset_x, _offset_y)) =
                         song.shadow_offset.as_mut()
                     {
@@ -769,8 +833,12 @@ impl SongEditor {
                     return Action::Task(self.update_song(song));
                 }
             }
-            Message::UpdateShadowOffsetY(y) => {
-                if let Some(mut song) = self.song.clone() {
+            Message::UpdateShadowOffsetY(index) => {
+                if let Some(mut song) = self.song.clone()
+                    && let Some(y_string) =
+                        self.shadow_offset_sizes.get(index)
+                    && let Ok(y) = y_string.parse::<i16>()
+                {
                     if let Some((_offset_x, offset_y)) =
                         song.shadow_offset.as_mut()
                     {
@@ -1342,12 +1410,20 @@ impl SongEditor {
                     .symbolic(true)
             ),
             dropdown(
-                &[
-                    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                    "10", "11", "12", "13", "14", "15"
-                ],
-                Some(self.stroke_size as usize),
-                |i| Message::UpdateStrokeSize(i as u16),
+                &self.stroke_sizes,
+                self.song.as_ref().and_then(|song| {
+                    song.stroke_size.and_then(|size| {
+                        self.stroke_sizes.iter().position(
+                            |size_string| {
+                                size_string
+                                    .parse::<u16>()
+                                    .expect("these are fine")
+                                    == size
+                            },
+                        )
+                    })
+                }),
+                |i| Message::UpdateStrokeSize(i),
             )
             .gap(5.0),
         ]
@@ -1413,81 +1489,55 @@ impl SongEditor {
             .width(Length::Fixed(400.0))
             .build("Recent Colors", "Copy", "Copied");
 
-        let _shadow_size_spinner = spin_button::vertical(
-            "Shadow Size",
-            self.song
-                .as_ref()
-                .and_then(|song| {
-                    song.shadow_size.map(|size| size as usize)
-                })
-                .unwrap_or_default(),
-            1,
-            0,
-            20,
-            |i| Message::UpdateShadowSize(i as u16),
-        );
-
-        let _shadow_offset_x_spinner = spin_button::vertical(
-            "Offset X",
-            self.song
-                .as_ref()
-                .and_then(|song| song.shadow_offset)
-                .map(|offset| offset.0)
-                .unwrap_or_default(),
-            1,
-            0,
-            50,
-            Message::UpdateShadowOffsetX,
-        );
-
-        let _shadow_offset_y_spinner = spin_button::vertical(
-            "Offset Y",
-            self.song
-                .as_ref()
-                .and_then(|song| song.shadow_offset)
-                .map(|offset| offset.1)
-                .unwrap_or_default(),
-            1,
-            0,
-            50,
-            Message::UpdateShadowOffsetY,
-        );
-
         let shadow_size_dropdown = dropdown(
-            &[
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                "10", "11", "12", "13", "14", "15",
-            ],
+            &self.shadow_sizes,
             self.song.as_ref().and_then(|song| {
-                song.shadow_size.map(|size| size as usize)
+                song.shadow_size.and_then(|size| {
+                    self.shadow_sizes.iter().position(|size_string| {
+                        size_string
+                            .parse::<u16>()
+                            .expect("these are fine")
+                            == size
+                    })
+                })
             }),
-            |i| Message::UpdateShadowSize(i as u16),
+            |i| Message::UpdateShadowSize(i),
         )
         .gap(5.0);
 
         let shadow_offset_x_dropdown = dropdown(
-            &[
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                "10", "11", "12", "13", "14", "15", "16", "17", "18",
-                "19", "20",
-            ],
+            &self.shadow_offset_sizes,
             self.song.as_ref().and_then(|song| {
-                song.shadow_offset.map(|offset| offset.0 as usize)
+                song.shadow_offset.and_then(|(offset_x, _)| {
+                    self.shadow_offset_sizes.iter().position(
+                        |x_string| {
+                            x_string
+                                .parse::<i16>()
+                                .expect("these are fine")
+                                == offset_x
+                        },
+                    )
+                })
             }),
-            |i| Message::UpdateShadowOffsetX(i as i16),
+            |i| Message::UpdateShadowOffsetX(i),
         )
         .gap(5.0);
 
         let shadow_offset_y_dropdown = dropdown(
-            &[
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                "10", "11", "12", "13", "14", "15", "16", "17", "18",
-                "19", "20",
-            ],
+            &self.shadow_offset_sizes,
             self.song.as_ref().and_then(|song| {
-                song.shadow_offset.map(|offset| offset.1 as usize)
+                song.shadow_offset.and_then(|(offset_y, _)| {
+                    self.shadow_offset_sizes.iter().position(
+                        |y_string| {
+                            y_string
+                                .parse::<i16>()
+                                .expect("these are fine")
+                                == offset_y
+                        },
+                    )
+                })
             }),
-            |i| Message::UpdateShadowOffsetY(i as i16),
+            |i| Message::UpdateShadowOffsetY(i),
         )
         .gap(5.0);
 
@@ -1803,8 +1853,7 @@ impl SongEditor {
                         .into_par_iter()
                         .map(move |mut s| {
                             text_svg::text_svg_generator(
-                                &mut s,
-                                Arc::clone(&font_db),
+                                &mut s, &font_db,
                             );
                             s
                         })
@@ -1822,7 +1871,7 @@ impl SongEditor {
         Task::batch(tasks)
     }
 
-    fn background_video(&mut self, background: &Option<Background>) {
+    fn background_video(&mut self, background: Option<&Background>) {
         if let Some(background) = background
             && background.kind == BackgroundKind::Video
         {
@@ -1841,6 +1890,7 @@ impl SongEditor {
 }
 
 #[allow(clippy::unreadable_literal)]
+#[allow(clippy::items_after_statements)]
 fn verse_chip(
     verse: VerseName,
     index: Option<usize>,
@@ -1862,6 +1912,8 @@ fn verse_chip(
     let name = verse.get_name();
     let dark_text = Color::BLACK;
     let light_text = Color::WHITE;
+
+    #[allow(clippy::match_same_arms)]
     let (background_color, text_color) = match verse {
         VerseName::Verse { .. } => (VERSE_COLOR, light_text),
         VerseName::PreChorus { .. } => {
@@ -1961,7 +2013,9 @@ async fn pick_background() -> Result<PathBuf, SongError> {
             error!(?e);
             SongError::BackgroundDialogClosed
         })
-        .map(|file| file.url().to_file_path().unwrap())
+        .map(|file| {
+            file.url().to_file_path().expect("Should be a file here")
+        })
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

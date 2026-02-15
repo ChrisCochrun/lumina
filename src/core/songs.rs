@@ -1636,9 +1636,7 @@ You saved my soul"
             let slides = song.to_slides().unwrap();
             slides.into_par_iter().for_each(|mut slide| {
                 text_svg_generator_with_cache(
-                    &mut slide,
-                    Arc::clone(&fontdb),
-                    false,
+                    &mut slide, &fontdb, false,
                 );
                 assert!(
                     slide

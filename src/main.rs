@@ -339,8 +339,7 @@ impl cosmic::Application for App {
                     .into_par_iter()
                     .map(|mut slide| {
                         text_svg::text_svg_generator(
-                            &mut slide,
-                            Arc::clone(&fontdb),
+                            &mut slide, &fontdb,
                         );
                         slide
                     })
@@ -1394,7 +1393,7 @@ impl cosmic::Application for App {
                     .map(|mut slide| {
                         let fontdb = Arc::clone(&self.fontdb);
                         text_svg::text_svg_generator(
-                            &mut slide, fontdb,
+                            &mut slide, &fontdb,
                         );
                         slide
                     })
@@ -1434,7 +1433,7 @@ impl cosmic::Application for App {
                     .map(|mut slide| {
                         let fontdb = Arc::clone(&self.fontdb);
                         text_svg::text_svg_generator(
-                            &mut slide, fontdb,
+                            &mut slide, &fontdb,
                         );
                         slide
                     })
@@ -2200,7 +2199,9 @@ async fn save_as_dialog() -> Result<PathBuf> {
     save::file(dialog).await.into_diagnostic().map(|response| {
         response.url().map_or_else(
             || Err(miette!("Can't convert url of file to a path")),
-            |url| Ok(url.to_file_path().unwrap()),
+            |url| {
+                Ok(url.to_file_path().expect("Should be a file here"))
+            },
         )
     })?
 }

@@ -44,7 +44,7 @@ impl VerseEditor {
         Self {
             verse_name: verse,
             lyric: lyric.to_string(),
-            content: text_editor::Content::with_text(&lyric),
+            content: text_editor::Content::with_text(lyric),
             editing_verse_name: false,
             verse_name_combo: combo_box::State::new(
                 VerseName::all_names(),
