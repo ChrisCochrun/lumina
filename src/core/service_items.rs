@@ -368,6 +368,7 @@ impl From<&Presentation> for ServiceItem {
     }
 }
 
+#[allow(unused)]
 impl Service {
     fn add_item(
         &mut self,

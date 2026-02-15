@@ -781,7 +781,7 @@ pub async fn get_song_from_db(
     index: i32,
     db: &mut SqliteConnection,
 ) -> Result<Song> {
-    let row = query(r#"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, id from songs where id = $1"#).bind(index).fetch_one(db).await.into_diagnostic()?;
+    let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, id from songs where id = $1").bind(index).fetch_one(db).await.into_diagnostic()?;
     Song::from_row(&row).into_diagnostic()
 }
 
@@ -799,7 +799,7 @@ impl Model<Song> {
     pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
         let db1 = db.acquire().await.unwrap();
-        let result = query(r"SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs").fetch_all(&mut db1.detach()).await;
+        let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs").fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
                 for song in s {
@@ -1034,67 +1034,67 @@ impl Song {
         // old implementation
         // ---------------------------------
 
-        let mut lyric_list = Vec::new();
-        if self.lyrics.is_none() {
-            return Err(miette!("There is no lyrics here"));
-        } else if self.verse_order.is_none() {
-            return Err(miette!("There is no verse_order here"));
-        } else if self
-            .verse_order
-            .clone()
-            .is_some_and(|v| v.is_empty())
-        {
-            return Err(miette!("There is no verse_order here"));
-        }
-        if let Some(raw_lyrics) = self.lyrics.clone() {
-            let raw_lyrics = raw_lyrics.as_str();
-            let verse_order = self.verses.clone();
+        // let mut lyric_list = Vec::new();
+        // if self.lyrics.is_none() {
+        //     return Err(miette!("There is no lyrics here"));
+        // } else if self.verse_order.is_none() {
+        //     return Err(miette!("There is no verse_order here"));
+        // } else if self
+        //     .verse_order
+        //     .clone()
+        //     .is_some_and(|v| v.is_empty())
+        // {
+        //     return Err(miette!("There is no verse_order here"));
+        // }
+        // if let Some(raw_lyrics) = self.lyrics.clone() {
+        //     let raw_lyrics = raw_lyrics.as_str();
+        //     let verse_order = self.verses.clone();
 
-            let mut lyric_map = HashMap::new();
-            let mut verse_title = String::new();
-            let mut lyric = String::new();
-            for (i, line) in raw_lyrics.split('\n').enumerate() {
-                if VERSE_KEYWORDS.contains(&line) {
-                    if i != 0 {
-                        lyric_map.insert(verse_title, lyric);
-                        lyric = String::new();
-                        verse_title = line.to_string();
-                    } else {
-                        verse_title = line.to_string();
-                    }
-                } else {
-                    lyric.push_str(line);
-                    lyric.push('\n');
-                }
-            }
-            lyric_map.insert(verse_title, lyric);
+        //     let mut lyric_map = HashMap::new();
+        //     let mut verse_title = String::new();
+        //     let mut lyric = String::new();
+        //     for (i, line) in raw_lyrics.split('\n').enumerate() {
+        //         if VERSE_KEYWORDS.contains(&line) {
+        //             if i != 0 {
+        //                 lyric_map.insert(verse_title, lyric);
+        //                 lyric = String::new();
+        //                 verse_title = line.to_string();
+        //             } else {
+        //                 verse_title = line.to_string();
+        //             }
+        //         } else {
+        //             lyric.push_str(line);
+        //             lyric.push('\n');
+        //         }
+        //     }
+        //     lyric_map.insert(verse_title, lyric);
 
-            for verse in verse_order.unwrap_or_default() {
-                let verse_name = &verse.get_name();
-                if let Some(lyric) = lyric_map.get(verse_name) {
-                    if lyric.contains("\n\n") {
-                        let split_lyrics: Vec<&str> =
-                            lyric.split("\n\n").collect();
-                        for lyric in split_lyrics {
-                            if lyric.is_empty() {
-                                continue;
-                            }
-                            lyric_list.push(lyric.to_string());
-                        }
-                        continue;
-                    }
-                    lyric_list.push(lyric.clone());
-                } else {
-                    // error!("NOT WORKING!");
-                }
-            }
-            // for lyric in lyric_list.iter() {
-            //     debug!(lyric = ?lyric)
-            // }
-            Ok(lyric_list)
-        } else {
-            Err(miette!("There are no lyrics"))
-        }
+        //     for verse in verse_order.unwrap_or_default() {
+        //         let verse_name = &verse.get_name();
+        //         if let Some(lyric) = lyric_map.get(verse_name) {
+        //             if lyric.contains("\n\n") {
+        //                 let split_lyrics: Vec<&str> =
+        //                     lyric.split("\n\n").collect();
+        //                 for lyric in split_lyrics {
+        //                     if lyric.is_empty() {
+        //                         continue;
+        //                     }
+        //                     lyric_list.push(lyric.to_string());
+        //                 }
+        //                 continue;
+        //             }
+        //             lyric_list.push(lyric.clone());
+        //         } else {
+        //             // error!("NOT WORKING!");
+        //         }
+        //     }
+        //     // for lyric in lyric_list.iter() {
+        //     //     debug!(lyric = ?lyric)
+        //     // }
+        //     Ok(lyric_list)
+        // } else {
+        //     Err(miette!("There are no lyrics"))
+        // }
     }
 
     pub fn update_verse_name(

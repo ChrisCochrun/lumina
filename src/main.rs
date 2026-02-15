@@ -1,3 +1,4 @@
+#![allow(clippy::option_if_let_else)]
 use clap::Parser;
 use core::service_items::ServiceItem;
 use core::slide::{
@@ -436,7 +437,7 @@ impl cosmic::Application for App {
             batch.push(app.show_window());
         }
 
-        batch.push(app.add_library());
+        batch.push(add_library());
         // batch.push(app.add_service(items, Arc::clone(&fontdb)));
         let batch = Task::batch(batch);
         (app, batch)
@@ -1671,7 +1672,7 @@ impl cosmic::Application for App {
                     if let Some(library) = &self.library {
                         library.view().map(Message::Library)
                     } else {
-                        Space::new(0, 0).into()
+                        Element::from(Space::new(0, 0))
                     },
                 )
                 .style(nav_bar_style),
@@ -1814,14 +1815,8 @@ where
             .map(|id| cosmic::Action::App(Message::WindowOpened(id)))
     }
 
-    fn add_library(&self) -> Task<Message> {
-        Task::perform(async move { Library::new().await }, |x| {
-            cosmic::Action::App(Message::AddLibrary(x))
-        })
-    }
-
     fn search(&self, query: String) -> Task<Message> {
-        if let Some(library) = self.library.clone() {
+        self.library.clone().map_or_else(Task::none, |library| {
             Task::perform(
                 async move { library.search_items(query).await },
                 |items| {
@@ -1830,9 +1825,19 @@ where
                     ))
                 },
             )
-        } else {
-            Task::none()
-        }
+        })
+        // if let Some(library) = self.library.clone() {
+        //     Task::perform(
+        //         async move { library.search_items(query).await },
+        //         |items| {
+        //             cosmic::Action::App(Message::UpdateSearchResults(
+        //                 items,
+        //             ))
+        //         },
+        //     )
+        // } else {
+        //     Task::none()
+        // }
     }
 
     fn process_key_press(
@@ -1906,6 +1911,7 @@ where
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn service_list(&self) -> Element<Message> {
         let list =
             self.service.iter().enumerate().map(|(index, item)| {
@@ -2176,6 +2182,12 @@ where
 
         container.center(Length::FillPortion(2)).into()
     }
+}
+
+fn add_library() -> Task<Message> {
+    Task::perform(async move { Library::new().await }, |x| {
+        cosmic::Action::App(Message::AddLibrary(x))
+    })
 }
 
 async fn save_as_dialog() -> Result<PathBuf> {

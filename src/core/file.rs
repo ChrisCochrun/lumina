@@ -25,9 +25,13 @@ pub fn save(
     let save_file = File::create(path).into_diagnostic()?;
     let ron = process_service_items(&list)?;
 
-    let encoder = Encoder::new(save_file, 3).unwrap().auto_finish();
+    let encoder = Encoder::new(save_file, 3)
+        .expect("file encoder shouldn't fail")
+        .auto_finish();
     let mut tar = Builder::new(encoder);
-    let mut temp_dir = dirs::data_dir().unwrap();
+    let mut temp_dir = dirs::data_dir().expect(
+        "there should be a data directory, ~/.local/share/ for linux, but couldn't find it",
+    );
     temp_dir.push("lumina");
     let mut s: String =
         iter::repeat_with(fastrand::alphanumeric).take(5).collect();
@@ -40,7 +44,6 @@ pub fn save(
     match fs::File::options()
         .read(true)
         .write(true)
-        .create(true)
         .open(service_file)
     {
         Ok(mut f) => {
@@ -135,10 +138,7 @@ pub fn save(
 fn process_service_items(items: &Vec<ServiceItem>) -> Result<String> {
     Ok(items
         .iter()
-        .filter_map(|item| {
-            let ron = ron::ser::to_string(item);
-            ron.ok()
-        })
+        .filter_map(|item| ron::ser::to_string(item).ok())
         .collect())
 }
 

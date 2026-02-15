@@ -408,22 +408,17 @@ impl TextSvg {
         }
         final_svg.push('>');
 
-        let text: String = self
-            .text
-            .lines()
-            .enumerate()
-            .map(|(index, text)| {
-                format!(
-                    "<tspan x=\"0\" y=\"{}\">{}</tspan>",
-                    (index as f32).mul_add(
-                        text_and_line_spacing,
-                        starting_y_position
-                    ),
-                    text
-                )
-            })
-            .collect();
-        final_svg.push_str(&text);
+        for (index, text) in self.text.lines().enumerate() {
+            let tspan = format!(
+                "<tspan x=\"0\" y=\"{}\">{}</tspan>",
+                (index as f32).mul_add(
+                    text_and_line_spacing,
+                    starting_y_position
+                ),
+                text
+            );
+            final_svg.push_str(&tspan);
+        }
 
         final_svg.push_str("</text></svg>");
 

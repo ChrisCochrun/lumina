@@ -1,3 +1,4 @@
+#![allow(clippy::similar_names, unused)]
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
@@ -46,13 +47,6 @@ pub enum BackgroundKind {
     Video,
     Pdf,
     Html,
-}
-
-#[derive(Debug, Clone, Default)]
-struct Image {
-    pub source: String,
-    pub fit: String,
-    pub children: Vec<String>,
 }
 
 #[derive(
@@ -389,10 +383,6 @@ impl Slide {
 
     pub(crate) const fn set_index(&mut self, index: i32) {
         self.id = index;
-    }
-
-    pub(crate) fn text_to_image(&self) {
-        todo!()
     }
 
     // pub fn slides_from_item(item: &ServiceItem) -> Result<Vec<Self>> {
@@ -747,12 +737,6 @@ impl SlideBuilder {
             pdf_page: self.pdf_page,
             ..Default::default()
         })
-    }
-}
-
-impl Image {
-    fn new() -> Self {
-        Default::default()
     }
 }
 

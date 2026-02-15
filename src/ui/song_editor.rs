@@ -1,3 +1,4 @@
+#![allow(clippy::similar_names)]
 use std::{
     fmt::Display,
     io::{self},
@@ -14,7 +15,6 @@ use cosmic::{
         alignment::Vertical,
         color,
         font::{Style, Weight},
-        futures::StreamExt,
         task,
     },
     iced_core::widget::tree,
@@ -153,7 +153,7 @@ pub enum Message {
 }
 
 #[derive(Debug, Clone)]
-struct Face(fontdb::FaceInfo);
+pub struct Face(fontdb::FaceInfo);
 
 impl Display for Face {
     fn fmt(
@@ -1841,6 +1841,7 @@ impl SongEditor {
     }
 }
 
+#[allow(clippy::unreadable_literal)]
 fn verse_chip(
     verse: VerseName,
     index: Option<usize>,
@@ -1854,7 +1855,7 @@ fn verse_chip(
     } = theme::spacing();
 
     const VERSE_COLOR: cosmic::iced::Color = color!(0xf26430);
-    const CHORUS_COLOR: cosmic::iced::Color = color!(0x3A86ff);
+    const CHORUS_COLOR: cosmic::iced::Color = color!(0x3a86ff);
     const BRIDGE_COLOR: cosmic::iced::Color = color!(0x47e5bc);
     const INSTRUMENTAL_COLOR: cosmic::iced::Color = color!(0xd90368);
     const OTHER_COLOR: cosmic::iced::Color = color!(0xffd400);
