@@ -498,10 +498,8 @@ impl TextSvg {
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if cache {
-            if let Err(e) = pixmap.save_png(&path) {
-                error!(?e, "Couldn't save a copy of the text");
-            }
+        if cache && let Err(e) = pixmap.save_png(&path) {
+            error!(?e, "Couldn't save a copy of the text");
         }
 
         // debug!("saved");

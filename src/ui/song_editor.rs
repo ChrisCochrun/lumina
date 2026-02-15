@@ -167,6 +167,10 @@ impl Display for Face {
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         let name = self.0.families[0].0.clone().trim().to_string();
+
+        // leaving this lint so we can make changes to what is "normal"
+        // font weight in the future, though I doubt we will
+        #[allow(clippy::wildcard_in_or_patterns)]
         let weight = match self.0.weight.0 {
             0..=100 => " Thin",
             101..=200 => " Extra Light",
@@ -177,6 +181,7 @@ impl Display for Face {
             801..=1000 => " Black",
             301..=500 | _ => "",
         };
+
         let style = match self.0.style {
             fontdb::Style::Normal => "",
             fontdb::Style::Italic => " Italic",
@@ -1423,7 +1428,7 @@ impl SongEditor {
                         )
                     })
                 }),
-                |i| Message::UpdateStrokeSize(i),
+                Message::UpdateStrokeSize,
             )
             .gap(5.0),
         ]
@@ -1501,7 +1506,7 @@ impl SongEditor {
                     })
                 })
             }),
-            |i| Message::UpdateShadowSize(i),
+            Message::UpdateShadowSize,
         )
         .gap(5.0);
 
@@ -1519,7 +1524,7 @@ impl SongEditor {
                     )
                 })
             }),
-            |i| Message::UpdateShadowOffsetX(i),
+            Message::UpdateShadowOffsetX,
         )
         .gap(5.0);
 
@@ -1537,7 +1542,7 @@ impl SongEditor {
                     )
                 })
             }),
-            |i| Message::UpdateShadowOffsetY(i),
+            Message::UpdateShadowOffsetY,
         )
         .gap(5.0);
 
