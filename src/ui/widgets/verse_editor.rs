@@ -40,10 +40,10 @@ pub enum Action {
 
 impl VerseEditor {
     #[must_use]
-    pub fn new(verse: VerseName, lyric: String) -> Self {
+    pub fn new(verse: VerseName, lyric: &str) -> Self {
         Self {
             verse_name: verse,
-            lyric: lyric.clone(),
+            lyric: lyric.to_string(),
             content: text_editor::Content::with_text(&lyric),
             editing_verse_name: false,
             verse_name_combo: combo_box::State::new(
@@ -58,7 +58,7 @@ impl VerseEditor {
                 match action {
                     text_editor::Action::Edit(_edit) => {
                         let lyrics = self.content.text();
-                        self.lyric = lyrics.clone();
+                        self.lyric.clone_from(&lyrics);
                         let verse = self.verse_name;
                         Action::UpdateVerse((verse, lyrics))
                     }
@@ -142,11 +142,8 @@ impl VerseEditor {
                             .color(t.cosmic().accent.hover);
                         match s {
                             text_editor::Status::Active => base_style,
-                            text_editor::Status::Hovered => {
-                                base_style.border = hovered_border;
-                                base_style
-                            }
-                            text_editor::Status::Focused => {
+                            text_editor::Status::Hovered
+                            | text_editor::Status::Focused => {
                                 base_style.border = hovered_border;
                                 base_style
                             }
@@ -164,14 +161,5 @@ impl VerseEditor {
             .padding(space_s)
             .class(theme::Container::Card)
             .into()
-    }
-
-    // TODO not done yet. This doesn't work, need to find a way to either reset the
-    // cursor position or not make new widgets
-    pub fn set_cursor_position(&mut self, position: (usize, usize)) {
-        self.content.perform(text_editor::Action::Click(Point::new(
-            position.0 as f32,
-            position.1 as f32,
-        )));
     }
 }

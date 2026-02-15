@@ -124,17 +124,16 @@ fn main() -> Result<()> {
         }
     };
 
-    let settings;
-    if args.ui {
+    let settings = if args.ui {
         debug!(target: "lumina", "main view");
-        settings = Settings::default().debug(false).is_daemon(true);
+        Settings::default().debug(false).is_daemon(true)
     } else {
         debug!("window view");
-        settings = Settings::default()
+        Settings::default()
             .debug(false)
             .no_main_window(true)
-            .is_daemon(true);
-    }
+            .is_daemon(true)
+    };
 
     cosmic::app::run::<App>(settings, (args, config_handler, config))
         .map_err(|e| miette!("Invalid things... {}", e))
@@ -144,6 +143,7 @@ fn main() -> Result<()> {
 //     Theme::dark()
 // }
 
+#[allow(clippy::struct_excessive_bools)]
 struct App {
     core: Core,
     nav_model: nav_bar::Model,
@@ -275,6 +275,8 @@ impl cosmic::Application for App {
     fn core_mut(&mut self) -> &mut Core {
         &mut self.core
     }
+
+    #[allow(clippy::too_many_lines)]
     fn init(
         core: Core,
         input: Self::Flags,
@@ -289,7 +291,10 @@ impl cosmic::Application for App {
         let mut windows = vec![];
 
         if input.0.ui {
-            windows.push(core.main_window_id().unwrap());
+            windows.push(
+                core.main_window_id()
+                    .expect("should be a window here"),
+            );
         }
 
         let (config_handler, settings) = (input.1, input.2);
@@ -662,7 +667,7 @@ impl cosmic::Application for App {
                             iced::keyboard::Event::ModifiersChanged(
                                 modifiers,
                             ) => Some(Message::ModifiersPressed(modifiers)),
-                            _ => None,
+                            iced::keyboard::Event::KeyPressed { .. } => None,
                         },
                         iced::Event::Mouse(_event) => None,
                         iced::Event::Window(window_event) => {
@@ -715,6 +720,7 @@ impl cosmic::Application for App {
         None
     }
 
+    #[allow(clippy::too_many_lines)]
     fn dialog(&self) -> Option<Element<'_, Self::Message>> {
         let cosmic::cosmic_theme::Spacing {
             space_xxs,
@@ -870,6 +876,7 @@ impl cosmic::Application for App {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Key(key, modifiers) => {
@@ -1033,7 +1040,6 @@ impl cosmic::Application for App {
                                 }
                                 self.current_item =
                                     (item_index, slide_index);
-                                Task::batch(tasks)
                             } else {
                                 // debug!("Slides are not longer");
                                 if self
@@ -1055,8 +1061,8 @@ impl cosmic::Application for App {
                                     self.current_item =
                                         (item_index + 1, 0);
                                 }
-                                Task::batch(tasks)
                             }
+                            Task::batch(tasks)
                         } else {
                             Task::none()
                         }
@@ -1447,10 +1453,7 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
-            Message::Search(query) => {
-                self.search_query = query.clone();
-                self.search(query)
-            }
+            Message::Search(query) => self.search(query),
             Message::UpdateSearchResults(items) => {
                 self.search_results = items;
                 Task::none()
@@ -1593,6 +1596,7 @@ impl cosmic::Application for App {
     }
 
     // Main window view
+    #[allow(clippy::too_many_lines)]
     fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
             space_none,

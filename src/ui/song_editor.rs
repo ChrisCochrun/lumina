@@ -1,4 +1,5 @@
 #![allow(clippy::similar_names)]
+#![allow(clippy::too_many_lines)]
 use std::{
     fmt::Display,
     io::{self},
@@ -61,6 +62,9 @@ use crate::{
     },
 };
 
+// This should get refactored into holding a state machine
+// then each state of what is being edited can be caught by the compiler
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub struct SongEditor {
     pub song: Option<Song>,
@@ -165,12 +169,11 @@ impl Display for Face {
             0..=100 => " Thin",
             101..=200 => " Extra Light",
             201..=300 => " Light",
-            301..=500 => "",
             501..=600 => " Semi Bold",
             601..=700 => " Bold",
             701..=800 => " Extra Bold",
             801..=1000 => " Black",
-            _ => "",
+            301..=500 | _ => "",
         };
         let style = match self.0.style {
             fontdb::Style::Normal => "",
@@ -273,6 +276,7 @@ impl SongEditor {
             importing: false,
         }
     }
+
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
@@ -366,7 +370,7 @@ impl SongEditor {
                     map.into_iter()
                         .sorted()
                         .map(|(verse_name, lyric)| {
-                            VerseEditor::new(verse_name, lyric)
+                            VerseEditor::new(verse_name, &lyric)
                         })
                         .collect()
                 });
@@ -387,10 +391,8 @@ impl SongEditor {
                             cosmic::iced::font::Style::Normal => {
                                 *font_style = Style::Italic;
                             }
-                            cosmic::iced::font::Style::Italic => {
-                                *font_style = Style::Normal;
-                            }
-                            cosmic::iced::font::Style::Oblique => {
+                            cosmic::iced::font::Style::Italic
+                            | cosmic::iced::font::Style::Oblique => {
                                 *font_style = Style::Normal;
                             }
                         }
@@ -406,10 +408,10 @@ impl SongEditor {
                     if let Some(font_weight) = &mut song.font_weight {
                         match font_weight {
                             Weight::Normal => {
-                                *font_weight = Weight::Bold
+                                *font_weight = Weight::Bold;
                             }
                             Weight::Bold => {
-                                *font_weight = Weight::Normal
+                                *font_weight = Weight::Normal;
                             }
                             _ => *font_weight = Weight::Normal,
                         }
@@ -424,14 +426,14 @@ impl SongEditor {
                 if let Ok(size) = size.parse() {
                     self.font_size = size;
                     if let Some(song) = &mut self.song {
-                        song.font_size = Some(size as i32);
+                        song.font_size = i32::try_from(size).ok();
                         let song = song.to_owned();
                         return Action::Task(self.update_song(song));
                     }
                 }
             }
             Message::ChangeTitle(title) => {
-                self.title = title.clone();
+                self.title.clone_from(&title);
                 if let Some(song) = &mut self.song {
                     song.title = title;
                     let song = song.to_owned();
@@ -439,7 +441,7 @@ impl SongEditor {
                 }
             }
             Message::ChangeVerseOrder(verse_order) => {
-                self.verse_order = verse_order.clone();
+                self.verse_order.clone_from(&verse_order);
                 if let Some(mut song) = self.song.clone() {
                     let verse_order = verse_order
                         .split(' ')
@@ -465,7 +467,7 @@ impl SongEditor {
             }
             Message::ChangeAuthor(author) => {
                 debug!(author);
-                self.author = author.clone();
+                self.author.clone_from(&author);
                 if let Some(mut song) = self.song.clone() {
                     song.author = Some(author);
                     return Action::Task(self.update_song(song));
@@ -642,8 +644,7 @@ impl SongEditor {
                 self.editing_verse_order = !self.editing_verse_order;
             }
             Message::AddVerse((verse, lyric)) => {
-                let verse_editor =
-                    VerseEditor::new(verse, lyric.clone());
+                let verse_editor = VerseEditor::new(verse, &lyric);
                 if let Some(verses) = self.verses.as_mut() {
                     verses.push(verse_editor);
                 }
@@ -715,7 +716,6 @@ impl SongEditor {
                 }
             }
             Message::ChipReorder(event) => match event {
-                draggable::DragEvent::Picked { index: _ } => (),
                 draggable::DragEvent::Dropped {
                     index,
                     target_index,
@@ -730,7 +730,8 @@ impl SongEditor {
                         return Action::Task(self.update_song(song));
                     }
                 }
-                draggable::DragEvent::Canceled { index: _ } => (),
+                draggable::DragEvent::Picked { .. }
+                | draggable::DragEvent::Canceled { .. } => (),
             },
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
@@ -1070,9 +1071,7 @@ impl SongEditor {
             )
         };
 
-        let mut verse_order_row;
-
-        if self.dragging_verse_chip {
+        let mut verse_order_row = if self.dragging_verse_chip {
             let ending_dnd_dest = dnd_destination(
                 horizontal_space().height(19),
                 vec!["application/verse".into()],
@@ -1087,7 +1086,7 @@ impl SongEditor {
                     Message::ChipDroppedEnd((data, mime))
                 },
             );
-            verse_order_row = row![
+            row![
                 scrollable(verse_order_items)
                     .direction(
                         Direction::Horizontal(Scrollbar::new())
@@ -1095,9 +1094,9 @@ impl SongEditor {
                     .spacing(space_s),
                 ending_dnd_dest
             ]
-            .width(Length::Fill);
+            .width(Length::Fill)
         } else {
-            verse_order_row = row![
+            row![
                 scrollable(verse_order_items)
                     .direction(
                         Direction::Horizontal(Scrollbar::new())
@@ -1105,8 +1104,8 @@ impl SongEditor {
                     .width(Length::Fill)
                     .spacing(space_s),
             ]
-            .width(Length::Fill);
-        }
+            .width(Length::Fill)
+        };
         verse_order_row =
             verse_order_row.push(verse_chips_edit_toggle);
 
