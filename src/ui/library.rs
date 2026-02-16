@@ -36,6 +36,7 @@ use crate::core::{
     videos::{self, Video, add_video_to_db, update_video_in_db},
 };
 
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
 pub struct Library {
     song_library: Model<Song>,
