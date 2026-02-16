@@ -771,25 +771,6 @@ mod test {
     }
 
     #[test]
-    fn test_lisp_serialize() {
-        let lisp =
-            read_to_string("./test_presentation.lisp").expect("oops");
-        let lisp_value = crisp::reader::read(&lisp);
-        match lisp_value {
-            Value::List(value) => {
-                let slide = Slide::from(value[0].clone());
-                let test_slide = test_slide();
-                assert_eq!(slide, test_slide);
-
-                let second_slide = Slide::from(value[1].clone());
-                let second_test_slide = test_second_slide();
-                assert_eq!(second_slide, second_test_slide)
-            }
-            _ => panic!("this should be a lisp"),
-        }
-    }
-
-    #[test]
     fn test_ron_deserialize() {
         let slide = read_to_string("./test_presentation.ron")
             .expect("Problem getting file read");

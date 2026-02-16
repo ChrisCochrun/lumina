@@ -161,8 +161,7 @@ mod test {
 
     #[test]
     fn test_save() {
-        let path =
-            PathBuf::from("/home/chris/dev/lumina-iced/test.pres");
+        let path = PathBuf::from("./test.pres");
         let list = get_items();
         match save(list, &path, true) {
             Ok(_) => {
