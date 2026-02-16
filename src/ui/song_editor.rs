@@ -381,7 +381,10 @@ impl SongEditor {
                     }
                 }
                 if let Some(font_size) = song.font_size {
-                    self.font_size = font_size as usize;
+                    self.font_size = usize::try_from(font_size)
+                        .expect(
+                            "There shouldn't be a negative font_size",
+                        );
                 }
                 if let Some(verse_order) = song.verse_order {
                     self.verse_order = verse_order
@@ -876,29 +879,35 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let video_elements = if let Some(video) = &self.video {
-            let play_button = button::icon(if video.paused() {
-                icon::from_name("media-playback-start")
-            } else {
-                icon::from_name("media-playback-pause")
-            })
-            .on_press(Message::PauseVideo);
-            let video_track = progress_bar(
-                0.0..=video.duration().as_secs_f32(),
-                video.position().as_secs_f32(),
-            )
-            .height(cosmic::theme::spacing().space_s)
-            .width(Length::Fill);
-            container(
-                row![play_button, video_track]
-                    .align_y(Vertical::Center)
-                    .spacing(cosmic::theme::spacing().space_m),
-            )
-            .padding(cosmic::theme::spacing().space_s)
-            .center_x(Length::FillPortion(2))
-        } else {
-            container(horizontal_space())
-        };
+        let video_elements: Element<Message> =
+            self.video.as_ref().map_or_else(
+                || horizontal_space().into(),
+                |video| {
+                    let play_button =
+                        button::icon(if video.paused() {
+                            icon::from_name("media-playback-start")
+                        } else {
+                            icon::from_name("media-playback-pause")
+                        })
+                        .on_press(Message::PauseVideo);
+                    let video_track = progress_bar(
+                        0.0..=video.duration().as_secs_f32(),
+                        video.position().as_secs_f32(),
+                    )
+                    .height(cosmic::theme::spacing().space_s)
+                    .width(Length::Fill);
+                    container(
+                        row![play_button, video_track]
+                            .align_y(Vertical::Center)
+                            .spacing(
+                                cosmic::theme::spacing().space_m,
+                            ),
+                    )
+                    .padding(cosmic::theme::spacing().space_s)
+                    .center_x(Length::FillPortion(2))
+                    .into()
+                },
+            );
         let slide_preview = container(self.slide_preview())
             .width(Length::FillPortion(2));
 
@@ -918,44 +927,42 @@ impl SongEditor {
     }
 
     fn slide_preview(&self) -> Element<Message> {
-        if let Some(slides) = &self.song_slides {
-            let slides: Vec<Element<Message>> = slides
-                .iter()
-                .enumerate()
-                .map(|(index, slide)| {
-                    container(
-                        slide_view(
-                            slide,
-                            if index == 0 {
-                                self.video.as_ref()
-                            } else {
-                                None
-                            },
-                            false,
-                            false,
+        self.song_slides.as_ref().map_or_else(
+            || horizontal_space().into(),
+            |slides| {
+                let slides: Vec<Element<Message>> = slides
+                    .iter()
+                    .enumerate()
+                    .map(|(index, slide)| {
+                        container(
+                            slide_view(
+                                slide,
+                                if index == 0 {
+                                    self.video.as_ref()
+                                } else {
+                                    None
+                                },
+                                false,
+                                false,
+                            )
+                            .map(|_| Message::None),
                         )
-                        .map(|_| Message::None),
-                    )
-                    .height(250) // need to find out how to do this differently
-                    .center_x(Length::Fill)
-                    .padding([0, 20])
-                    .clip(true)
-                    .into()
-                })
-                .collect();
-            scrollable(
-                cosmic::widget::column::with_children(slides)
-                    .spacing(theme::active().cosmic().space_l()),
-            )
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .into()
-        } else {
-            horizontal_space().into()
-        }
-        // self.slide_state
-        //     .view(Font::with_name("Quicksand Bold"))
-        //     .map(|_s| Message::None)
+                        .height(250) // need to find out how to do this differently
+                        .center_x(Length::Fill)
+                        .padding([0, 20])
+                        .clip(true)
+                        .into()
+                    })
+                    .collect();
+                scrollable(
+                    cosmic::widget::column::with_children(slides)
+                        .spacing(theme::active().cosmic().space_l()),
+                )
+                .height(Length::Fill)
+                .width(Length::Fill)
+                .into()
+            },
+        )
     }
 
     fn left_column(&self) -> Element<Message> {
@@ -987,62 +994,64 @@ impl SongEditor {
         //         .on_input(Message::ChangeVerseOrder);
 
         let verse_option_chips: Vec<Element<Message>> =
-            if let Some(song) = &self.song {
-                if let Some(verse_map) = &song.verse_map {
-                    verse_map
-                        .keys()
-                        .sorted()
-                        .map(|verse| {
-                            let verse = *verse;
-                            let chip = verse_chip(verse, None);
-                            let verse_chip_wrapped =
-                                RcElementWrapper::<Message>::new(
-                                    chip,
-                                );
-                            Element::from(
-                            dnd_source::<Message, Box<VerseName>>(
-                                verse_chip_wrapped.clone(),
-                            )
-                            .on_start(Some(
-                                Message::DraggingChipStart,
-                            ))
-                            .on_finish(Some(
-                                Message::DraggingChipStart,
-                            ))
-                            .on_cancel(Some(
-                                Message::DraggingChipStart,
-                            ))
-                            .drag_content(move || Box::new(verse))
-                            .drag_icon(
-                                move |_| {
-                                    let state: tree::State =
-                                        cosmic::widget::Widget::<
-                                            Message,
-                                            _,
-                                            _,
-                                        >::state(
-                                            &verse_chip_wrapped
-                                        );
-                                    (
-                                        Element::from(
-                                            verse_chip_wrapped
-                                                .clone(),
-                                        )
-                                        .map(|_| ()),
-                                        state,
-                                        Vector::new(-5.0, -15.0),
+            self.song.as_ref().map_or_else(Vec::new, |song| {
+                song.verse_map.as_ref().map_or_else(
+                    Vec::new,
+                    |verse_map| {
+                        verse_map
+                            .keys()
+                            .sorted()
+                            .map(|verse| {
+                                let verse = *verse;
+                                let chip = verse_chip(verse, None);
+                                let verse_chip_wrapped =
+                                    RcElementWrapper::<Message>::new(
+                                        chip,
+                                    );
+                                Element::from(
+                                    dnd_source::<
+                                        Message,
+                                        Box<VerseName>,
+                                    >(
+                                        verse_chip_wrapped.clone()
                                     )
-                                },
-                            ),
-                        )
-                        })
-                        .collect()
-                } else {
-                    vec![]
-                }
-            } else {
-                vec![]
-            };
+                                    .on_start(Some(
+                                        Message::DraggingChipStart,
+                                    ))
+                                    .on_finish(Some(
+                                        Message::DraggingChipStart,
+                                    ))
+                                    .on_cancel(Some(
+                                        Message::DraggingChipStart,
+                                    ))
+                                    .drag_content(move || {
+                                        Box::new(verse)
+                                    })
+                                    .drag_icon(move |_| {
+                                        let state: tree::State =
+                                            cosmic::widget::Widget::<
+                                                Message,
+                                                _,
+                                                _,
+                                            >::state(
+                                                &verse_chip_wrapped,
+                                            );
+                                        (
+                                            Element::from(
+                                                verse_chip_wrapped
+                                                    .clone(),
+                                            )
+                                            .map(|_| ()),
+                                            state,
+                                            Vector::new(-5.0, -15.0),
+                                        )
+                                    }),
+                                )
+                            })
+                            .collect()
+                    },
+                )
+            });
 
         let verse_options = container(
             scrollable(row(verse_option_chips).spacing(space_s))
@@ -1062,76 +1071,69 @@ impl SongEditor {
             })
             .on_press(Message::EditVerseOrder);
 
-        let verse_order_items: Vec<Element<Message>> = if let Some(
-            song,
-        ) =
-            &self.song
-        {
-            if let Some(verses) = &song.verses {
-                verses
-                    .iter()
-                    .enumerate()
-                    .map(|(index, verse)| {
-                        let verse = *verse;
-                        let hovered_chip = self.hovered_verse_chip.filter(|hovered_index| hovered_index == &index);
-                        let mut chip =
-                            verse_chip(verse, hovered_chip).apply(mouse_area)
-                            .on_enter(Message::ChipHovered(Some(index)))
-                            .on_exit(Message::ChipHovered(None))
-                            .into();
-                        if let Some(hovered_chip) =
-                            self.hovered_dnd_verse_chip
-                            && index == hovered_chip {
-                                let phantom_chip = horizontal_space().width(60).height(19)
-                                    .apply(container)
-                                    .padding(
-                                        Padding::new(space_xxs.into())
-                                            .right(space_s)
-                                            .left(space_s),
-                                    )
-                                    .class(theme::Container::Custom(Box::new(move |t| {
-                                        container::Style::default()
-                                            .background(ContainerBackground::Color(
-                                                Color::from(t.cosmic().secondary.base).scale_alpha(0.5)
-                                            ))
-                                            .border(Border::default().rounded(space_m).width(2))
-                                    })));
-                                chip = row![
-                                    phantom_chip,
-                                    chip
-                                ]
-                                .spacing(space_s)
+        let verse_order_items: Vec<Element<Message>> =
+            self.song.as_ref().map_or_else(Vec::new, |song| {
+                song.verses.as_ref().map_or_else(Vec::new, |verses| {
+                    verses
+                        .iter()
+                        .enumerate()
+                        .map(|(index, verse)| {
+                            let verse = *verse;
+                            let hovered_chip = self.hovered_verse_chip.filter(|hovered_index| hovered_index == &index);
+                            let mut chip =
+                                verse_chip(verse, hovered_chip).apply(mouse_area)
+                                .on_enter(Message::ChipHovered(Some(index)))
+                                .on_exit(Message::ChipHovered(None))
                                 .into();
-                            }
-                        let verse_chip_wrapped =
-                            RcElementWrapper::<Message>::new(chip);
-                        Element::from(
-                            dnd_destination(
-                                verse_chip_wrapped,
-                                vec!["application/verse".into()],
+                            if let Some(hovered_chip) =
+                                self.hovered_dnd_verse_chip
+                                && index == hovered_chip {
+                                    let phantom_chip = horizontal_space().width(60).height(19)
+                                        .apply(container)
+                                        .padding(
+                                            Padding::new(space_xxs.into())
+                                                .right(space_s)
+                                                .left(space_s),
+                                        )
+                                        .class(theme::Container::Custom(Box::new(move |t| {
+                                            container::Style::default()
+                                                .background(ContainerBackground::Color(
+                                                    Color::from(t.cosmic().secondary.base).scale_alpha(0.5)
+                                                ))
+                                                .border(Border::default().rounded(space_m).width(2))
+                                        })));
+                                    chip = row![
+                                        phantom_chip,
+                                        chip
+                                    ]
+                                        .spacing(space_s)
+                                        .into();
+                                }
+                            let verse_chip_wrapped =
+                                RcElementWrapper::<Message>::new(chip);
+                            Element::from(
+                                dnd_destination(
+                                    verse_chip_wrapped,
+                                    vec!["application/verse".into()],
+                                )
+                                    .on_enter(move |x, y, mimes| {
+                                        debug!(x, y, ?mimes);
+                                        Message::ChipDndHovered(Some(index))
+                                    })
+                                    .on_leave(move || {
+                                        Message::ChipDndHovered(None)
+                                    })
+                                    .on_finish(
+                                        move |mime, data, action, _x, _y| {
+                                            debug!(mime, ?data, ?action);
+                                            Message::ChipDropped((index, data, mime))
+                                        },
+                                    ),
                             )
-                            .on_enter(move |x, y, mimes| {
-                                debug!(x, y, ?mimes);
-                                Message::ChipDndHovered(Some(index))
-                            })
-                            .on_leave(move || {
-                                Message::ChipDndHovered(None)
-                            })
-                            .on_finish(
-                                move |mime, data, action, _x, _y| {
-                                    debug!(mime, ?data, ?action);
-                                    Message::ChipDropped((index, data, mime))
-                                },
-                            ),
-                        )
-                    })
-                    .collect()
-            } else {
-                vec![]
-            }
-        } else {
-            vec![]
-        };
+                        })
+                        .collect()
+                })
+            });
 
         let verse_order_items = if self.dragging_verse_chip {
             Element::from(row(verse_order_items).spacing(space_s))
@@ -1214,27 +1216,28 @@ impl SongEditor {
         ]
         .spacing(5);
 
-        let verse_list = if let Some(verse_list) = &self.verses {
-            Element::from(
-                column(verse_list.iter().enumerate().map(
-                    |(index, v)| {
-                        column![
-                            v.view().map(move |message| {
-                                Message::VerseEditorMessage((
-                                    index, message,
-                                ))
-                            }),
-                            divider::horizontal::heavy()
-                        ]
-                        .spacing(space_m)
-                        .into()
-                    },
-                ))
-                .spacing(space_m),
-            )
-        } else {
-            Element::from(horizontal_space())
-        };
+        let verse_list = self.verses.as_ref().map_or_else(
+            || Element::from(horizontal_space()),
+            |verse_list| {
+                Element::from(
+                    column(verse_list.iter().enumerate().map(
+                        |(index, v)| {
+                            column![
+                                v.view().map(move |message| {
+                                    Message::VerseEditorMessage((
+                                        index, message,
+                                    ))
+                                }),
+                                divider::horizontal::heavy()
+                            ]
+                            .spacing(space_m)
+                            .into()
+                        },
+                    ))
+                    .spacing(space_m),
+                )
+            },
+        );
         let verse_scroller = scrollable(
             verse_list
                 .apply(container)

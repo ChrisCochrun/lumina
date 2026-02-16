@@ -89,14 +89,12 @@ impl VideoEditor {
                 let task = Task::perform(
                     pick_video(),
                     move |video_result| {
-                        if let Ok(video) = video_result {
+                        video_result.map_or(Message::None, |video| {
                             let mut video =
                                 videos::Video::from(video);
                             video.id = video_id;
                             Message::UpdateVideoFile(video)
-                        } else {
-                            Message::None
-                        }
+                        })
                     },
                 );
                 return Action::Task(task);
@@ -111,29 +109,30 @@ impl VideoEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let video_elements = if let Some(video) = &self.video {
-            let play_button = button::icon(if video.paused() {
-                icon::from_name("media-playback-start")
-            } else {
-                icon::from_name("media-playback-pause")
-            })
-            .on_press(Message::PauseVideo);
-            let video_track = progress_bar(
-                0.0..=video.duration().as_secs_f32(),
-                video.position().as_secs_f32(),
-            )
-            .height(cosmic::theme::spacing().space_s)
-            .width(Length::Fill);
-            container(
-                row![play_button, video_track]
-                    .align_y(Vertical::Center)
-                    .spacing(cosmic::theme::spacing().space_m),
-            )
-            .padding(cosmic::theme::spacing().space_s)
-            .center_x(Length::FillPortion(2))
-        } else {
-            container(horizontal_space())
-        };
+        let video_elements = self.video.as_ref().map_or_else(
+            || container(horizontal_space()),
+            |video| {
+                let play_button = button::icon(if video.paused() {
+                    icon::from_name("media-playback-start")
+                } else {
+                    icon::from_name("media-playback-pause")
+                })
+                .on_press(Message::PauseVideo);
+                let video_track = progress_bar(
+                    0.0..=video.duration().as_secs_f32(),
+                    video.position().as_secs_f32(),
+                )
+                .height(cosmic::theme::spacing().space_s)
+                .width(Length::Fill);
+                container(
+                    row![play_button, video_track]
+                        .align_y(Vertical::Center)
+                        .spacing(cosmic::theme::spacing().space_m),
+                )
+                .padding(cosmic::theme::spacing().space_s)
+                .center_x(Length::FillPortion(2))
+            },
+        );
 
         let video_player = self.video.as_ref().map_or_else(
             || Element::from(Space::new(0, 0)),

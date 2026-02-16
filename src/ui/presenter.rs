@@ -255,35 +255,29 @@ impl Presenter {
 
     pub fn with_items(items: Vec<ServiceItem>) -> Self {
         let video = {
-            if let Some(item) = items.first() {
-                if let Some(slide) = item.slides.first() {
+            items.first().and_then(|item| {
+                item.slides.first().and_then(|slide| {
                     let path = slide.background().path.clone();
-                    if path.exists() {
-                        let url = Url::from_file_path(path).expect(
-                            "There should be a video file here",
-                        );
-                        let result = Video::new(&url);
-                        match result {
-                            Ok(mut v) => {
-                                v.set_paused(true);
-                                Some(v)
-                            }
-                            Err(e) => {
-                                error!(
-                                    "Had an error creating the video object: {e}, likely the first slide isn't a video"
-                                );
-                                None
-                            }
-                        }
-                    } else {
-                        None
+                    if !path.exists() {
+                        return None;
                     }
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+                    let url = Url::from_file_path(path).expect(
+                        "There should be a video file here",
+                    );
+                    match Video::new(&url) {
+                        Ok(mut v) => {
+                            v.set_paused(true);
+                            Some(v)
+                        }
+                        Err(e) => {
+                            error!(
+                                "Had an error creating the video object: {e}, likely the first slide isn't a video"
+                            );
+                            None
+                        }
+                    }
+                })
+            })
         };
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
@@ -470,11 +464,9 @@ impl Presenter {
                 // self.current_slide_index = slide;
                 debug!("cloning slide...");
                 self.current_slide = slide.clone();
-                let font = if let Some(font) = slide.font() {
-                    font.get_name()
-                } else {
-                    String::new()
-                };
+                let font = slide
+                    .font()
+                    .map_or_else(String::new, |font| font.get_name());
                 let _ = self.update(Message::ChangeFont(font));
                 debug!("changing video now...");
                 if !backgrounds_match {
@@ -508,6 +500,7 @@ impl Presenter {
 
                 debug!(target_item);
 
+                #[allow(clippy::cast_precision_loss)]
                 let offset = AbsoluteOffset {
                     x: {
                         if target_item > 2 {
@@ -541,25 +534,8 @@ impl Presenter {
                     }
                     debug!("{:?}", new_audio);
                     if new_audio.exists() {
-                        let old_audio = self.audio.clone();
-                        if let Some(current_audio) = old_audio
-                            && current_audio != *new_audio
-                        {
-                            debug!(
-                                ?new_audio,
-                                ?current_audio,
-                                "audio needs to change"
-                            );
-                            self.audio = Some(new_audio);
-                            tasks.push(self.start_audio());
-                        } else {
-                            debug!(
-                                ?new_audio,
-                                "could not find audio, need to change"
-                            );
-                            self.audio = Some(new_audio);
-                            tasks.push(self.start_audio());
-                        }
+                        self.audio = Some(new_audio);
+                        tasks.push(self.start_audio());
                     } else {
                         self.audio = None;
                         self.update(Message::EndAudio);

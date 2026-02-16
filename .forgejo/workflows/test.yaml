@@ -7,13 +7,15 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command just ci-test
-  # clippy:
-  #   runs-on: rust-latest
+  # lint:
+  #   runs-on: nixos-latest
   #   steps:
   #     - name: checkout
   #       uses: actions/checkout@v4
-  #     - run: |
-  #         apt update
-  #         apt upgrade
-  #         apt install just mupdf gstreamer
-  #     - run: just test
+  #     - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command just clippy
+  # build:
+  #   runs-on: nixos-latest
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v4
+  #     - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command just build-release

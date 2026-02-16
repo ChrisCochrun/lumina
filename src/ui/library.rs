@@ -137,6 +137,9 @@ impl<'a> Library {
         self.song_library.get_item(index)
     }
 
+    #[allow(clippy::cast_possible_wrap)]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::too_many_lines)]
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
             Message::None => (),
@@ -652,6 +655,7 @@ impl<'a> Library {
             Message::AddFiles(items) => {
                 let mut tasks = Vec::new();
                 let last_item = &items.last();
+
                 let after_task = match last_item {
                     Some(ServiceItemKind::Image(_image)) => {
                         Task::done(Message::OpenItem(Some((
@@ -896,6 +900,7 @@ impl<'a> Library {
         container(library_dnd).padding(2).into()
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn library_item<T>(
         &'a self,
         model: &'a Model<T>,
@@ -953,18 +958,28 @@ impl<'a> Library {
                 .style(|t| {
                     container::Style::default()
                         .background({
-                            match self.library_hovered {
-                                Some(lib) => Background::Color(
-                                    if lib == model.kind {
-                                        t.cosmic().button.hover.into()
-                                    } else {
-                                        t.cosmic().button.base.into()
-                                    },
-                                ),
-                                None => Background::Color(
-                                    t.cosmic().button.base.into(),
-                                ),
-                            }
+                            self.library_hovered.map_or_else(
+                                || {
+                                    Background::Color(
+                                        t.cosmic().button.base.into(),
+                                    )
+                                },
+                                |library| {
+                                    Background::Color(
+                                        if library == model.kind {
+                                            t.cosmic()
+                                                .button
+                                                .hover
+                                                .into()
+                                        } else {
+                                            t.cosmic()
+                                                .button
+                                                .base
+                                                .into()
+                                        },
+                                    )
+                                },
+                            )
                         })
                         .border(Border::default().rounded(
                             t.cosmic().corner_radii.radius_s,
@@ -987,6 +1002,7 @@ impl<'a> Library {
                 column({
                     model.items.iter().enumerate().map(
                         |(index, item)| {
+                            let i32_index = i32::try_from(index).expect("shouldn't be negative");
                             let kind = model.kind;
                             let visual_item = self
                                 .single_item(index, item, model)
@@ -997,21 +1013,21 @@ impl<'a> Library {
                                 let mouse_area = mouse_area.on_enter(Message::HoverItem(
                                     Some((
                                         model.kind,
-                                        index as i32,
+                                        i32_index ,
                                     )),
                                 ))
                                     .on_double_click(
                                         Message::OpenItem(Some((
                                             model.kind,
-                                            index as i32,
+                                            i32_index,
                                         ))),
                                     )
-                                    .on_right_press(Message::OpenContext(index as i32))
+                                    .on_right_press(Message::OpenContext(i32_index ))
                                     .on_exit(Message::HoverItem(None))
                                     .on_press(Message::SelectItem(
                                         Some((
                                             model.kind,
-                                            index as i32,
+                                            i32_index,
                                         )),
                                     ));
 
@@ -1038,7 +1054,7 @@ impl<'a> Library {
                                             )
                             }})
                             .drag_content(move || {
-                                KindWrapper((kind, index as i32))
+                                KindWrapper((kind, i32_index))
                             })
                             .into()
                         },
@@ -1065,6 +1081,7 @@ impl<'a> Library {
         column![library_button, lib_container].into()
     }
 
+    #[allow(clippy::too_many_lines)]
     fn single_item<T>(
         &'a self,
         index: usize,
@@ -1084,30 +1101,28 @@ impl<'a> Library {
         .center_x(Length::Fill);
         let subtext = container(responsive(move |size| {
             let color: Color = if item.background().is_some() {
-                if let Some(items) = &self.selected_items {
-                    if items.contains(&(model.kind, index as i32)) {
-                        theme::active().cosmic().control_0().into()
-                    } else {
-                        theme::active()
-                            .cosmic()
-                            .accent_text_color()
-                            .into()
-                    }
+                if let Some(items) = &self.selected_items
+                    && items.contains(&(
+                        model.kind,
+                        i32::try_from(index)
+                            .expect("Should never be negative"),
+                    ))
+                {
+                    theme::active().cosmic().control_0().into()
                 } else {
                     theme::active()
                         .cosmic()
                         .accent_text_color()
                         .into()
                 }
-            } else if let Some(items) = &self.selected_items {
-                if items.contains(&(model.kind, index as i32)) {
-                    theme::active().cosmic().control_0().into()
-                } else {
-                    theme::active()
-                        .cosmic()
-                        .destructive_text_color()
-                        .into()
-                }
+            } else if let Some(items) = &self.selected_items
+                && items.contains(&(
+                    model.kind,
+                    i32::try_from(index)
+                        .expect("Should never be negative"),
+                ))
+            {
+                theme::active().cosmic().control_0().into()
             } else {
                 theme::active()
                     .cosmic()
@@ -1135,15 +1150,16 @@ impl<'a> Library {
         .style(move |t| {
             container::Style::default()
                 .background(Background::Color(
-                    if let Some(items) = &self.selected_items {
-                        if items.contains(&(model.kind, index as i32))
-                        {
+                    if let Some(items) = &self.selected_items
+                        && let Ok(index) = i32::try_from(index)
+                    {
+                        if items.contains(&(model.kind, index)) {
                             t.cosmic().accent.selected.into()
                         } else if let Some((library, hovered)) =
                             self.hovered_item
                         {
                             if model.kind == library
-                                && hovered == index as i32
+                                && hovered == index
                             {
                                 t.cosmic().button.hover.into()
                             } else {
@@ -1154,10 +1170,9 @@ impl<'a> Library {
                         }
                     } else if let Some((library, hovered)) =
                         self.hovered_item
+                        && let Ok(index) = i32::try_from(index)
                     {
-                        if model.kind == library
-                            && hovered == index as i32
-                        {
+                        if model.kind == library && hovered == index {
                             t.cosmic().button.hover.into()
                         } else {
                             t.cosmic().button.base.into()
@@ -1209,45 +1224,36 @@ impl<'a> Library {
         query: String,
     ) -> Vec<ServiceItemKind> {
         let query = query.to_lowercase();
-        let mut items: Vec<ServiceItemKind> = self
+        let items = self
             .song_library
             .items
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|song| song.title.to_lowercase().contains(&query))
-            .map(ServiceItemKind::Song)
-            .collect();
-        let videos: Vec<ServiceItemKind> = self
+            .map(|song| ServiceItemKind::Song(song.clone()));
+        let videos = self
             .video_library
             .items
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|vid| vid.title.to_lowercase().contains(&query))
-            .map(ServiceItemKind::Video)
-            .collect();
-        let images: Vec<ServiceItemKind> = self
+            .map(|video| ServiceItemKind::Video(video.clone()));
+        let images = self
             .image_library
             .items
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|image| {
                 image.title.to_lowercase().contains(&query)
             })
-            .map(ServiceItemKind::Image)
-            .collect();
-        let presentations: Vec<ServiceItemKind> = self
+            .map(|image| ServiceItemKind::Image(image.clone()));
+        let presentations = self
             .presentation_library
             .items
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|pres| pres.title.to_lowercase().contains(&query))
-            .map(ServiceItemKind::Presentation)
-            .collect();
-        items.extend(videos);
-        items.extend(images);
-        items.extend(presentations);
+            .map(|pres| ServiceItemKind::Presentation(pres.clone()));
+        let items = items.chain(videos);
+        let items = items.chain(images);
+        let items = items.chain(presentations);
         let mut items: Vec<(usize, ServiceItemKind)> = items
-            .into_iter()
             .map(|item| {
                 (
                     levenshtein::distance(
@@ -1288,6 +1294,7 @@ impl<'a> Library {
         self.modifiers_pressed = modifiers;
     }
 
+    #[allow(clippy::too_many_lines)]
     fn delete_items(&mut self) -> Action {
         // Need to make this function collect tasks to be run off of
         // who should be deleted
@@ -1482,14 +1489,20 @@ async fn add_presentations() -> Option<Vec<Presentation>> {
 }
 
 async fn add_db() -> Result<SqlitePool> {
-    let mut data = dirs::data_local_dir().unwrap();
+    let mut data = dirs::data_local_dir()
+        .expect("Should always find a data dir");
     data.push("lumina");
     data.push("library-db.sqlite3");
     let mut db_url = String::from("sqlite://");
-    db_url.push_str(data.to_str().unwrap());
+    db_url.push_str(
+        data.to_str().expect("Should always be a file here"),
+    );
     SqlitePool::connect(&db_url).await.into_diagnostic()
 }
 
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
 pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     const CHAR_SIZE: f32 = 8.0;
     let text: String = text.as_ref().to_owned();

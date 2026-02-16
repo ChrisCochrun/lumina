@@ -95,6 +95,7 @@ impl PresentationEditor {
             context_menu_id: None,
         }
     }
+    #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangePresentation(presentation) => {
@@ -122,7 +123,7 @@ impl PresentationEditor {
                 }
             }
             Message::ChangeTitle(title) => {
-                self.title = title.clone();
+                self.title.clone_from(&title);
                 if let Some(presentation) = &self.presentation {
                     let mut presentation = presentation.clone();
                     presentation.title = title;
@@ -147,17 +148,17 @@ impl PresentationEditor {
                 let task = Task::perform(
                     pick_presentation(),
                     move |presentation_result| {
-                        if let Ok(presentation) = presentation_result
-                        {
-                            let mut presentation =
-                                Presentation::from(presentation);
-                            presentation.id = presentation_id;
-                            Message::ChangePresentationFile(
-                                presentation,
-                            )
-                        } else {
-                            Message::None
-                        }
+                        presentation_result.map_or(
+                            Message::None,
+                            |presentation| {
+                                let mut presentation =
+                                    Presentation::from(presentation);
+                                presentation.id = presentation_id;
+                                Message::ChangePresentationFile(
+                                    presentation,
+                                )
+                            },
+                        )
                     },
                 );
                 return Action::Task(task);
@@ -198,14 +199,16 @@ impl PresentationEditor {
             Message::NextPage => {
                 let next_index =
                     self.current_slide_index.unwrap_or_default() + 1;
-                let mut last_index =
-                    self.page_count.unwrap_or_default();
-                if let Some(presentation) = self.presentation.as_ref()
+
+                let last_index = if let Some(presentation) =
+                    self.presentation.as_ref()
                     && let PresKind::Pdf { ending_index, .. } =
                         presentation.kind
                 {
-                    last_index = ending_index;
-                }
+                    ending_index
+                } else {
+                    self.page_count.unwrap_or_default()
+                };
 
                 if next_index > last_index {
                     return Action::None;
@@ -241,14 +244,16 @@ impl PresentationEditor {
             Message::PrevPage => {
                 let previous_index =
                     self.current_slide_index.unwrap_or_default() - 1;
-                let mut first_index =
-                    self.page_count.unwrap_or_default();
-                if let Some(presentation) = self.presentation.as_ref()
+
+                let first_index = if let Some(presentation) =
+                    self.presentation.as_ref()
                     && let PresKind::Pdf { starting_index, .. } =
                         presentation.kind
                 {
-                    first_index = starting_index;
-                }
+                    starting_index
+                } else {
+                    self.page_count.unwrap_or_default()
+                };
 
                 if previous_index < first_index {
                     return Action::None;
@@ -279,8 +284,9 @@ impl PresentationEditor {
             Message::ChangeSlide(index) => {
                 self.current_slide =
                     self.document.as_ref().and_then(|doc| {
-                        let page =
-                            doc.load_page(index as i32).ok()?;
+                        let page = doc
+                            .load_page(i32::try_from(index).ok()?)
+                            .ok()?;
                         let matrix = Matrix::IDENTITY;
                         let colorspace = Colorspace::device_rgb();
                         let pixmap = page
@@ -298,13 +304,13 @@ impl PresentationEditor {
                             pixmap.samples().to_vec(),
                         ))
                     });
-                self.current_slide_index = Some(index as i32);
+                self.current_slide_index = i32::try_from(index).ok();
             }
             Message::HoverSlide(slide) => {
                 self.hovered_slide = slide;
             }
             Message::ContextMenu(index) => {
-                self.context_menu_id = Some(index as i32);
+                self.context_menu_id = i32::try_from(index).ok();
             }
             Message::SplitBefore => {
                 if let Ok((first, second)) = self.split_before() {
@@ -327,66 +333,74 @@ impl PresentationEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let presentation = if let Some(slide) = &self.current_slide {
-            container(
-                widget::image(slide)
-                    .content_fit(ContentFit::ScaleDown),
-            )
-            .style(|_| {
-                container::background(Background::Color(
-                    cosmic::iced::Color::WHITE,
-                ))
-            })
-        } else {
-            container(Space::new(0, 0))
-        };
-        let pdf_pages: Vec<Element<Message>> = if let Some(pages) =
-            &self.slides
-        {
-            pages
-                .iter()
-                .enumerate()
-                .map(|(index, page)| {
-                    let image = widget::image(page)
-                        .height(theme::spacing().space_xxxl * 3)
-                        .content_fit(ContentFit::ScaleDown);
-                    let slide = container(image).style(|_| {
-                        container::background(Background::Color(
-                            cosmic::iced::Color::WHITE,
-                        ))
-                    });
-                    let clickable_slide = container(
-                        mouse_area(slide)
-                            .on_enter(Message::HoverSlide(Some(
-                                index as i32,
-                            )))
-                            .on_exit(Message::HoverSlide(None))
-                            .on_right_press(Message::ContextMenu(
-                                index,
-                            ))
-                            .on_press(Message::ChangeSlide(index)),
-                    )
-                    .padding(theme::spacing().space_m)
-                    .clip(true)
-                    .class(
-                        if let Some(hovered_index) =
-                            self.hovered_slide
-                        {
-                            if index as i32 == hovered_index {
-                                theme::Container::Primary
-                            } else {
-                                theme::Container::Card
-                            }
-                        } else {
-                            theme::Container::Card
-                        },
-                    );
-                    clickable_slide.into()
+        let presentation = self.current_slide.as_ref().map_or_else(
+            || container(Space::new(0, 0)),
+            |slide| {
+                container(
+                    widget::image(slide)
+                        .content_fit(ContentFit::ScaleDown),
+                )
+                .style(|_| {
+                    container::background(Background::Color(
+                        cosmic::iced::Color::WHITE,
+                    ))
                 })
-                .collect()
-        } else {
-            vec![horizontal_space().into()]
-        };
+            },
+        );
+        let pdf_pages: Vec<Element<Message>> =
+            self.slides.as_ref().map_or_else(
+                || vec![horizontal_space().into()],
+                |pages| {
+                    pages
+                        .iter()
+                        .enumerate()
+                        .map(|(index, page)| {
+                            let image = widget::image(page)
+                                .height(
+                                    theme::spacing().space_xxxl * 3,
+                                )
+                                .content_fit(ContentFit::ScaleDown);
+                            let slide = container(image).style(|_| {
+                                container::background(Background::Color(
+                                    cosmic::iced::Color::WHITE,
+                                ))
+                            });
+                            let clickable_slide = container(
+                                mouse_area(slide)
+                                    .on_enter(Message::HoverSlide(
+                                        i32::try_from(index).ok(),
+                                    ))
+                                    .on_exit(Message::HoverSlide(
+                                        None,
+                                    ))
+                                    .on_right_press(
+                                        Message::ContextMenu(index),
+                                    )
+                                    .on_press(Message::ChangeSlide(
+                                        index,
+                                    )),
+                            )
+                                .padding(theme::spacing().space_m)
+                                .clip(true)
+                                .class(self.hovered_slide.map_or(
+                                    theme::Container::Card,
+                                    |hovered_index| {
+                                        if i32::try_from(index).is_ok_and(
+                                            |index| {
+                                                index == hovered_index
+                                            },
+                                        ) {
+                                            theme::Container::Primary
+                                        } else {
+                                            theme::Container::Card
+                                        }
+                                    },
+                                ));
+                            clickable_slide.into()
+                        })
+                        .collect()
+                },
+            );
         let pages_column = container(
             self.context_menu(
                 scrollable(
@@ -485,7 +499,7 @@ impl PresentationEditor {
         presentation: &Presentation,
     ) {
         self.presentation = Some(presentation.clone());
-        self.title = presentation.title.clone();
+        self.title.clone_from(&presentation.title);
         self.document =
             Document::open(&presentation.path.as_path()).ok();
         self.page_count = self
@@ -615,7 +629,9 @@ fn get_pages(
         pages
             .enumerate()
             .filter_map(|(index, page)| {
-                if !range.contains(&(index as i32)) {
+                if !range.contains(&i32::try_from(index).expect(
+                    "looking for a pdf index that is way too large",
+                )) {
                     return None;
                 }
                 let page = page.ok()?;
@@ -649,7 +665,9 @@ async fn pick_presentation() -> Result<PathBuf, PresentationError> {
             error!(?e);
             PresentationError::DialogClosed
         })
-        .map(|file| file.url().to_file_path().unwrap())
+        .map(|file| {
+            file.url().to_file_path().expect("Should be a file here")
+        })
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

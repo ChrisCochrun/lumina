@@ -1,4 +1,4 @@
-#![allow(clippy::option_if_let_else)]
+#![allow(clippy::missing_panics_doc)]
 use clap::Parser;
 use core::service_items::ServiceItem;
 use core::slide::{
@@ -299,18 +299,13 @@ impl cosmic::Application for App {
 
         let (config_handler, settings) = (input.1, input.2);
 
-        let items = if let Some(file) = input.0.file {
+        let items = input.0.file.map_or_else(Vec::new, |file| {
             match read_to_string(file) {
                 Ok(lisp) => {
                     let mut service_items = vec![];
                     let lisp = crisp::reader::read(&lisp);
                     match lisp {
                         Value::List(vec) => {
-                            // let items = vec
-                            //     .into_par_iter()
-                            //     .map(|value| parse_lisp(value))
-                            //     .collect();
-                            // slide_vector.append(items);
                             for value in vec {
                                 let mut inner_vector =
                                     parse_lisp(value);
@@ -327,9 +322,7 @@ impl cosmic::Application for App {
                     vec![]
                 }
             }
-        } else {
-            vec![]
-        };
+        });
 
         let items: Vec<ServiceItem> = items
             .into_par_iter()
@@ -1101,14 +1094,11 @@ impl cosmic::Application for App {
                             } else {
                                 // debug!("Change slide to previous items slides");
                                 let previous_item_slides_length =
-                                    if let Some(item) = self
-                                        .service
+                                    self.service
                                         .get(item_index - 1)
-                                    {
-                                        item.slides.len()
-                                    } else {
-                                        0
-                                    };
+                                        .map_or(0, |item| {
+                                            item.slides.len()
+                                        });
                                 self.current_item = (
                                     item_index - 1,
                                     previous_item_slides_length - 1,
@@ -1229,11 +1219,7 @@ impl cosmic::Application for App {
                 })
             }
             Message::CloseWindow(id) => {
-                if let Some(id) = id {
-                    window::close(id)
-                } else {
-                    Task::none()
-                }
+                id.map_or_else(Task::none, window::close)
             }
             Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
@@ -1454,7 +1440,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::Search(query) => {
-                self.search_query = query.clone();
+                self.search_query.clone_from(&query);
                 self.search(query)
             }
             Message::UpdateSearchResults(items) => {
@@ -1616,24 +1602,27 @@ impl cosmic::Application for App {
         );
 
         let video_button_icon =
-            if let Some(video) = &self.presenter.video {
-                let (icon_name, tooltip) = if video.paused() {
-                    ("media-play", "Play")
-                } else {
-                    ("media-pause", "Pause")
-                };
-                button::icon(icon::from_name(icon_name))
-                    .tooltip(tooltip)
-                    .on_press(Message::Present(
-                        presenter::Message::StartVideo,
-                    ))
-            } else {
-                button::icon(icon::from_name("media-play"))
-                    .tooltip("Play")
-                    .on_press(Message::Present(
-                        presenter::Message::StartVideo,
-                    ))
-            };
+            self.presenter.video.as_ref().map_or_else(
+                || {
+                    button::icon(icon::from_name("media-play"))
+                        .tooltip("Play")
+                        .on_press(Message::Present(
+                            presenter::Message::StartVideo,
+                        ))
+                },
+                |video| {
+                    let (icon_name, tooltip) = if video.paused() {
+                        ("media-play", "Play")
+                    } else {
+                        ("media-pause", "Pause")
+                    };
+                    button::icon(icon::from_name(icon_name))
+                        .tooltip(tooltip)
+                        .on_press(Message::Present(
+                            presenter::Message::StartVideo,
+                        ))
+                },
+            );
 
         let slide_preview = column![
             Space::with_height(Length::Fill),
@@ -1675,13 +1664,10 @@ impl cosmic::Application for App {
 
         let library = if self.library_open {
             Container::new(
-                Container::new(
-                    if let Some(library) = &self.library {
-                        library.view().map(Message::Library)
-                    } else {
-                        Element::from(Space::new(0, 0))
-                    },
-                )
+                Container::new(self.library.as_ref().map_or_else(
+                    || Element::from(Space::new(0, 0)),
+                    |library| library.view().map(Message::Library),
+                ))
                 .style(nav_bar_style),
             )
             .padding(space_s)
@@ -1822,7 +1808,7 @@ where
             .map(|id| cosmic::Action::App(Message::WindowOpened(id)))
     }
 
-    fn search(&mut self, query: String) -> Task<Message> {
+    fn search(&self, query: String) -> Task<Message> {
         self.library.clone().map_or_else(Task::none, |library| {
             Task::perform(
                 async move { library.search_items(query).await },
