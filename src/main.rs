@@ -781,6 +781,7 @@ impl cosmic::Application for App {
             .spacing(space_s)
             .apply(container)
             .padding(space_xl)
+            .max_width(600)
             .style(nav_bar_style);
             let modal = mouse_area(modal)
                 .on_press(Message::None)
@@ -1452,7 +1453,10 @@ impl cosmic::Application for App {
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
-            Message::Search(query) => self.search(query),
+            Message::Search(query) => {
+                self.search_query = query.clone();
+                self.search(query)
+            }
             Message::UpdateSearchResults(items) => {
                 self.search_results = items;
                 Task::none()
@@ -1818,7 +1822,7 @@ where
             .map(|id| cosmic::Action::App(Message::WindowOpened(id)))
     }
 
-    fn search(&self, query: String) -> Task<Message> {
+    fn search(&mut self, query: String) -> Task<Message> {
         self.library.clone().map_or_else(Task::none, |library| {
             Task::perform(
                 async move { library.search_items(query).await },
