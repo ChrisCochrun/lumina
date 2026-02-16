@@ -161,6 +161,7 @@ impl std::fmt::Debug for Message {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
     ObsSceneAssign(usize),
@@ -168,7 +169,6 @@ enum MenuAction {
     ObsStopStream,
     ObsStartRecord,
     ObsStopRecord,
-    MidiAction,
 }
 
 impl menu::Action for MenuAction {
@@ -191,7 +191,6 @@ impl menu::Action for MenuAction {
             ),
             Self::ObsStartRecord => todo!(),
             Self::ObsStopRecord => todo!(),
-            Self::MidiAction => todo!(),
         }
     }
 }
@@ -543,33 +542,23 @@ impl Presenter {
                     debug!("{:?}", new_audio);
                     if new_audio.exists() {
                         let old_audio = self.audio.clone();
-                        match old_audio {
-                            Some(current_audio)
-                                if current_audio != *new_audio =>
-                            {
-                                debug!(
-                                    ?new_audio,
-                                    ?current_audio,
-                                    "audio needs to change"
-                                );
-                                self.audio = Some(new_audio);
-                                tasks.push(self.start_audio());
-                            }
-                            Some(current_audio) => {
-                                debug!(
-                                    ?new_audio,
-                                    ?current_audio,
-                                    "Same audio shouldn't change"
-                                );
-                            }
-                            None => {
-                                debug!(
-                                    ?new_audio,
-                                    "could not find audio, need to change"
-                                );
-                                self.audio = Some(new_audio);
-                                tasks.push(self.start_audio());
-                            }
+                        if let Some(current_audio) = old_audio
+                            && current_audio != *new_audio
+                        {
+                            debug!(
+                                ?new_audio,
+                                ?current_audio,
+                                "audio needs to change"
+                            );
+                            self.audio = Some(new_audio);
+                            tasks.push(self.start_audio());
+                        } else {
+                            debug!(
+                                ?new_audio,
+                                "could not find audio, need to change"
+                            );
+                            self.audio = Some(new_audio);
+                            tasks.push(self.start_audio());
                         }
                     } else {
                         self.audio = None;
