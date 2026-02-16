@@ -72,15 +72,18 @@ pub fn bg_from_video(
 pub fn bg_path_from_video(video: &Path) -> PathBuf {
     let video = PathBuf::from(video);
     debug!(?video);
-    let mut data_dir = dirs::data_local_dir().unwrap();
+    let mut data_dir =
+        dirs::cache_dir().expect("Can't find cache dir");
     data_dir.push("lumina");
     data_dir.push("thumbnails");
+    let _ = fs::create_dir_all(&data_dir);
     if !data_dir.exists() {
         fs::create_dir(&data_dir)
             .expect("Could not create thumbnails dir");
     }
     let mut screenshot = data_dir.clone();
-    screenshot.push(video.file_name().unwrap());
+    screenshot
+        .push(video.file_name().expect("Should have file name"));
     screenshot.set_extension("png");
     screenshot
 }
@@ -93,17 +96,7 @@ mod test {
     fn test_bg_video_creation() {
         let video = Path::new("./res/bigbuckbunny.mp4");
         let screenshot = bg_path_from_video(video);
-        let screenshot_string =
-            screenshot.to_str().expect("Should be thing");
-        assert_eq!(
-            screenshot_string,
-            "/home/chris/.local/share/lumina/thumbnails/bigbuckbunny.png"
-        );
-
-        // let runtime = tokio::runtime::Runtime::new().unwrap();
-        let result = bg_from_video(video, &screenshot);
-        // let result = runtime.block_on(future);
-        match result {
+        match bg_from_video(video, &screenshot) {
             Ok(_o) => assert!(screenshot.exists()),
             Err(e) => debug_assert!(
                 false,
@@ -111,17 +104,5 @@ mod test {
                 e
             ),
         }
-    }
-
-    #[test]
-    fn test_bg_not_same() {
-        let video = Path::new("./res/bigbuckbunny.mp4");
-        let screenshot = bg_path_from_video(video);
-        let screenshot_string =
-            screenshot.to_str().expect("Should be thing");
-        assert_ne!(
-            screenshot_string,
-            "./res/All WebDev Sucks and you know it.png"
-        );
     }
 }
