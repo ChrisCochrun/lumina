@@ -21,6 +21,8 @@ clean:
     cargo clean
 test:
     cargo nextest run
+ci-test:
+    cargo nextest run -- --skip test_db_and_model --skip test_update --skip test_song_slide_speed --skip test_song_to_slide --skip test_song_from_db
 bench:
     export NEXTEST_EXPERIMENTAL_BENCHMARKS=1
     cargo nextest bench

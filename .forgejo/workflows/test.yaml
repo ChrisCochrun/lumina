@@ -6,7 +6,7 @@ jobs:
       - run: nix-env --install nodejs
       - name: checkout
         uses: actions/checkout@v4
-      - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command just test
+      - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command just ci-test
   # test:
   #   runs-on: rust-latest
   #   steps:

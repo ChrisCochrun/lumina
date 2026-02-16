@@ -1387,11 +1387,7 @@ You saved my soul"
     }
 
     async fn add_db() -> Result<SqlitePool> {
-        // let mut data = dirs::data_local_dir().unwrap();
-        // data.push("lumina");
-        // data.push("library-db.sqlite3");
-        let mut db_url = String::from("sqlite://./test.db");
-        // db_url.push_str(data.to_str().unwrap());
+        let db_url = String::from("sqlite://./test.db");
         SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 
@@ -1485,15 +1481,6 @@ You saved my soul"
             ]),
             verse_map,
             ..Default::default()
-        }
-    }
-
-    fn test_lisp_song() -> Value {
-        let lisp = read_to_string("./test_song.lisp").expect("oops");
-        let lisp_value = crisp::reader::read(&lisp);
-        match lisp_value {
-            Value::List(v) => v.first().unwrap().clone(),
-            _ => Value::Nil,
         }
     }
 
