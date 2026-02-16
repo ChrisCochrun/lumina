@@ -74,6 +74,7 @@ impl SlideEditor {
 
 /// Ensure to use the `cosmic::Theme and cosmic::Renderer` here
 /// or else it will not compile
+#[allow(clippy::extra_unused_lifetimes)]
 impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
     for EditorProgram
 {

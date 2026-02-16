@@ -369,14 +369,6 @@ impl ServiceTrait for Song {
     }
 }
 
-const VERSE_KEYWORDS: [&str; 24] = [
-    "Verse 1", "Verse 2", "Verse 3", "Verse 4", "Verse 5", "Verse 6",
-    "Verse 7", "Verse 8", "Chorus 1", "Chorus 2", "Chorus 3",
-    "Chorus 4", "Bridge 1", "Bridge 2", "Bridge 3", "Bridge 4",
-    "Intro 1", "Intro 2", "Ending 1", "Ending 2", "Other 1",
-    "Other 2", "Other 3", "Other 4",
-];
-
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let lyrics: &str = row.try_get("lyrics")?;
@@ -516,72 +508,6 @@ impl From<Value> for Song {
             _ => Self::default(),
         }
     }
-}
-
-fn lyrics_to_verse(
-    lyrics: String,
-) -> Result<(Vec<VerseName>, HashMap<VerseName, String>)> {
-    let mut verse_list = Vec::new();
-    if lyrics.is_empty() {
-        return Err(miette!("There is no lyrics here"));
-    }
-
-    let raw_lyrics = lyrics.as_str();
-
-    let mut lyric_map = HashMap::new();
-    let mut verse_title = String::new();
-    let mut lyric = String::new();
-    for (i, line) in raw_lyrics.split('\n').enumerate() {
-        if VERSE_KEYWORDS.contains(&line) {
-            if i != 0 {
-                lyric_map.insert(verse_title, lyric);
-                lyric = String::new();
-                verse_title = line.to_string();
-            } else {
-                verse_title = line.to_string();
-            }
-        } else {
-            lyric.push_str(line);
-            lyric.push('\n');
-        }
-    }
-    lyric_map.insert(verse_title, lyric);
-    let mut verse_map = HashMap::new();
-    for (verse_name, lyric) in lyric_map {
-        let mut verse_elements = verse_name.split_whitespace();
-        let verse_keyword = verse_elements.next();
-        let Some(keyword) = verse_keyword else {
-            return Err(miette!(
-                "Can't parse a proper verse keyword from lyrics"
-            ));
-        };
-        let verse_index = verse_elements.next();
-        let Some(index) = verse_index else {
-            return Err(miette!(
-                "Can't parse a proper verse index from lyrics"
-            ));
-        };
-        let index = index.parse::<usize>().into_diagnostic()?;
-        let verse = match keyword {
-            "Verse" => VerseName::Verse { number: index },
-            "Pre-Chorus" => VerseName::PreChorus { number: index },
-            "Chorus" => VerseName::Chorus { number: index },
-            "Post-Chorus" => VerseName::PostChorus { number: index },
-            "Bridge" => VerseName::Bridge { number: index },
-            "Intro" => VerseName::Intro { number: index },
-            "Outro" => VerseName::Outro { number: index },
-            "Instrumental" => {
-                VerseName::Instrumental { number: index }
-            }
-            "Other" => VerseName::Other { number: index },
-            _ => VerseName::Other { number: 99 },
-        };
-        verse_list.push(verse);
-        let lyric = lyric.trim().to_string();
-        verse_map.insert(verse, lyric);
-    }
-
-    Ok((verse_list, verse_map))
 }
 
 pub fn lisp_to_song(list: Vec<Value>) -> Song {

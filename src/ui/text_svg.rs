@@ -306,7 +306,7 @@ impl TextSvg {
             return self;
         };
         path.push(PathBuf::from("lumina"));
-        path.push(PathBuf::from("temp"));
+        path.push(PathBuf::from("text_svg_cache"));
         let _ = fs::create_dir_all(&path);
 
         let mut final_svg = String::with_capacity(1024);

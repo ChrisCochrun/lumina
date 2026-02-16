@@ -25,7 +25,7 @@ pub const fn service<Message: Clone + 'static>(
 }
 
 pub struct Service<'a, Message> {
-    service: &'a Vec<ServiceItem>,
+    items: &'a Vec<ServiceItem>,
     on_start: Option<Message>,
     on_cancelled: Option<Message>,
     on_finish: Option<Message>,
@@ -36,9 +36,9 @@ pub struct Service<'a, Message> {
 
 impl<'a, Message: Clone + 'static> Service<'a, Message> {
     #[must_use]
-    pub const fn new(service: &'a Vec<ServiceItem>) -> Self {
+    pub const fn new(service_items: &'a Vec<ServiceItem>) -> Self {
         Self {
-            service,
+            items: service_items,
             drag_threshold: 8.0,
             on_start: None,
             on_cancelled: None,
@@ -93,11 +93,13 @@ impl<'a, Message: Clone + 'static> Service<'a, Message> {
     //     );
     // }
 
+    #[must_use]
     pub fn on_start(mut self, on_start: Option<Message>) -> Self {
         self.on_start = on_start;
         self
     }
 
+    #[must_use]
     pub fn on_cancel(
         mut self,
         on_cancelled: Option<Message>,
@@ -106,6 +108,7 @@ impl<'a, Message: Clone + 'static> Service<'a, Message> {
         self
     }
 
+    #[must_use]
     pub fn on_finish(mut self, on_finish: Option<Message>) -> Self {
         self.on_finish = on_finish;
         self
@@ -289,7 +292,7 @@ impl<Message: Clone + 'static>
         _viewport: &Rectangle,
     ) {
         // let state = tree.state.downcast_mut::<State>();
-        for _item in self.service {}
+        for _item in self.items {}
     }
 
     // fn overlay<'b>(

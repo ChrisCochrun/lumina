@@ -50,7 +50,6 @@ pub(crate) struct Presenter {
     pub current_slide: Slide,
     pub current_item: usize,
     pub current_slide_index: usize,
-    pub absolute_slide_index: usize,
     pub total_slides: usize,
     pub video: Option<Video>,
     pub video_position: f32,
@@ -75,6 +74,7 @@ pub(crate) enum Action {
 }
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
@@ -168,6 +168,7 @@ enum MenuAction {
     ObsStopStream,
     ObsStartRecord,
     ObsStopRecord,
+    MidiAction,
 }
 
 impl menu::Action for MenuAction {
@@ -190,12 +191,13 @@ impl menu::Action for MenuAction {
             ),
             Self::ObsStartRecord => todo!(),
             Self::ObsStopRecord => todo!(),
+            Self::MidiAction => todo!(),
         }
     }
 }
 
 impl Presenter {
-    fn create_video(url: Url) -> Result<Video> {
+    fn create_video(url: &Url) -> Result<Video> {
         // Based on `iced_video_player::Video::new`,
         // but without a text sink so that the built-in subtitle functionality triggers.
         use gstreamer as gst;
@@ -218,16 +220,35 @@ impl Presenter {
 
         let video_sink: gst::Element =
             pipeline.property("video-sink");
-        let pad = video_sink.pads().first().cloned().unwrap();
-        let pad = pad.dynamic_cast::<gst::GhostPad>().unwrap();
+        let pad =
+            video_sink.pads().first().cloned().expect("first pad");
+        let pad = pad
+            .dynamic_cast::<gst::GhostPad>()
+            .map_err(|_| iced_video_player::Error::Cast)
+            .into_diagnostic()?;
         let bin = pad
             .parent_element()
-            .unwrap()
+            .ok_or_else(|| {
+                iced_video_player::Error::AppSink(String::from(
+                    "Should have a parent element here",
+                ))
+            })
+            .into_diagnostic()?
             .downcast::<gst::Bin>()
-            .unwrap();
-        let video_sink = bin.by_name("lumina_video").unwrap();
-        let video_sink =
-            video_sink.downcast::<gst_app::AppSink>().unwrap();
+            .map_err(|_| iced_video_player::Error::Cast)
+            .into_diagnostic()?;
+        let video_sink = bin
+            .by_name("lumina_video")
+            .ok_or_else(|| {
+                iced_video_player::Error::AppSink(String::from(
+                    "Can't find element lumina_video",
+                ))
+            })
+            .into_diagnostic()?;
+        let video_sink = video_sink
+            .downcast::<gst_app::AppSink>()
+            .map_err(|_| iced_video_player::Error::Cast)
+            .into_diagnostic()?;
         let result =
             Video::from_gst_pipeline(pipeline, video_sink, None);
         result.into_diagnostic()
@@ -239,7 +260,9 @@ impl Presenter {
                 if let Some(slide) = item.slides.first() {
                     let path = slide.background().path.clone();
                     if path.exists() {
-                        let url = Url::from_file_path(path).unwrap();
+                        let url = Url::from_file_path(path).expect(
+                            "There should be a video file here",
+                        );
                         let result = Video::new(&url);
                         match result {
                             Ok(mut v) => {
@@ -281,7 +304,6 @@ impl Presenter {
             current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
             current_item: 0,
             current_slide_index: 0,
-            absolute_slide_index: 0,
             total_slides,
             video,
             audio,
@@ -308,6 +330,7 @@ impl Presenter {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::AddObsClient(client) => {
@@ -347,17 +370,16 @@ impl Presenter {
                 self.obs_scenes = Some(scenes);
             }
             Message::AssignObsScene(scene_index) => {
+                let slide_id = self.context_menu_id.expect("In this match we should always already have a context menu id");
                 let Some(scenes) = &self.obs_scenes else {
                     return Action::None;
                 };
                 let new_scene = &scenes[scene_index];
                 debug!(?scenes, ?new_scene, "updating obs actions");
                 if let Some(map) = self.slide_action_map.as_mut() {
-                    if let Some(actions) = map.get_mut(
-                        &self.context_menu_id.unwrap_or_default(),
-                    ) {
+                    if let Some(actions) = map.get_mut(&slide_id) {
                         let mut altered_actions = vec![];
-                        actions.iter_mut().for_each(|action| {
+                        for action in actions.iter_mut() {
                             match action {
                                 slide_actions::Action::Obs {
                                     action: ObsAction::Scene { .. },
@@ -371,7 +393,7 @@ impl Presenter {
                                 _ => altered_actions
                                     .push(action.to_owned()),
                             }
-                        });
+                        }
                         *actions = altered_actions;
                         debug!(
                             "updating the obs scene {:?}",
@@ -379,7 +401,7 @@ impl Presenter {
                         );
                     } else if map
                         .insert(
-                            self.context_menu_id.unwrap(),
+                            slide_id,
                             vec![slide_actions::Action::Obs {
                                 action: ObsAction::Scene {
                                     scene: new_scene.clone(),
@@ -401,7 +423,7 @@ impl Presenter {
                 } else {
                     let mut map = HashMap::new();
                     map.insert(
-                        self.context_menu_id.unwrap(),
+                        slide_id,
                         vec![slide_actions::Action::Obs {
                             action: ObsAction::Scene {
                                 scene: new_scene.clone(),
@@ -412,23 +434,16 @@ impl Presenter {
                 }
             }
             Message::AssignSlideAction(action) => {
+                let slide_id = self.context_menu_id.expect("In this match we should always already have a context menu id");
                 if let Some(map) = self.slide_action_map.as_mut() {
-                    if let Some(actions) =
-                        map.get_mut(&self.context_menu_id.unwrap())
-                    {
+                    if let Some(actions) = map.get_mut(&slide_id) {
                         actions.push(action);
                     } else {
-                        map.insert(
-                            self.context_menu_id.unwrap(),
-                            vec![action],
-                        );
+                        map.insert(slide_id, vec![action]);
                     }
                 } else {
                     let mut map = HashMap::new();
-                    map.insert(
-                        self.context_menu_id.unwrap(),
-                        vec![action],
-                    );
+                    map.insert(slide_id, vec![action]);
                     self.slide_action_map = Some(map);
                 }
             }
@@ -519,7 +534,7 @@ impl Presenter {
                 {
                     if let Some(stripped_audio) = new_audio
                         .to_str()
-                        .unwrap()
+                        .expect("Should be no problem")
                         .to_string()
                         .strip_prefix(r"file://")
                     {
@@ -654,7 +669,7 @@ impl Presenter {
                             Message::None
                         })
                         .await
-                        .unwrap()
+                        .expect("Spawning a task shouldn't fail")
                     },
                     |x| x,
                 ));
@@ -677,13 +692,24 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        slide_view(&self.current_slide, &self.video, false, true)
+        slide_view(
+            &self.current_slide,
+            self.video.as_ref(),
+            false,
+            true,
+        )
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        slide_view(&self.current_slide, &self.video, false, false)
+        slide_view(
+            &self.current_slide,
+            self.video.as_ref(),
+            false,
+            false,
+        )
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
         let mut items = vec![];
         self.service.iter().enumerate().for_each(
@@ -700,7 +726,7 @@ impl Presenter {
 
                         let container = slide_view(
                             slide,
-                            &self.video,
+                            self.video.as_ref(),
                             true,
                             false,
                         );
@@ -739,18 +765,18 @@ impl Presenter {
                                     style.shadow = Shadow {
                                         color: Color::BLACK,
                                         offset: {
-                                            if is_current_slide {
-                                                Vector::new(5.0, 5.0)
-                                            } else if hovered {
+                                            if is_current_slide
+                                                || hovered
+                                            {
                                                 Vector::new(5.0, 5.0)
                                             } else {
                                                 Vector::new(0.0, 0.0)
                                             }
                                         },
                                         blur_radius: {
-                                            if is_current_slide {
-                                                10.0
-                                            } else if hovered {
+                                            if is_current_slide
+                                                || hovered
+                                            {
                                                 10.0
                                             } else {
                                                 0.0
@@ -938,8 +964,9 @@ impl Presenter {
             BackgroundKind::Video => {
                 let path = &self.current_slide.background().path;
                 if path.exists() {
-                    let url = Url::from_file_path(path).unwrap();
-                    let result = Self::create_video(url);
+                    let url = Url::from_file_path(path)
+                        .expect("There should be a video file here");
+                    let result = Self::create_video(&url);
                     match result {
                         Ok(mut v) => {
                             v.set_looping(
@@ -1028,9 +1055,13 @@ async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
 #[allow(clippy::unused_async)]
 async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     debug!(?audio);
-    let file = BufReader::new(File::open(audio).unwrap());
+    let file = BufReader::new(
+        File::open(audio)
+            .expect("There should be an audio file here"),
+    );
     debug!(?file);
-    let source = Decoder::new(file).unwrap();
+    let source = Decoder::new(file)
+        .expect("There should be an audio decoder here");
     sink.append(source);
     let empty = sink.empty();
     let paused = sink.is_paused();
@@ -1050,7 +1081,7 @@ fn scale_font(font_size: f32, width: f32) -> f32 {
 
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
-    video: &'a Option<Video>,
+    video: Option<&'a Video>,
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'a, Message> {

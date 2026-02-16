@@ -1,6 +1,6 @@
 use crate::core::model::LibraryKind;
 
-pub mod double_ended_slider;
+// pub mod double_ended_slider;
 pub mod image_editor;
 pub mod library;
 pub mod presentation_editor;

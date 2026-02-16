@@ -33,8 +33,7 @@ use cosmic::{
         dropdown,
         grid::{self},
         horizontal_space, icon, mouse_area, popover, progress_bar,
-        scrollable, spin_button, text, text_editor, text_input,
-        tooltip,
+        scrollable, text, text_editor, text_input, tooltip,
     },
 };
 use derive_more::Debug;
@@ -107,6 +106,7 @@ pub struct SongEditor {
     importing: bool,
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum Action {
     Task(Task<Message>),
     UpdateSong(Song),
@@ -189,7 +189,7 @@ impl Display for Face {
         };
         // need to figure out how to parse this out and then back into something
 
-        f.write_str(&format!("{name}{weight}{style}"))
+        write!(f, "{name}{weight}{style}")
     }
 }
 
@@ -204,7 +204,6 @@ impl SongEditor {
             })
             .map(|f| Face(f.clone()))
             .collect();
-        let stroke_sizes = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let font_sizes = vec![
             "5".to_string(),
             "6".to_string(),
@@ -928,9 +927,9 @@ impl SongEditor {
                         slide_view(
                             slide,
                             if index == 0 {
-                                &self.video
+                                self.video.as_ref()
                             } else {
-                                &None
+                                None
                             },
                             false,
                             false,
