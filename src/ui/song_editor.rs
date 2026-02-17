@@ -28,7 +28,7 @@ use cosmic::{
     theme,
     widget::{
         ColorPickerModel, RcElementWrapper, button,
-        color_picker::{self, ColorPickerUpdate},
+        color_picker::ColorPickerUpdate,
         combo_box, container, divider, dnd_destination, dnd_source,
         dropdown,
         grid::{self},
