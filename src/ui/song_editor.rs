@@ -13,7 +13,7 @@ use cosmic::{
     iced::{
         Background as ContainerBackground, Border, Color, Length,
         Padding, Shadow, Vector,
-        alignment::Vertical,
+        alignment::{Horizontal, Vertical},
         color,
         font::{Style, Weight},
         task,
@@ -1411,40 +1411,20 @@ impl SongEditor {
             tooltip::Position::Bottom,
         );
 
-        let stroke_size_row = row![
-            icon(
+        let mut stroke_tools_button = popover(tooltip(
+            button::icon(
                 icon::from_path("./res/text-outline.svg".into())
-                    .symbolic(true)
-            ),
-            dropdown(
-                &self.stroke_sizes,
-                self.song.as_ref().and_then(|song| {
-                    song.stroke_size
-                        .and_then(|size| {
-                            self.stroke_sizes.iter().position(
-                                |size_string| {
-                                    size_string
-                                        .parse::<u16>()
-                                        .expect("these are fine")
-                                        == size
-                                },
-                            )
-                        })
-                        .map_or(Some(0), Some)
-                }),
-                Message::UpdateStrokeSize,
+                    .symbolic(true),
             )
-            .gap(5.0),
-        ]
-        .spacing(3)
-        .align_y(Vertical::Center);
-
-        let stroke_size_selector = tooltip(
-            stroke_size_row,
+            .label("Text Stroke")
+            .on_press(Message::OpenStrokeColorPicker),
             "Outline of the text",
             tooltip::Position::Bottom,
-        )
-        .gap(10);
+        ))
+        .modal(false)
+        .position(popover::Position::Bottom)
+        .on_close(Message::OpenStrokeColorPicker);
+
         // let stroke_width_selector = combo_box(
         //     &self.stroke_sizes,
         //     "0",
@@ -1453,130 +1433,56 @@ impl SongEditor {
         // )
         // .width(theme::active().cosmic().space_xxl());
 
-        let stroke_color_button = color_picker::color_button(
-            Some(Message::OpenStrokeColorPicker),
-            self.stroke_color_model.get_applied_color(),
-            Length::Fixed(50.0),
-        )
-        .width(space_l)
-        .height(space_l);
-
-        let mut stroke_color_button = popover(stroke_color_button)
-            .modal(false)
-            .position(popover::Position::Bottom)
-            .on_close(Message::OpenStrokeColorPicker);
         if self.stroke_color_picker_open {
+            let stroke_size_row = row![
+                "Stroke Size: ",
+                dropdown(
+                    &self.stroke_sizes,
+                    self.song.as_ref().and_then(|song| {
+                        song.stroke_size
+                            .and_then(|size| {
+                                self.stroke_sizes.iter().position(
+                                    |size_string| {
+                                        size_string
+                                            .parse::<u16>()
+                                            .expect("these are fine")
+                                            == size
+                                    },
+                                )
+                            })
+                            .map_or(Some(0), Some)
+                    }),
+                    Message::UpdateStrokeSize,
+                )
+                .gap(5.0),
+            ]
+            .spacing(3)
+            .align_y(Vertical::Center)
+            .apply(container)
+            .padding(space_m)
+            .align_top(Length::Shrink)
+            .center_x(Length::Fill);
+
             let stroke_color_picker = self
                 .stroke_color_model
                 .builder(Message::UpdateStrokeColor)
-                .height(Length::Fixed(200.0))
-                .width(Length::Fixed(200.0))
-                .build("Recent Colors", "Copy", "Copied")
-                .apply(container)
-                .center_y(Length::Fixed(400.0))
-                .center_x(Length::Fixed(200.0))
-                .class(theme::Container::custom(
-                    floating_container_style,
-                ));
+                .height(Length::Fixed(300.0))
+                .width(Length::Fixed(400.0))
+                .build("Recent Colors", "Copy", "Copied");
+            let stroke_tools =
+                column![stroke_size_row, stroke_color_picker]
+                    .spacing(space_s)
+                    .height(Length::Fill)
+                    .apply(container)
+                    .center_y(Length::Fixed(600.0))
+                    .center_x(Length::Fixed(400.0))
+                    .class(theme::Container::custom(
+                        floating_container_style,
+                    ));
 
-            stroke_color_button =
-                stroke_color_button.popup(stroke_color_picker);
+            stroke_tools_button =
+                stroke_tools_button.popup(stroke_tools);
         }
-
-        // let shadow_color_button = color_picker::color_button(
-        //     Some(Message::OpenShadowTools),
-        //     self.shadow_color_model.get_applied_color(),
-        //     Length::Fixed(50.0),
-        // )
-        // .width(space_l)
-        // .height(space_l);
-
-        let shadow_color_picker = self
-            .shadow_color_model
-            .builder(Message::UpdateShadowColor)
-            .height(Length::Fixed(300.0))
-            .width(Length::Fixed(400.0))
-            .build("Recent Colors", "Copy", "Copied");
-
-        let shadow_size_dropdown = dropdown(
-            &self.shadow_sizes,
-            self.song.as_ref().and_then(|song| {
-                song.shadow_size
-                    .and_then(|size| {
-                        self.shadow_sizes.iter().position(
-                            |size_string| {
-                                size_string
-                                    .parse::<u16>()
-                                    .expect("these are fine")
-                                    == size
-                            },
-                        )
-                    })
-                    .map_or(Some(0), Some)
-            }),
-            Message::UpdateShadowSize,
-        )
-        .gap(5.0);
-
-        let shadow_offset_x_dropdown = dropdown(
-            &self.shadow_offset_sizes,
-            self.song.as_ref().and_then(|song| {
-                song.shadow_offset.and_then(|(offset_x, _)| {
-                    self.shadow_offset_sizes.iter().position(
-                        |x_string| {
-                            x_string
-                                .parse::<i16>()
-                                .expect("these are fine")
-                                == offset_x
-                        },
-                    )
-                })
-            }),
-            Message::UpdateShadowOffsetX,
-        )
-        .gap(5.0);
-
-        let shadow_offset_y_dropdown = dropdown(
-            &self.shadow_offset_sizes,
-            self.song.as_ref().and_then(|song| {
-                song.shadow_offset.and_then(|(_, offset_y)| {
-                    self.shadow_offset_sizes.iter().position(
-                        |y_string| {
-                            y_string
-                                .parse::<i16>()
-                                .expect("these are fine")
-                                == offset_y
-                        },
-                    )
-                })
-            }),
-            Message::UpdateShadowOffsetY,
-        )
-        .gap(5.0);
-
-        let shadow_size = row!["Size:", shadow_size_dropdown]
-            .align_y(Vertical::Center)
-            .spacing(space_s);
-        let shadow_offset_x =
-            row!["Offset X:", shadow_offset_x_dropdown]
-                .align_y(Vertical::Center)
-                .spacing(space_s);
-        let shadow_offset_y =
-            row!["Offset Y:", shadow_offset_y_dropdown]
-                .align_y(Vertical::Center)
-                .spacing(space_s);
-
-        let shadow_tools = column![
-            row![shadow_size, shadow_offset_x, shadow_offset_y]
-                .padding(space_m)
-                .width(Length::Shrink)
-                .spacing(space_s)
-                .apply(container)
-                .center_x(Length::Fill),
-            shadow_color_picker
-        ]
-        .height(Length::Fill)
-        .spacing(space_s);
 
         let mut shadow_tools_button = popover(tooltip(
             button::icon(
@@ -1594,6 +1500,94 @@ impl SongEditor {
         .on_close(Message::OpenShadowTools);
 
         if self.shadow_tools_open {
+            let shadow_color_picker = self
+                .shadow_color_model
+                .builder(Message::UpdateShadowColor)
+                .height(Length::Fixed(300.0))
+                .width(Length::Fixed(400.0))
+                .build("Recent Colors", "Copy", "Copied");
+
+            let shadow_size_dropdown = dropdown(
+                &self.shadow_sizes,
+                self.song.as_ref().and_then(|song| {
+                    song.shadow_size
+                        .and_then(|size| {
+                            self.shadow_sizes.iter().position(
+                                |size_string| {
+                                    size_string
+                                        .parse::<u16>()
+                                        .expect("these are fine")
+                                        == size
+                                },
+                            )
+                        })
+                        .map_or(Some(0), Some)
+                }),
+                Message::UpdateShadowSize,
+            )
+            .gap(5.0);
+
+            let shadow_offset_x_dropdown = dropdown(
+                &self.shadow_offset_sizes,
+                self.song.as_ref().and_then(|song| {
+                    song.shadow_offset.and_then(|(offset_x, _)| {
+                        self.shadow_offset_sizes.iter().position(
+                            |x_string| {
+                                x_string
+                                    .parse::<i16>()
+                                    .expect("these are fine")
+                                    == offset_x
+                            },
+                        )
+                    })
+                }),
+                Message::UpdateShadowOffsetX,
+            )
+            .gap(5.0);
+
+            let shadow_offset_y_dropdown = dropdown(
+                &self.shadow_offset_sizes,
+                self.song.as_ref().and_then(|song| {
+                    song.shadow_offset.and_then(|(_, offset_y)| {
+                        self.shadow_offset_sizes.iter().position(
+                            |y_string| {
+                                y_string
+                                    .parse::<i16>()
+                                    .expect("these are fine")
+                                    == offset_y
+                            },
+                        )
+                    })
+                }),
+                Message::UpdateShadowOffsetY,
+            )
+            .gap(5.0);
+
+            let shadow_size = row!["Size:", shadow_size_dropdown]
+                .align_y(Vertical::Center)
+                .spacing(space_s);
+            let shadow_offset_x =
+                row!["Offset X:", shadow_offset_x_dropdown]
+                    .align_y(Vertical::Center)
+                    .spacing(space_s);
+            let shadow_offset_y =
+                row!["Offset Y:", shadow_offset_y_dropdown]
+                    .align_y(Vertical::Center)
+                    .spacing(space_s);
+
+            let shadow_tools = column![
+                row![shadow_size, shadow_offset_x, shadow_offset_y]
+                    .padding(space_m)
+                    .width(Length::Shrink)
+                    .spacing(space_s)
+                    .apply(container)
+                    .center_x(Length::Fill),
+                shadow_color_picker
+            ]
+            .align_x(Horizontal::Center)
+            .height(Length::Fill)
+            .spacing(space_s);
+
             let shadow_tools = shadow_tools
                 .apply(container)
                 .center_y(Length::Fixed(600.0))
@@ -1779,9 +1773,7 @@ impl SongEditor {
             italic_button,
             underline_button,
             divider::vertical::default().height(space_l),
-            stroke_size_selector,
-            text::body("Stroke Color:"),
-            stroke_color_button,
+            stroke_tools_button,
             shadow_tools_button,
             divider::vertical::default().height(space_l),
             text_alignment_popup,
