@@ -1,0 +1,9 @@
+on: [push]
+jobs:
+  clippy:
+    runs-on: nixos-latest
+    steps:
+      - run: nix-env --install nodejs
+      - name: checkout
+        uses: actions/checkout@v4
+      - run: nix --extra-experimental-features nix-command --extra-experimental-features flakes develop --command cargo clippy -- -D clippy::pedantic -D clippy::perf -D clippy::nursery -D clippy::unwrap_used
