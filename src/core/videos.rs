@@ -74,11 +74,10 @@ impl Content for Video {
 
     fn subtext(&self) -> String {
         if self.path.exists() {
-            self.path
-                .file_name()
-                .map_or("Missing video".into(), |f| {
-                    f.to_string_lossy().to_string()
-                })
+            self.path.file_name().map_or_else(
+                || "Missing video".into(),
+                |f| f.to_string_lossy().to_string(),
+            )
         } else {
             "Missing video".into()
         }
@@ -95,16 +94,16 @@ impl From<&Value> for Video {
     fn from(value: &Value) -> Self {
         match value {
             Value::List(list) => {
-                let path = if let Some(path_pos) =
-                    list.iter().position(|v| {
+                let path = list
+                    .iter()
+                    .position(|v| {
                         v == &Value::Keyword(Keyword::from("source"))
-                    }) {
-                    let pos = path_pos + 1;
-                    list.get(pos)
-                        .map(|p| PathBuf::from(String::from(p)))
-                } else {
-                    None
-                };
+                    })
+                    .and_then(|path_pos| {
+                        let pos = path_pos + 1;
+                        list.get(pos)
+                            .map(|p| PathBuf::from(String::from(p)))
+                    });
 
                 let title = path.clone().map(|p| {
                     let path =
@@ -114,40 +113,41 @@ impl From<&Value> for Video {
                     title.to_string()
                 });
 
-                let start_time = if let Some(start_pos) =
-                    list.iter().position(|v| {
+                let start_time = list
+                    .iter()
+                    .position(|v| {
                         v == &Value::Keyword(Keyword::from(
                             "start-time",
                         ))
-                    }) {
-                    let pos = start_pos + 1;
-                    list.get(pos).map(|p| i32::from(p) as f32)
-                } else {
-                    None
-                };
+                    })
+                    .and_then(|start_pos| {
+                        let pos = start_pos + 1;
+                        list.get(pos).map(|p| i32::from(p) as f32)
+                    });
 
-                let end_time = if let Some(end_pos) =
-                    list.iter().position(|v| {
+                let end_time = list
+                    .iter()
+                    .position(|v| {
                         v == &Value::Keyword(Keyword::from(
                             "end-time",
                         ))
-                    }) {
-                    let pos = end_pos + 1;
-                    list.get(pos).map(|p| i32::from(p) as f32)
-                } else {
-                    None
-                };
+                    })
+                    .and_then(|end_pos| {
+                        let pos = end_pos + 1;
+                        list.get(pos).map(|p| i32::from(p) as f32)
+                    });
 
-                let looping = if let Some(loop_pos) =
-                    list.iter().position(|v| {
+                let looping = list
+                    .iter()
+                    .position(|v| {
                         v == &Value::Keyword(Keyword::from("loop"))
-                    }) {
-                    let pos = loop_pos + 1;
-                    list.get(pos)
-                        .is_some_and(|l| String::from(l) == *"true")
-                } else {
-                    false
-                };
+                    })
+                    .is_some_and(|loop_pos| {
+                        let pos = loop_pos + 1;
+                        list.get(pos).is_some_and(|l| {
+                            String::from(l) == *"true"
+                        })
+                    });
 
                 Self {
                     title: title.unwrap_or_default(),

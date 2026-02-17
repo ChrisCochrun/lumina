@@ -71,6 +71,7 @@ impl MenuAction for MenuMessage {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum Action {
     OpenItem(Option<(LibraryKind, i32)>),
     DraggedItem(ServiceItem),
@@ -141,6 +142,7 @@ impl<'a> Library {
     #[allow(clippy::cast_possible_wrap)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::match_same_arms)]
     pub fn update(&'a mut self, message: Message) -> Action {
         match message {
             Message::None => (),

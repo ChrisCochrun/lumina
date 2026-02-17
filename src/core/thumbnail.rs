@@ -16,9 +16,8 @@ pub fn bg_from_video(
     } else {
         let output_duration = Command::new("ffprobe")
             .args(["-i", &video.to_string_lossy()])
-            .output()
-            .expect("failed to execute ffprobe");
-        io::stderr().write_all(&output_duration.stderr).unwrap();
+            .output()?;
+        io::stderr().write_all(&output_duration.stderr)?;
         let mut at_second = 5;
         let mut log = str::from_utf8(&output_duration.stderr)
             .expect("Using non UTF-8 characters")

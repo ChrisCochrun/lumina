@@ -2,7 +2,7 @@ use std::{io, path::PathBuf};
 
 use crate::core::images::Image;
 use cosmic::{
-    Element, Task,
+    Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
     iced::{Length, alignment::Vertical},
     iced_widget::{column, row},
@@ -52,7 +52,7 @@ impl ImageEditor {
                 self.update_entire_image(&image);
             }
             Message::ChangeTitle(title) => {
-                self.title = title.clone();
+                self.title.clone_from(&title);
                 if let Some(image) = &self.image {
                     let mut image = image.clone();
                     image.title = title;
@@ -77,13 +77,11 @@ impl ImageEditor {
                 let task = Task::perform(
                     pick_image(),
                     move |image_result| {
-                        if let Ok(image) = image_result {
+                        image_result.map_or(Message::None, |image| {
                             let mut image = Image::from(image);
                             image.id = image_id;
                             Message::Update(image)
-                        } else {
-                            Message::None
-                        }
+                        })
                     },
                 );
                 return Action::Task(task);
@@ -95,12 +93,10 @@ impl ImageEditor {
 
     #[must_use]
     pub fn view(&self) -> Element<Message> {
-        let container = if let Some(pic) = &self.image {
-            let image = widget::image(pic.path.clone());
-            container(image)
-        } else {
-            container(Space::new(0, 0))
-        };
+        let container = self.image.as_ref().map_or_else(
+            || Space::new(0, 0).apply(container),
+            |pic| widget::image(pic.path.clone()).apply(container),
+        );
         let column = column![
             self.toolbar(),
             container.center_x(Length::FillPortion(2))
@@ -139,7 +135,7 @@ impl ImageEditor {
 
     fn update_entire_image(&mut self, image: &Image) {
         self.image = Some(image.clone());
-        self.title = image.title.clone();
+        self.title.clone_from(&image.title);
     }
 }
 
@@ -167,7 +163,9 @@ async fn pick_image() -> Result<PathBuf, ImageError> {
             error!(?e);
             ImageError::DialogClosed
         })
-        .map(|file| file.url().to_file_path().unwrap())
+        .map(|file| {
+            file.url().to_file_path().expect("Should be a file here")
+        })
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

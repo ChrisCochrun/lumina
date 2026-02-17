@@ -1,4 +1,5 @@
 #![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
 use clap::Parser;
 use core::service_items::ServiceItem;
 use core::slide::{
@@ -34,8 +35,8 @@ use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
 use cosmic::{Application, ApplicationExt, Apply, Element, executor};
 use cosmic::{cosmic_config, theme};
-use crisp::types::Value;
-use lisp::parse_lisp;
+// use crisp::types::Value;
+// use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
@@ -62,7 +63,7 @@ use crate::ui::video_editor::{self, VideoEditor};
 use crate::ui::widgets::draggable;
 
 pub mod core;
-pub mod lisp;
+// pub mod lisp;
 pub mod ui;
 
 #[derive(Debug, Parser)]
@@ -299,47 +300,48 @@ impl cosmic::Application for App {
 
         let (config_handler, settings) = (input.1, input.2);
 
-        let items = input.0.file.map_or_else(Vec::new, |file| {
-            match read_to_string(file) {
-                Ok(lisp) => {
-                    let mut service_items = vec![];
-                    let lisp = crisp::reader::read(&lisp);
-                    match lisp {
-                        Value::List(vec) => {
-                            for value in vec {
-                                let mut inner_vector =
-                                    parse_lisp(value);
-                                service_items
-                                    .append(&mut inner_vector);
-                            }
-                        }
-                        _ => todo!(),
-                    }
-                    service_items
-                }
-                Err(e) => {
-                    warn!("Missing file or could not read: {e}");
-                    vec![]
-                }
-            }
-        });
+        // let items = input.0.file.map_or_else(Vec::new, |file| {
+        //     match read_to_string(file) {
+        //         Ok(lisp) => {
+        //             let mut service_items = vec![];
+        //             let lisp = crisp::reader::read(&lisp);
+        //             match lisp {
+        //                 Value::List(vec) => {
+        //                     for value in vec {
+        //                         let mut inner_vector =
+        //                             parse_lisp(value);
+        //                         service_items
+        //                             .append(&mut inner_vector);
+        //                     }
+        //                 }
+        //                 _ => todo!(),
+        //             }
+        //             service_items
+        //         }
+        //         Err(e) => {
+        //             warn!("Missing file or could not read: {e}");
+        //             vec![]
+        //         }
+        //     }
+        // });
 
-        let items: Vec<ServiceItem> = items
-            .into_par_iter()
-            .map(|mut item| {
-                item.slides = item
-                    .slides
-                    .into_par_iter()
-                    .map(|mut slide| {
-                        text_svg::text_svg_generator(
-                            &mut slide, &fontdb,
-                        );
-                        slide
-                    })
-                    .collect();
-                item
-            })
-            .collect();
+        // let items: Vec<ServiceItem> = items
+        //     .into_par_iter()
+        //     .map(|mut item| {
+        //         item.slides = item
+        //             .slides
+        //             .into_par_iter()
+        //             .map(|mut slide| {
+        //                 text_svg::text_svg_generator(
+        //                     &mut slide, &fontdb,
+        //                 );
+        //                 slide
+        //             })
+        //             .collect();
+        //         item
+        //     })
+        //     .collect();
+        let items: Vec<ServiceItem> = vec![];
 
         let presenter = Presenter::with_items(items.clone());
         let song_editor = SongEditor::new(Arc::clone(&fontdb));
