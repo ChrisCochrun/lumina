@@ -85,7 +85,7 @@ pub struct SongEditor {
     video: Option<Video>,
     ccli: String,
     song_slides: Option<Vec<Slide>>,
-    slide_state: SlideEditor,
+    _slide_state: SlideEditor,
     stroke_sizes: [String; 16],
     shadow_sizes: [String; 16],
     shadow_offset_sizes: [String; 21],
@@ -253,7 +253,7 @@ impl SongEditor {
             background: None,
             video: None,
             ccli: String::new(),
-            slide_state: SlideEditor::default(),
+            _slide_state: SlideEditor::default(),
             song_slides: None,
             stroke_sizes: [
                 "0".to_string(),
@@ -641,7 +641,7 @@ impl SongEditor {
 
                                 let verse_name = song
                                     .verse_name_from_str(
-                                        verse_name,
+                                        &verse_name,
                                         old_verse_name,
                                     );
 

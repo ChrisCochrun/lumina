@@ -72,11 +72,10 @@ impl Content for Image {
 
     fn subtext(&self) -> String {
         if self.path.exists() {
-            self.path
-                .file_name()
-                .map_or("Missing image".into(), |f| {
-                    f.to_string_lossy().to_string()
-                })
+            self.path.file_name().map_or_else(
+                || "Missing image".into(),
+                |f| f.to_string_lossy().to_string(),
+            )
         } else {
             "Missing image".into()
         }
@@ -89,6 +88,7 @@ impl From<Value> for Image {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
 impl From<&Value> for Image {
     fn from(value: &Value) -> Self {
         match value {

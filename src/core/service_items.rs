@@ -32,7 +32,7 @@ impl Eq for ServiceItem {}
 
 impl PartialOrd for ServiceItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.id.partial_cmp(&other.id)
+        Some(self.cmp(other))
     }
 }
 
@@ -89,9 +89,11 @@ impl TryFrom<PathBuf> for ServiceItem {
         let ext = path
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or(miette::miette!(
-                "There isn't an extension on this file"
-            ))?;
+            .ok_or_else(|| {
+                miette::miette!(
+                    "There isn't an extension on this file"
+                )
+            })?;
         match ext {
             "png" | "jpg" | "jpeg" => {
                 Ok(Self::from(&Image::from(path)))
@@ -157,6 +159,8 @@ impl From<Value> for ServiceItem {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
+#[allow(clippy::match_like_matches_macro)]
 impl From<&Value> for ServiceItem {
     fn from(value: &Value) -> Self {
         match value {
@@ -280,64 +284,61 @@ impl From<Vec<ServiceItem>> for Service {
 
 impl From<&Song> for ServiceItem {
     fn from(song: &Song) -> Self {
-        if let Ok(slides) = song.to_slides() {
-            Self {
+        song.to_slides().map_or_else(
+            |_| Self {
+                kind: ServiceItemKind::Song(song.clone()),
+                database_id: song.id,
+                title: song.title.clone(),
+                ..Default::default()
+            },
+            |slides| Self {
                 kind: ServiceItemKind::Song(song.clone()),
                 database_id: song.id,
                 title: song.title.clone(),
                 slides,
                 ..Default::default()
-            }
-        } else {
-            Self {
-                kind: ServiceItemKind::Song(song.clone()),
-                database_id: song.id,
-                title: song.title.clone(),
-                ..Default::default()
-            }
-        }
+            },
+        )
     }
 }
 
 impl From<&Video> for ServiceItem {
     fn from(video: &Video) -> Self {
-        if let Ok(slides) = video.to_slides() {
-            Self {
+        video.to_slides().map_or_else(
+            |_| Self {
+                kind: ServiceItemKind::Video(video.clone()),
+                database_id: video.id,
+                title: video.title.clone(),
+                ..Default::default()
+            },
+            |slides| Self {
                 kind: ServiceItemKind::Video(video.clone()),
                 database_id: video.id,
                 title: video.title.clone(),
                 slides,
                 ..Default::default()
-            }
-        } else {
-            Self {
-                kind: ServiceItemKind::Video(video.clone()),
-                database_id: video.id,
-                title: video.title.clone(),
-                ..Default::default()
-            }
-        }
+            },
+        )
     }
 }
 
 impl From<&Image> for ServiceItem {
     fn from(image: &Image) -> Self {
-        if let Ok(slides) = image.to_slides() {
-            Self {
+        image.to_slides().map_or_else(
+            |_| Self {
+                kind: ServiceItemKind::Image(image.clone()),
+                database_id: image.id,
+                title: image.title.clone(),
+                ..Default::default()
+            },
+            |slides| Self {
                 kind: ServiceItemKind::Image(image.clone()),
                 database_id: image.id,
                 title: image.title.clone(),
                 slides,
                 ..Default::default()
-            }
-        } else {
-            Self {
-                kind: ServiceItemKind::Image(image.clone()),
-                database_id: image.id,
-                title: image.title.clone(),
-                ..Default::default()
-            }
-        }
+            },
+        )
     }
 }
 
@@ -370,13 +371,9 @@ impl From<&Presentation> for ServiceItem {
 
 #[allow(unused)]
 impl Service {
-    fn add_item(
-        &mut self,
-        item: impl Into<ServiceItem>,
-    ) -> Result<()> {
+    fn add_item(&mut self, item: impl Into<ServiceItem>) {
         let service_item: ServiceItem = item.into();
         self.items.push(service_item);
-        Ok(())
     }
 
     pub fn to_slides(&self) -> Result<Vec<Slide>> {
@@ -392,7 +389,7 @@ impl Service {
             .collect::<Vec<Slide>>();
         let mut final_slides = vec![];
         for (index, mut slide) in slides.into_iter().enumerate() {
-            slide.set_index(index as i32);
+            slide.set_index(i32::try_from(index).into_diagnostic()?);
             final_slides.push(slide);
         }
         Ok(final_slides)
@@ -455,19 +452,15 @@ mod test {
         let pres = test_presentation();
         let pres_item = ServiceItem::from(&pres);
         let mut service_model = Service::default();
-        match service_model.add_item(&song) {
-            Ok(_) => {
-                assert_eq!(
-                    ServiceItemKind::Song(song),
-                    service_model.items[0].kind
-                );
-                assert_eq!(
-                    ServiceItemKind::Presentation(pres),
-                    pres_item.kind
-                );
-                assert_eq!(service_item, service_model.items[0]);
-            }
-            Err(e) => panic!("Problem adding item: {:?}", e),
-        }
+        service_model.add_item(&song);
+        assert_eq!(
+            ServiceItemKind::Song(song),
+            service_model.items[0].kind
+        );
+        assert_eq!(
+            ServiceItemKind::Presentation(pres),
+            pres_item.kind
+        );
+        assert_eq!(service_item, service_model.items[0]);
     }
 }

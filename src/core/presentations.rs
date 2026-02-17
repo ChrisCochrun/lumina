@@ -65,27 +65,24 @@ impl From<PathBuf> for Presentation {
             .to_str()
             .unwrap_or_default()
         {
-            "pdf" => {
-                if let Ok(document) = Document::open(&value.as_path())
-                {
-                    if let Ok(count) = document.page_count() {
-                        PresKind::Pdf {
-                            starting_index: 0,
-                            ending_index: count - 1,
-                        }
-                    } else {
+            "pdf" => Document::open(&value.as_path()).map_or(
+                PresKind::Pdf {
+                    starting_index: 0,
+                    ending_index: 0,
+                },
+                |document| {
+                    document.page_count().map_or(
                         PresKind::Pdf {
                             starting_index: 0,
                             ending_index: 0,
-                        }
-                    }
-                } else {
-                    PresKind::Pdf {
-                        starting_index: 0,
-                        ending_index: 0,
-                    }
-                }
-            }
+                        },
+                        |count| PresKind::Pdf {
+                            starting_index: 0,
+                            ending_index: count - 1,
+                        },
+                    )
+                },
+            ),
             "html" => PresKind::Html,
             _ => PresKind::Generic,
         };
@@ -129,11 +126,10 @@ impl Content for Presentation {
 
     fn subtext(&self) -> String {
         if self.path.exists() {
-            self.path
-                .file_name()
-                .map_or("Missing presentation".into(), |f| {
-                    f.to_string_lossy().to_string()
-                })
+            self.path.file_name().map_or_else(
+                || "Missing presentation".into(),
+                |f| f.to_string_lossy().to_string(),
+            )
         } else {
             "Missing presentation".into()
         }
@@ -146,6 +142,7 @@ impl From<Value> for Presentation {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
 impl From<&Value> for Presentation {
     fn from(value: &Value) -> Self {
         match value {
@@ -206,15 +203,14 @@ impl ServiceTrait for Presentation {
         let pages: Vec<Handle> = pages
             .enumerate()
             .filter_map(|(index, page)| {
-                if (index as i32) < starting_index {
-                    return None;
-                } else if (index as i32) > ending_index {
+                let index = i32::try_from(index)
+                    .expect("Shouldn't be that high");
+
+                if index < starting_index || index > ending_index {
                     return None;
                 }
 
-                let Some(page) = page.ok() else {
-                    return None;
-                };
+                let page = page.ok()?;
                 let matrix = Matrix::IDENTITY;
                 let colorspace = Colorspace::device_rgb();
                 let Ok(pixmap) = page
@@ -248,7 +244,10 @@ impl ServiceTrait for Presentation {
                 .video_loop(false)
                 .video_start_time(0.0)
                 .video_end_time(0.0)
-                .pdf_index(index as u32)
+                .pdf_index(
+                    u32::try_from(index)
+                        .expect("Shouldn't get that high"),
+                )
                 .pdf_page(page)
                 .build()?;
             slides.push(slide);
@@ -334,32 +333,38 @@ impl Model<Presentation> {
                             presentation.ending_index,
                         ) {
                             PresKind::Pdf {
-                                starting_index: starting_index as i32,
-                                ending_index: ending_index as i32,
+                                starting_index: i32::try_from(
+                                    starting_index,
+                                )
+                                .expect("Shouldn't get that high"),
+                                ending_index: i32::try_from(
+                                    ending_index,
+                                )
+                                .expect("Shouldn't get that high"),
                             }
                         } else {
                             let path =
                                 PathBuf::from(presentation.path);
-                            if let Ok(document) =
-                                Document::open(path.as_path())
-                            {
-                                if let Ok(count) =
-                                    document.page_count()
-                                {
-                                    let ending_index = count - 1;
-                                    PresKind::Pdf {
-                                        starting_index: 0,
-                                        ending_index,
-                                    }
-                                } else {
-                                    PresKind::Pdf {
-                                        starting_index: 0,
-                                        ending_index: 0,
-                                    }
-                                }
-                            } else {
-                                PresKind::Generic
-                            }
+
+                            Document::open(path.as_path()).map_or(
+                                PresKind::Generic,
+                                |document| {
+                                    document.page_count().map_or(
+                                        PresKind::Pdf {
+                                            starting_index: 0,
+                                            ending_index: 0,
+                                        },
+                                        |count| {
+                                            let ending_index =
+                                                count - 1;
+                                            PresKind::Pdf {
+                                                starting_index: 0,
+                                                ending_index,
+                                            }
+                                        },
+                                    )
+                                },
+                            )
                         },
                     });
                 }
@@ -416,16 +421,16 @@ pub async fn update_presentation_in_db(
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     let mut db = db.detach();
-    let mut starting_index = 0;
-    let mut ending_index = 0;
-    if let PresKind::Pdf {
+    let (starting_index, ending_index) = if let PresKind::Pdf {
         starting_index: s_index,
         ending_index: e_index,
-    } = presentation.get_kind()
+    } =
+        presentation.get_kind()
     {
-        starting_index = *s_index;
-        ending_index = *e_index;
-    }
+        (*s_index, *e_index)
+    } else {
+        (0, 0)
+    };
     let id = presentation.id;
     if let Err(e) =
         query!("SELECT id FROM presentations where id = $1", id)

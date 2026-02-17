@@ -344,7 +344,7 @@ struct State {
     hovered: bool,
     left_pressed_position: Option<Point>,
     is_dragging: bool,
-    cached_bounds: Rectangle,
+    _cached_bounds: Rectangle,
 }
 
 impl State {

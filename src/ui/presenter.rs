@@ -27,6 +27,7 @@ use cosmic::{
         menu, mouse_area, responsive, scrollable, text,
     },
 };
+use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use tracing::{debug, error, info, warn};
@@ -41,7 +42,7 @@ use crate::{
     },
 };
 
-const REFERENCE_WIDTH: f32 = 1920.0;
+// const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 
 // #[derive(Default, Clone, Debug)]
@@ -73,8 +74,8 @@ pub(crate) enum Action {
     None,
 }
 
-#[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
+#[derive(Clone, Debug)]
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
@@ -83,7 +84,7 @@ pub(crate) enum Message {
     ClickSlide(usize, usize),
     EndVideo,
     StartVideo,
-    StartAudio,
+    // StartAudio,
     EndAudio,
     VideoPos(f32),
     VideoFrame,
@@ -95,70 +96,9 @@ pub(crate) enum Message {
     RightClickSlide(usize, usize),
     AssignObsScene(usize),
     UpdateObsScenes(Vec<Scene>),
+    #[debug("AddObsClient")]
     AddObsClient(Arc<Client>),
     AssignSlideAction(slide_actions::Action),
-}
-
-impl std::fmt::Debug for Message {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        match self {
-            Self::NextSlide => write!(f, "NextSlide"),
-            Self::PrevSlide => write!(f, "PrevSlide"),
-            Self::SlideChange(arg0) => {
-                f.debug_tuple("SlideChange").field(arg0).finish()
-            }
-            Self::ActivateSlide(arg0, arg1) => f
-                .debug_tuple("ActivateSlide")
-                .field(arg0)
-                .field(arg1)
-                .finish(),
-            Self::ClickSlide(arg0, arg1) => f
-                .debug_tuple("ClickSlide")
-                .field(arg0)
-                .field(arg1)
-                .finish(),
-            Self::EndVideo => write!(f, "EndVideo"),
-            Self::StartVideo => write!(f, "StartVideo"),
-            Self::StartAudio => write!(f, "StartAudio"),
-            Self::EndAudio => write!(f, "EndAudio"),
-            Self::VideoPos(arg0) => {
-                f.debug_tuple("VideoPos").field(arg0).finish()
-            }
-            Self::VideoFrame => write!(f, "VideoFrame"),
-            Self::MissingPlugin(arg0) => {
-                f.debug_tuple("MissingPlugin").field(arg0).finish()
-            }
-            Self::HoveredSlide(arg0) => {
-                f.debug_tuple("HoveredSlide").field(arg0).finish()
-            }
-            Self::ChangeFont(arg0) => {
-                f.debug_tuple("ChangeFont").field(arg0).finish()
-            }
-            Self::Error(arg0) => {
-                f.debug_tuple("Error").field(arg0).finish()
-            }
-            Self::None => write!(f, "None"),
-            Self::RightClickSlide(arg0, arg1) => f
-                .debug_tuple("RightClickSlide")
-                .field(arg0)
-                .field(arg1)
-                .finish(),
-            Self::AssignObsScene(arg0) => {
-                f.debug_tuple("ObsSceneAssign").field(arg0).finish()
-            }
-            Self::UpdateObsScenes(arg0) => {
-                f.debug_tuple("UpdateObsScenes").field(arg0).finish()
-            }
-            Self::AddObsClient(_) => write!(f, "AddObsClient"),
-            Self::AssignSlideAction(action) => f
-                .debug_tuple("AssignSlideAction")
-                .field(action)
-                .finish(),
-        }
-    }
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -167,8 +107,8 @@ enum MenuAction {
     ObsSceneAssign(usize),
     ObsStartStream,
     ObsStopStream,
-    ObsStartRecord,
-    ObsStopRecord,
+    // ObsStartRecord,
+    // ObsStopRecord,
 }
 
 impl menu::Action for MenuAction {
@@ -189,8 +129,8 @@ impl menu::Action for MenuAction {
                     action: ObsAction::StopStream,
                 },
             ),
-            Self::ObsStartRecord => todo!(),
-            Self::ObsStopRecord => todo!(),
+            // Self::ObsStartRecord => todo!(),
+            // Self::ObsStopRecord => todo!(),
         }
     }
 }
@@ -642,9 +582,9 @@ impl Presenter {
             Message::HoveredSlide(slide) => {
                 self.hovered_slide = slide;
             }
-            Message::StartAudio => {
-                return Action::Task(self.start_audio());
-            }
+            // Message::StartAudio => {
+            //     return Action::Task(self.start_audio());
+            // }
             Message::EndAudio => {
                 self.sink.0.stop();
             }
@@ -1008,13 +948,13 @@ impl Presenter {
     }
 }
 
-#[allow(clippy::unused_async)]
-async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
-    match client.scenes().set_current_program_scene(&scene.id).await {
-        Ok(()) => debug!("Set scene to: {:?}", scene),
-        Err(e) => error!(?e),
-    }
-}
+// #[allow(clippy::unused_async)]
+// async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
+//     match client.scenes().set_current_program_scene(&scene.id).await {
+//         Ok(()) => debug!("Set scene to: {:?}", scene),
+//         Err(e) => error!(?e),
+//     }
+// }
 
 // This needs to be async so that rodio's audio will work
 #[allow(clippy::unused_async)]
@@ -1031,17 +971,6 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     let empty = sink.empty();
     let paused = sink.is_paused();
     debug!(empty, paused, "Finished running");
-}
-
-fn scale_font(font_size: f32, width: f32) -> f32 {
-    let scale_factor = (REFERENCE_WIDTH / width).sqrt();
-    // debug!(scale_factor);
-
-    if font_size > 0.0 {
-        font_size / scale_factor
-    } else {
-        50.0
-    }
 }
 
 pub(crate) fn slide_view<'a>(

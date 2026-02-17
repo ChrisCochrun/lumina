@@ -85,8 +85,8 @@ pub enum VerseName {
 
 impl VerseName {
     #[must_use]
-    pub fn from_string(name: String) -> Self {
-        match name.as_str() {
+    pub fn from_string(name: &str) -> Self {
+        match name {
             "Verse" => Self::Verse { number: 1 },
             "Pre-Chorus" => Self::PreChorus { number: 1 },
             "Chorus" => Self::Chorus { number: 1 },
@@ -96,7 +96,7 @@ impl VerseName {
             "Outro" => Self::Outro { number: 1 },
             "Instrumental" => Self::Instrumental { number: 1 },
             "Other" => Self::Other { number: 1 },
-            "Blank" => Self::Blank,
+            // Blank is included in wildcard
             _ => Self::Blank,
         }
     }
@@ -260,7 +260,9 @@ impl Content for Song {
     }
 
     fn subtext(&self) -> String {
-        self.author.clone().unwrap_or("Author missing".into())
+        self.author
+            .clone()
+            .unwrap_or_else(|| "Author missing".into())
     }
 }
 
@@ -278,7 +280,9 @@ impl ServiceTrait for Song {
         let lyrics: Vec<String> = self
             .verses
             .as_ref()
-            .ok_or(miette!("There are no verses assigned yet."))?
+            .ok_or_else(|| {
+                miette!("There are no verses assigned yet.")
+            })?
             .iter()
             .filter_map(|verse| self.get_lyric(verse))
             .flat_map(|lyric| {
@@ -299,13 +303,12 @@ impl ServiceTrait for Song {
                             .clone()
                             .unwrap_or_else(|| "Calibri".into()),
                     )
-                    .style(
-                        self.font_style.clone().unwrap_or_default(),
-                    )
-                    .weight(
-                        self.font_weight.clone().unwrap_or_default(),
-                    )
-                    .size(self.font_size.unwrap_or(100) as u8);
+                    .style(self.font_style.unwrap_or_default())
+                    .weight(self.font_weight.unwrap_or_default())
+                    .size(
+                        u8::try_from(self.font_size.unwrap_or(100))
+                            .unwrap_or(100),
+                    );
                 let stroke_size =
                     self.stroke_size.unwrap_or_default();
                 let stroke: Stroke = stroke(
@@ -367,21 +370,10 @@ impl ServiceTrait for Song {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let lyrics: &str = row.try_get("lyrics")?;
-
-        // let Some((mut verses, mut verse_map)) =
-        //     lyrics_to_verse(lyrics.clone()).ok()
-        // else {
-        //     return Err(sqlx::Error::ColumnDecode {
-        //         index: "8".into(),
-        //         source: miette!(
-        //             "Couldn't decode the song into verses"
-        //         )
-        //         .into(),
-        //     });
-        // };
 
         let Ok(verse_map) = ron::de::from_str::<
             Option<HashMap<VerseName, String>>,
@@ -508,6 +500,9 @@ impl From<Value> for Song {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
+#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::too_many_lines)]
 pub fn lisp_to_song(list: Vec<Value>) -> Song {
     const DEFAULT_SONG_ID: i32 = 0;
     // const DEFAULT_SONG_LOCATION: usize = 0;
@@ -586,7 +581,8 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         .position(|v| v == &Value::Keyword(Keyword::from("title")))
     {
         let pos = key_pos + 1;
-        list.get(pos).map_or(String::from("song"), String::from)
+        list.get(pos)
+            .map_or_else(|| String::from("song"), String::from)
     } else {
         String::from("song")
     };
@@ -629,10 +625,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
                             || text.contains("i1")
                     }
                     _ => false,
-                } && match &inner[1] {
-                    Value::String(_) => true,
-                    _ => false,
-                })
+                } && matches!(&inner[1], Value::String(_)))
             }
             _ => false,
         })
@@ -654,7 +647,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
 
         let verse_title = match lyric_verse.as_str() {
             "i1" => r"\n\nIntro 1\n",
-            "i2" => r"\n\nIntro 1\n",
+            "i2" => r"\n\nIntro 2\n",
             "v1" => r"\n\nVerse 1\n",
             "v2" => r"\n\nVerse 2\n",
             "v3" => r"\n\nVerse 3\n",
@@ -722,7 +715,7 @@ impl Model<Song> {
 
     pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-        let db1 = db.acquire().await.unwrap();
+        let db1 = db.acquire().await.expect("Database not found");
         let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs").fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
@@ -766,16 +759,14 @@ pub async fn add_song_to_db(
     let mut song = Song::default();
 
     let verse_order = {
-        if let Some(vo) = song.verse_order.clone() {
+        song.verse_order.clone().map_or_else(String::new, |vo| {
             vo.into_iter()
                 .map(|mut s| {
                     s.push(' ');
                     s
                 })
                 .collect::<String>()
-        } else {
-            String::new()
-        }
+        })
     };
 
     let audio = song
@@ -803,7 +794,9 @@ pub async fn add_song_to_db(
     .execute(&mut db)
     .await
     .into_diagnostic()?;
-    song.id = res.last_insert_rowid() as i32;
+    song.id = i32::try_from(res.last_insert_rowid()).expect(
+        "Fairly confident that this number won't get that high",
+    );
     Ok(song)
 }
 
@@ -921,7 +914,7 @@ impl Song {
             verse_map
                 .entry(*verse)
                 .and_modify(|old_lyrics| {
-                    *old_lyrics = lyric_copy.clone();
+                    old_lyrics.clone_from(&lyric_copy);
                 })
                 .or_insert(lyric_copy);
             // debug!(?verse_map, "should be updated");
@@ -935,10 +928,6 @@ impl Song {
     }
 
     pub fn get_lyrics(&self) -> Result<Vec<String>> {
-        // ---------------------------------
-        // new implementation
-        // ---------------------------------
-
         if let Some(verses) = self.verses.as_ref() {
             let mut lyrics = vec![];
             for verse in verses {
@@ -952,73 +941,7 @@ impl Song {
             }
             return Ok(lyrics);
         }
-        return Err(miette!("No verses in this song yet"));
-
-        // ---------------------------------
-        // old implementation
-        // ---------------------------------
-
-        // let mut lyric_list = Vec::new();
-        // if self.lyrics.is_none() {
-        //     return Err(miette!("There is no lyrics here"));
-        // } else if self.verse_order.is_none() {
-        //     return Err(miette!("There is no verse_order here"));
-        // } else if self
-        //     .verse_order
-        //     .clone()
-        //     .is_some_and(|v| v.is_empty())
-        // {
-        //     return Err(miette!("There is no verse_order here"));
-        // }
-        // if let Some(raw_lyrics) = self.lyrics.clone() {
-        //     let raw_lyrics = raw_lyrics.as_str();
-        //     let verse_order = self.verses.clone();
-
-        //     let mut lyric_map = HashMap::new();
-        //     let mut verse_title = String::new();
-        //     let mut lyric = String::new();
-        //     for (i, line) in raw_lyrics.split('\n').enumerate() {
-        //         if VERSE_KEYWORDS.contains(&line) {
-        //             if i != 0 {
-        //                 lyric_map.insert(verse_title, lyric);
-        //                 lyric = String::new();
-        //                 verse_title = line.to_string();
-        //             } else {
-        //                 verse_title = line.to_string();
-        //             }
-        //         } else {
-        //             lyric.push_str(line);
-        //             lyric.push('\n');
-        //         }
-        //     }
-        //     lyric_map.insert(verse_title, lyric);
-
-        //     for verse in verse_order.unwrap_or_default() {
-        //         let verse_name = &verse.get_name();
-        //         if let Some(lyric) = lyric_map.get(verse_name) {
-        //             if lyric.contains("\n\n") {
-        //                 let split_lyrics: Vec<&str> =
-        //                     lyric.split("\n\n").collect();
-        //                 for lyric in split_lyrics {
-        //                     if lyric.is_empty() {
-        //                         continue;
-        //                     }
-        //                     lyric_list.push(lyric.to_string());
-        //                 }
-        //                 continue;
-        //             }
-        //             lyric_list.push(lyric.clone());
-        //         } else {
-        //             // error!("NOT WORKING!");
-        //         }
-        //     }
-        //     // for lyric in lyric_list.iter() {
-        //     //     debug!(lyric = ?lyric)
-        //     // }
-        //     Ok(lyric_list)
-        // } else {
-        //     Err(miette!("There are no lyrics"))
-        // }
+        Err(miette!("No verses in this song yet"))
     }
 
     pub fn update_verse_name(
@@ -1123,39 +1046,28 @@ impl Song {
     #[must_use]
     pub fn get_next_verse_name(&self) -> VerseName {
         if let Some(verse_names) = &self.verses {
-            let verses: Vec<&VerseName> = verse_names
+            let verses = verse_names
                 .iter()
-                .filter(|verse| match verse {
-                    VerseName::Verse { .. } => true,
-                    _ => false,
+                .filter(|verse| {
+                    matches!(verse, VerseName::Verse { .. })
                 })
-                .sorted()
-                .collect();
-            let choruses: Vec<&VerseName> = verse_names
-                .iter()
-                .filter(|verse| match verse {
-                    VerseName::Chorus { .. } => true,
-                    _ => false,
-                })
-                .collect();
-            let bridges: Vec<&VerseName> = verse_names
-                .iter()
-                .filter(|verse| match verse {
-                    VerseName::Bridge { .. } => true,
-                    _ => false,
-                })
-                .collect();
-            if verses.is_empty() {
+                .sorted();
+            let mut choruses = verse_names.iter().filter(|verse| {
+                matches!(verse, VerseName::Chorus { .. })
+            });
+            let mut bridges = verse_names.iter().filter(|verse| {
+                matches!(verse, VerseName::Bridge { .. })
+            });
+            if verses.len() == 0 {
                 VerseName::Verse { number: 1 }
-            } else if choruses.is_empty() {
+            } else if choruses.next().is_none() {
                 VerseName::Chorus { number: 1 }
             } else if verses.len() == 1 {
                 let verse_number =
-                    if let Some(last_verse) = verses.iter().last() {
-                        match last_verse {
-                            VerseName::Verse { number } => *number,
-                            _ => 0,
-                        }
+                    if let Some(VerseName::Verse { number }) =
+                        verses.last()
+                    {
+                        *number
                     } else {
                         0
                     };
@@ -1163,10 +1075,10 @@ impl Song {
                     return VerseName::Verse { number: 1 };
                 }
                 VerseName::Verse { number: 2 }
-            } else if bridges.is_empty() {
+            } else if bridges.next().is_none() {
                 VerseName::Bridge { number: 1 }
             } else {
-                if let Some(last_verse) = verses.iter().last()
+                if let Some(last_verse) = verses.last()
                     && let VerseName::Verse { number } = last_verse
                 {
                     return VerseName::Verse { number: number + 1 };
@@ -1194,17 +1106,15 @@ impl Song {
 
     pub(crate) fn verse_name_from_str(
         &self,
-        verse_name: String,        // chorus 2
+        verse_name: &str,          // chorus 2
         old_verse_name: VerseName, // v4
     ) -> VerseName {
         if old_verse_name.get_name() == verse_name {
             return old_verse_name;
         }
-        if let Some(verses) =
-            self.verse_map.clone().map(|verse_map| {
+        self.verse_map.clone().map(|verse_map| {
                 verse_map.into_keys().collect::<Vec<VerseName>>()
-            })
-        {
+            }).map_or_else(|| VerseName::from_string(verse_name), |verses| {
             verses
                 .into_iter()
                 .filter(|verse| {
@@ -1212,7 +1122,7 @@ impl Song {
                         .get_name()
                         .split_whitespace()
                         .next()
-                        .unwrap()
+                        .expect("Shouldn't fail, the get_name() fn won't return a string that is blank or all whitespace")
                         == verse_name
                 })
                 .sorted()
@@ -1221,9 +1131,7 @@ impl Song {
                     || VerseName::from_string(verse_name),
                     |verse_name| verse_name.next(),
                 )
-        } else {
-            VerseName::from_string(verse_name)
-        }
+        })
     }
 
     pub(crate) fn delete_verse(&mut self, verse: VerseName) {

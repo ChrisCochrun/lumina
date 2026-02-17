@@ -90,6 +90,7 @@ impl From<Value> for Video {
     }
 }
 
+#[allow(clippy::cast_precision_loss)]
 impl From<&Value> for Video {
     fn from(value: &Value) -> Self {
         match value {

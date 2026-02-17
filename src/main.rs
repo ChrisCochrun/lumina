@@ -41,7 +41,6 @@ use miette::{IntoDiagnostic, Result, miette};
 use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
-use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{debug, level_filters::LevelFilter};

@@ -8,7 +8,7 @@ use cosmic::iced_wgpu::Primitive;
 use cosmic::iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 
 pub struct SlideText {
-    text: String,
+    _text: String,
     font_size: f32,
 }
 
@@ -16,7 +16,7 @@ impl SlideText {
     pub fn new(text: impl AsRef<str>) -> Self {
         let text = text.as_ref();
         Self {
-            text: text.to_string(),
+            _text: text.to_string(),
             font_size: 50.0,
         }
     }
@@ -88,8 +88,8 @@ where
 
 #[derive(Debug, Clone)]
 pub(crate) struct TextPrimitive {
-    text_id: u64,
-    size: (u32, u32),
+    _text_id: u64,
+    _size: (u32, u32),
 }
 
 impl TextPrimitive {

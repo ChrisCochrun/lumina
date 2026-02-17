@@ -136,12 +136,15 @@ impl TryFrom<PathBuf> for Background {
     type Error = ParseError;
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let path = if path.starts_with("~") {
-            let path = path.to_str().unwrap().to_string();
+            let path = path
+                .to_str()
+                .expect("Should have a string")
+                .to_string();
             let path = path.trim_start_matches("file://");
             let home = dirs::home_dir()
-                .unwrap()
+                .expect("We should have a home directory")
                 .to_str()
-                .unwrap()
+                .expect("Gah")
                 .to_string();
             let path = path.replace('~', &home);
             PathBuf::from(path)
@@ -189,16 +192,18 @@ impl TryFrom<&str> for Background {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = value.trim_start_matches("file://");
         if value.starts_with('~') {
-            if let Some(home) = dirs::home_dir() {
-                if let Some(home) = home.to_str() {
-                    let value = value.replace('~', home);
-                    Self::try_from(PathBuf::from(value))
-                } else {
-                    Self::try_from(PathBuf::from(value))
-                }
-            } else {
-                Self::try_from(PathBuf::from(value))
-            }
+            dirs::home_dir().map_or_else(
+                || Self::try_from(PathBuf::from(value)),
+                |home| {
+                    home.to_str().map_or_else(
+                        || Self::try_from(PathBuf::from(value)),
+                        |home| {
+                            let value = value.replace('~', home);
+                            Self::try_from(PathBuf::from(value))
+                        },
+                    )
+                },
+            )
         } else if value.starts_with("./") {
             Err(ParseError::CannotCanonicalize)
         } else {
@@ -262,95 +267,116 @@ impl From<&Slide> for Value {
 }
 
 impl Slide {
+    #[must_use]
     pub fn set_text(mut self, text: impl AsRef<str>) -> Self {
         self.text = text.as_ref().into();
         self
     }
 
+    #[must_use]
     pub fn with_text_svg(mut self, text_svg: TextSvg) -> Self {
         self.text_svg = Some(text_svg);
         self
     }
 
+    #[must_use]
     pub fn set_font(mut self, font: impl AsRef<str>) -> Self {
         self.font = Some(font.as_ref().into());
         self
     }
 
+    #[must_use]
     pub const fn set_font_size(mut self, font_size: i32) -> Self {
         self.font_size = font_size;
         self
     }
 
+    #[must_use]
     pub fn set_audio(mut self, audio: Option<PathBuf>) -> Self {
         self.audio = audio;
         self
     }
 
+    #[must_use]
     pub const fn set_pdf_index(mut self, pdf_index: u32) -> Self {
         self.pdf_index = pdf_index;
         self
     }
 
+    #[must_use]
     pub const fn set_stroke(mut self, stroke: Stroke) -> Self {
         self.stroke = Some(stroke);
         self
     }
 
+    #[must_use]
     pub const fn set_shadow(mut self, shadow: Shadow) -> Self {
         self.shadow = Some(shadow);
         self
     }
 
+    #[must_use]
     pub const fn set_text_color(mut self, color: Color) -> Self {
         self.text_color = Some(color);
         self
     }
 
+    #[must_use]
     pub const fn background(&self) -> &Background {
         &self.background
     }
 
+    #[must_use]
     pub fn text(&self) -> String {
         self.text.clone()
     }
 
+    #[must_use]
     pub const fn text_alignment(&self) -> TextAlignment {
         self.text_alignment
     }
 
+    #[must_use]
     pub const fn font_size(&self) -> i32 {
         self.font_size
     }
 
+    #[must_use]
     pub fn font(&self) -> Option<Font> {
         self.font.clone()
     }
 
+    #[must_use]
     pub const fn video_loop(&self) -> bool {
         self.video_loop
     }
 
+    #[must_use]
     pub fn audio(&self) -> Option<PathBuf> {
         self.audio.clone()
     }
 
+    #[must_use]
     pub fn pdf_page(&self) -> Option<Handle> {
         self.pdf_page.clone()
     }
 
+    #[must_use]
     pub fn text_color(&self) -> Option<Color> {
         self.text_color.clone()
     }
 
+    #[must_use]
     pub fn stroke(&self) -> Option<Stroke> {
         self.stroke.clone()
     }
 
+    #[must_use]
     pub fn shadow(&self) -> Option<Shadow> {
         self.shadow.clone()
     }
 
+    #[must_use]
     pub const fn pdf_index(&self) -> u32 {
         self.pdf_index
     }
@@ -405,7 +431,8 @@ impl From<&Value> for Slide {
     }
 }
 
-fn lisp_to_slide(lisp: &Vec<Value>) -> Slide {
+#[allow(clippy::option_if_let_else)]
+fn lisp_to_slide(lisp: &[Value]) -> Slide {
     const DEFAULT_BACKGROUND_LOCATION: usize = 1;
     const DEFAULT_TEXT_LOCATION: usize = 0;
 
@@ -469,6 +496,7 @@ fn lisp_to_slide(lisp: &Vec<Value>) -> Slide {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
 fn lisp_to_font_size(lisp: &Value) -> i32 {
     match lisp {
         Value::List(list) => {
@@ -501,6 +529,7 @@ fn lisp_to_text(lisp: &Value) -> impl Into<String> {
 
 // Need to return a Result here so that we can propogate
 // errors and then handle them appropriately
+#[allow(clippy::option_if_let_else)]
 pub fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {

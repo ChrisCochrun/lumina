@@ -35,10 +35,7 @@ pub async fn search_online_song_links(
 
     Ok(document
         .select(&best_matches_selector)
-        .filter_map(|best_section| {
-            Some(best_section.select(&lyric_selector))
-        })
-        .flatten()
+        .flat_map(|best_section| best_section.select(&lyric_selector))
         .map(|a| {
             a.value().attr("href").unwrap_or("").trim().to_string()
         })
@@ -52,13 +49,17 @@ pub async fn search_online_song_links(
         .collect())
 }
 
+// leaving this lint unfixed because I don't know if we will need this
+// id value or not in the future and I'd like to keep the code understanding
+// of what this variable might be.
+#[allow(clippy::no_effect_underscore_binding)]
 pub async fn link_to_online_song(
     links: Vec<impl AsRef<str> + std::fmt::Display>,
 ) -> Result<Vec<OnlineSong>> {
     let mut songs = vec![];
     for link in links {
         let parts = link
-            .to_string()
+            .as_ref()
             .split('/')
             .map(std::string::ToString::to_string)
             .collect::<Vec<String>>();

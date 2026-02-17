@@ -13,13 +13,13 @@ use tracing::debug;
 
 #[derive(Debug, Default)]
 struct State {
-    cache: canvas::Cache,
+    _cache: canvas::Cache,
 }
 
 #[derive(Debug, Default)]
 pub struct SlideEditor {
-    state: State,
-    font: Font,
+    _state: State,
+    _font: Font,
     program: EditorProgram,
 }
 
@@ -35,11 +35,11 @@ pub enum Message {
 }
 
 pub struct Text {
-    text: String,
+    _text: String,
 }
 
 pub struct Image {
-    source: PathBuf,
+    _source: PathBuf,
 }
 
 pub enum SlideWidget {
@@ -55,7 +55,7 @@ pub enum SlideError {
 
 #[derive(Debug, Default)]
 struct EditorProgram {
-    mouse_button_pressed: Option<cosmic::iced::mouse::Button>,
+    _mouse_button_pressed: Option<cosmic::iced::mouse::Button>,
 }
 
 impl SlideEditor {

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, mem::replace, path::PathBuf};
+use std::{borrow::Cow, fs, mem::replace, path::PathBuf};
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::{IntoDiagnostic, Result, miette};
@@ -84,26 +84,36 @@ impl<T> Model<T> {
     }
 
     pub fn update_item(&mut self, item: T, index: i32) -> Result<()> {
-        if let Some(current_item) = self.items.get_mut(index as usize)
-        {
-            let _old_item = replace(current_item, item);
-            Ok(())
-        } else {
-            Err(miette!(
-                "Item doesn't exist in model. Id was {}",
-                index
-            ))
-        }
+        self.items
+            .get_mut(
+                usize::try_from(index)
+                    .expect("Shouldn't be negative"),
+            )
+            .map_or_else(
+                || {
+                    Err(miette!(
+                        "Item doesn't exist in model. Id was {index}"
+                    ))
+                },
+                |current_item| {
+                    let _old_item = replace(current_item, item);
+                    Ok(())
+                },
+            )
     }
 
     pub fn remove_item(&mut self, index: i32) -> Result<()> {
-        self.items.remove(index as usize);
+        self.items.remove(
+            usize::try_from(index).expect("Shouldn't be negative"),
+        );
         Ok(())
     }
 
     #[must_use]
     pub fn get_item(&self, index: i32) -> Option<&T> {
-        self.items.get(index as usize)
+        self.items.get(
+            usize::try_from(index).expect("shouldn't be negative"),
+        )
     }
 
     pub fn find<P>(&self, f: P) -> Option<&T>
@@ -114,7 +124,10 @@ impl<T> Model<T> {
     }
 
     pub fn insert_item(&mut self, item: T, index: i32) -> Result<()> {
-        self.items.insert(index as usize, item);
+        self.items.insert(
+            usize::try_from(index).expect("Shouldn't be negative"),
+            item,
+        );
         Ok(())
     }
 }
@@ -131,11 +144,13 @@ impl<T> Model<T> {
 // }
 
 pub async fn get_db() -> SqliteConnection {
-    let mut data = dirs::data_local_dir().unwrap();
+    let mut data = dirs::data_local_dir()
+        .expect("Should be able to find a data dir");
     data.push("lumina");
+    let _ = fs::create_dir_all(&data);
     data.push("library-db.sqlite3");
     let mut db_url = String::from("sqlite://");
-    db_url.push_str(data.to_str().unwrap());
+    db_url.push_str(data.to_str().expect("Should be there"));
     SqliteConnection::connect(&db_url).await.expect("problems")
 }
 

@@ -13,6 +13,7 @@ use tar::Builder;
 use tracing::error;
 use zstd::Encoder;
 
+#[allow(clippy::too_many_lines)]
 pub fn save(
     list: Vec<ServiceItem>,
     path: impl AsRef<Path>,
@@ -23,7 +24,7 @@ pub fn save(
         fs::remove_file(path).into_diagnostic()?;
     }
     let save_file = File::create(path).into_diagnostic()?;
-    let ron = process_service_items(&list)?;
+    let ron = process_service_items(&list);
 
     let encoder = Encoder::new(save_file, 3)
         .expect("file encoder shouldn't fail")
@@ -58,7 +59,7 @@ pub fn save(
                 }
             }
             match tar.append_file("serviceitems.ron", &mut f) {
-                Ok(_) => {
+                Ok(()) => {
                     dbg!(
                         "should have added serviceitems.ron to the file"
                     );
@@ -125,7 +126,7 @@ pub fn save(
     }
 
     match tar.finish() {
-        Ok(_) => (),
+        Ok(()) => (),
         Err(e) => {
             error!(?e);
             dbg!(&e);
@@ -135,11 +136,11 @@ pub fn save(
     fs::remove_dir_all(temp_dir).into_diagnostic()
 }
 
-fn process_service_items(items: &Vec<ServiceItem>) -> Result<String> {
-    Ok(items
+fn process_service_items(items: &[ServiceItem]) -> String {
+    items
         .iter()
         .filter_map(|item| ron::ser::to_string(item).ok())
-        .collect())
+        .collect()
 }
 
 #[cfg(test)]

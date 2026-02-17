@@ -28,9 +28,11 @@ impl TryFrom<PathBuf> for ServiceItemKind {
         let ext = path
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or(miette::miette!(
-                "There isn't an extension on this file"
-            ))?;
+            .ok_or_else(|| {
+                miette::miette!(
+                    "There isn't an extension on this file"
+                )
+            })?;
         match ext {
             "png" | "jpg" | "jpeg" => {
                 Ok(Self::Image(Image::from(path)))
