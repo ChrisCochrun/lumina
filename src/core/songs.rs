@@ -21,16 +21,14 @@ use tracing::{debug, error};
 
 use crate::{
     Slide, SlideBuilder,
-    core::slide,
+    core::{
+        content::Content,
+        kinds::ServiceItemKind,
+        model::{LibraryKind, Model},
+        service_items::ServiceTrait,
+        slide::{self, Background, TextAlignment},
+    },
     ui::text_svg::{Color, Font, Stroke, shadow, stroke},
-};
-
-use super::{
-    content::Content,
-    kinds::ServiceItemKind,
-    model::{LibraryKind, Model},
-    service_items::ServiceTrait,
-    slide::{Background, TextAlignment},
 };
 
 #[derive(
@@ -1240,7 +1238,7 @@ impl Song {
 
 #[cfg(test)]
 mod test {
-    use std::{fs::read_to_string, sync::Arc};
+    use std::sync::Arc;
 
     use crate::ui::text_svg::text_svg_generator_with_cache;
 
