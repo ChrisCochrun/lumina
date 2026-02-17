@@ -632,6 +632,14 @@ impl SongEditor {
                                 },
                             ));
                         }
+                        verse_editor::Action::ScrollVerses(
+                            pixels,
+                        ) => {
+                            //
+                            //
+                            //
+                            ()
+                        }
                         verse_editor::Action::UpdateVerseName(
                             verse_name,
                         ) => {

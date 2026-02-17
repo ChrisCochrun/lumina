@@ -35,6 +35,7 @@ pub enum Action {
     UpdateVerse((VerseName, String)),
     UpdateVerseName(String),
     DeleteVerse(VerseName),
+    ScrollVerses(f32),
     None,
 }
 
@@ -53,18 +54,27 @@ impl VerseEditor {
     }
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::UpdateLyric(action) => {
-                self.content.perform(action.clone());
-                match action {
-                    text_editor::Action::Edit(_edit) => {
-                        let lyrics = self.content.text();
-                        self.lyric.clone_from(&lyrics);
-                        let verse = self.verse_name;
-                        Action::UpdateVerse((verse, lyrics))
-                    }
-                    _ => Action::None,
+            Message::UpdateLyric(action) => match action {
+                text_editor::Action::Edit(ref _edit) => {
+                    self.content.perform(action.clone());
+                    let lyrics = self.content.text();
+                    self.lyric.clone_from(&lyrics);
+                    let verse = self.verse_name;
+                    Action::UpdateVerse((verse, lyrics))
                 }
-            }
+                text_editor::Action::Scroll { pixels } => {
+                    if self.content.line_count() > 6 {
+                        self.content.perform(action.clone());
+                        Action::None
+                    } else {
+                        Action::ScrollVerses(pixels)
+                    }
+                }
+                _ => {
+                    self.content.perform(action.clone());
+                    Action::None
+                }
+            },
             Message::UpdateVerseName(verse_name) => {
                 Action::UpdateVerseName(verse_name)
             }
