@@ -447,7 +447,7 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.font = Some(font.0.families[0].0.clone());
                     let song = song.to_owned();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeFontStyle => {
@@ -466,7 +466,7 @@ impl SongEditor {
                         song.font_style = Some(Style::Italic);
                     }
                     let song = song.clone();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeFontWeight => {
@@ -485,7 +485,7 @@ impl SongEditor {
                         song.font_weight = Some(Weight::Bold);
                     }
                     let song = song.clone();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeFontSize(size) => {
@@ -494,7 +494,7 @@ impl SongEditor {
                     if let Some(song) = &mut self.song {
                         song.font_size = i32::try_from(size).ok();
                         let song = song.to_owned();
-                        return Action::Task(self.update_song(song));
+                        return Action::Task(self.update_song(&song));
                     }
                 }
             }
@@ -503,7 +503,7 @@ impl SongEditor {
                 if let Some(song) = &mut self.song {
                     song.title = title;
                     let song = song.to_owned();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeVerseOrder(verse_order) => {
@@ -514,7 +514,7 @@ impl SongEditor {
                         .map(std::borrow::ToOwned::to_owned)
                         .collect();
                     song.verse_order = Some(verse_order);
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeLyrics(action) => {
@@ -524,7 +524,7 @@ impl SongEditor {
 
                 if let Some(mut song) = self.song.clone() {
                     song.lyrics = Some(lyrics);
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::Edit(edit) => {
@@ -536,7 +536,7 @@ impl SongEditor {
                 self.author.clone_from(&author);
                 if let Some(mut song) = self.song.clone() {
                     song.author = Some(author);
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeBackground(Ok(path)) => {
@@ -545,7 +545,7 @@ impl SongEditor {
                     let background = Background::try_from(path).ok();
                     self.background_video(background.as_ref());
                     song.background = background;
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeBackground(Err(error)) => {
@@ -571,7 +571,7 @@ impl SongEditor {
                     song.stroke_size =
                         if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateStrokeColor(update) => {
@@ -583,7 +583,7 @@ impl SongEditor {
                 {
                     debug!(?color);
                     song.stroke_color = Some(color.into());
-                    tasks.push(self.update_song(song));
+                    tasks.push(self.update_song(&song));
                 }
                 return Action::Task(Task::batch(tasks));
             }
@@ -657,7 +657,7 @@ impl SongEditor {
                                 );
 
                                 return Action::Task(
-                                    self.update_song(song),
+                                    self.update_song(&song),
                                 );
                             }
                         }
@@ -672,7 +672,7 @@ impl SongEditor {
                                 //     index, verse, lyric,
                                 // );
                                 return Action::Task(
-                                    self.update_song(song),
+                                    self.update_song(&song),
                                 );
                             }
                         }
@@ -692,7 +692,7 @@ impl SongEditor {
                                     verses.remove(verse);
                                 }
                                 return Action::Task(
-                                    self.update_song(song),
+                                    self.update_song(&song),
                                 );
                             }
                         }
@@ -716,7 +716,7 @@ impl SongEditor {
                 }
                 if let Some(mut song) = self.song.clone() {
                     song.add_verse(verse, lyric);
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::RemoveVerse(index) => {
@@ -727,7 +727,7 @@ impl SongEditor {
                             verses.remove(index);
                         },
                     );
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChipHovered(index) => {
@@ -746,7 +746,7 @@ impl SongEditor {
                                 verses.insert(index, verse);
                                 let song = song.clone();
                                 return Action::Task(
-                                    self.update_song(song),
+                                    self.update_song(&song),
                                 );
                             }
                             error!("No verses in this song?");
@@ -769,7 +769,7 @@ impl SongEditor {
                             verses.push(verse);
                             let song = song.clone();
                             return Action::Task(
-                                self.update_song(song),
+                                self.update_song(&song),
                             );
                         }
                         error!(
@@ -793,7 +793,7 @@ impl SongEditor {
                         let verse = verses.remove(index);
                         verses.insert(target_index, verse);
                         debug!(?verses);
-                        return Action::Task(self.update_song(song));
+                        return Action::Task(self.update_song(&song));
                     }
                 }
                 draggable::DragEvent::Picked { .. }
@@ -808,7 +808,7 @@ impl SongEditor {
             Message::SetTextAlignment(alignment) => {
                 if let Some(mut song) = self.song.clone() {
                     song.text_alignment = Some(alignment);
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateShadowSize(index) => {
@@ -820,7 +820,7 @@ impl SongEditor {
                     song.shadow_size =
                         if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateShadowOffsetX(index) => {
@@ -837,7 +837,7 @@ impl SongEditor {
                     } else {
                         song.shadow_offset = Some((x, 0));
                     }
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateShadowOffsetY(index) => {
@@ -854,7 +854,7 @@ impl SongEditor {
                     } else {
                         song.shadow_offset = Some((0, y));
                     }
-                    return Action::Task(self.update_song(song));
+                    return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateShadowColor(update) => {
@@ -866,7 +866,7 @@ impl SongEditor {
                 {
                     debug!(?color);
                     song.shadow_color = Some(color.into());
-                    tasks.push(self.update_song(song));
+                    tasks.push(self.update_song(&song));
                 }
                 return Action::Task(Task::batch(tasks));
             }
@@ -1419,16 +1419,18 @@ impl SongEditor {
             dropdown(
                 &self.stroke_sizes,
                 self.song.as_ref().and_then(|song| {
-                    song.stroke_size.and_then(|size| {
-                        self.stroke_sizes.iter().position(
-                            |size_string| {
-                                size_string
-                                    .parse::<u16>()
-                                    .expect("these are fine")
-                                    == size
-                            },
-                        )
-                    })
+                    song.stroke_size
+                        .and_then(|size| {
+                            self.stroke_sizes.iter().position(
+                                |size_string| {
+                                    size_string
+                                        .parse::<u16>()
+                                        .expect("these are fine")
+                                        == size
+                                },
+                            )
+                        })
+                        .map_or(Some(0), Some)
                 }),
                 Message::UpdateStrokeSize,
             )
@@ -1499,14 +1501,18 @@ impl SongEditor {
         let shadow_size_dropdown = dropdown(
             &self.shadow_sizes,
             self.song.as_ref().and_then(|song| {
-                song.shadow_size.and_then(|size| {
-                    self.shadow_sizes.iter().position(|size_string| {
-                        size_string
-                            .parse::<u16>()
-                            .expect("these are fine")
-                            == size
+                song.shadow_size
+                    .and_then(|size| {
+                        self.shadow_sizes.iter().position(
+                            |size_string| {
+                                size_string
+                                    .parse::<u16>()
+                                    .expect("these are fine")
+                                    == size
+                            },
+                        )
                     })
-                })
+                    .map_or(Some(0), Some)
             }),
             Message::UpdateShadowSize,
         )
@@ -1533,7 +1539,7 @@ impl SongEditor {
         let shadow_offset_y_dropdown = dropdown(
             &self.shadow_offset_sizes,
             self.song.as_ref().and_then(|song| {
-                song.shadow_offset.and_then(|(offset_y, _)| {
+                song.shadow_offset.and_then(|(_, offset_y)| {
                     self.shadow_offset_sizes.iter().position(
                         |y_string| {
                             y_string
@@ -1801,7 +1807,7 @@ impl SongEditor {
 
     // fn update_verse_slide_subscription(&self)
 
-    fn update_song(&mut self, song: Song) -> Task<Message> {
+    fn update_song(&mut self, song: &Song) -> Task<Message> {
         // use cosmic::iced_futures::futures::stream;
         // use cosmic::iced_futures::futures::{Stream, StreamExt};
         // use cosmic::iced_futures::stream::channel;
@@ -1873,7 +1879,7 @@ impl SongEditor {
             self.update_slide_handle = Some(handle);
             tasks.push(task);
         }
-        tasks.push(Task::done(Message::UpdateSong(song)));
+        tasks.push(Task::done(Message::UpdateSong(song.clone())));
 
         Task::batch(tasks)
     }

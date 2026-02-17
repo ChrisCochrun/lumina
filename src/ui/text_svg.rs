@@ -22,7 +22,7 @@ use resvg::{
     usvg::{Tree, fontdb},
 };
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::TextAlignment;
 
@@ -580,7 +580,7 @@ pub fn text_svg_generator_with_cache(
             text_svg
         };
         let text_svg = text_svg.font(font).fontdb(Arc::clone(fontdb));
-        debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
+        // debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
         let text_svg =
             text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
@@ -598,7 +598,7 @@ mod tests {
     #[test]
     fn test_generator() {
         let slide = Slide::default();
-
+        debug!("test");
         let mut fontdb = Database::new();
         fontdb.load_system_fonts();
         let fontdb = Arc::new(fontdb);

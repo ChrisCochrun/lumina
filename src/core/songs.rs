@@ -436,6 +436,18 @@ impl FromRow<'_, SqliteRow> for Song {
             _ => None,
         };
 
+        let style_string: String = row.try_get("style")?;
+        let font_style =
+            ron::de::from_str::<Option<Style>>(&style_string)
+                .ok()
+                .flatten();
+
+        let weight_string: String = row.try_get("weight")?;
+        let font_weight =
+            ron::de::from_str::<Option<Weight>>(&weight_string)
+                .ok()
+                .flatten();
+
         Ok(Self {
             id: row.try_get("id")?,
             title: row.try_get("title")?,
@@ -479,6 +491,8 @@ impl FromRow<'_, SqliteRow> for Song {
             }),
             font: row.try_get("font")?,
             font_size: row.try_get("font_size")?,
+            font_style,
+            font_weight,
             stroke_size,
             stroke_color,
             shadow_size,
@@ -698,7 +712,7 @@ pub async fn get_song_from_db(
     index: i32,
     db: &mut SqliteConnection,
 ) -> Result<Song> {
-    let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, id from songs where id = $1").bind(index).fetch_one(db).await.into_diagnostic()?;
+    let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, style, weight, id from songs where id = $1").bind(index).fetch_one(db).await.into_diagnostic()?;
     Song::from_row(&row).into_diagnostic()
 }
 
@@ -716,7 +730,7 @@ impl Model<Song> {
     pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
         let db1 = db.acquire().await.expect("Database not found");
-        let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, id from songs").fetch_all(&mut db1.detach()).await;
+        let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, style, weight, id from songs").fetch_all(&mut db1.detach()).await;
         match result {
             Ok(s) => {
                 for song in s {
@@ -854,6 +868,11 @@ pub async fn update_song_in_db(
     let shadow_color =
         ron::ser::to_string(&item.shadow_color).into_diagnostic()?;
 
+    let style =
+        ron::ser::to_string(&item.font_style).into_diagnostic()?;
+    let weight =
+        ron::ser::to_string(&item.font_weight).into_diagnostic()?;
+
     // debug!(
     //     ?stroke_size,
     //     ?stroke_color,
@@ -864,7 +883,7 @@ pub async fn update_song_in_db(
     // );
 
     let result = query!(
-        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18 WHERE id = $1"#,
+        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20 WHERE id = $1"#,
         item.id,
         item.title,
         lyrics,
@@ -882,7 +901,9 @@ pub async fn update_song_in_db(
         stroke_size,
         shadow_size,
         shadow_offset_x,
-        shadow_offset_y
+        shadow_offset_y,
+        style,
+        weight
     )
         .execute(&mut db.detach())
         .await
