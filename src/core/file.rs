@@ -42,7 +42,7 @@ pub fn save(
     temp_dir.push(s);
     fs::create_dir_all(&temp_dir).into_diagnostic()?;
     let service_file = temp_dir.join("serviceitems.ron");
-    dbg!(&service_file);
+    debug!(?service_file);
     fs::File::create(&service_file).into_diagnostic()?;
     match fs::File::options()
         .read(true)
@@ -52,23 +52,21 @@ pub fn save(
         Ok(mut f) => {
             match f.write(ron.as_bytes()) {
                 Ok(size) => {
-                    dbg!(size);
+                    debug!(size);
                 }
                 Err(e) => {
                     error!(?e);
-                    dbg!(&e);
                     return Err(miette!("PROBS: {e}"));
                 }
             }
             match tar.append_file("serviceitems.ron", &mut f) {
                 Ok(()) => {
-                    dbg!(
+                    debug!(
                         "should have added serviceitems.ron to the file"
                     );
                 }
                 Err(e) => {
                     error!(?e);
-                    dbg!(&e);
                     return Err(miette!("PROBS: {e}"));
                 }
             }
@@ -113,19 +111,25 @@ pub fn save(
             }
         }
         if let Some(path) = audio {
-            let file_name = path.file_name().unwrap_or_default();
-            dbg!(&path);
-            let mut file = fs::File::open(&path).into_diagnostic()?;
-            tar.append_file(file_name, &mut file)
-                .into_diagnostic()?;
+            if path.exists() {
+                let file_name = path.file_name().unwrap_or_default();
+                debug!(?path);
+                let mut file =
+                    fs::File::open(&path).into_diagnostic()?;
+                tar.append_file(file_name, &mut file)
+                    .into_diagnostic()?;
+            }
         }
         if let Some(background) = background {
             let path = background.path;
-            dbg!(&path);
-            let file_name = path.file_name().unwrap_or_default();
-            let mut file = fs::File::open(&path).into_diagnostic()?;
-            tar.append_file(file_name, &mut file)
-                .into_diagnostic()?;
+            if path.exists() {
+                debug!(?path);
+                let file_name = path.file_name().unwrap_or_default();
+                let mut file =
+                    fs::File::open(&path).into_diagnostic()?;
+                tar.append_file(file_name, &mut file)
+                    .into_diagnostic()?;
+            }
         }
     }
 
@@ -133,7 +137,6 @@ pub fn save(
         Ok(()) => (),
         Err(e) => {
             error!(?e);
-            dbg!(&e);
             return Err(miette!("tar error: {e}"));
         }
     }

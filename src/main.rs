@@ -7,7 +7,7 @@ use core::slide::{
 };
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::dialog::file_chooser::save;
+use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::window::{Mode, Position};
@@ -221,6 +221,7 @@ enum Message {
     New,
     Open,
     OpenFile(PathBuf),
+    OpenLoadItems(Vec<ServiceItem>),
     Save,
     SaveAsDialog,
     SaveAs(PathBuf),
@@ -1498,23 +1499,50 @@ impl cosmic::Application for App {
             }
             Message::Open => {
                 debug!("Open file");
-                Task::none()
+                Task::perform(open_dialog(), |res| match res {
+                    Ok(file) => {
+                        cosmic::Action::App(Message::OpenFile(file))
+                    }
+                    Err(e) => {
+                        error!(
+                            ?e,
+                            "There was an error during opening"
+                        );
+                        cosmic::Action::None
+                    }
+                })
             }
             Message::OpenFile(file) => {
                 debug!(?file, "opening file");
+                Task::perform(
+                    async move { file::load(file) },
+                    |res| match res {
+                        Ok(items) => cosmic::Action::App(
+                            Message::OpenLoadItems(items),
+                        ),
+                        Err(e) => {
+                            error!(?e);
+                            cosmic::Action::None
+                        }
+                    },
+                )
+            }
+            Message::OpenLoadItems(items) => {
+                self.service = items.clone();
+                self.presenter.service = items;
                 Task::none()
             }
             Message::Save => {
                 let service = self.service.clone();
-                let file1 = self.file.clone();
-                let file2 = self.file.clone();
+                let file = self.file.clone();
+                let file_name = self.file.file_name().expect("Since we are saving we should have given a name by now").to_owned();
                 Task::perform(
-                    async move { file::save(service, file1, true) },
+                    async move { file::save(service, file, true) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!(
                                 "saving file to: {:?}",
-                                file2
+                                file_name
                             );
                             cosmic::Action::None
                         }
@@ -2194,5 +2222,14 @@ async fn save_as_dialog() -> Result<PathBuf> {
                 Ok(url.to_file_path().expect("Should be a file here"))
             },
         )
+    })?
+}
+
+async fn open_dialog() -> Result<PathBuf> {
+    let dialog = open::Dialog::new();
+    open::file(dialog).await.into_diagnostic().map(|response| {
+        response.url().to_file_path().map_err(|e| {
+            miette!("Can't convert to file path: {:?}", e)
+        })
     })?
 }
