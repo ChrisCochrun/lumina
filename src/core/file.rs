@@ -9,9 +9,9 @@ use std::{
     iter,
     path::{Path, PathBuf},
 };
-use tar::Builder;
+use tar::{Archive, Builder};
 use tracing::error;
-use zstd::Encoder;
+use zstd::{Decoder, Encoder};
 
 #[allow(clippy::too_many_lines)]
 pub fn save(
@@ -24,7 +24,9 @@ pub fn save(
         fs::remove_file(path).into_diagnostic()?;
     }
     let save_file = File::create(path).into_diagnostic()?;
-    let ron = process_service_items(&list);
+    let ron_pretty = ron::ser::PrettyConfig::default();
+    let ron = ron::ser::to_string_pretty(&list, ron_pretty)
+        .into_diagnostic()?;
 
     let encoder = Encoder::new(save_file, 3)
         .expect("file encoder shouldn't fail")
@@ -136,11 +138,57 @@ pub fn save(
     fs::remove_dir_all(temp_dir).into_diagnostic()
 }
 
-fn process_service_items(items: &[ServiceItem]) -> String {
-    items
-        .iter()
-        .filter_map(|item| ron::ser::to_string(item).ok())
-        .collect()
+pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
+    let decoder =
+        Decoder::new(fs::File::open(&path).into_diagnostic()?)
+            .into_diagnostic()?;
+    let mut tar = Archive::new(decoder);
+
+    let mut cache_dir =
+        dirs::cache_dir().expect("Should be a cache dir");
+    cache_dir.push("lumina");
+    cache_dir.push("cached_save_files");
+
+    let save_name_ext = path
+        .as_ref()
+        .extension()
+        .expect("Should have extension")
+        .to_str()
+        .expect("Should be fine");
+    let save_name_string = path
+        .as_ref()
+        .file_name()
+        .expect("Should be a name")
+        .to_os_string()
+        .into_string()
+        .expect("Should be fine");
+    let save_name = save_name_string.trim_end_matches(save_name_ext);
+    cache_dir.push(save_name);
+
+    for entry in tar.entries().into_diagnostic()? {
+        let mut entry = entry.into_diagnostic()?;
+        entry.unpack_in(&cache_dir).into_diagnostic()?;
+    }
+
+    let mut dir = fs::read_dir(cache_dir).into_diagnostic()?;
+    let ron_file = dir
+        .find_map(|file| {
+            if file.as_ref().ok()?.path().extension()?.to_str()?
+                == ".ron"
+            {
+                Some(file.ok()?.path())
+            } else {
+                None
+            }
+        })
+        .expect("Should have a ron file");
+
+    let ron_string =
+        fs::read_to_string(ron_file).into_diagnostic()?;
+    let items = ron::de::from_str::<Vec<ServiceItem>>(&ron_string)
+        .into_diagnostic()?;
+    for mut item in items {}
+    todo!()
 }
 
 #[cfg(test)]
@@ -166,7 +214,6 @@ mod test {
         let list = get_items();
         match save(list, &path, true) {
             Ok(_) => {
-                assert!(true);
                 assert!(path.is_file());
                 let Ok(file) = fs::File::open(path) else {
                     return assert!(false, "couldn't open file");

@@ -594,6 +594,7 @@ mod tests {
     use super::*;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb::Database;
+    use tracing::debug;
 
     #[test]
     fn test_generator() {

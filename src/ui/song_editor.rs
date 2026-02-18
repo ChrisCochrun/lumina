@@ -638,7 +638,7 @@ impl SongEditor {
                             //
                             //
                             //
-                            ()
+                            ();
                         }
                         verse_editor::Action::UpdateVerseName(
                             verse_name,
