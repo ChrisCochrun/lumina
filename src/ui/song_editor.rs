@@ -22,12 +22,15 @@ use cosmic::{
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
         column, row,
-        scrollable::{Direction, Scrollbar},
+        scrollable::{
+            self as iced_scrollable, AbsoluteOffset, Direction,
+            Scrollbar,
+        },
         stack,
     },
     theme,
     widget::{
-        ColorPickerModel, RcElementWrapper, button,
+        ColorPickerModel, Id, RcElementWrapper, button,
         color_picker::ColorPickerUpdate,
         combo_box, container, divider, dnd_destination, dnd_source,
         dropdown,
@@ -94,6 +97,7 @@ pub struct SongEditor {
     #[debug(skip)]
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
+    verses_scroll_id: Id,
     hovered_verse_chip: Option<usize>,
     hovered_dnd_verse_chip: Option<usize>,
     stroke_color_picker_open: bool,
@@ -324,6 +328,7 @@ impl SongEditor {
             ),
             stroke_color_picker_open: false,
             verses: None,
+            verses_scroll_id: Id::unique(),
             editing_verse_order: false,
             hovered_dnd_verse_chip: None,
             hovered_verse_chip: None,
@@ -635,10 +640,15 @@ impl SongEditor {
                         verse_editor::Action::ScrollVerses(
                             pixels,
                         ) => {
-                            //
-                            //
-                            //
-                            ();
+                            return Action::Task(
+                                iced_scrollable::scroll_by(
+                                    self.verses_scroll_id.clone(),
+                                    AbsoluteOffset {
+                                        x: 0.0,
+                                        y: pixels,
+                                    },
+                                ),
+                            );
                         }
                         verse_editor::Action::UpdateVerseName(
                             verse_name,
@@ -1251,6 +1261,7 @@ impl SongEditor {
                 .apply(container)
                 .padding(Padding::default().right(space_l)),
         )
+        .id(self.verses_scroll_id.clone())
         .height(Length::Fill)
         .direction(Direction::Vertical(Scrollbar::new()));
 

@@ -56,7 +56,7 @@ impl VerseEditor {
         match message {
             Message::UpdateLyric(action) => match action {
                 text_editor::Action::Edit(ref _edit) => {
-                    self.content.perform(action.clone());
+                    self.content.perform(action);
                     let lyrics = self.content.text();
                     self.lyric.clone_from(&lyrics);
                     let verse = self.verse_name;
@@ -64,14 +64,14 @@ impl VerseEditor {
                 }
                 text_editor::Action::Scroll { pixels } => {
                     if self.content.line_count() > 6 {
-                        self.content.perform(action.clone());
+                        self.content.perform(action);
                         Action::None
                     } else {
                         Action::ScrollVerses(pixels)
                     }
                 }
                 _ => {
-                    self.content.perform(action.clone());
+                    self.content.perform(action);
                     Action::None
                 }
             },
