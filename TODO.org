@@ -4,6 +4,11 @@
 * TODO [#A] File saving and loading
 Need to make sure we can save a file with all files archived in it and load it back up.
 
+This is giving me a lot of thoughts...
+1. That saving and loading needs to know about fonts as well.
+2. That TextSvgs should likely be saved as well since the other machines may not always have the same fonts.
+3. That means that TextSvg should have a path option that could hold the cached svg that has already been rendered and that this gets changed to the loaded files directory rather than using the default cache directory.
+
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
