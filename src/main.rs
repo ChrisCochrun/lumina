@@ -1379,12 +1379,13 @@ impl cosmic::Application for App {
                 item.slides = item
                     .slides
                     .into_par_iter()
-                    .map(|mut slide| {
+                    .map(|slide| {
                         let fontdb = Arc::clone(&self.fontdb);
                         text_svg::text_svg_generator(
-                            &mut slide, &fontdb,
-                        );
-                        slide
+                            slide.clone(),
+                            &fontdb,
+                        )
+                        .unwrap_or(slide)
                     })
                     .collect();
                 self.service.insert(index, item);
@@ -1419,12 +1420,13 @@ impl cosmic::Application for App {
                 item.slides = item
                     .slides
                     .into_par_iter()
-                    .map(|mut slide| {
+                    .map(|slide| {
                         let fontdb = Arc::clone(&self.fontdb);
                         text_svg::text_svg_generator(
-                            &mut slide, &fontdb,
-                        );
-                        slide
+                            slide.clone(),
+                            &fontdb,
+                        )
+                        .unwrap_or(slide)
                     })
                     .collect();
                 self.service.push(item);

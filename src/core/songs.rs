@@ -1474,15 +1474,16 @@ You saved my soul"
         let fontdb = Arc::new(fontdb::Database::new());
         songs.into_par_iter().for_each(|song| {
             let slides = song.to_slides().unwrap();
-            slides.into_par_iter().for_each(|mut slide| {
-                text_svg_generator_with_cache(
-                    &mut slide, &fontdb, false,
-                );
-                assert!(
-                    slide
-                        .text_svg
-                        .is_some_and(|svg| svg.handle.is_some())
-                )
+            slides.into_par_iter().for_each(|slide| {
+                text_svg_generator_with_cache(slide, &fontdb, None)
+                    .map_or_else(
+                        |e| assert!(false, "{e}"),
+                        |slide| {
+                            assert!(slide.text_svg.is_some_and(
+                                |svg| svg.handle.is_some()
+                            ))
+                        },
+                    )
             });
         });
     }

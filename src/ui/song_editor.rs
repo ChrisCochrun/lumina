@@ -422,13 +422,14 @@ impl SongEditor {
                     async move {
                         song_slides
                             .ok()
-                            .map(move |v| {
+                            .map(|v| {
                                 v.into_par_iter()
-                                    .map(move |mut s| {
+                                    .map(|s| {
                                         text_svg::text_svg_generator(
-                                            &mut s, &font_db,
-                                        );
-                                        s
+                                            s.clone(),
+                                            &font_db,
+                                        )
+                                        .unwrap_or(s)
                                     })
                                     .collect::<Vec<Slide>>()
                             })
@@ -1875,11 +1876,12 @@ impl SongEditor {
                 async move {
                     slides
                         .into_par_iter()
-                        .map(move |mut s| {
+                        .map(|s| {
                             text_svg::text_svg_generator(
-                                &mut s, &font_db,
-                            );
-                            s
+                                s.clone(),
+                                &font_db,
+                            )
+                            .unwrap_or(s)
                         })
                         .collect::<Vec<Slide>>()
                 },

@@ -15,7 +15,7 @@ use cosmic::{
     prelude::*,
     widget::{Image, Space, image::Handle},
 };
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use rapidhash::v3::rapidhash_v3;
 use resvg::{
     tiny_skia::{self, Pixmap},
@@ -24,7 +24,7 @@ use resvg::{
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::TextAlignment;
+use crate::{TextAlignment, core::slide::Slide};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TextSvg {
@@ -34,6 +34,7 @@ pub struct TextSvg {
     stroke: Option<Stroke>,
     fill: Color,
     alignment: TextAlignment,
+    pub path: Option<PathBuf>,
     #[serde(skip)]
     pub handle: Option<Handle>,
     #[serde(skip)]
@@ -49,6 +50,7 @@ impl PartialEq for TextSvg {
             && self.fill == other.fill
             && self.alignment == other.alignment
             && self.handle == other.handle
+            && self.path == other.path
     }
 }
 
@@ -60,6 +62,7 @@ impl Hash for TextSvg {
         self.stroke.hash(state);
         self.fill.hash(state);
         self.alignment.hash(state);
+        self.path.hash(state);
     }
 }
 
@@ -298,16 +301,12 @@ impl TextSvg {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::too_many_lines)]
-    pub fn build(mut self, size: Size, cache: bool) -> Self {
+    pub fn build(
+        mut self,
+        size: Size,
+        mut cache: Option<PathBuf>,
+    ) -> Self {
         // debug!("starting...");
-
-        let Some(mut path) = dirs::cache_dir() else {
-            error!("Cannot find the cache dir");
-            return self;
-        };
-        path.push(PathBuf::from("lumina"));
-        path.push(PathBuf::from("text_svg_cache"));
-        let _ = fs::create_dir_all(&path);
 
         let mut final_svg = String::with_capacity(1024);
 
@@ -460,14 +459,14 @@ impl TextSvg {
         //     text
         // ));
 
-        if cache {
+        if let Some(path) = cache.as_mut() {
             let hashed_title = rapidhash_v3(final_svg.as_bytes());
             path.push(PathBuf::from(hashed_title.to_string()));
             path.set_extension("png");
 
             if path.exists() {
                 // debug!("cached");
-                let handle = Handle::from_path(path);
+                let handle = Handle::from_path(&path);
                 self.handle = Some(handle);
                 return self;
             }
@@ -498,7 +497,9 @@ impl TextSvg {
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if cache && let Err(e) = pixmap.save_png(&path) {
+        if let Some(path) = cache
+            && let Err(e) = pixmap.save_png(&path)
+        {
             error!(?e, "Couldn't save a copy of the text");
         }
 
@@ -551,18 +552,28 @@ pub fn color(color: impl AsRef<str>) -> Color {
 }
 
 pub fn text_svg_generator(
-    slide: &mut crate::core::slide::Slide,
+    slide: crate::core::slide::Slide,
     fontdb: &Arc<fontdb::Database>,
-) {
-    text_svg_generator_with_cache(slide, fontdb, true);
+) -> Result<Slide> {
+    let Some(mut path) = dirs::cache_dir() else {
+        error!("Cannot find the cache dir");
+        return Err(miette!("Cannot find the cache dir"));
+    };
+    path.push("lumina");
+    path.push("text_svg_cache");
+    let _ = fs::create_dir_all(&path);
+
+    text_svg_generator_with_cache(slide, fontdb, Some(path))
 }
 
 pub fn text_svg_generator_with_cache(
-    slide: &mut crate::core::slide::Slide,
+    mut slide: crate::core::slide::Slide,
     fontdb: &Arc<fontdb::Database>,
-    cache: bool,
-) {
-    if !slide.text().is_empty() {
+    cache: Option<PathBuf>,
+) -> Result<Slide> {
+    if slide.text().is_empty() {
+        Err(miette!("There is no slide text"))
+    } else {
         let font = slide.font().unwrap_or_default();
         let text_svg = TextSvg::new(slide.text())
             .alignment(slide.text_alignment())
@@ -584,6 +595,7 @@ pub fn text_svg_generator_with_cache(
         let text_svg =
             text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
+        Ok(slide)
     }
 }
 
@@ -604,23 +616,27 @@ mod tests {
         fontdb.load_system_fonts();
         let fontdb = Arc::new(fontdb);
         (0..400).into_par_iter().for_each(|_| {
-            let mut slide = slide
+            let slide = slide
                 .clone()
                 .set_font_size(120)
                 .set_font("Quicksand")
                 .set_shadow(shadow(5, 5, 5, "#000"))
                 .set_stroke(stroke(9, "#000"))
                 .set_text("This is the first slide of text\nAnd we are singing\nTo save the world!");
-            text_svg_generator_with_cache(
-                &mut slide,
+            match text_svg_generator_with_cache(
+                slide,
                 &fontdb,
-                false,
-            );
-            assert!(
-                slide
-                    .text_svg
-                    .is_some_and(|svg| svg.handle.is_some())
-            )
+                None,
+            ) {
+                Ok(slide) => {
+                    assert!(
+                        slide
+                            .text_svg
+                            .is_some_and(|svg| svg.handle.is_some())
+                    )
+                },
+                Err(e) => assert!(false, "There was an issue creating the TextSvg: {e}"),
+            };
         });
     }
 }
