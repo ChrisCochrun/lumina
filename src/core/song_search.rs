@@ -131,20 +131,25 @@ mod test {
             song.author == "North Point InsideOut"
         }) {
             assert_eq!(&song, first);
-            let song = Song::from(song);
-            if let Some(verse_map) = song.verse_map.as_ref() {
-                if verse_map.len() < 2 {
-                    return Err(format!(
-                        "VerseMap wasn't built right likely: {:?}",
-                        song
-                    ));
-                }
-            } else {
-                return Err(String::from(
-                    "There is no VerseMap in this song",
-                ));
-            };
+            online_song_to_song(song)?
         }
+        Ok(())
+    }
+
+    fn online_song_to_song(song: OnlineSong) -> Result<(), String> {
+        let song = Song::from(song);
+        if let Some(verse_map) = song.verse_map.as_ref() {
+            if verse_map.len() < 2 {
+                return Err(format!(
+                    "VerseMap wasn't built right likely: {:?}",
+                    song
+                ));
+            }
+        } else {
+            return Err(String::from(
+                "There is no VerseMap in this song",
+            ));
+        };
         Ok(())
     }
 
