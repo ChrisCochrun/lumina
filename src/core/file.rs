@@ -203,9 +203,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
 
     let ron_string =
         fs::read_to_string(ron_file).into_diagnostic()?;
+
     let mut items =
         ron::de::from_str::<Vec<ServiceItem>>(&ron_string)
             .into_diagnostic()?;
+
     for item in &mut items {
         let dir = fs::read_dir(&cache_dir).into_diagnostic()?;
         for file in dir {
@@ -217,8 +219,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                     let text_path = slide
                         .text_svg
                         .as_ref()
-                        .map(|svg| svg.path.clone())
-                        .flatten();
+                        .and_then(|svg| svg.path.clone());
                     if Some(file_name.as_os_str())
                         == slide.background.path.file_name()
                     {
@@ -236,14 +237,14 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                             .unwrap_or_default()
                             .file_name()
                     {
-                        slide
-                            .text_svg
-                            .as_mut()
-                            .map(|svg| svg.path = Some(file.path()));
+                        if let Some(svg) = slide.text_svg.as_mut() {
+                            svg.path = Some(file.path());
+                        }
                         dbg!(&slide);
                     }
                 }
             }
+
             match &mut item.kind {
                 ServiceItemKind::Song(song) => {
                     if let Ok(file) = file.as_ref() {
@@ -310,6 +311,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
 
 #[cfg(test)]
 mod test {
+    use cosmic::cosmic_theme::palette::Srgb;
     use pretty_assertions::assert_eq;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
@@ -341,8 +343,11 @@ mod test {
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
             background: Some(Background::try_from("/home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
             text_alignment: Some(TextAlignment::MiddleCenter),
-            font: Some("Quicksand Bold".to_string()),
+            font: Some("Quicksand".to_string()),
             font_size: Some(120),
+            font_style: None,
+            font_weight: None,
+            text_color: Some(Srgb::new(0.5, 0.5, 0.5)),
             stroke_size: None,
             verses: Some(vec![VerseName::Chorus { number: 1 }, VerseName::Intro { number: 1 }, VerseName::Other { number: 99 }, VerseName::Bridge { number: 1 }, VerseName::Verse { number: 4 }, VerseName::Verse { number: 2 }, VerseName::Verse { number: 3 }, VerseName::Verse { number: 1 }
             ]),
@@ -353,7 +358,9 @@ mod test {
 
     fn get_items() -> Vec<ServiceItem> {
         let song = test_song();
-        let fontdb = Arc::new(fontdb::Database::new());
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+        let fontdb = Arc::new(fontdb);
         let slides = song
             .to_slides()
             .unwrap()
@@ -363,7 +370,16 @@ mod test {
                     slide.clone(),
                     &Arc::clone(&fontdb),
                 )
-                .unwrap_or(slide)
+                .map_or_else(
+                    |e| {
+                        assert!(false, "Couldn't create svg: {e}");
+                        slide
+                    },
+                    |slide| {
+                        dbg!(&slide);
+                        slide
+                    },
+                )
             })
             .collect::<Vec<Slide>>();
         let items = vec![
@@ -416,6 +432,9 @@ mod test {
                         text_svg.path.as_ref().map_or(Err(String::from("There is no path in this song's TextSvg")), |path| {
                             if path.exists() {
                                 let mut path = path.clone();
+                                if path.metadata().unwrap().len() < 20000 {
+                                    return Err(String::from("SVG text is too small, maybe the svg didn't generate properly"))
+                                }
                                 if path.pop() && path == cache_dir {
                                     Ok(())
                                 } else {

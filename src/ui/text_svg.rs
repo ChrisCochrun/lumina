@@ -15,6 +15,7 @@ use cosmic::{
     prelude::*,
     widget::{Image, Space, image::Handle},
 };
+use derive_more::Debug;
 use miette::{IntoDiagnostic, Result, miette};
 use rapidhash::v3::rapidhash_v3;
 use resvg::{
@@ -38,6 +39,7 @@ pub struct TextSvg {
     #[serde(skip)]
     pub handle: Option<Handle>,
     #[serde(skip)]
+    #[debug(skip)]
     fontdb: Arc<resvg::usvg::fontdb::Database>,
 }
 
@@ -467,7 +469,7 @@ impl TextSvg {
             if path.exists() {
                 // debug!("cached");
                 let handle = Handle::from_path(&path);
-                self.path = Some(path.to_path_buf());
+                self.path = Some(path.clone());
                 self.handle = Some(handle);
                 return self;
             }
