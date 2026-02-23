@@ -27,6 +27,7 @@ use crate::{
         model::{LibraryKind, Model},
         service_items::ServiceTrait,
         slide::{self, Background, TextAlignment},
+        song_search::OnlineSong,
     },
     ui::text_svg::{Color, Font, Stroke, shadow, stroke},
 };
@@ -502,6 +503,27 @@ impl FromRow<'_, SqliteRow> for Song {
             verse_map,
             ..Default::default()
         })
+    }
+}
+
+impl From<OnlineSong> for Song {
+    fn from(value: OnlineSong) -> Self {
+        let mut song = Self::default();
+        song.verse_map = Some(HashMap::new());
+        for line in value.lyrics.lines() {
+            let next_verse = song.get_next_verse_name();
+            if let Some(verse_map) = song.verse_map.as_mut() {
+                verse_map
+                    .entry(next_verse)
+                    .or_insert_with(|| line.to_string());
+            }
+            if let Some(verses) = song.verses.as_mut() {
+                verses.push(next_verse);
+            } else {
+                song.verses = Some(vec![next_verse]);
+            }
+        }
+        song
     }
 }
 

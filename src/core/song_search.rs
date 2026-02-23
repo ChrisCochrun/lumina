@@ -3,11 +3,11 @@ use miette::{IntoDiagnostic, Result, miette};
 
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd, Ord, Eq)]
 pub struct OnlineSong {
-    lyrics: String,
-    title: String,
-    author: String,
-    site: String,
-    link: String,
+    pub lyrics: String,
+    pub title: String,
+    pub author: String,
+    pub site: String,
+    pub link: String,
 }
 
 pub async fn search_online_song_links(
@@ -107,11 +107,13 @@ pub async fn link_to_online_song(
 
 #[cfg(test)]
 mod test {
+    use crate::core::songs::Song;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
-    async fn test_search_to_song() {
+    async fn test_search_to_song() -> Result<(), String> {
         let song = OnlineSong {
             lyrics: "Alone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love Made a way to let mercy come in\nWhen death was arrested and my life began\n\nAsh was redeemed only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet my feet rose to dance\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nReleased from my chains I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOur savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nWhen death was arrested and my life began\nWhen death was arrested and my life began".to_string(),
             title: "Death Was Arrested".to_string(),
@@ -119,26 +121,31 @@ mod test {
             site: "https://www.lyrics.com".to_string(),
             link: "https://www.lyrics.com/lyric/35090938/North+Point+InsideOut/Death+Was+Arrested".to_string(),
         };
-        let search =
-            search_online_song_links("Death was arrested").await;
-        match search {
-            Ok(links) => {
-                let songs = link_to_online_song(links).await;
-                match songs {
-                    Ok(songs) => {
-                        if let Some(first) =
-                            songs.iter().find_or_first(|song| {
-                                song.author == "North Point InsideOut"
-                            })
-                        {
-                            assert_eq!(&song, first);
-                        }
-                    }
-                    Err(e) => assert!(false, "{}", e),
+        let links = search_online_song_links("Death was arrested")
+            .await
+            .map_err(|e| format!("{e}"))?;
+        let songs = link_to_online_song(links)
+            .await
+            .map_err(|e| format!("{e}"))?;
+        if let Some(first) = songs.iter().find_or_first(|song| {
+            song.author == "North Point InsideOut"
+        }) {
+            assert_eq!(&song, first);
+            let song = Song::from(song);
+            if let Some(verse_map) = song.verse_map.as_ref() {
+                if verse_map.len() < 2 {
+                    return Err(format!(
+                        "VerseMap wasn't built right likely: {:?}",
+                        song
+                    ));
                 }
-            }
-            Err(e) => assert!(false, "{}", e),
+            } else {
+                return Err(String::from(
+                    "There is no VerseMap in this song",
+                ));
+            };
         }
+        Ok(())
     }
 
     #[tokio::test]
