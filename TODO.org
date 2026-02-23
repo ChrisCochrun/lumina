@@ -1,22 +1,20 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO [#A] File saving and loading
-Need to make sure we can save a file with all files archived in it and load it back up.
-
-This is giving me a lot of thoughts...
-1. That saving and loading needs to know about fonts as well.
-2. That TextSvgs should likely be saved as well since the other machines may not always have the same fonts.
-3. That means that TextSvg should have a path option that could hold the cached svg that has already been rendered and that this gets changed to the loaded files directory rather than using the default cache directory.
-
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
 This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
 
+* TODO [#B] Saving and loading font awareness
+Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
+
 * TODO [#B] Develop ui for settings
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO Font in the song editor doesn't always use the original version
+There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 
@@ -43,9 +41,6 @@ I bet this is tricking up the loading mechanism. Loading only grabs all the back
 ** Made this slightly faster
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later
 
-* TODO Font in the song editor doesn't always use the original version
-There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
-
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
 * TODO [#C] Figure out why the Video element seems to have problems when moving the mouse around
@@ -57,8 +52,13 @@ This is limited by the fact that I need to develop this in cosmic. I am honestly
 
 This needs lots more attention
 
-* DONE [#B] Functions for text alignments
-This will need to be matched on for the =TextAlignment= from the user
+* DONE [#A] File saving and loading
+Need to make sure we can save a file with all files archived in it and load it back up.
+
+This is giving me a lot of thoughts...
+1. That saving and loading needs to know about fonts as well.
+2. That TextSvgs should likely be saved as well since the other machines may not always have the same fonts.
+3. That means that TextSvg should have a path option that could hold the cached svg that has already been rendered and that this gets changed to the loaded files directory rather than using the default cache directory.
 
 * DONE [#A] Add removal and reordering of service_items
 Reordering is finished
@@ -72,7 +72,6 @@ Lots of them have been tweaked to be completing now, but there is more work to d
 
 Still failing 4 tests, all to do with the db or lisp. I might throw out the lisp code at some point tho. I keep thinking that a better alternative would be to have a markdown serialization system such that you can write slides in markdown somehow and they would be able to be loaded.
 
-* DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
 * DONE [#A] Make sure updating verse updates the lyrics too
 [[file:~/dev/lumina-iced/src/core/songs.rs::old_verse = verse;]]
 
@@ -82,6 +81,10 @@ There is likely some work that still needs to be done here, I believe I am someh
 * DONE [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
 
+* DONE [#B] Functions for text alignments
+This will need to be matched on for the =TextAlignment= from the user
+
+* DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
 * DONE Build a presentation editor
 
 * DONE Build library to see all available songs, images, videos, presentations, and slides
