@@ -623,7 +623,7 @@ mod tests {
             let slide = slide
                 .clone()
                 .set_font_size(120)
-                .set_font("Quicksand")
+                .set_font("")
                 .set_shadow(shadow(5, 5, 5, "#000"))
                 .set_stroke(stroke(9, "#000"))
                 .set_text("This is the first slide of text\nAnd we are singing\nTo save the world!");

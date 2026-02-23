@@ -311,8 +311,6 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
 
 #[cfg(test)]
 mod test {
-    use cosmic::cosmic_theme::palette::Srgb;
-    use pretty_assertions::assert_eq;
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
 
@@ -484,7 +482,7 @@ mod test {
                         return false;
                     }
                 }
-                ServiceItemKind::Content(slide) => todo!(),
+                ServiceItemKind::Content(_slide) => todo!(),
             }
             for slide in &item.slides {
                 if !slide.background().path.starts_with(&cache_dir) {
