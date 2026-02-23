@@ -2,6 +2,7 @@ use crate::core::{
     kinds::ServiceItemKind, service_items::ServiceItem,
     slide::Background,
 };
+use cosmic::widget::image::Handle;
 use miette::{IntoDiagnostic, Result, miette};
 use std::{
     fs::{self, File},
@@ -239,6 +240,8 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                     {
                         if let Some(svg) = slide.text_svg.as_mut() {
                             svg.path = Some(file.path());
+                            svg.handle =
+                                Some(Handle::from_path(file.path()))
                         }
                         dbg!(&slide);
                     }
@@ -427,6 +430,11 @@ mod test {
             if let ServiceItemKind::Song(..) = item.kind {
                 item.slides.iter().try_for_each(|slide| {
                     slide.text_svg.as_ref().map_or(Err(String::from("There is no TextSvg for this song")), |text_svg| {
+
+                        if text_svg.handle.is_none() {
+                            return Err(String::from("There is no handle in this song's TextSvg"));
+                        };
+
                         text_svg.path.as_ref().map_or(Err(String::from("There is no path in this song's TextSvg")), |path| {
                             if path.exists() {
                                 let mut path = path.clone();
