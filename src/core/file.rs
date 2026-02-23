@@ -237,13 +237,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                             .clone()
                             .unwrap_or_default()
                             .file_name()
+                        && let Some(svg) = slide.text_svg.as_mut()
                     {
-                        if let Some(svg) = slide.text_svg.as_mut() {
-                            svg.path = Some(file.path());
-                            svg.handle =
-                                Some(Handle::from_path(file.path()))
-                        }
-                        dbg!(&slide);
+                        svg.path = Some(file.path());
+                        svg.handle =
+                            Some(Handle::from_path(file.path()));
                     }
                 }
             }
@@ -376,10 +374,7 @@ mod test {
                         assert!(false, "Couldn't create svg: {e}");
                         slide
                     },
-                    |slide| {
-                        dbg!(&slide);
-                        slide
-                    },
+                    |slide| slide,
                 )
             })
             .collect::<Vec<Slide>>();
