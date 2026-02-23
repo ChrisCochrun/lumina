@@ -343,11 +343,11 @@ mod test {
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
             background: Some(Background::try_from("/home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
             text_alignment: Some(TextAlignment::MiddleCenter),
-            font: Some("Quicksand".to_string()),
+            font: None,
             font_size: Some(120),
             font_style: None,
             font_weight: None,
-            text_color: Some(Srgb::new(0.5, 0.5, 0.5)),
+            text_color: None,
             stroke_size: None,
             verses: Some(vec![VerseName::Chorus { number: 1 }, VerseName::Intro { number: 1 }, VerseName::Other { number: 99 }, VerseName::Bridge { number: 1 }, VerseName::Verse { number: 4 }, VerseName::Verse { number: 2 }, VerseName::Verse { number: 3 }, VerseName::Verse { number: 1 }
             ]),
