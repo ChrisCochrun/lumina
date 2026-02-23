@@ -77,6 +77,13 @@ pub fn save(
         }
     }
 
+    let mut append_file = |path: PathBuf| -> Result<()> {
+        let file_name = path.file_name().unwrap_or_default();
+        let mut file = fs::File::open(&path).into_diagnostic()?;
+        tar.append_file(file_name, &mut file).into_diagnostic()?;
+        Ok(())
+    };
+
     for item in list {
         let background;
         let audio: Option<PathBuf>;
@@ -113,21 +120,22 @@ pub fn save(
         if let Some(path) = audio
             && path.exists()
         {
-            let file_name = path.file_name().unwrap_or_default();
             debug!(?path);
-            let mut file = fs::File::open(&path).into_diagnostic()?;
-            tar.append_file(file_name, &mut file)
-                .into_diagnostic()?;
+            append_file(path)?;
         }
         if let Some(background) = background
             && let path = background.path
             && path.exists()
         {
             debug!(?path);
-            let file_name = path.file_name().unwrap_or_default();
-            let mut file = fs::File::open(&path).into_diagnostic()?;
-            tar.append_file(file_name, &mut file)
-                .into_diagnostic()?;
+            append_file(path)?;
+        }
+        for slide in item.slides {
+            if let Some(svg) = slide.text_svg
+                && let Some(path) = svg.path
+            {
+                append_file(path)?;
+            }
         }
     }
 
@@ -206,6 +214,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                     let file_name = file.file_name();
                     let audio_path =
                         slide.audio().clone().unwrap_or_default();
+                    let text_path = slide
+                        .text_svg
+                        .as_ref()
+                        .map(|svg| svg.path.clone())
+                        .flatten();
                     if Some(file_name.as_os_str())
                         == slide.background.path.file_name()
                     {
@@ -217,6 +230,17 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                             .clone()
                             .set_audio(Some(file.path()));
                         *slide = new_slide;
+                    } else if Some(file_name.as_os_str())
+                        == text_path
+                            .clone()
+                            .unwrap_or_default()
+                            .file_name()
+                    {
+                        slide
+                            .text_svg
+                            .as_mut()
+                            .map(|svg| svg.path = Some(file.path()));
+                        dbg!(&slide);
                     }
                 }
             }
@@ -391,7 +415,12 @@ mod test {
                     slide.text_svg.as_ref().map_or(Err(String::from("There is no TextSvg for this song")), |text_svg| {
                         text_svg.path.as_ref().map_or(Err(String::from("There is no path in this song's TextSvg")), |path| {
                             if path.exists() {
-                                Ok(())
+                                let mut path = path.clone();
+                                if path.pop() && path == cache_dir {
+                                    Ok(())
+                                } else {
+                                    Err(String::from("The path of the TextSvg isn't in the load directory"))
+                                }
                             } else {
                                 Err(String::from("The path in this TextSvg doesn't exist"))
                             }

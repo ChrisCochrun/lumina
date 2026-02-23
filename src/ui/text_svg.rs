@@ -467,6 +467,7 @@ impl TextSvg {
             if path.exists() {
                 // debug!("cached");
                 let handle = Handle::from_path(&path);
+                self.path = Some(path.to_path_buf());
                 self.handle = Some(handle);
                 return self;
             }
@@ -497,11 +498,12 @@ impl TextSvg {
         resvg::render(&resvg_tree, transform, &mut pixmap.as_mut());
         // debug!("rendered");
 
-        if let Some(path) = cache
-            && let Err(e) = pixmap.save_png(&path)
+        if let Some(path) = cache.as_ref()
+            && let Err(e) = pixmap.save_png(path)
         {
             error!(?e, "Couldn't save a copy of the text");
         }
+        self.path = cache;
 
         // debug!("saved");
         // let handle = Handle::from_path(path);
