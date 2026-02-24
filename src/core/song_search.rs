@@ -1,7 +1,20 @@
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
+use reqwest::header;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-#[derive(Clone, Debug, Default, PartialEq, PartialOrd, Ord, Eq)]
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Eq,
+    Serialize,
+    Deserialize,
+)]
 pub struct OnlineSong {
     pub lyrics: String,
     pub title: String,
@@ -10,7 +23,114 @@ pub struct OnlineSong {
     pub link: String,
 }
 
-pub async fn search_online_song_links(
+pub async fn search_genius_links(
+    query: impl AsRef<str> + std::fmt::Display,
+) -> Result<Vec<OnlineSong>> {
+    let auth_token = env!("GENIUS_TOKEN");
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        header::AUTHORIZATION,
+        header::HeaderValue::from_static(auth_token),
+    );
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .into_diagnostic()?;
+    let response = client
+        .get(format!("https://api.genius.com/search?q={query}"))
+        .send()
+        .await
+        .into_diagnostic()?
+        .error_for_status()
+        .into_diagnostic()?
+        .text()
+        .await
+        .into_diagnostic()?;
+    let json: Value =
+        serde_json::from_str(&response).into_diagnostic()?;
+    let hits = json
+        .get("response")
+        .expect("respose")
+        .get("hits")
+        .expect("hits")
+        .as_array()
+        .expect("array");
+    Ok(hits
+        .iter()
+        .map(|hit| {
+            let result = hit.get("result").expect("result");
+            let title = result
+                .get("full_title")
+                .expect("title")
+                .as_str()
+                .expect("title")
+                .to_string();
+            let title = title.replace("\u{a0}", " ");
+            let author = result
+                .get("artist_names")
+                .expect("artists")
+                .as_str()
+                .expect("artists")
+                .to_string();
+            let link = result
+                .get("url")
+                .expect("url")
+                .as_str()
+                .expect("url")
+                .to_string();
+            OnlineSong {
+                lyrics: String::new(),
+                title,
+                author,
+                site: String::from("https://genius.com"),
+                link,
+            }
+        })
+        .collect())
+}
+
+pub async fn get_genius_lyrics(
+    mut song: OnlineSong,
+) -> Result<OnlineSong> {
+    let html = reqwest::get(&song.link)
+        .await
+        .into_diagnostic()?
+        .error_for_status()
+        .into_diagnostic()?
+        .text()
+        .await
+        .into_diagnostic()?;
+    let document = scraper::Html::parse_document(&html);
+    let Ok(lyrics_root_selector) = scraper::Selector::parse(
+        r#"div[data-lyrics-container="true"]"#,
+    ) else {
+        return Err(miette!("error in finding lyrics_root"));
+    };
+
+    let lyrics = document
+        .select(&lyrics_root_selector)
+        .map(|root| {
+            // dbg!(&root);
+            root.inner_html()
+        })
+        .collect::<String>();
+    let lyrics = lyrics.find("[").map_or_else(
+        || {
+            lyrics.find("</div></div></div>").map_or(
+                lyrics.clone(),
+                |position| {
+                    lyrics.split_at(position + 18).1.to_string()
+                },
+            )
+        },
+        |position| lyrics.split_at(position).1.to_string(),
+    );
+    let lyrics = lyrics.replace("<br>", "\n");
+    song.lyrics = lyrics;
+    Ok(song)
+}
+
+pub async fn search_lyrics_com_links(
     query: impl AsRef<str> + std::fmt::Display,
 ) -> Result<Vec<String>> {
     let html =
@@ -53,7 +173,7 @@ pub async fn search_online_song_links(
 // id value or not in the future and I'd like to keep the code understanding
 // of what this variable might be.
 #[allow(clippy::no_effect_underscore_binding)]
-pub async fn link_to_online_song(
+pub async fn lyrics_com_link_to_song(
     links: Vec<impl AsRef<str> + std::fmt::Display>,
 ) -> Result<Vec<OnlineSong>> {
     let mut songs = vec![];
@@ -113,6 +233,40 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
+    async fn test_genius() -> Result<(), String> {
+        let song = OnlineSong {
+            lyrics: String::new(),
+            title: "Death Was Arrested by North Point Worship (Ft. Seth Condrey)".to_string(),
+            author: "North Point Worship (Ft. Seth Condrey)".to_string(),
+            site: "https://genius.com".to_string(),
+            link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
+        };
+        let hits = search_genius_links("Death was arrested")
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let titles: Vec<String> =
+            hits.iter().map(|song| song.title.clone()).collect();
+        dbg!(titles);
+        for hit in hits {
+            let new_song = get_genius_lyrics(hit)
+                .await
+                .map_err(|e| e.to_string())?;
+            dbg!(&new_song);
+            if !new_song.lyrics.starts_with("[Verse 1]") {
+                assert!(new_song.lyrics.len() > 10);
+            } else {
+                assert!(new_song.lyrics.contains("[Verse 2]"));
+                if !new_song.lyrics.contains("[Chorus]") {
+                    assert!(new_song.lyrics.contains("[Chorus 1]"))
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_search_to_song() -> Result<(), String> {
         let song = OnlineSong {
             lyrics: "Alone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love Made a way to let mercy come in\nWhen death was arrested and my life began\n\nAsh was redeemed only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet my feet rose to dance\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nReleased from my chains I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOur savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nWhen death was arrested and my life began\nWhen death was arrested and my life began".to_string(),
@@ -121,10 +275,10 @@ mod test {
             site: "https://www.lyrics.com".to_string(),
             link: "https://www.lyrics.com/lyric/35090938/North+Point+InsideOut/Death+Was+Arrested".to_string(),
         };
-        let links = search_online_song_links("Death was arrested")
+        let links = search_lyrics_com_links("Death was arrested")
             .await
             .map_err(|e| format!("{e}"))?;
-        let songs = link_to_online_song(links)
+        let songs = lyrics_com_link_to_song(links)
             .await
             .map_err(|e| format!("{e}"))?;
         if let Some(first) = songs.iter().find_or_first(|song| {
@@ -156,7 +310,7 @@ mod test {
     #[tokio::test]
     async fn test_online_search() {
         let search =
-            search_online_song_links("Death was arrested").await;
+            search_lyrics_com_links("Death was arrested").await;
         match search {
             Ok(songs) => {
                 assert_eq!(
