@@ -1,6 +1,8 @@
 #+TITLE: The Task list for Lumina
 
 
+* TODO Find a way to use auth-token in tests for ci
+If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
