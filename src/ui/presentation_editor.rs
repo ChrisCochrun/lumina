@@ -192,7 +192,6 @@ impl PresentationEditor {
                 }
             }
             Message::AddSlides(slides) => {
-                debug!(?slides);
                 self.slides = slides;
             }
             Message::None => (),
@@ -314,6 +313,7 @@ impl PresentationEditor {
             }
             Message::SplitBefore => {
                 if let Ok((first, second)) = self.split_before() {
+                    debug!(?first, ?second);
                     self.update_entire_presentation(&first);
                     return Action::SplitAddPresentation((
                         first, second,
@@ -322,6 +322,7 @@ impl PresentationEditor {
             }
             Message::SplitAfter => {
                 if let Ok((first, second)) = self.split_after() {
+                    debug!(?first, ?second);
                     self.update_entire_presentation(&first);
                     return Action::SplitAddPresentation((
                         first, second,
@@ -512,21 +513,51 @@ impl PresentationEditor {
             .as_ref()
             .and_then(|doc| doc.page_count().ok());
         warn!("changing presentation");
-        self.current_slide = self.document.as_ref().and_then(|doc| {
-            let page = doc.load_page(0).ok()?;
-            let matrix = Matrix::IDENTITY;
-            let colorspace = Colorspace::device_rgb();
-            let pixmap = page
-                .to_pixmap(&matrix, &colorspace, true, true)
-                .ok()?;
+        let pages = if let PresKind::Pdf {
+            starting_index,
+            ending_index,
+        } = presentation.kind
+        {
+            self.current_slide =
+                self.document.as_ref().and_then(|doc| {
+                    let page = doc.load_page(starting_index).ok()?;
+                    let matrix = Matrix::IDENTITY;
+                    let colorspace = Colorspace::device_rgb();
+                    let pixmap = page
+                        .to_pixmap(&matrix, &colorspace, true, true)
+                        .ok()?;
 
-            Some(Handle::from_rgba(
-                pixmap.width(),
-                pixmap.height(),
-                pixmap.samples().to_vec(),
-            ))
-        });
-        self.current_slide_index = Some(0);
+                    Some(Handle::from_rgba(
+                        pixmap.width(),
+                        pixmap.height(),
+                        pixmap.samples().to_vec(),
+                    ))
+                });
+            self.current_slide_index = Some(starting_index);
+            get_pages(
+                starting_index..=ending_index,
+                presentation.path.clone(),
+            )
+        } else {
+            self.current_slide =
+                self.document.as_ref().and_then(|doc| {
+                    let page = doc.load_page(0).ok()?;
+                    let matrix = Matrix::IDENTITY;
+                    let colorspace = Colorspace::device_rgb();
+                    let pixmap = page
+                        .to_pixmap(&matrix, &colorspace, true, true)
+                        .ok()?;
+
+                    Some(Handle::from_rgba(
+                        pixmap.width(),
+                        pixmap.height(),
+                        pixmap.samples().to_vec(),
+                    ))
+                });
+            self.current_slide_index = Some(0);
+            get_pages(.., presentation.path.clone())
+        };
+        self.slides = pages;
     }
 
     fn split_before(&self) -> Result<(Presentation, Presentation)> {
@@ -552,7 +583,10 @@ impl PresentationEditor {
             };
             let second_presentation = Presentation {
                 id: 0,
-                title: current_presentation.title.clone(),
+                title: format!(
+                    "{} (2)",
+                    current_presentation.title.clone()
+                ),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {
                     PresKind::Pdf { ending_index, .. } => {
@@ -596,7 +630,10 @@ impl PresentationEditor {
             };
             let second_presentation = Presentation {
                 id: 0,
-                title: current_presentation.title.clone(),
+                title: format!(
+                    "{} (2)",
+                    current_presentation.title.clone()
+                ),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {
                     PresKind::Pdf { ending_index, .. } => {

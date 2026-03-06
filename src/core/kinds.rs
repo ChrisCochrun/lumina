@@ -40,6 +40,7 @@ impl TryFrom<PathBuf> for ServiceItemKind {
             "mp4" | "mkv" | "webm" => {
                 Ok(Self::Video(Video::from(path)))
             }
+            "pdf" => Ok(Self::Presentation(Presentation::from(path))),
             _ => Err(miette::miette!("Unknown item")),
         }
     }

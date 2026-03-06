@@ -106,6 +106,7 @@ pub enum Message {
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
+    AddPresentationSplit(Option<Presentation>),
 }
 
 impl<'a> Library {
@@ -254,8 +255,38 @@ impl<'a> Library {
                     Task::batch(tasks).chain(after_task),
                 );
             }
+            Message::AddPresentationSplit(presentation) => {
+                debug!(?presentation, "adding to db");
+                if let Some(presentation) = presentation {
+                    if let Err(e) = self
+                        .presentation_library
+                        .add_item(presentation.clone())
+                    {
+                        error!(?e);
+                    }
+                    return Action::Task(
+                        Task::future(self.db.acquire()).and_then(
+                            move |db| {
+                                Task::perform(
+                                    add_presentation_to_db(
+                                        presentation.clone(),
+                                        db,
+                                    ),
+                                    move |res| {
+                                        debug!("added to db");
+                                        if let Err(e) = res {
+                                            error!(?e);
+                                        }
+                                        Message::None
+                                    },
+                                )
+                            },
+                        ),
+                    );
+                }
+            }
             Message::AddPresentations(presentations) => {
-                debug!(?presentations);
+                debug!(?presentations, "adding to db");
                 let mut index = self.presentation_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
@@ -597,7 +628,7 @@ impl<'a> Library {
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
             Message::UpdatePresentation(presentation) => {
-                let Some((kind, index)) = self.editing_item else {
+                let Some((kind, _index)) = self.editing_item else {
                     error!("Not editing an item");
                     return Action::None;
                 };
@@ -606,6 +637,14 @@ impl<'a> Library {
                     error!("Not editing a presentation item");
                     return Action::None;
                 }
+                let index = self
+                    .presentation_library
+                    .items
+                    .iter()
+                    .position(|pres| pres.id == presentation.id)
+                    .unwrap_or_default()
+                    .try_into()
+                    .unwrap_or_default();
 
                 match self
                             .presentation_library

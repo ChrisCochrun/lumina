@@ -961,7 +961,7 @@ impl cosmic::Application for App {
                     }
                     presentation_editor::Action::SplitAddPresentation((first, second)) => {
                         if self.library.is_some() {
-                            let second_task = self.update(Message::Library(library::Message::AddPresentations(Some(vec![second]))));
+                            let second_task = self.update(Message::Library(library::Message::AddPresentationSplit(Some(second))));
                             self.update(Message::Library(library::Message::UpdatePresentation(first))).chain(second_task)
 
                         } else {

@@ -456,7 +456,10 @@ pub async fn update_presentation_in_db(
             let Some(mut max) = ids.iter().map(|r| r.id).max() else {
                 return Err(miette::miette!("cannot find max id"));
             };
-            debug!(?e, "Presentation not found");
+            debug!(
+                ?e,
+                "Presentation not found adding a new presentation"
+            );
             max += 1;
             let result = query!(
                 r#"INSERT into presentations VALUES($1, $2, $3, $4, $5, $6)"#,
@@ -473,7 +476,7 @@ pub async fn update_presentation_in_db(
 
             return match result {
                 Ok(_) => {
-                    debug!("should have been updated");
+                    debug!("presentation should have been added");
                     Ok(())
                 }
                 Err(e) => {
