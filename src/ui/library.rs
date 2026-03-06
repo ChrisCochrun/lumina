@@ -1513,10 +1513,25 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     if text_length > width {
         format!(
             "{}...",
-            text.split_at(
+            if let Some((first, _second)) = text.split_at_checked(
                 ((width / CHAR_SIZE) - 3.0).floor() as usize
-            )
-            .0
+            ) {
+                first
+            } else if let Some((first, _second)) = text
+                .split_at_checked(
+                    ((width / CHAR_SIZE) - 5.0).floor() as usize
+                )
+            {
+                first
+            } else if let Some((first, _second)) = text
+                .split_at_checked(
+                    ((width / CHAR_SIZE) - 7.0).floor() as usize
+                )
+            {
+                first
+            } else {
+                &text
+            }
         )
     } else {
         text
