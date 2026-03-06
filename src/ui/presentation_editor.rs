@@ -430,13 +430,18 @@ impl PresentationEditor {
     }
 
     fn toolbar(&self) -> Element<Message> {
-        let title_box = text_input("Title...", &self.title)
-            .on_input(Message::ChangeTitle);
+        let title_box = text_input(
+            "Title...",
+            self.presentation
+                .as_ref()
+                .map_or("", |presentation| &presentation.title),
+        )
+        .on_input(Message::ChangeTitle);
 
         let presentation_selector = button::icon(
             icon::from_name("folder-presentations-symbolic").scale(2),
         )
-        .label("Presentation")
+        .label("Change Presentation")
         .tooltip("Select a presentation")
         .on_press(Message::PickPresentation)
         .padding(10);
