@@ -1,20 +1,16 @@
 #+TITLE: The Task list for Lumina
 
 
-* TODO [#C] Use orgize as a file parser and allow for orgdown files to represent a presentation.
-Orgize has some very nice features that will let me determine what things are in an orgdown file and thus take said file and turn it into a presentation.
-
-After looking more and more at how the orgize docs describe things and the testing platform found at: https://poiscript.github.io/orgize/ I believe this will work. The main things are that I can possibly decide how to interpret certain pieces of orgdown to mean certain things in lumina. Essentially a properties drawer or tag can indicate backgrounds and other info for the slides or songs and then the notes blocks can indicate text that shouldn't be printed into the slide, thus allowing a single orgdown document to illustrate both an entire presentation, but also the notes and plan for the presenter.
-
-I could potentially do the same with markdown, but since this is for me first, I'll use orgdown because I enjoy the syntax a lot more.
-
-* TODO Find a way to use auth-token in tests for ci
-If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
-
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
 This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
+
+* TODO [#A] Font in the song editor doesn't always use the original version
+There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
+
+* TODO [#B] Find a way to use auth-token in tests for ci
+If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
 
 * TODO [#B] Saving and loading font awareness
 Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
@@ -23,8 +19,12 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
 
-* TODO Font in the song editor doesn't always use the original version
-There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
+* TODO [#C] Use orgize as a file parser and allow for orgdown files to represent a presentation.
+Orgize has some very nice features that will let me determine what things are in an orgdown file and thus take said file and turn it into a presentation.
+
+After looking more and more at how the orgize docs describe things and the testing platform found at: https://poiscript.github.io/orgize/ I believe this will work. The main things are that I can possibly decide how to interpret certain pieces of orgdown to mean certain things in lumina. Essentially a properties drawer or tag can indicate backgrounds and other info for the slides or songs and then the notes blocks can indicate text that shouldn't be printed into the slide, thus allowing a single orgdown document to illustrate both an entire presentation, but also the notes and plan for the presenter.
+
+I could potentially do the same with markdown, but since this is for me first, I'll use orgdown because I enjoy the syntax a lot more.
 
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 
