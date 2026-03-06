@@ -11,6 +11,7 @@ There seems to be some issue with fontdb not able to decipher all the versions o
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
+* TODO [#B] Rename menu actions to menu commands and build a reverse hashmap for settings to map commands to key-binding such that we can allow for remapping them on the fly.
 
 * TODO [#B] Saving and loading font awareness
 Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
