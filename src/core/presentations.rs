@@ -398,11 +398,22 @@ pub async fn add_presentation_to_db(
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
     let mut db = db.detach();
+    let (starting_index, ending_index) = if let PresKind::Pdf {
+        starting_index,
+        ending_index,
+    } = presentation.kind
+    {
+        (starting_index, ending_index)
+    } else {
+        (0, 0)
+    };
     query!(
-        r#"INSERT INTO presentations (title, file_path, html) VALUES ($1, $2, $3)"#,
+        r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index) VALUES ($1, $2, $3, $4, $5)"#,
         presentation.title,
         path,
         html,
+        starting_index,
+        ending_index
     )
     .execute(&mut db)
     .await
@@ -431,6 +442,7 @@ pub async fn update_presentation_in_db(
     } else {
         (0, 0)
     };
+    debug!(starting_index, ending_index);
     let id = presentation.id;
     if let Err(e) =
         query!("SELECT id FROM presentations where id = $1", id)
@@ -475,11 +487,13 @@ pub async fn update_presentation_in_db(
 
     debug!(?presentation, "should be been updated");
     let result = query!(
-        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4 WHERE id = $1"#,
+        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4, starting_index = $5, ending_index = $6 WHERE id = $1"#,
         presentation.id,
         presentation.title,
         path,
-        html
+        html,
+        starting_index,
+        ending_index
     )
         .execute(&mut db)
         .await.into_diagnostic();
