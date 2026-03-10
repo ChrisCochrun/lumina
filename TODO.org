@@ -6,6 +6,8 @@ This will be based on each slide having the ability to activate an action (i.e. 
 
 This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
 
+* TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly
+
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
