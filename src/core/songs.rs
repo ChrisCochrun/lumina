@@ -1194,7 +1194,7 @@ mod test {
     use crate::ui::text_svg::text_svg_generator_with_cache;
 
     use super::*;
-    use pretty_assertions::assert_eq;
+    use pretty_assertions::{assert_eq, assert_ne};
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
 
@@ -1397,12 +1397,17 @@ You saved my soul"
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
         song_model.load_from_db(&mut db).await;
+        let test_song = song_model.get_item(2);
+        assert_ne!(test_song, Some(&cloned_song));
 
         match song_model.update_item(song, 2) {
-            Ok(()) => assert_eq!(
-                &cloned_song,
-                song_model.find(|s| s.id == 7).unwrap()
-            ),
+            Ok(()) => {
+                assert_eq!(
+                    &cloned_song,
+                    song_model.find(|s| s.id == 7).unwrap()
+                );
+                assert_eq!(Some(&cloned_song), song_model.get_item(2))
+            }
             Err(e) => assert!(false, "{e}"),
         }
     }
