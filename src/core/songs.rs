@@ -1402,11 +1402,26 @@ You saved my soul"
 
         match song_model.update_item(song, 2) {
             Ok(()) => {
-                assert_eq!(
-                    &cloned_song,
-                    song_model.find(|s| s.id == 7).unwrap()
-                );
-                assert_eq!(Some(&cloned_song), song_model.get_item(2))
+                let updated_model_song =
+                    song_model.find(|s| s.id == 7).unwrap();
+                assert_eq!(&cloned_song, updated_model_song);
+                match update_song_in_db(
+                    cloned_song.clone(),
+                    db.acquire().await.unwrap(),
+                )
+                .await
+                {
+                    Ok(_) => {
+                        let db_song = get_song_from_db(
+                            7,
+                            &mut db.acquire().await.unwrap(),
+                        )
+                        .await
+                        .unwrap();
+                        assert_eq!(db_song, cloned_song);
+                    }
+                    Err(e) => assert!(false, "{e}"),
+                }
             }
             Err(e) => assert!(false, "{e}"),
         }
