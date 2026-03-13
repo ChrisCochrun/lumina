@@ -233,7 +233,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
-    async fn test_genius() -> Result<(), String> {
+    async fn genius() -> Result<(), String> {
         let song = OnlineSong {
             lyrics: String::new(),
             title: "Death Was Arrested by North Point Worship (Ft. Seth Condrey)".to_string(),
@@ -244,6 +244,11 @@ mod test {
         let hits = search_genius_links("Death was arrested")
             .await
             .map_err(|e| e.to_string())?;
+
+        assert!(
+            hits.iter().find(|hit| **hit == song).is_some(),
+            "There was no song that matched on Genius"
+        );
 
         let titles: Vec<String> =
             hits.iter().map(|song| song.title.clone()).collect();
@@ -267,7 +272,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_search_to_song() -> Result<(), String> {
+    async fn search_to_song() -> Result<(), String> {
         let song = OnlineSong {
             lyrics: "Alone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love Made a way to let mercy come in\nWhen death was arrested and my life began\n\nAsh was redeemed only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet my feet rose to dance\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nReleased from my chains I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOur savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nWhen death was arrested and my life began\nWhen death was arrested and my life began".to_string(),
             title: "Death Was Arrested".to_string(),
@@ -308,7 +313,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_online_search() {
+    async fn online_search() {
         let search =
             search_lyrics_com_links("Death was arrested").await;
         match search {
