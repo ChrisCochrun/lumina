@@ -1,4 +1,6 @@
 #+TITLE: The Task list for Lumina
+#+FILETAGS: :project:dev:
+#+CATEGORY: dev
 
 
 * TODO [#A] Add Action system
