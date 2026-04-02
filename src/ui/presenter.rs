@@ -19,12 +19,13 @@ use cosmic::{
         scrollable::{
             AbsoluteOffset, Direction, Scrollbar, scroll_to,
         },
-        stack, vertical_rule,
+        stack,
     },
     prelude::*,
     widget::{
-        Container, Id, Row, Space, container, context_menu, image,
-        menu, mouse_area, responsive, scrollable, text,
+        Container, Id, Row, Space, container, context_menu,
+        divider::vertical, image, menu, mouse_area, responsive,
+        scrollable, text,
     },
 };
 use derive_more::Debug;
@@ -723,7 +724,7 @@ impl Presenter {
                     .align_top(Length::Fill)
                     .align_left(Length::Fill)
                     .padding([0, 0, 0, 35]);
-                let divider = vertical_rule(2);
+                let divider = vertical::light();
                 items.push(
                     container(stack!(row, label_container))
                         .padding([5, 2])
@@ -981,7 +982,7 @@ pub(crate) fn slide_view<'a>(
 ) -> Element<'a, Message> {
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
-        let black = Container::new(Space::new(0, 0))
+        let black = Container::new(Space::new())
             .style(|_| {
                 container::background(Background::Color(Color::BLACK))
             })

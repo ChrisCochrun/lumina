@@ -8,8 +8,8 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        self, Space, button, container, horizontal_space, icon, text,
-        text_input,
+        self, Space, button, container, icon, space::horizontal,
+        text, text_input,
     },
 };
 use tracing::{debug, error, warn};
@@ -94,7 +94,7 @@ impl ImageEditor {
     #[must_use]
     pub fn view(&self) -> Element<Message> {
         let container = self.image.as_ref().map_or_else(
-            || Space::new(0, 0).apply(container),
+            || Space::new().apply(container),
             |pic| widget::image(pic.path.clone()).apply(container),
         );
         let column = column![
@@ -120,7 +120,7 @@ impl ImageEditor {
         row![
             text::body("Title:"),
             title_box,
-            horizontal_space(),
+            horizontal(),
             image_selector
         ]
         .align_y(Vertical::Center)

@@ -12,9 +12,11 @@ use cosmic::{
     theme,
     widget::{
         Container, DndSource, Space, button, container, context_menu,
-        dnd_destination, horizontal_space, icon,
+        dnd_destination, icon,
         menu::{self, Action as MenuAction},
-        mouse_area, responsive, row, scrollable, text, text_input,
+        mouse_area, responsive, row, scrollable,
+        space::horizontal,
+        text, text_input,
     },
 };
 use miette::{IntoDiagnostic, Result};
@@ -1183,7 +1185,7 @@ impl<'a> Library {
         let texts = column([text.into(), subtext.into()]);
 
         Container::new(
-            rowm![horizontal_space().width(0), texts]
+            rowm![horizontal().width(0), texts]
                 .spacing(10)
                 .align_y(Vertical::Center),
         )

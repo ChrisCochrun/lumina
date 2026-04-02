@@ -13,9 +13,9 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        self, Space, button, container, context_menu,
-        horizontal_space, icon, image::Handle, menu, mouse_area,
-        scrollable, text, text_input,
+        self, Space, button, container, context_menu, icon,
+        image::Handle, menu, mouse_area, scrollable,
+        space::horizontal, text, text_input,
     },
 };
 use miette::{IntoDiagnostic, Result, miette};
@@ -335,7 +335,7 @@ impl PresentationEditor {
 
     pub fn view(&self) -> Element<Message> {
         let presentation = self.current_slide.as_ref().map_or_else(
-            || container(Space::new(0, 0)),
+            || container(Space::new()),
             |slide| {
                 container(
                     widget::image(slide)
@@ -350,7 +350,7 @@ impl PresentationEditor {
         );
         let pdf_pages: Vec<Element<Message>> =
             self.slides.as_ref().map_or_else(
-                || vec![horizontal_space().into()],
+                || vec![horizontal().into()],
                 |pages| {
                     pages
                         .iter()

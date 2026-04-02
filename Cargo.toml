@@ -57,8 +57,8 @@ default-features = false
 features = ["debug", "winit", "desktop", "winit_wgpu", "winit_tokio", "tokio", "wayland", "rfd", "dbus-config", "a11y", "wgpu", "multi-window", "process"]
 
 [dependencies.iced_video_player]
-git = "https://github.com/jackpot51/iced_video_player.git"
-branch = "cosmic"
+git = "https://github.com/wash2/iced_video_player.git"
+branch = "iced-rebase"
 features = ["wgpu"]
 
 # [profile.dev]

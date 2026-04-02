@@ -35,8 +35,9 @@ use cosmic::{
         combo_box, container, divider, dnd_destination, dnd_source,
         dropdown,
         grid::{self},
-        horizontal_space, icon, mouse_area, popover, progress_bar,
-        scrollable, text, text_editor, text_input, tooltip,
+        icon, mouse_area, popover, progress_bar, scrollable,
+        space::horizontal,
+        text, text_editor, text_input, tooltip,
     },
 };
 use derive_more::Debug;
@@ -900,7 +901,7 @@ impl SongEditor {
     pub fn view(&self) -> Element<Message> {
         let video_elements: Element<Message> =
             self.video.as_ref().map_or_else(
-                || horizontal_space().into(),
+                || horizontal().into(),
                 |video| {
                     let play_button =
                         button::icon(if video.paused() {
@@ -913,8 +914,8 @@ impl SongEditor {
                         0.0..=video.duration().as_secs_f32(),
                         video.position().as_secs_f32(),
                     )
-                    .height(cosmic::theme::spacing().space_s)
-                    .width(Length::Fill);
+                    .girth(cosmic::theme::spacing().space_s)
+                    .length(Length::Fill);
                     container(
                         row![play_button, video_track]
                             .align_y(Vertical::Center)
