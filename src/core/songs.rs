@@ -14,8 +14,8 @@ use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
-    pool::PoolConnection, query, sqlite::SqliteRow,
+    FromRow, Row, Sqlite, SqliteConnection, SqliteExecutor,
+    SqlitePool, pool::PoolConnection, query, sqlite::SqliteRow,
 };
 use tracing::{debug, error};
 
@@ -789,9 +789,8 @@ pub async fn remove_from_db(
 }
 
 pub async fn add_song_to_db(
-    db: PoolConnection<Sqlite>,
+    db: impl SqliteExecutor<'_>,
 ) -> Result<Song> {
-    let mut db = db.detach();
     let mut song = Song::default();
 
     let verse_order = {
@@ -827,7 +826,7 @@ pub async fn add_song_to_db(
         song.font_size,
         background
     )
-    .execute(&mut db)
+    .execute(db)
     .await
     .into_diagnostic()?;
     song.id = i32::try_from(res.last_insert_rowid()).expect(
@@ -838,7 +837,7 @@ pub async fn add_song_to_db(
 
 pub async fn update_song_in_db(
     item: Song,
-    db: PoolConnection<Sqlite>,
+    db: impl SqliteExecutor<'_>,
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
@@ -927,7 +926,7 @@ pub async fn update_song_in_db(
         style,
         weight
     )
-        .execute(&mut db.detach())
+        .execute(db)
         .await
         .into_diagnostic()?;
 
@@ -1189,7 +1188,7 @@ impl Song {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
+    use std::{str::FromStr, sync::Arc};
 
     use crate::ui::text_svg::text_svg_generator_with_cache;
 
@@ -1197,6 +1196,12 @@ mod test {
     use pretty_assertions::{assert_eq, assert_ne};
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
+    use sqlx::{
+        Connection, migrate,
+        sqlite::{
+            SqliteConnectOptions, SqliteConnection, SqlitePoolOptions,
+        },
+    };
 
     #[test]
     pub fn test_song_lyrics() {
@@ -1337,12 +1342,35 @@ You saved my soul"
 
     async fn add_db() -> Result<SqlitePool> {
         let db_url = String::from("sqlite://./test.db");
-        SqlitePool::connect(&db_url).await.into_diagnostic()
+        let pool =
+            SqlitePool::connect(&db_url).await.into_diagnostic()?;
+        migrate!()
+            .run(&pool)
+            .await
+            .into_diagnostic()
+            .expect("broken migrations");
+        fill_db(&pool).await?;
+        Ok(pool)
+    }
+
+    async fn fill_db(db: &SqlitePool) -> Result<()> {
+        for _ in 0..20 {
+            let conn = db.acquire().await.into_diagnostic()?;
+            let db_song = add_song_to_db(conn).await?;
+            let mut song = test_song();
+            song.id = db_song.id;
+            let conn = db.acquire().await.into_diagnostic()?;
+            update_song_in_db(song, conn).await?;
+        }
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_db_and_model() {
-        let mut db = add_db().await.unwrap();
+    async fn song_db_and_model() {
+        let mut db = add_db().await.expect("ERROR OPENING");
+        if let Err(e) = fill_db(&db).await {
+            panic!("grrr {e}")
+        };
         let mut song_model = model().await;
         song_model.load_from_db(&mut db).await;
         if let Some(song) = song_model.find(|s| s.id == 7) {

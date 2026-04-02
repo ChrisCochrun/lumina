@@ -112,7 +112,7 @@ pub enum Message {
 impl<'a> Library {
     pub async fn new() -> Self {
         let mut db = add_db().await.expect("probs");
-        if let Err(e) = migrate!("./migrations").run(&db).await {
+        if let Err(e) = migrate!().run(&db).await {
             error!(?e);
         }
         Self {
