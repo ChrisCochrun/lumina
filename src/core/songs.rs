@@ -15,7 +15,8 @@ use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     FromRow, Row, Sqlite, SqliteConnection, SqliteExecutor,
-    SqlitePool, pool::PoolConnection, query, sqlite::SqliteRow,
+    SqlitePool, Transaction, pool::PoolConnection, query,
+    sqlite::SqliteRow,
 };
 use tracing::{debug, error};
 
@@ -789,7 +790,7 @@ pub async fn remove_from_db(
 }
 
 pub async fn add_song_to_db(
-    db: impl SqliteExecutor<'_>,
+    db: PoolConnection<Sqlite>,
 ) -> Result<Song> {
     let mut song = Song::default();
 
@@ -826,7 +827,7 @@ pub async fn add_song_to_db(
         song.font_size,
         background
     )
-    .execute(db)
+    .execute(&mut db.detach())
     .await
     .into_diagnostic()?;
     song.id = i32::try_from(res.last_insert_rowid()).expect(
@@ -837,7 +838,7 @@ pub async fn add_song_to_db(
 
 pub async fn update_song_in_db(
     item: Song,
-    db: impl SqliteExecutor<'_>,
+    db: PoolConnection<Sqlite>,
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
@@ -926,7 +927,7 @@ pub async fn update_song_in_db(
         style,
         weight
     )
-        .execute(db)
+        .execute(&mut db.detach())
         .await
         .into_diagnostic()?;
 
@@ -1341,7 +1342,7 @@ You saved my soul"
     }
 
     async fn add_db() -> Result<SqlitePool> {
-        let db_url = String::from("sqlite://./test.db");
+        let db_url = String::from("sqlite::memory:");
         let pool =
             SqlitePool::connect(&db_url).await.into_diagnostic()?;
         migrate!()
