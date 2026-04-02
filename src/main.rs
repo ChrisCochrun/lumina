@@ -22,14 +22,14 @@ use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
+use cosmic::widget::space::horizontal;
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     Container, divider, menu, settings, text_input,
 };
 use cosmic::widget::{
-    Space, button, context_menu, horizontal_space, mouse_area,
-    nav_bar, nav_bar_toggle, responsive, scrollable, search_input,
-    tooltip,
+    Space, button, context_menu, mouse_area, nav_bar, nav_bar_toggle,
+    responsive, scrollable, search_input, tooltip,
 };
 use cosmic::widget::{container, text};
 use cosmic::widget::{icon, slider};
@@ -699,6 +699,7 @@ impl cosmic::Application for App {
                             // debug!(?platform_specific);
                             None
                         }
+                        iced::Event::InputMethod(event) => todo!(),
                     }
                 }
                 event::Status::Captured => None,
@@ -736,7 +737,7 @@ impl cosmic::Application for App {
                         row![
                             column![title, subtitle]
                                 .spacing(space_xxs),
-                            horizontal_space(),
+                            horizontal(),
                             tooltip(
                                 icon::from_name("add")
                                     .symbolic(true).apply(button::icon)
@@ -824,7 +825,7 @@ impl cosmic::Application for App {
                     .padding(space_s)
                     .align_right(Length::Fill)
                     .align_top(60),
-                horizontal_space().height(space_xxl),
+                horizontal().height(space_xxl),
                 settings::section()
                     .title("Obs Settings")
                     .add(obs_socket)
@@ -1704,7 +1705,7 @@ impl cosmic::Application for App {
             .padding(space_s)
             .width(Length::FillPortion(2))
         } else {
-            Container::new(horizontal_space().width(0))
+            Container::new(horizontal().width(0))
         };
 
         let editor = self.editor_mode.as_ref().map_or_else(
@@ -1763,7 +1764,7 @@ impl cosmic::Application for App {
 
         let preview_bar = if self.editor_mode.is_none() {
             if self.service.is_empty() {
-                Container::new(horizontal_space())
+                Container::new(horizontal())
             } else {
                 Container::new(
                     self.presenter
@@ -1775,7 +1776,7 @@ impl cosmic::Application for App {
                 .center_y(180)
             }
         } else {
-            Container::new(horizontal_space())
+            Container::new(horizontal())
         };
 
         let main_area = self.editor_mode.as_ref().map_or_else(
