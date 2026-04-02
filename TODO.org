@@ -10,6 +10,8 @@ This is working but the right click context menu is all the way on the edge of t
 
 * TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly
 
+Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
+
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
