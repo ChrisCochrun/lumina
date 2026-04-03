@@ -121,10 +121,10 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
     fn update(
         &self,
         _state: &mut Self::State,
-        event: canvas::Event,
+        event: &canvas::Event,
         bounds: cosmic::iced::Rectangle,
         _cursor: cosmic::iced_core::mouse::Cursor,
-    ) -> (canvas::event::Status, Option<SlideWidget>) {
+    ) -> (&cosmic::event::Status, Option<SlideWidget>) {
         match event {
             canvas::Event::Mouse(event) => match event {
                 cosmic::iced::mouse::Event::CursorEntered => {
@@ -157,8 +157,15 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
             },
             canvas::Event::Touch(_event) => debug!("test"),
             canvas::Event::Keyboard(_event) => debug!("test"),
+            canvas::Event::Window(event) => todo!(),
+            canvas::Event::InputMethod(event) => todo!(),
+            canvas::Event::A11y(id, action_request) => todo!(),
+            canvas::Event::Dnd(dnd_event) => todo!(),
+            canvas::Event::PlatformSpecific(platform_specific) => {
+                todo!()
+            }
         }
-        (canvas::event::Status::Ignored, None)
+        (iced_core::event::Status::Ignored, None)
     }
 
     fn mouse_interaction(

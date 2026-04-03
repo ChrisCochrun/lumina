@@ -14,8 +14,10 @@ use cosmic::{
     theme,
     widget::{
         self, Space, button, container, context_menu, icon,
-        image::Handle, menu, mouse_area, scrollable,
-        space::horizontal, text, text_input,
+        image::Handle,
+        menu, mouse_area, scrollable,
+        space::{self, horizontal},
+        text, text_input,
     },
 };
 use miette::{IntoDiagnostic, Result, miette};
@@ -421,7 +423,7 @@ impl PresentationEditor {
         let control_buttons = row![
             button::standard("Previous Page")
                 .on_press(Message::PrevPage),
-            horizontal_space(),
+            space::horizontal(),
             button::standard("Next Page").on_press(Message::NextPage),
         ];
         let column =
@@ -450,7 +452,7 @@ impl PresentationEditor {
         row![
             text::body("Title:"),
             title_box,
-            horizontal_space(),
+            space::horizontal(),
             presentation_selector
         ]
         .align_y(Vertical::Center)

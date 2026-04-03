@@ -7,8 +7,9 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        Space, button, container, horizontal_space, icon,
-        progress_bar, text, text_input,
+        Space, button, container, icon, progress_bar,
+        space::{self, horizontal},
+        text, text_input,
     },
 };
 use iced_video_player::{Video, VideoPlayer};
@@ -110,7 +111,7 @@ impl VideoEditor {
 
     pub fn view(&self) -> Element<Message> {
         let video_elements = self.video.as_ref().map_or_else(
-            || container(horizontal_space()),
+            || container(horizontal()),
             |video| {
                 let play_button = button::icon(if video.paused() {
                     icon::from_name("media-playback-start")
@@ -122,8 +123,8 @@ impl VideoEditor {
                     0.0..=video.duration().as_secs_f32(),
                     video.position().as_secs_f32(),
                 )
-                .height(cosmic::theme::spacing().space_s)
-                .width(Length::Fill);
+                .girth(cosmic::theme::spacing().space_s)
+                .length(Length::Fill);
                 container(
                     row![play_button, video_track]
                         .align_y(Vertical::Center)
@@ -135,7 +136,7 @@ impl VideoEditor {
         );
 
         let video_player = self.video.as_ref().map_or_else(
-            || Element::from(Space::new(0, 0)),
+            || Element::from(Space::new()),
             |video| Element::from(VideoPlayer::new(video)),
         );
 
@@ -164,7 +165,7 @@ impl VideoEditor {
         row![
             text::body("Title:"),
             title_box,
-            horizontal_space(),
+            space::horizontal(),
             video_selector
         ]
         .align_y(Vertical::Center)

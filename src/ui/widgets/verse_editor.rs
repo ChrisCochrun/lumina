@@ -5,7 +5,8 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        button, combo_box, container, horizontal_space, icon,
+        button, combo_box, container, icon,
+        space::{self, horizontal},
         text_editor,
     },
 };
@@ -62,12 +63,12 @@ impl VerseEditor {
                     let verse = self.verse_name;
                     Action::UpdateVerse((verse, lyrics))
                 }
-                text_editor::Action::Scroll { pixels } => {
+                text_editor::Action::Scroll { lines } => {
                     if self.content.line_count() > 6 {
                         self.content.perform(action);
                         Action::None
                     } else {
-                        Action::ScrollVerses(pixels)
+                        Action::ScrollVerses(lines as f32)
                     }
                 }
                 _ => {
@@ -109,12 +110,12 @@ impl VerseEditor {
         );
 
         let verse_title =
-            row![combo, horizontal_space(), delete_button];
+            row![combo, space::horizontal(), delete_button];
 
         let lyric: Element<Message> = if self.verse_name
             == VerseName::Blank
         {
-            horizontal_space().into()
+            space::horizontal().into()
         } else {
             text_editor(&self.content)
                 .on_action(Message::UpdateLyric)
@@ -131,15 +132,11 @@ impl VerseEditor {
                                     .into(),
                             ),
                             border: Border::default()
-                                .rounded(space_s)
+                                .rounded(space_s as u8)
                                 .width(2)
                                 .color(
                                     t.cosmic().bg_component_divider(),
                                 ),
-                            icon: t
-                                .cosmic()
-                                .primary_component_color()
-                                .into(),
                             placeholder: neutral
                                 .with_alpha(0.7)
                                 .into(),
@@ -147,13 +144,15 @@ impl VerseEditor {
                             selection: t.cosmic().accent.base.into(),
                         };
                         let hovered_border = Border::default()
-                            .rounded(space_s)
+                            .rounded(space_s as u8)
                             .width(3)
                             .color(t.cosmic().accent.hover);
                         match s {
                             text_editor::Status::Active => base_style,
                             text_editor::Status::Hovered
-                            | text_editor::Status::Focused => {
+                            | text_editor::Status::Focused {
+                                ..
+                            } => {
                                 base_style.border = hovered_border;
                                 base_style
                             }

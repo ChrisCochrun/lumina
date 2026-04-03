@@ -455,7 +455,10 @@ impl Presenter {
                 };
 
                 let mut tasks = vec![];
-                tasks.push(scroll_to(self.scroll_id.clone(), offset));
+                tasks.push(scroll_to(
+                    self.scroll_id.clone(),
+                    offset.into(),
+                ));
 
                 if self.slide_action_map.is_some() {
                     debug!("Found slide actions, running them");
