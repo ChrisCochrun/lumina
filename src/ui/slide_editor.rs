@@ -124,7 +124,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         event: &canvas::Event,
         bounds: cosmic::iced::Rectangle,
         _cursor: cosmic::iced_core::mouse::Cursor,
-    ) -> (&cosmic::event::Status, Option<SlideWidget>) {
+    ) -> Option<cosmic::iced_widget::Action<SlideWidget>> {
         match event {
             canvas::Event::Mouse(event) => match event {
                 cosmic::iced::mouse::Event::CursorEntered => {
@@ -165,7 +165,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                 todo!()
             }
         }
-        (iced_core::event::Status::Ignored, None)
+        None
     }
 
     fn mouse_interaction(

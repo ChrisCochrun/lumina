@@ -1245,7 +1245,7 @@ impl cosmic::Application for App {
                                                             if let Some(video) = &mut self.presenter.video {
                                                                 video.set_muted(false);
                                                             }
-                                                            window::change_mode(id, Mode::Fullscreen)
+                                                            window::maximize(id, true)
                                                         } else {
                                                             Task::none()
                                                         }
@@ -1296,10 +1296,12 @@ impl cosmic::Application for App {
                 )
             }
             Message::HoveredServiceItem(index) => {
+                debug!(index);
                 self.hovered_item = index;
                 Task::none()
             }
             Message::HoveredServiceDrop(index) => {
+                debug!(index);
                 self.hovered_dnd = index;
                 Task::none()
             }
@@ -2149,7 +2151,7 @@ where
             text::heading("Service List")
                 .center()
                 .width(Length::Fill),
-            iced::widget::horizontal_rule(1),
+            divider::horizontal::light(),
             scrollable
         ]
         .padding(10)

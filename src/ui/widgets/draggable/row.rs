@@ -421,9 +421,7 @@ where
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
-    ) -> event::Status {
-        let mut event_status = event::Status::Ignored;
-
+    ) {
         let action = tree.state.downcast_mut::<Action>();
 
         match event {
@@ -444,7 +442,7 @@ where
                                 index,
                                 origin: cursor_position,
                             };
-                            event_status = event::Status::Captured;
+                            shell.capture_event();
                             break;
                         }
                     }
@@ -469,7 +467,7 @@ where
                                     DragEvent::Picked { index },
                                 ));
                             }
-                            event_status = event::Status::Captured;
+                            shell.capture_event();
                         }
                     }
                     Action::Dragging { origin, index, .. } => {
@@ -481,7 +479,7 @@ where
                                 origin,
                                 index,
                             };
-                            event_status = event::Status::Captured;
+                            shell.capture_event();
                         }
                     }
                     _ => {}
@@ -514,8 +512,7 @@ where
                                             drop_position,
                                         },
                                     ));
-                                    event_status =
-                                        event::Status::Captured;
+                                    shell.capture_event();
                                 }
                             } else if let Some(on_reorder) =
                                 &self.on_drag
@@ -523,8 +520,7 @@ where
                                 shell.publish(on_reorder(
                                     DragEvent::Canceled { index },
                                 ));
-                                event_status =
-                                    event::Status::Captured;
+                                shell.capture_event();
                             }
                         }
                         *action = Action::Idle;
@@ -544,7 +540,7 @@ where
             .iter_mut()
             .zip(&mut tree.children)
             .zip(layout.children())
-            .map(|((child, state), layout)| {
+            .for_each(|((child, state), layout)| {
                 child.as_widget_mut().update(
                     state,
                     &event.clone(),
@@ -555,18 +551,7 @@ where
                     shell,
                     viewport,
                 )
-            })
-            .fold(
-                event::Status::Ignored,
-                |arg0: cosmic::iced::event::Status, arg1: ()| {
-                    event::Status::merge(
-                        event::Status::Ignored,
-                        arg0, /* cosmic::iced::event::Status */
-                    )
-                },
-            );
-
-        event::Status::merge(event_status, child_status)
+            });
     }
 
     fn mouse_interaction(
@@ -953,7 +938,7 @@ where
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
-    ) -> event::Status {
+    ) {
         self.row.update(
             tree, event, layout, cursor, renderer, clipboard, shell,
             viewport,

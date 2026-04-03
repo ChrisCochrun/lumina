@@ -54,7 +54,7 @@ serde_json = "1.0.149"
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 default-features = false
-features = ["debug", "winit", "desktop", "winit_wgpu", "winit_tokio", "tokio", "wayland", "rfd", "dbus-config", "a11y", "wgpu", "multi-window", "process"]
+features = ["debug", "winit", "desktop", "wayland", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window", "process"]
 
 [dependencies.iced_video_player]
 git = "https://github.com/wash2/iced_video_player.git"
