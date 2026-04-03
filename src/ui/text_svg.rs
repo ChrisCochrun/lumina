@@ -518,7 +518,13 @@ impl TextSvg {
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
         self.handle.clone().map_or_else(
-            || Element::from(Space::new(Length::Fill, Length::Fill)),
+            || {
+                Element::from(
+                    Space::new()
+                        .height(Length::Fill)
+                        .width(Length::Fill),
+                )
+            },
             |handle| {
                 Image::new(handle)
                     .content_fit(ContentFit::Cover)

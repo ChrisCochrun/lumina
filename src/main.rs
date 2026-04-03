@@ -18,6 +18,7 @@ use cosmic::iced::{
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
+use cosmic::prelude::*;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
@@ -786,7 +787,9 @@ impl cosmic::Application for App {
                 .center_x(Length::Fill)
                 .align_top(Length::Fill);
             let mouse_stack = stack!(
-                Space::new(Length::Fill, Length::Fill)
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
                     .apply(container)
                     .style(|_| {
                         container::background(
@@ -846,7 +849,9 @@ impl cosmic::Application for App {
                 .apply(container)
                 .padding([space_xxl, space_xxxl * 2]);
             let mouse_stack = stack!(
-                Space::new(Length::Fill, Length::Fill)
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
                     .apply(container)
                     .style(|_| {
                         container::background(
@@ -1657,7 +1662,7 @@ impl cosmic::Application for App {
             );
 
         let slide_preview = column![
-            Space::with_height(Length::Fill),
+            Space::new().height(Length::Fill),
             Container::new(
                 self.presenter.view_preview().map(Message::Present),
             )
@@ -1686,7 +1691,7 @@ impl cosmic::Application for App {
                 row![]
             })
             .center_x(Length::Fill),
-            Space::with_height(Length::Fill),
+            Space::new().height(Length::Fill)
         ]
         .spacing(3);
 
@@ -1697,7 +1702,7 @@ impl cosmic::Application for App {
         let library = if self.library_open {
             Container::new(
                 Container::new(self.library.as_ref().map_or_else(
-                    || Element::from(Space::new(0, 0)),
+                    || Element::from(Space::new()),
                     |library| library.view().map(Message::Library),
                 ))
                 .style(nav_bar_style),
@@ -1709,7 +1714,7 @@ impl cosmic::Application for App {
         };
 
         let editor = self.editor_mode.as_ref().map_or_else(
-            || Element::from(Space::new(0, 0)),
+            || Element::from(Space::new()),
             |mode| match mode {
                 EditorMode::Song => {
                     self.song_editor.view().map(Message::SongEditor)
@@ -1789,7 +1794,7 @@ impl cosmic::Application for App {
                 if self.library_open {
                     library.width(Length::FillPortion(1))
                 } else {
-                    container(Space::new(0, 0))
+                    container(Space::new())
                 },
                 main_area.width(Length::FillPortion(4))
             ]
@@ -1916,11 +1921,9 @@ where
             ) => self.update(Message::Present(
                 presenter::Message::PrevSlide,
             )),
-            (Key::Named(iced::keyboard::key::Named::Space), _) => {
-                self.update(Message::Present(
-                    presenter::Message::NextSlide,
-                ))
-            }
+            (Key::Character(k), _) if k == *" " => self.update(
+                Message::Present(presenter::Message::NextSlide),
+            ),
             (Key::Character(k), _) if k == *"j" || k == *"l" => self
                 .update(Message::Present(
                     presenter::Message::NextSlide,
@@ -2002,11 +2005,11 @@ where
                         let color = t.cosmic().accent_color();
                         cosmic::iced_widget::rule::Style {
                             color: color.into(),
-                            width: 2,
+                            snap: true,
                             radius: t.cosmic().corner_radii.radius_xs.into(),
                             fill_mode: cosmic::iced_widget::rule::FillMode::Full,
                         }
-                    } ));
+                    } )).width(2);
                     Container::new(column![divider, container].spacing(theme::spacing().space_s))
                 } else { container };
                 let mouse_area = mouse_area(visual_item)

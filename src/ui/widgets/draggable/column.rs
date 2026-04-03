@@ -376,7 +376,7 @@ where
     }
 
     fn layout(
-        &self,
+        &mut self,
         tree: &mut Tree,
         renderer: &Renderer,
         limits: &layout::Limits,
@@ -392,44 +392,42 @@ where
             self.padding,
             self.spacing,
             self.align,
-            &self.children,
+            self.children.as_mut(),
             &mut tree.children,
         )
     }
 
     fn operate(
-        &self,
+        &mut self,
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
-        operation.container(
-            None,
-            layout.bounds(),
-            &mut |operation| {
-                self.children
-                    .iter()
-                    .zip(&mut tree.children)
-                    .zip(layout.children())
-                    .for_each(|((child, state), c_layout)| {
-                        child.as_widget().operate(
-                            state,
-                            c_layout.with_virtual_offset(
-                                layout.virtual_offset(),
-                            ),
-                            renderer,
-                            operation,
-                        );
-                    });
-            },
-        );
+        operation.container(None, layout.bounds());
+
+        operation.traverse(&mut |operation| {
+            self.children
+                .iter_mut()
+                .zip(&mut tree.children)
+                .zip(layout.children())
+                .for_each(|((child, state), c_layout)| {
+                    child.as_widget_mut().operate(
+                        state,
+                        c_layout.with_virtual_offset(
+                            layout.virtual_offset(),
+                        ),
+                        renderer,
+                        operation,
+                    );
+                });
+        });
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut Tree,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &Renderer,
@@ -560,9 +558,9 @@ where
             .zip(&mut tree.children)
             .zip(layout.children())
             .map(|((child, state), c_layout)| {
-                child.as_widget_mut().on_event(
+                child.as_widget_mut().update(
                     state,
-                    event.clone(),
+                    &event.clone(),
                     c_layout
                         .with_virtual_offset(layout.virtual_offset()),
                     cursor,
@@ -572,7 +570,15 @@ where
                     viewport,
                 )
             })
-            .fold(event::Status::Ignored, event::Status::merge);
+            .fold(
+                event::Status::Ignored,
+                |arg0: cosmic::iced::event::Status, arg1: ()| {
+                    event::Status::merge(
+                        event::Status::Ignored,
+                        arg0, /* cosmic::iced::event::Status */
+                    )
+                },
+            );
 
         event::Status::merge(event_status, child_status)
     }
@@ -807,8 +813,9 @@ where
     fn overlay<'b>(
         &'b mut self,
         tree: &'b mut Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &Renderer,
+        viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         overlay::from_children(
@@ -816,6 +823,7 @@ where
             tree,
             layout,
             renderer,
+            viewport,
             translation,
         )
     }

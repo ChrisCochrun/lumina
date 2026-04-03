@@ -36,7 +36,7 @@ use cosmic::{
         dropdown,
         grid::{self},
         icon, mouse_area, popover, progress_bar, scrollable,
-        space::horizontal,
+        space::{self, horizontal},
         text, text_editor, text_input, tooltip,
     },
 };
@@ -948,7 +948,7 @@ impl SongEditor {
 
     fn slide_preview(&self) -> Element<Message> {
         self.song_slides.as_ref().map_or_else(
-            || horizontal_space().into(),
+            || space::horizontal().into(),
             |slides| {
                 let slides: Vec<Element<Message>> = slides
                     .iter()
@@ -1108,7 +1108,7 @@ impl SongEditor {
                             if let Some(hovered_chip) =
                                 self.hovered_dnd_verse_chip
                                 && index == hovered_chip {
-                                    let phantom_chip = horizontal_space().width(60).height(19)
+                                    let phantom_chip = space::horizontal().width(60).height(19)
                                         .apply(container)
                                         .padding(
                                             Padding::new(space_xxs.into())
@@ -1120,7 +1120,7 @@ impl SongEditor {
                                                 .background(ContainerBackground::Color(
                                                     Color::from(t.cosmic().secondary.base).scale_alpha(0.5)
                                                 ))
-                                                .border(Border::default().rounded(space_m).width(2))
+                                                .border(Border::default().rounded(space_m as u8).width(2))
                                         })));
                                     chip = row![
                                         phantom_chip,
@@ -1167,7 +1167,7 @@ impl SongEditor {
 
         let mut verse_order_row = if self.dragging_verse_chip {
             let ending_dnd_dest = dnd_destination(
-                horizontal_space().height(19),
+                space::horizontal().height(19),
                 vec!["application/verse".into()],
             )
             .on_enter(|_, _, _| {
@@ -1214,7 +1214,7 @@ impl SongEditor {
                 if self.editing_verse_order {
                     Element::from(verse_options)
                 } else {
-                    Element::from(horizontal_space())
+                    Element::from(space::horizontal())
                 }
             ]
             .spacing(space_s),
@@ -1237,7 +1237,7 @@ impl SongEditor {
         .spacing(5);
 
         let verse_list = self.verses.as_ref().map_or_else(
-            || Element::from(horizontal_space()),
+            || Element::from(space::horizontal()),
             |verse_list| {
                 Element::from(
                     column(verse_list.iter().enumerate().map(
@@ -1348,7 +1348,7 @@ impl SongEditor {
                 .on_close(Message::FontSelectorOpen(false))
                 .width(300),
                 container(if self.font_selector_open {
-                    Element::from(horizontal_space())
+                    Element::from(space::horizontal())
                 } else {
                     Element::from(
                         icon::from_name("arrow-down").size(space_m),
@@ -1384,7 +1384,7 @@ impl SongEditor {
                 .on_close(Message::FontSizeOpen(false))
                 .width(space_xxxl),
                 container(if self.font_size_open {
-                    Element::from(horizontal_space())
+                    Element::from(space::horizontal())
                 } else {
                     Element::from(
                         icon::from_name("arrow-down").size(space_m),
@@ -1798,7 +1798,7 @@ impl SongEditor {
             shadow_tools_button,
             divider::vertical::default().height(space_l),
             text_alignment_popup,
-            horizontal_space(),
+            space::horizontal(),
             background_selector
         ]
         .align_y(Vertical::Center)
@@ -1975,7 +1975,9 @@ fn verse_chip(
                     ))
                     .color(text_color)
                     .border(
-                        Border::default().rounded(space_m).width(2),
+                        Border::default()
+                            .rounded(space_m as u8)
+                            .width(2),
                     )
             })));
         let button = button::icon(icon::from_name("view-close"))
@@ -2007,7 +2009,9 @@ fn verse_chip(
                     ))
                     .color(text_color)
                     .border(
-                        Border::default().rounded(space_m).width(2),
+                        Border::default()
+                            .rounded(space_m as u8)
+                            .width(2),
                     )
             })))
             .into()

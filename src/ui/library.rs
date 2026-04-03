@@ -1361,8 +1361,8 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
+                            Task::future(self.db.acquire())
+                                .and_then(move |db| {
                                     Task::perform(
                                         songs::remove_from_db(
                                             db, song.id,
@@ -1371,11 +1371,11 @@ impl<'a> Library {
                                             if let Err(e) = r {
                                                 error!(?e);
                                             }
-                                            Message::None
+                                            r.map(|_| Message::None)
                                         },
                                     )
-                                },
-                            )
+                                })
+                                .map(|r| r.unwrap_or(Task::none()))
                         }
                     } else {
                         Task::none()
@@ -1392,8 +1392,8 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
+                            Task::future(self.db.acquire())
+                                .and_then(move |db| {
                                     Task::perform(
                                         videos::remove_from_db(
                                             db, video.id,
@@ -1405,8 +1405,8 @@ impl<'a> Library {
                                             Message::None
                                         },
                                     )
-                                },
-                            )
+                                })
+                                .map(|r| r.unwrap_or(Task::none()))
                         }
                     } else {
                         Task::none()
@@ -1425,8 +1425,8 @@ impl<'a> Library {
                         } else {
                             debug!("let's remove {0}", image.id);
                             debug!("let's remove {0}", image.title);
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
+                            Task::future(self.db.acquire())
+                                .and_then(move |db| {
                                     Task::perform(
                                         images::remove_from_db(
                                             db, image.id,
@@ -1438,8 +1438,8 @@ impl<'a> Library {
                                             Message::None
                                         },
                                     )
-                                },
-                            )
+                                })
+                                .map(|r| r.unwrap_or(Task::none()))
                         }
                     } else {
                         Task::none()
@@ -1457,8 +1457,8 @@ impl<'a> Library {
                             error!(?e);
                             Task::none()
                         } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
+                            Task::future(self.db.acquire())
+                                .and_then(move |db| {
                                     Task::perform(
                                         presentations::remove_from_db(
                                             db,
@@ -1471,8 +1471,8 @@ impl<'a> Library {
                                             Message::None
                                         },
                                     )
-                                },
-                            )
+                                })
+                                .map(|r| r.unwrap_or(Task::none()))
                         }
                     } else {
                         Task::none()
