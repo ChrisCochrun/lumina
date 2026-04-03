@@ -178,6 +178,7 @@ impl VideoEditor {
     }
 
     fn update_entire_video(&mut self, video: &videos::Video) {
+        debug!(?video);
         let Ok(mut player_video) =
             Url::from_file_path(video.path.clone())
                 .map(|url| Video::new(&url).expect("Should be here"))

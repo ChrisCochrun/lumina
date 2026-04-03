@@ -67,6 +67,7 @@
           libGL
           cargo-flamegraph
           bacon
+          openssl
 
           fontconfig
           glib
