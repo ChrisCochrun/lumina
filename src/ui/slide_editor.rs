@@ -157,11 +157,11 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
             },
             canvas::Event::Touch(_event) => debug!("test"),
             canvas::Event::Keyboard(_event) => debug!("test"),
-            canvas::Event::Window(event) => todo!(),
-            canvas::Event::InputMethod(event) => todo!(),
-            canvas::Event::A11y(id, action_request) => todo!(),
-            canvas::Event::Dnd(dnd_event) => todo!(),
-            canvas::Event::PlatformSpecific(platform_specific) => {
+            canvas::Event::Window(_event) => todo!(),
+            canvas::Event::InputMethod(_event) => todo!(),
+            canvas::Event::A11y(_id, _action_request) => todo!(),
+            canvas::Event::Dnd(_dnd_event) => todo!(),
+            canvas::Event::PlatformSpecific(_platform_specific) => {
                 todo!()
             }
         }
