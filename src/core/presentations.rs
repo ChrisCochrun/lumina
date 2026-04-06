@@ -301,14 +301,14 @@ impl Model<Presentation> {
     pub async fn append_presentation(
         &mut self,
         presentation: Presentation,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
 
     pub async fn new_presentation(
         &mut self,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
@@ -316,14 +316,14 @@ impl Model<Presentation> {
     pub async fn update_presentation(
         &mut self,
         presentation: Presentation,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
     pub async fn remove_presentation(
         &mut self,
         id: i32,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
