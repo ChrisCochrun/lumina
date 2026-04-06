@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use cosmic::{
     Element, Task,
@@ -50,7 +50,7 @@ pub struct Library {
     selected_items: Option<Vec<(LibraryKind, i32)>>,
     hovered_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
-    db: SqlitePool,
+    db: Arc<SqlitePool>,
     menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
     context_menu: Option<i32>,
     modifiers_pressed: Option<Modifiers>,
@@ -104,7 +104,8 @@ pub enum Message {
     OpenContext(i32),
     None,
     AddFiles(Vec<ServiceItemKind>),
-    AddSong(PoolConnection<Sqlite>),
+    ReaddSongs(Vec<Song>),
+    AddSong,
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
@@ -130,7 +131,7 @@ impl<'a> Library {
             selected_items: None,
             hovered_item: None,
             editing_item: None,
-            db,
+            db: db.into(),
             menu_keys: HashMap::new(),
             context_menu: None,
             modifiers_pressed: None,
@@ -142,29 +143,30 @@ impl<'a> Library {
         self.song_library.get_item(index)
     }
 
+    async fn test(&mut self) -> Result<Song> {
+        self.song_library.new_song(Arc::clone(&self.db)).await
+    }
+
     #[allow(clippy::cast_possible_wrap)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::match_same_arms)]
-    pub fn update(&'a mut self, message: Message) -> Action {
+    pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::None => (),
             Message::DeleteItem => {
                 return self.delete_items();
             }
-            Message::AddSong(db) => {
+            Message::ReaddSongs(songs) => {
+                self.song_library.items = songs;
+            }
+            Message::AddSong => {
+                let songs =
+                    self.song_library.items.drain(..).collect();
                 return Action::Task(Task::perform(
-                    self.song_library.new_song(db),
+                    add_song_to_db(songs, Arc::clone(&self.db)),
                     move |res| match res {
-                        Ok(song) => {
-                            let index =
-                                (self.song_library.items.len() - 1)
-                                    as i32;
-                            Message::OpenItem(Some((
-                                LibraryKind::Song,
-                                index,
-                            )))
-                        }
+                        Ok(songs) => Message::ReaddSongs(songs),
                         Err(e) => {
                             error!("adding error: {e}");
                             Message::None
@@ -177,12 +179,7 @@ impl<'a> Library {
                     self.library_open.unwrap_or(LibraryKind::Song);
                 match kind {
                     LibraryKind::Song => {
-                        let task = Task::future(self.db.acquire())
-                            .map_err(|e| {
-                                miette::miette!("Database error: {e}")
-                            })
-                            .map(|db| Message::AddSong(db));
-                        return Action::Task(task);
+                        return self.update(Message::AddSong);
                     }
                     LibraryKind::Video => {
                         return Action::Task(Task::perform(
@@ -479,20 +476,13 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                return Action::Task(
-                    Task::future(self.db.acquire())
-                        .map_err(|e| {
-                            miette::miette!("Database error: {e}")
-                        })
-                        .and_then(move |db| {
-                            Task::perform(
-                                self.song_library
-                                    .update_song(song, db),
-                                |r| r.map(|_| Message::SongChanged),
-                            )
-                        })
-                        .map(|r| r.unwrap_or(Message::None)),
-                );
+                return Action::Task(Task::perform(
+                    self.song_library.update_song(song, &self.db),
+                    |r| {
+                        r.map(|_| Message::SongChanged)
+                            .unwrap_or(Message::None)
+                    },
+                ));
             }
             Message::SongChanged => {
                 // self.song_library.update_item(song, index);
@@ -509,20 +499,13 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                return Action::Task(
-                    Task::future(self.db.acquire())
-                        .map_err(|e| {
-                            miette::miette!("Database error: {e}")
-                        })
-                        .and_then(move |conn| {
-                            Task::perform(
-                                self.image_library
-                                    .update_image(image, conn),
-                                |r| r.map(|_| Message::ImageChanged),
-                            )
-                        })
-                        .map(|r| r.unwrap_or(Message::None)),
-                );
+                return Action::Task(Task::perform(
+                    self.image_library.update_image(image, &self.db),
+                    |r| {
+                        r.map(|_| Message::ImageChanged)
+                            .unwrap_or(Message::None)
+                    },
+                ));
             }
             Message::ImageChanged => (),
             Message::UpdateVideo(video) => {
@@ -536,20 +519,13 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                return Action::Task(
-                    Task::future(self.db.acquire())
-                        .map_err(|e| {
-                            miette::miette!("Database error: {e}")
-                        })
-                        .and_then(move |conn| {
-                            Task::perform(
-                                self.video_library
-                                    .update_video(video, conn),
-                                |r| r.map(|_| Message::VideoChanged),
-                            )
-                        })
-                        .map(|r| r.unwrap_or(Message::None)),
-                );
+                return Action::Task(Task::perform(
+                    self.video_library.update_video(video, &self.db),
+                    |r| {
+                        r.map(|_| Message::VideoChanged)
+                            .unwrap_or(Message::None)
+                    },
+                ));
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
             Message::UpdatePresentation(presentation) => {
@@ -562,25 +538,15 @@ impl<'a> Library {
                     error!("Not editing a presentation item");
                     return Action::None;
                 }
-                let mut update_fn = move |conn| {
-                    self.presentation_library
-                        .update_presentation(presentation, conn)
-                };
 
-                return Action::Task(
-                    Task::future(self.db.acquire())
-                        .map_err(|e| {
-                            miette::miette!("Database error: {e}")
-                        })
-                        .and_then(move |conn| {
-                            Task::perform(update_fn(conn), |r| {
-                                r.map(|_| {
-                                    Message::PresentationChanged
-                                })
-                            })
-                        })
-                        .map(|r| r.unwrap_or(Message::None)),
-                );
+                return Action::Task(Task::perform(
+                    self.presentation_library
+                        .update_presentation(presentation, &self.db),
+                    |r| {
+                        r.map(|_| Message::PresentationChanged)
+                            .unwrap_or(Message::None)
+                    },
+                ));
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
@@ -1264,21 +1230,17 @@ impl<'a> Library {
                     if let Some(song) =
                         self.song_library.get_item(*index)
                     {
-                        Task::future(self.db.acquire()).and_then(
-                            move |db| {
-                                Task::perform(
-                                    self.song_library
-                                        .remove_song(song.id, db),
-                                    |r| {
-                                        if let Err(e) = r {
-                                            error!(?e);
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                .map(|m| Ok(m))
+                        Task::perform(
+                            self.song_library
+                                .remove_song(song.id, &self.db),
+                            |r| {
+                                if let Err(e) = r {
+                                    error!(?e);
+                                }
+                                Message::None
                             },
                         )
+                        .map(|m| Ok(m))
                     } else {
                         Task::none()
                     }
@@ -1287,21 +1249,17 @@ impl<'a> Library {
                     if let Some(video) =
                         self.video_library.get_item(*index)
                     {
-                        Task::future(self.db.acquire()).and_then(
-                            move |db| {
-                                Task::perform(
-                                    self.video_library
-                                        .remove_video(video.id, db),
-                                    |r| {
-                                        if let Err(e) = r {
-                                            error!(?e);
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                .map(|m| Ok(m))
+                        Task::perform(
+                            self.video_library
+                                .remove_video(video.id, &self.db),
+                            |r| {
+                                if let Err(e) = r {
+                                    error!(?e);
+                                }
+                                Message::None
                             },
                         )
+                        .map(|m| Ok(m))
                     } else {
                         Task::none()
                     }
@@ -1314,21 +1272,17 @@ impl<'a> Library {
                             image.id,
                             image.title, "let's remove this image",
                         );
-                        Task::future(self.db.acquire()).and_then(
-                            move |db| {
-                                Task::perform(
-                                    self.image_library
-                                        .remove_image(image.id, db),
-                                    |r| {
-                                        if let Err(e) = r {
-                                            error!(?e);
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                .map(|m| Ok(m))
+                        Task::perform(
+                            self.image_library
+                                .remove_image(image.id, &self.db),
+                            |r| {
+                                if let Err(e) = r {
+                                    error!(?e);
+                                }
+                                Message::None
                             },
                         )
+                        .map(|m| Ok(m))
                     } else {
                         Task::none()
                     }
@@ -1337,24 +1291,20 @@ impl<'a> Library {
                     if let Some(presentation) =
                         self.presentation_library.get_item(*index)
                     {
-                        Task::future(self.db.acquire()).and_then(
-                            move |db| {
-                                Task::perform(
-                                    self.presentation_library
-                                        .remove_presentation(
-                                            presentation.id,
-                                            db,
-                                        ),
-                                    |r| {
-                                        if let Err(e) = r {
-                                            error!(?e);
-                                        }
-                                        Message::None
-                                    },
-                                )
-                                .map(|m| Ok(m))
+                        Task::perform(
+                            self.presentation_library
+                                .remove_presentation(
+                                    presentation.id,
+                                    &self.db,
+                                ),
+                            |r| {
+                                if let Err(e) = r {
+                                    error!(?e);
+                                }
+                                Message::None
                             },
                         )
+                        .map(|m| Ok(m))
                     } else {
                         Task::none()
                     }
