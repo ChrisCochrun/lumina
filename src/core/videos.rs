@@ -201,22 +201,19 @@ impl Model<Video> {
     pub async fn append_video(
         &mut self,
         video: Video,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
 
-    pub async fn new_video(
-        &mut self,
-        db: PoolConnection<Sqlite>,
-    ) -> Result<()> {
+    pub async fn new_video(&mut self, db: &SqlitePool) -> Result<()> {
         todo!()
     }
 
     pub async fn update_video(
         &mut self,
         video: Video,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
@@ -224,7 +221,7 @@ impl Model<Video> {
     pub async fn remove_video(
         &mut self,
         id: i32,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         todo!()
     }
