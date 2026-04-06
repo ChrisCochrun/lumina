@@ -34,7 +34,7 @@ use crate::core::{
         update_presentation_in_db,
     },
     service_items::ServiceItem,
-    songs::{self, Song, add_song_to_db, update_song_in_db},
+    songs::{self, Song, new_song_from_db, update_song_in_db},
     videos::{self, Video, add_video_to_db, update_video_in_db},
 };
 
@@ -171,25 +171,20 @@ impl<'a> Library {
                     self.library_open.unwrap_or(LibraryKind::Song);
                 match kind {
                     LibraryKind::Song => {
+                        let index = (self.song_library.items.len()
+                            - 1)
+                            as i32;
+
                         let task = Task::future(self.db.acquire())
                             .map_err(|e| {
                                 miette::miette!("Database error: {e}")
                             })
                             .and_then(move |db| {
                                 Task::perform(
-                                    self.song_library.new_song(db),
+                                    new_song_from_db(db),
                                     move |res| {
                                         res.map(|song| {
-                                            let index = (self
-                                                .song_library
-                                                .items
-                                                .len()
-                                                - 1)
-                                                as i32;
-                                            Message::OpenItem(Some((
-                                                LibraryKind::Song,
-                                                index,
-                                            )))
+                                            Message::AddSong(song)
                                         })
                                     },
                                 )
@@ -698,7 +693,7 @@ impl<'a> Library {
                                 })
                                 .and_then(move |db| {
                                     Task::perform(
-                                        add_song_to_db(db),
+                                        new_song_from_db(db),
                                         {
                                             move |res| {
                                                 res.map(|_song| {

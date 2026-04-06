@@ -789,7 +789,7 @@ pub async fn remove_from_db(
         .map(|_| ())
 }
 
-pub async fn add_song_to_db(
+pub async fn new_song_from_db(
     db: PoolConnection<Sqlite>,
 ) -> Result<Song> {
     let mut song = Song::default();
@@ -1357,7 +1357,7 @@ You saved my soul"
     async fn fill_db(db: &SqlitePool) -> Result<()> {
         for _ in 0..20 {
             let conn = db.acquire().await.into_diagnostic()?;
-            let db_song = add_song_to_db(conn).await?;
+            let db_song = new_song_from_db(conn).await?;
             let mut song = test_song();
             song.id = db_song.id;
             let conn = db.acquire().await.into_diagnostic()?;
