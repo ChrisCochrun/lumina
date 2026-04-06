@@ -21,7 +21,7 @@ use cosmic::{
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{SqlitePool, migrate};
+use sqlx::{Sqlite, SqlitePool, migrate, pool::PoolConnection};
 use tracing::{debug, error, warn};
 
 use crate::core::{
@@ -104,7 +104,7 @@ pub enum Message {
     OpenContext(i32),
     None,
     AddFiles(Vec<ServiceItemKind>),
-    AddSong(Song),
+    AddSong(PoolConnection<Sqlite>),
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
@@ -152,19 +152,25 @@ impl<'a> Library {
             Message::DeleteItem => {
                 return self.delete_items();
             }
-            Message::AddSong(song) => {
-                if let Err(e) = self.song_library.add_item(song) {
-                    error!(?e, "couldn't add song to model");
-                } else {
-                    let index =
-                        (self.song_library.items.len() - 1) as i32;
-                    return Action::Task(Task::done(
-                        Message::OpenItem(Some((
-                            LibraryKind::Song,
-                            index,
-                        ))),
-                    ));
-                }
+            Message::AddSong(db) => {
+                return Action::Task(Task::perform(
+                    self.song_library.new_song(db),
+                    move |res| match res {
+                        Ok(song) => {
+                            let index =
+                                (self.song_library.items.len() - 1)
+                                    as i32;
+                            Message::OpenItem(Some((
+                                LibraryKind::Song,
+                                index,
+                            )))
+                        }
+                        Err(e) => {
+                            error!("adding error: {e}");
+                            Message::None
+                        }
+                    },
+                ));
             }
             Message::AddItem => {
                 let kind =
@@ -175,26 +181,7 @@ impl<'a> Library {
                             .map_err(|e| {
                                 miette::miette!("Database error: {e}")
                             })
-                            .and_then(move |db| {
-                                Task::perform(
-                                    self.song_library.new_song(db),
-                                    move |res| {
-                                        res.map(|song| {
-                                            let index = (self
-                                                .song_library
-                                                .items
-                                                .len()
-                                                - 1)
-                                                as i32;
-                                            Message::OpenItem(Some((
-                                                LibraryKind::Song,
-                                                index,
-                                            )))
-                                        })
-                                    },
-                                )
-                            })
-                            .map(|r| r.unwrap_or(Message::None));
+                            .map(|db| Message::AddSong(db));
                         return Action::Task(task);
                     }
                     LibraryKind::Video => {
