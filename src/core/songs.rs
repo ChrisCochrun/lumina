@@ -14,9 +14,8 @@ use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    FromRow, Row, Sqlite, SqliteConnection, SqliteExecutor,
-    SqlitePool, Transaction, pool::PoolConnection, query,
-    sqlite::SqliteRow,
+    FromRow, Row, Sqlite, SqliteConnection, SqlitePool,
+    pool::PoolConnection, query, sqlite::SqliteRow,
 };
 use tracing::{debug, error};
 
@@ -740,6 +739,187 @@ pub async fn get_song_from_db(
 }
 
 impl Model<Song> {
+    // Not sure we will use this function. As it is, it makes more sense for
+    // a new song to be made within the model and then passed back out.
+    // But maybe for encapsulation reasons, it makes sense to have this?
+    pub async fn append_song(
+        &mut self,
+        song: Song,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        self.add_item(song)?;
+        todo!()
+    }
+
+    pub async fn new_song(
+        &mut self,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<Song> {
+        let mut song = Song::default();
+
+        let verse_order = {
+            song.verse_order.clone().map_or_else(String::new, |vo| {
+                vo.into_iter()
+                    .map(|mut s| {
+                        s.push(' ');
+                        s
+                    })
+                    .collect::<String>()
+            })
+        };
+
+        let audio = song
+            .audio
+            .clone()
+            .map(|a| a.to_str().unwrap_or_default().to_string());
+
+        let background = song
+            .background
+            .clone()
+            .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+        let res = query!(
+            r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+            song.title,
+            song.lyrics,
+            song.author,
+            song.ccli,
+            verse_order,
+            audio,
+            song.font,
+            song.font_size,
+            background
+        )
+            .execute(&mut db.detach())
+            .await
+            .into_diagnostic()?;
+        song.id = i32::try_from(res.last_insert_rowid()).expect(
+            "Fairly confident that this number won't get that high",
+        );
+        self.add_item(song.clone())?;
+        Ok(song)
+    }
+
+    pub async fn update_song(
+        &mut self,
+        song: Song,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        let id = song.id;
+        self.update_item(song.clone(), |song| song.id == id)?;
+        // debug!(?item);
+        let verse_order =
+            ron::ser::to_string(&song.verses).into_diagnostic()?;
+
+        let audio = song
+            .audio
+            .map(|a| a.to_str().unwrap_or_default().to_string());
+
+        let background = song
+            .background
+            .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+        let lyrics = song.verse_map.map(|map| {
+            map.iter()
+                .map(|(name, lyric)| {
+                    let lyric =
+                        lyric.trim_end_matches('\n').to_string();
+                    (name.to_owned(), lyric)
+                })
+                .collect::<HashMap<VerseName, String>>()
+        });
+        let lyrics =
+            ron::ser::to_string(&lyrics).into_diagnostic()?;
+
+        let (vertical_alignment, horizontal_alignment) =
+            song.text_alignment.map_or_else(
+                || ("center", "center"),
+                |ta| match ta {
+                    TextAlignment::TopLeft => ("top", "left"),
+                    TextAlignment::TopCenter => ("top", "center"),
+                    TextAlignment::TopRight => ("top", "right"),
+                    TextAlignment::MiddleLeft => ("center", "left"),
+                    TextAlignment::MiddleCenter => {
+                        ("center", "center")
+                    }
+                    TextAlignment::MiddleRight => ("center", "right"),
+                    TextAlignment::BottomLeft => ("bottom", "left"),
+                    TextAlignment::BottomCenter => {
+                        ("bottom", "center")
+                    }
+                    TextAlignment::BottomRight => ("bottom", "right"),
+                },
+            );
+
+        let stroke_size = song.stroke_size.unwrap_or_default();
+        let shadow_size = song.shadow_size.unwrap_or_default();
+        let (shadow_offset_x, shadow_offset_y) =
+            song.shadow_offset.unwrap_or_default();
+
+        let stroke_color = ron::ser::to_string(&song.stroke_color)
+            .into_diagnostic()?;
+        let shadow_color = ron::ser::to_string(&song.shadow_color)
+            .into_diagnostic()?;
+
+        let style = ron::ser::to_string(&song.font_style)
+            .into_diagnostic()?;
+        let weight = ron::ser::to_string(&song.font_weight)
+            .into_diagnostic()?;
+
+        // debug!(
+        //     ?stroke_size,
+        //     ?stroke_color,
+        //     ?shadow_size,
+        //     ?shadow_color,
+        //     ?shadow_offset_x,
+        //     ?shadow_offset_y
+        // );
+
+        let result = query!(
+            r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20 WHERE id = $1"#,
+            song.id,
+            song.title,
+            lyrics,
+            song.author,
+            song.ccli,
+            verse_order,
+            audio,
+            song.font,
+            song.font_size,
+            background,
+            horizontal_alignment,
+            vertical_alignment,
+            stroke_color,
+            shadow_color,
+            stroke_size,
+            shadow_size,
+            shadow_offset_x,
+            shadow_offset_y,
+            style,
+            weight
+        )
+            .execute(&mut db.detach())
+            .await
+            .into_diagnostic()?;
+
+        debug!(rows_affected = ?result.rows_affected());
+
+        Ok(())
+    }
+
+    pub async fn remove_song(
+        &mut self,
+        id: i32,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        self.remove_item(|current_song| id == current_song.id)?;
+        query!("DELETE FROM songs WHERE id = $1", id)
+            .execute(&mut db.detach())
+            .await
+            .into_diagnostic()
+            .map(|_| ())
+    }
+
     pub async fn new_song_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
@@ -1429,7 +1609,9 @@ You saved my soul"
         let test_song = song_model.get_item(2);
         assert_ne!(test_song, Some(&cloned_song));
 
-        match song_model.update_item(song, 2) {
+        match song_model
+            .update_item(song, |song| song.id == cloned_song.id)
+        {
             Ok(()) => {
                 let updated_model_song =
                     song_model.find(|s| s.id == 7).unwrap();

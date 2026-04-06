@@ -298,6 +298,35 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
+    pub async fn append_presentation(
+        &mut self,
+        presentation: Presentation,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn new_presentation(
+        &mut self,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn update_presentation(
+        &mut self,
+        presentation: Presentation,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+    pub async fn remove_presentation(
+        &mut self,
+        id: i32,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
     pub async fn new_presentation_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],

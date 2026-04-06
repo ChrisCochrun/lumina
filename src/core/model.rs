@@ -83,30 +83,35 @@ impl<T> Model<T> {
         todo!()
     }
 
-    pub fn update_item(&mut self, item: T, index: i32) -> Result<()> {
+    pub fn update_item<P>(
+        &mut self,
+        item: T,
+        predicate: P,
+    ) -> Result<()>
+    where
+        P: Fn(&T) -> bool,
+    {
         self.items
-            .get_mut(
-                usize::try_from(index)
-                    .expect("Shouldn't be negative"),
-            )
-            .map_or_else(
-                || {
-                    Err(miette!(
-                        "Item doesn't exist in model. Id was {index}"
-                    ))
-                },
-                |current_item| {
-                    let _old_item = replace(current_item, item);
-                    Ok(())
-                },
-            )
+            .iter()
+            .position(predicate)
+            .ok_or(miette!("Item cannot be found"))
+            .map(|index| self.items.get_mut(index).expect("Since we found position this should always exist"))
+            .map(|current_item| {
+                let _old_item = replace(current_item, item);
+            })
     }
 
-    pub fn remove_item(&mut self, index: i32) -> Result<()> {
-        self.items.remove(
-            usize::try_from(index).expect("Shouldn't be negative"),
-        );
-        Ok(())
+    pub fn remove_item<P>(&mut self, predicate: P) -> Result<()>
+    where
+        P: Fn(&T) -> bool,
+    {
+        self.items
+            .iter()
+            .position(predicate)
+            .ok_or(miette!("Item cannot be found"))
+            .map(|index| {
+                self.items.remove(index);
+            })
     }
 
     #[must_use]
@@ -123,11 +128,12 @@ impl<T> Model<T> {
         self.items.iter().find(f)
     }
 
-    pub fn insert_item(&mut self, item: T, index: i32) -> Result<()> {
-        self.items.insert(
-            usize::try_from(index).expect("Shouldn't be negative"),
-            item,
-        );
+    pub fn insert_item(
+        &mut self,
+        item: T,
+        index: usize,
+    ) -> Result<()> {
+        self.items.insert(index, item);
         Ok(())
     }
 }
