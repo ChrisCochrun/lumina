@@ -156,6 +156,70 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
+    pub async fn append_image(
+        &mut self,
+        image: Image,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn new_image(
+        &mut self,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<Image> {
+        todo!()
+    }
+    pub async fn update_image(
+        &mut self,
+        image: Image,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        let id = image.id;
+        self.update_item(image.clone(), |current_image| {
+            current_image.id == id
+        })?;
+        let path = image
+            .path
+            .to_str()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default();
+        let mut db = db.detach();
+        debug!(?image, "should be been updated");
+        let result = query!(
+        r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
+        image.id,
+        image.title,
+        path,
+    )
+        .execute(&mut db)
+        .await.into_diagnostic();
+
+        match result {
+            Ok(_) => {
+                debug!("should have been updated");
+                Ok(())
+            }
+            Err(e) => {
+                error! {?e};
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn remove_image(
+        &mut self,
+        id: i32,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        self.remove_item(|image| image.id == id)?;
+        query!("DELETE FROM images WHERE id = $1", id)
+            .execute(&mut db.detach())
+            .await
+            .into_diagnostic()
+            .map(|_| ())
+    }
+
     pub async fn new_image_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],

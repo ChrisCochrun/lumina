@@ -12,6 +12,8 @@ This is working but the right click context menu is all the way on the edge of t
 
 Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
 
+Need to make some tests in the library module that can run things without needing messages as much. I'm redoing how the models work too such that the adding, updating, and removing of items all happens in just the model without needing to have a separate function to do the same action in the database.
+
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 

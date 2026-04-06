@@ -198,6 +198,36 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
+    pub async fn append_video(
+        &mut self,
+        video: Video,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn new_video(
+        &mut self,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn update_video(
+        &mut self,
+        video: Video,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    pub async fn remove_video(
+        &mut self,
+        id: i32,
+        db: PoolConnection<Sqlite>,
+    ) -> Result<()> {
+        todo!()
+    }
     pub async fn new_video_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],

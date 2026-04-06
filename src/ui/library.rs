@@ -492,23 +492,15 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                if self
-                    .song_library
-                    .update_item(song.clone(), index)
-                    .is_err()
-                {
-                    error!("Couldn't update song in model");
-                    return Action::None;
-                }
-
                 return Action::Task(
                     Task::future(self.db.acquire())
                         .map_err(|e| {
                             miette::miette!("Database error: {e}")
                         })
-                        .and_then(move |conn| {
+                        .and_then(move |db| {
                             Task::perform(
-                                update_song_in_db(song.clone(), conn),
+                                self.song_library
+                                    .update_song(song, db),
                                 |r| r.map(|_| Message::SongChanged),
                             )
                         })
@@ -530,24 +522,6 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                if self
-                    .image_library
-                    .update_item(image.clone(), index)
-                    .is_err()
-                {
-                    error!("Couldn't update image in model");
-                    return Action::None;
-                }
-
-                if self
-                    .image_library
-                    .update_item(image.clone(), index)
-                    .is_err()
-                {
-                    error!("Couldn't update image in model");
-                    return Action::None;
-                }
-
                 return Action::Task(
                     Task::future(self.db.acquire())
                         .map_err(|e| {
@@ -555,10 +529,8 @@ impl<'a> Library {
                         })
                         .and_then(move |conn| {
                             Task::perform(
-                                update_image_in_db(
-                                    image.clone(),
-                                    conn,
-                                ),
+                                self.image_library
+                                    .update_image(image, conn),
                                 |r| r.map(|_| Message::ImageChanged),
                             )
                         })
@@ -577,15 +549,6 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                if self
-                    .video_library
-                    .update_item(video.clone(), index)
-                    .is_err()
-                {
-                    error!("Couldn't update video in model");
-                    return Action::None;
-                }
-
                 return Action::Task(
                     Task::future(self.db.acquire())
                         .map_err(|e| {
@@ -593,10 +556,8 @@ impl<'a> Library {
                         })
                         .and_then(move |conn| {
                             Task::perform(
-                                update_video_in_db(
-                                    video.clone(),
-                                    conn,
-                                ),
+                                self.video_library
+                                    .update_video(video, conn),
                                 |r| r.map(|_| Message::VideoChanged),
                             )
                         })
@@ -614,36 +575,25 @@ impl<'a> Library {
                     error!("Not editing a presentation item");
                     return Action::None;
                 }
-                let index = self
-                    .presentation_library
-                    .items
-                    .iter()
-                    .position(|pres| pres.id == presentation.id)
-                    .unwrap_or_default()
-                    .try_into()
-                    .unwrap_or_default();
+                let mut update_fn = move |conn| {
+                    self.presentation_library
+                        .update_presentation(presentation, conn)
+                };
 
-                match self
-                            .presentation_library
-                            .update_item(presentation.clone(), index)
-                        {
-                            Ok(()) => return Action::Task(
-                                Task::future(self.db.acquire()).map_err(|e| {
-                                    miette::miette!("Database error: {e}")
-                                }).and_then(
-                                    move |conn| {
-                                        Task::perform(
-                                            update_presentation_in_db(
-                                                presentation.clone(),
-                                                conn,
-                                            ),
-                                            |r| r.map(|_| Message::PresentationChanged)
-                                        )
-                                    },
-                                ).map(|r| r.unwrap_or(Message::None)),
-                            ),
-                            Err(_) => todo!(),
-                        }
+                return Action::Task(
+                    Task::future(self.db.acquire())
+                        .map_err(|e| {
+                            miette::miette!("Database error: {e}")
+                        })
+                        .and_then(move |conn| {
+                            Task::perform(update_fn(conn), |r| {
+                                r.map(|_| {
+                                    Message::PresentationChanged
+                                })
+                            })
+                        })
+                        .map(|r| r.unwrap_or(Message::None)),
+                );
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
@@ -1327,30 +1277,21 @@ impl<'a> Library {
                     if let Some(song) =
                         self.song_library.get_item(*index)
                     {
-                        let song = song.clone();
-                        if let Err(e) =
-                            self.song_library.remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
-                        } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
-                                    Task::perform(
-                                        songs::remove_from_db(
-                                            db, song.id,
-                                        ),
-                                        |r| {
-                                            if let Err(e) = r {
-                                                error!(?e);
-                                            }
-                                            Message::None
-                                        },
-                                    )
-                                    .map(|m| Ok(m))
-                                },
-                            )
-                        }
+                        Task::future(self.db.acquire()).and_then(
+                            move |db| {
+                                Task::perform(
+                                    self.song_library
+                                        .remove_song(song.id, db),
+                                    |r| {
+                                        if let Err(e) = r {
+                                            error!(?e);
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                .map(|m| Ok(m))
+                            },
+                        )
                     } else {
                         Task::none()
                     }
@@ -1359,30 +1300,21 @@ impl<'a> Library {
                     if let Some(video) =
                         self.video_library.get_item(*index)
                     {
-                        let video = video.clone();
-                        if let Err(e) =
-                            self.video_library.remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
-                        } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
-                                    Task::perform(
-                                        videos::remove_from_db(
-                                            db, video.id,
-                                        ),
-                                        |r| {
-                                            if let Err(e) = r {
-                                                error!(?e);
-                                            }
-                                            Message::None
-                                        },
-                                    )
-                                    .map(|m| Ok(m))
-                                },
-                            )
-                        }
+                        Task::future(self.db.acquire()).and_then(
+                            move |db| {
+                                Task::perform(
+                                    self.video_library
+                                        .remove_video(video.id, db),
+                                    |r| {
+                                        if let Err(e) = r {
+                                            error!(?e);
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                .map(|m| Ok(m))
+                            },
+                        )
                     } else {
                         Task::none()
                     }
@@ -1391,32 +1323,25 @@ impl<'a> Library {
                     if let Some(image) =
                         self.image_library.get_item(*index)
                     {
-                        let image = image.clone();
-                        if let Err(e) =
-                            self.image_library.remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
-                        } else {
-                            debug!("let's remove {0}", image.id);
-                            debug!("let's remove {0}", image.title);
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
-                                    Task::perform(
-                                        images::remove_from_db(
-                                            db, image.id,
-                                        ),
-                                        |r| {
-                                            if let Err(e) = r {
-                                                error!(?e);
-                                            }
-                                            Message::None
-                                        },
-                                    )
-                                    .map(|m| Ok(m))
-                                },
-                            )
-                        }
+                        debug!(
+                            image.id,
+                            image.title, "let's remove this image",
+                        );
+                        Task::future(self.db.acquire()).and_then(
+                            move |db| {
+                                Task::perform(
+                                    self.image_library
+                                        .remove_image(image.id, db),
+                                    |r| {
+                                        if let Err(e) = r {
+                                            error!(?e);
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                .map(|m| Ok(m))
+                            },
+                        )
                     } else {
                         Task::none()
                     }
@@ -1425,32 +1350,24 @@ impl<'a> Library {
                     if let Some(presentation) =
                         self.presentation_library.get_item(*index)
                     {
-                        let presentation = presentation.clone();
-                        if let Err(e) = self
-                            .presentation_library
-                            .remove_item(*index)
-                        {
-                            error!(?e);
-                            Task::none()
-                        } else {
-                            Task::future(self.db.acquire()).and_then(
-                                move |db| {
-                                    Task::perform(
-                                        presentations::remove_from_db(
-                                            db,
+                        Task::future(self.db.acquire()).and_then(
+                            move |db| {
+                                Task::perform(
+                                    self.presentation_library
+                                        .remove_presentation(
                                             presentation.id,
+                                            db,
                                         ),
-                                        |r| {
-                                            if let Err(e) = r {
-                                                error!(?e);
-                                            }
-                                            Message::None
-                                        },
-                                    )
-                                    .map(|m| Ok(m))
-                                },
-                            )
-                        }
+                                    |r| {
+                                        if let Err(e) = r {
+                                            error!(?e);
+                                        }
+                                        Message::None
+                                    },
+                                )
+                                .map(|m| Ok(m))
+                            },
+                        )
                     } else {
                         Task::none()
                     }
