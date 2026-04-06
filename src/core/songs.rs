@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow, collections::HashMap, option::Option, path::PathBuf,
+    sync::Arc,
 };
 
 use cosmic::{
@@ -745,7 +746,7 @@ impl Model<Song> {
     pub async fn append_song(
         &mut self,
         song: Song,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         self.add_item(song)?;
         todo!()
@@ -753,7 +754,7 @@ impl Model<Song> {
 
     pub async fn new_song(
         &mut self,
-        db: PoolConnection<Sqlite>,
+        db: Arc<SqlitePool>,
     ) -> Result<Song> {
         let mut song = Song::default();
 
@@ -790,7 +791,7 @@ impl Model<Song> {
             song.font_size,
             background
         )
-            .execute(&mut db.detach())
+            .execute(&*db)
             .await
             .into_diagnostic()?;
         song.id = i32::try_from(res.last_insert_rowid()).expect(
@@ -803,7 +804,7 @@ impl Model<Song> {
     pub async fn update_song(
         &mut self,
         song: Song,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         let id = song.id;
         self.update_item(song.clone(), |song| song.id == id)?;
@@ -898,7 +899,7 @@ impl Model<Song> {
             style,
             weight
         )
-            .execute(&mut db.detach())
+            .execute(db)
             .await
             .into_diagnostic()?;
 
@@ -910,11 +911,11 @@ impl Model<Song> {
     pub async fn remove_song(
         &mut self,
         id: i32,
-        db: PoolConnection<Sqlite>,
+        db: &SqlitePool,
     ) -> Result<()> {
         self.remove_item(|current_song| id == current_song.id)?;
         query!("DELETE FROM songs WHERE id = $1", id)
-            .execute(&mut db.detach())
+            .execute(db)
             .await
             .into_diagnostic()
             .map(|_| ())
@@ -970,8 +971,9 @@ pub async fn remove_from_db(
 }
 
 pub async fn add_song_to_db(
-    db: PoolConnection<Sqlite>,
-) -> Result<Song> {
+    mut songs: Vec<Song>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Song>> {
     let mut song = Song::default();
 
     let verse_order = {
@@ -1007,13 +1009,14 @@ pub async fn add_song_to_db(
         song.font_size,
         background
     )
-    .execute(&mut db.detach())
+    .execute(&*db)
     .await
     .into_diagnostic()?;
     song.id = i32::try_from(res.last_insert_rowid()).expect(
         "Fairly confident that this number won't get that high",
     );
-    Ok(song)
+    songs.push(song);
+    Ok(songs)
 }
 
 pub async fn update_song_in_db(
