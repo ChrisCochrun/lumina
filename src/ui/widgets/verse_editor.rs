@@ -5,9 +5,7 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        button, combo_box, container, icon,
-        space::{self, horizontal},
-        text_editor,
+        button, combo_box, container, icon, space, text_editor,
     },
 };
 

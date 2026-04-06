@@ -10,7 +10,7 @@ use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::iced::window::{Mode, Position};
+use cosmic::iced::window::Position;
 use cosmic::iced::{
     self, Background as IcedBackground, Border, Color, Length, event,
     window,
@@ -700,7 +700,7 @@ impl cosmic::Application for App {
                             // debug!(?platform_specific);
                             None
                         }
-                        iced::Event::InputMethod(event) => todo!(),
+                        iced::Event::InputMethod(_event) => todo!(),
                     }
                 }
                 event::Status::Captured => None,
@@ -1858,6 +1858,7 @@ where
                 },
             )
         })
+
         // if let Some(library) = self.library.clone() {
         //     Task::perform(
         //         async move { library.search_items(query).await },

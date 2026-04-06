@@ -177,10 +177,19 @@ impl<'a> Library {
                             })
                             .and_then(move |db| {
                                 Task::perform(
-                                    add_song_to_db(db),
+                                    self.song_library.new_song(db),
                                     move |res| {
                                         res.map(|song| {
-                                            Message::AddSong(song)
+                                            let index = (self
+                                                .song_library
+                                                .items
+                                                .len()
+                                                - 1)
+                                                as i32;
+                                            Message::OpenItem(Some((
+                                                LibraryKind::Song,
+                                                index,
+                                            )))
                                         })
                                     },
                                 )
@@ -214,7 +223,7 @@ impl<'a> Library {
                 // Check if empty
                 let mut tasks = Vec::new();
                 if let Some(videos) = videos {
-                    let len = videos.len();
+                    // let len = videos.len();
                     for video in videos {
                         if let Err(e) =
                             self.video_library.add_item(video.clone())
@@ -290,7 +299,7 @@ impl<'a> Library {
                 // Check if empty
                 let mut tasks = Vec::new();
                 if let Some(presentations) = presentations {
-                    let len = presentations.len();
+                    // let len = presentations.len();
                     for presentation in presentations {
                         if let Err(e) = self
                             .presentation_library
@@ -331,7 +340,7 @@ impl<'a> Library {
                 // Check if empty
                 let mut tasks = Vec::new();
                 if let Some(images) = images {
-                    let len = images.len();
+                    // let len = images.len();
                     for image in images {
                         if let Err(e) =
                             self.image_library.add_item(image.clone())
@@ -692,7 +701,7 @@ impl<'a> Library {
                                         add_song_to_db(db),
                                         {
                                             move |res| {
-                                                res.map(|song| {
+                                                res.map(|_song| {
                                                     Message::None
                                                 })
                                             }

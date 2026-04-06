@@ -114,10 +114,10 @@ pub async fn get_genius_lyrics(
             root.inner_html()
         })
         .collect::<String>();
-    let lyrics = lyrics.find("[").map_or_else(
+    let lyrics = lyrics.find('[').map_or_else(
         || {
-            lyrics.find("</div></div></div>").map_or(
-                lyrics.clone(),
+            lyrics.find("</div></div></div>").map_or_else(
+                || lyrics.clone(),
                 |position| {
                     lyrics.split_at(position + 18).1.to_string()
                 },
