@@ -17,8 +17,10 @@ By making the db functions take the vector of items in the model, we can drain t
 
 We should probably return a tuple with the original vector of items in case the db function fails somehow.
 =======
-Need to make some tests in the library module that can run things without needing messages as much. I'm redoing how the models work too such that the adding, updating, and removing of items all happens in just the model without needing to have a separate function to do the same action in the database.
->>>>>>> 588ef0d (trying to remodel the models...)
+By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
+
+We should probably return a tuple with the original vector of items in case the db function fails somehow.
+>>>>>>> a782002 (update todo)
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
