@@ -960,17 +960,25 @@ impl Model<Song> {
 }
 
 pub async fn remove_from_db(
-    db: PoolConnection<Sqlite>,
+    db: Arc<SqlitePool>,
+    mut songs: Vec<Song>,
     id: i32,
-) -> Result<()> {
-    query!("DELETE FROM songs WHERE id = $1", id)
-        .execute(&mut db.detach())
-        .await
-        .into_diagnostic()
-        .map(|_| ())
+) -> Result<Vec<Song>> {
+    if let Some(index) =
+        songs.iter().position(|current_song| current_song.id == id)
+    {
+        songs.remove(index);
+        query!("DELETE FROM songs WHERE id = $1", id)
+            .execute(&*db)
+            .await
+            .into_diagnostic()
+            .map(|_| songs)
+    } else {
+        Err(miette!("Couldn't find song in model"))
+    }
 }
 
-pub async fn add_song_to_db(
+pub async fn add_to_db(
     mut songs: Vec<Song>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Song>> {
@@ -1021,7 +1029,8 @@ pub async fn add_song_to_db(
 
 pub async fn update_song_in_db(
     item: Song,
-    db: PoolConnection<Sqlite>,
+    songs: Vec<Song>,
+    db: Arc<SqlitePool>,
 ) -> Result<()> {
     // self.update_item(item.clone(), index)?;
 
@@ -1110,7 +1119,7 @@ pub async fn update_song_in_db(
         style,
         weight
     )
-        .execute(&mut db.detach())
+        .execute(&*db)
         .await
         .into_diagnostic()?;
 
@@ -1540,7 +1549,7 @@ You saved my soul"
     async fn fill_db(db: &SqlitePool) -> Result<()> {
         for _ in 0..20 {
             let conn = db.acquire().await.into_diagnostic()?;
-            let db_song = add_song_to_db(conn).await?;
+            let db_song = add_to_db(conn).await?;
             let mut song = test_song();
             song.id = db_song.id;
             let conn = db.acquire().await.into_diagnostic()?;

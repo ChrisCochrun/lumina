@@ -34,7 +34,7 @@ use crate::core::{
         update_presentation_in_db,
     },
     service_items::ServiceItem,
-    songs::{self, Song, add_song_to_db, update_song_in_db},
+    songs::{self, Song, add_to_db, update_song_in_db},
     videos::{self, Video, add_video_to_db, update_video_in_db},
 };
 
@@ -164,7 +164,7 @@ impl<'a> Library {
                 let songs =
                     self.song_library.items.drain(..).collect();
                 return Action::Task(Task::perform(
-                    add_song_to_db(songs, Arc::clone(&self.db)),
+                    add_to_db(songs, Arc::clone(&self.db)),
                     move |res| match res {
                         Ok(songs) => Message::ReaddSongs(songs),
                         Err(e) => {
@@ -591,27 +591,31 @@ impl<'a> Library {
                                 .add_item(song.clone())
                                 .err()
                             else {
-                                let task = Task::future(
-                                    self.db.acquire(),
-                                )
-                                .map_err(|e| {
-                                    miette::miette!(
-                                        "Database error: {e}"
-                                    )
-                                })
-                                .and_then(move |db| {
-                                    Task::perform(
-                                        add_song_to_db(db),
-                                        {
-                                            move |res| {
-                                                res.map(|_song| {
-                                                    Message::None
-                                                })
+                                let songs = self
+                                    .song_library
+                                    .items
+                                    .drain(..)
+                                    .collect();
+                                let task = Task::perform(
+                                    songs::add_to_db(
+                                        songs,
+                                        Arc::clone(&self.db),
+                                    ),
+                                    {
+                                        move |res| match res {
+                                            Ok(songs) => {
+                                                Message::ReaddSongs(
+                                                    songs,
+                                                )
                                             }
-                                        },
-                                    )
-                                })
-                                .map(|r| r.unwrap_or(Message::None));
+
+                                            Err(e) => {
+                                                error!(?e);
+                                                Message::None
+                                            }
+                                        }
+                                    },
+                                );
                                 tasks.push(task);
                                 continue;
                             };
@@ -1230,17 +1234,27 @@ impl<'a> Library {
                     if let Some(song) =
                         self.song_library.get_item(*index)
                     {
+                        let songs = self
+                            .song_library
+                            .items
+                            .drain(..)
+                            .collect();
                         Task::perform(
-                            self.song_library
-                                .remove_song(song.id, &self.db),
-                            |r| {
-                                if let Err(e) = r {
-                                    error!(?e);
+                            songs::remove_from_db(
+                                Arc::clone(&self.db),
+                                songs,
+                                song.id,
+                            ),
+                            |r| match r {
+                                Ok(songs) => {
+                                    Message::ReaddSongs(songs)
                                 }
-                                Message::None
+                                Err(e) => {
+                                    error!(?e);
+                                    Message::None
+                                }
                             },
                         )
-                        .map(|m| Ok(m))
                     } else {
                         Task::none()
                     }
@@ -1414,3 +1428,9 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
         text
     }
 }
+ ÿÿÿÿ        !       ÿÿÿÿÿÿÿÿÿÿÿÿ   ·    !       Àƒr
+¨ƒr
+ƒr
+xƒr
+lƒr
+    q      „ÿÿÿ  A§áùñØ–0   yÈëúéºg     „
