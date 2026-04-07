@@ -12,15 +12,9 @@ This is working but the right click context menu is all the way on the edge of t
 
 Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
 
-<<<<<<< HEAD
 By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
 
 We should probably return a tuple with the original vector of items in case the db function fails somehow.
-=======
-By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
-
-We should probably return a tuple with the original vector of items in case the db function fails somehow.
->>>>>>> a782002 (update todo)
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
