@@ -169,7 +169,7 @@ impl<'a> Library {
                 let songs =
                     self.song_library.items.drain(..).collect();
                 return Action::Task(Task::perform(
-                    songs::add_to_db(songs, Arc::clone(&self.db)),
+                    songs::add_song(songs, Arc::clone(&self.db)),
                     move |res| match res {
                         Ok(songs) => Message::ReaddSongs(songs),
                         Err(e) => {
@@ -220,7 +220,7 @@ impl<'a> Library {
                     let current_videos =
                         self.video_library.items.drain(..).collect();
                     let task = Task::perform(
-                        videos::add_to_db(
+                        videos::add_video(
                             new_videos,
                             current_videos,
                             Arc::clone(&self.db),
@@ -253,7 +253,7 @@ impl<'a> Library {
                         .drain(..)
                         .collect();
                     return Action::Task(Task::perform(
-                        presentations::add_to_db(
+                        presentations::add_presentation(
                             vec![presentation.clone()],
                             presentations,
                             Arc::clone(&self.db),
@@ -285,7 +285,7 @@ impl<'a> Library {
                         .drain(..)
                         .collect();
                     let task = Task::perform(
-                        presentations::add_to_db(
+                        presentations::add_presentation(
                             new_presentations,
                             current_presentations,
                             Arc::clone(&self.db),
@@ -317,7 +317,7 @@ impl<'a> Library {
                     let current_images =
                         self.image_library.items.drain(..).collect();
                     let task = Task::perform(
-                        images::add_to_db(
+                        images::add_image(
                             new_images,
                             current_images,
                             Arc::clone(&self.db),
@@ -449,7 +449,7 @@ impl<'a> Library {
                     self.song_library.items.drain(..).collect();
 
                 return Action::Task(Task::perform(
-                    songs::update_in_db(
+                    songs::update_song(
                         song,
                         songs,
                         Arc::clone(&self.db),
@@ -481,7 +481,7 @@ impl<'a> Library {
                     self.image_library.items.drain(..).collect();
 
                 return Action::Task(Task::perform(
-                    images::update_in_db(
+                    images::update_image(
                         image,
                         images,
                         Arc::clone(&self.db),
@@ -511,7 +511,7 @@ impl<'a> Library {
                     self.video_library.items.drain(..).collect();
 
                 return Action::Task(Task::perform(
-                    videos::update_in_db(
+                    videos::update_video(
                         video,
                         videos,
                         Arc::clone(&self.db),
@@ -544,7 +544,7 @@ impl<'a> Library {
                     .collect();
 
                 return Action::Task(Task::perform(
-                    presentations::update_in_db(
+                    presentations::update_presentation(
                         presentation,
                         presentations,
                         Arc::clone(&self.db),
@@ -606,7 +606,7 @@ impl<'a> Library {
                                     .drain(..)
                                     .collect();
                                 let task = Task::perform(
-                                    songs::add_to_db(
+                                    songs::add_song(
                                         songs,
                                         Arc::clone(&self.db),
                                     ),
@@ -642,7 +642,7 @@ impl<'a> Library {
                                     .drain(..)
                                     .collect();
                                 let task = Task::perform(
-                                    videos::add_to_db(
+                                    videos::add_video(
                                         vec![video.clone()],
                                         videos,
                                         Arc::clone(&self.db),
@@ -673,7 +673,7 @@ impl<'a> Library {
                                     .drain(..)
                                     .collect();
                                 let task = Task::perform(
-                                    images::add_to_db(
+                                    images::add_image(
                                         vec![image.clone()],
                                         images,
                                         Arc::clone(&self.db),
@@ -706,7 +706,7 @@ impl<'a> Library {
                                     .drain(..)
                                     .collect();
                                 let task = Task::perform(
-                                    presentations::add_to_db(
+                                    presentations::add_presentation(
                                         vec![presentation.clone()],
                                         presentations,
                                         Arc::clone(&self.db),
@@ -1241,7 +1241,7 @@ impl<'a> Library {
                             .drain(..)
                             .collect();
                         Task::perform(
-                            songs::remove_from_db(
+                            songs::remove_song(
                                 Arc::clone(&self.db),
                                 songs,
                                 song.id,
@@ -1271,7 +1271,7 @@ impl<'a> Library {
                             .drain(..)
                             .collect();
                         Task::perform(
-                            videos::remove_from_db(
+                            videos::remove_video(
                                 Arc::clone(&self.db),
                                 videos,
                                 video.id,
@@ -1298,7 +1298,7 @@ impl<'a> Library {
                             .drain(..)
                             .collect();
                         Task::perform(
-                            images::remove_from_db(
+                            images::remove_image(
                                 Arc::clone(&self.db),
                                 images,
                                 image.id,
@@ -1325,7 +1325,7 @@ impl<'a> Library {
                             .drain(..)
                             .collect();
                         Task::perform(
-                            presentations::remove_from_db(
+                            presentations::remove_presentation(
                                 Arc::clone(&self.db),
                                 presentations,
                                 presentation.id,

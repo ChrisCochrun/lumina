@@ -959,7 +959,7 @@ impl Model<Song> {
     }
 }
 
-pub async fn remove_from_db(
+pub async fn remove_song(
     db: Arc<SqlitePool>,
     mut songs: Vec<Song>,
     id: i32,
@@ -978,7 +978,7 @@ pub async fn remove_from_db(
     }
 }
 
-pub async fn add_to_db(
+pub async fn add_song(
     mut songs: Vec<Song>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Song>> {
@@ -1027,7 +1027,7 @@ pub async fn add_to_db(
     Ok(songs)
 }
 
-pub async fn update_in_db(
+pub async fn update_song(
     song: Song,
     mut songs: Vec<Song>,
     db: Arc<SqlitePool>,
@@ -1561,7 +1561,7 @@ You saved my soul"
     async fn fill_db(db: &SqlitePool) -> Result<()> {
         for _ in 0..20 {
             let conn = db.acquire().await.into_diagnostic()?;
-            let db_song = add_to_db(conn).await?;
+            let db_song = add_song(conn).await?;
             let mut song = test_song();
             song.id = db_song.id;
             let conn = db.acquire().await.into_diagnostic()?;

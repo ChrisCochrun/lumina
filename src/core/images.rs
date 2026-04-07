@@ -257,7 +257,7 @@ impl Model<Image> {
     }
 }
 
-pub async fn remove_from_db(
+pub async fn remove_image(
     db: Arc<SqlitePool>,
     mut images: Vec<Image>,
     id: i32,
@@ -275,7 +275,7 @@ pub async fn remove_from_db(
     Ok(images)
 }
 
-pub async fn add_to_db(
+pub async fn add_image(
     new_images: Vec<Image>,
     mut current_images: Vec<Image>,
     db: Arc<SqlitePool>,
@@ -301,7 +301,7 @@ pub async fn add_to_db(
     Ok(current_images)
 }
 
-pub async fn update_in_db(
+pub async fn update_image(
     image: Image,
     mut images: Vec<Image>,
     db: Arc<SqlitePool>,

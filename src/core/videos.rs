@@ -257,7 +257,7 @@ impl Model<Video> {
     }
 }
 
-pub async fn remove_from_db(
+pub async fn remove_video(
     db: Arc<SqlitePool>,
     mut videos: Vec<Video>,
     id: i32,
@@ -276,7 +276,7 @@ pub async fn remove_from_db(
     Ok(videos)
 }
 
-pub async fn add_to_db(
+pub async fn add_video(
     new_videos: Vec<Video>,
     mut current_videos: Vec<Video>,
     db: Arc<SqlitePool>,
@@ -305,7 +305,7 @@ pub async fn add_to_db(
     Ok(current_videos)
 }
 
-pub async fn update_in_db(
+pub async fn update_video(
     video: Video,
     mut videos: Vec<Video>,
     db: Arc<SqlitePool>,
