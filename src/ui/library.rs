@@ -76,6 +76,7 @@ pub enum Action {
     DraggedItem(ServiceItem),
     Task(Task<Message>),
     None,
+    ToService(ServiceItem),
 }
 
 #[derive(Clone, Debug)]
@@ -110,6 +111,7 @@ pub enum Message {
     ReaddImages(Vec<Image>),
     ReaddVideos(Vec<Video>),
     ReaddPres(Vec<Presentation>),
+    ToService(ServiceItem),
 }
 
 impl<'a> Library {
@@ -154,6 +156,9 @@ impl<'a> Library {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::None => (),
+            Message::ToService(item) => {
+                return Action::ToService(item);
+            }
             Message::DeleteItem => {
                 return self.delete_items();
             }
@@ -919,8 +924,7 @@ impl<'a> Library {
                             let i32_index = i32::try_from(index).expect("shouldn't be negative");
                             let kind = model.kind;
                             let visual_item = self
-                                .single_item(index, item, model)
-                                .map(|()| Message::None);
+                                .single_item(index, item, model);
 
                             DndSource::<Message, KindWrapper>::new({
                                 let mouse_area = mouse_area(visual_item);
@@ -1001,7 +1005,7 @@ impl<'a> Library {
         index: usize,
         item: &'a T,
         model: &'a Model<T>,
-    ) -> Element<'a, ()>
+    ) -> Element<'a, Message>
     where
         T: Content,
     {
@@ -1057,8 +1061,12 @@ impl<'a> Library {
 
         let texts = column([text.into(), subtext.into()]);
 
+        let add_button = button::icon(icon::from_name("caret-right"))
+            .on_press(Message::ToService(item.to_service_item()))
+            .tooltip("Add to service");
+
         Container::new(
-            rowm![horizontal().width(0), texts]
+            rowm![horizontal().width(0), texts, add_button]
                 .spacing(10)
                 .align_y(Vertical::Center),
         )

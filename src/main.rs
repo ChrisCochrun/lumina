@@ -1139,66 +1139,69 @@ impl cosmic::Application for App {
             Message::Library(message) => {
                 if let Some(library) = &mut self.library {
                     match library.update(message) {
-                                library::Action::OpenItem(None) => {
-                                    return Task::none();
-                                }
-                                library::Action::Task(task) => {
-                                    return task.map(|message| {
-                                        cosmic::Action::App(Message::Library(
-                                            message,
-                                        ))
-                                    });
-                                }
-                                library::Action::None => return Task::none(),
-                                library::Action::OpenItem(Some((
-                                    kind,
-                                    index,
-                                ))) => {
-                                    match kind {
-                                        core::model::LibraryKind::Song => {
-                                            let Some(lib_song) = library.get_song(index) else {
-                                                return Task::none();
-                                            };
-                                            self.editor_mode = Some(kind.into());
-                                            let song = lib_song.to_owned();
-                                            return self.update(Message::SongEditor(
-                                                song_editor::Message::ChangeSong(song),
-                                            ));
-                                        },
-                                        core::model::LibraryKind::Video => {
-                                            let Some(lib_video) = library.get_video(index) else {
-                                                return Task::none();
-                                            };
-                                            self.editor_mode = Some(kind.into());
-                                            let video = lib_video.to_owned();
-                                            return self.update(Message::VideoEditor(video_editor::Message::ChangeVideo(video)));
-                                        },
-                                        core::model::LibraryKind::Image => {
-                                            let Some(lib_image) = library.get_image(index) else {
-                                                return Task::none();
-                                            };
-                                            self.editor_mode = Some(kind.into());
-                                            let image = lib_image.to_owned();
-                                            return self.update(Message::ImageEditor(image_editor::Message::ChangeImage(image)));
-                                        },
-                                        core::model::LibraryKind::Presentation => {
-                                            let Some(lib_presentation) = library.get_presentation(index) else {
-                                                return Task::none();
-                                            };
-                                            self.editor_mode = Some(kind.into());
-                                            let presentation = lib_presentation.to_owned();
-                                            return self.update(Message::PresentationEditor(presentation_editor::Message::ChangePresentation(presentation)));
-                                        },
-                                    }
-                                }
-                                library::Action::DraggedItem(
-                                    service_item,
-                                ) => {
-                                    debug!("hi");
-                                    self.library_dragged_item =
-                                        Some(service_item);
-                                }
+                        library::Action::OpenItem(None) => {
+                            return Task::none();
+                        }
+                        library::Action::ToService(item) => {
+                            self.service.push(item);
+                        }
+                        library::Action::Task(task) => {
+                            return task.map(|message| {
+                                cosmic::Action::App(Message::Library(
+                                    message,
+                                ))
+                            });
+                        }
+                        library::Action::None => return Task::none(),
+                        library::Action::OpenItem(Some((
+                            kind,
+                            index,
+                        ))) => {
+                            match kind {
+                                core::model::LibraryKind::Song => {
+                                    let Some(lib_song) = library.get_song(index) else {
+                                        return Task::none();
+                                    };
+                                    self.editor_mode = Some(kind.into());
+                                    let song = lib_song.to_owned();
+                                    return self.update(Message::SongEditor(
+                                        song_editor::Message::ChangeSong(song),
+                                    ));
+                                },
+                                core::model::LibraryKind::Video => {
+                                    let Some(lib_video) = library.get_video(index) else {
+                                        return Task::none();
+                                    };
+                                    self.editor_mode = Some(kind.into());
+                                    let video = lib_video.to_owned();
+                                    return self.update(Message::VideoEditor(video_editor::Message::ChangeVideo(video)));
+                                },
+                                core::model::LibraryKind::Image => {
+                                    let Some(lib_image) = library.get_image(index) else {
+                                        return Task::none();
+                                    };
+                                    self.editor_mode = Some(kind.into());
+                                    let image = lib_image.to_owned();
+                                    return self.update(Message::ImageEditor(image_editor::Message::ChangeImage(image)));
+                                },
+                                core::model::LibraryKind::Presentation => {
+                                    let Some(lib_presentation) = library.get_presentation(index) else {
+                                        return Task::none();
+                                    };
+                                    self.editor_mode = Some(kind.into());
+                                    let presentation = lib_presentation.to_owned();
+                                    return self.update(Message::PresentationEditor(presentation_editor::Message::ChangePresentation(presentation)));
+                                },
                             }
+                        }
+                        library::Action::DraggedItem(
+                            service_item,
+                        ) => {
+                            debug!("hi");
+                            self.library_dragged_item =
+                                Some(service_item);
+                        }
+                    }
                 }
                 Task::none()
             }
