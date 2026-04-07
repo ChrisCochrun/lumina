@@ -1,13 +1,17 @@
 use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     Row, Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
     prelude::FromRow, query, sqlite::SqliteRow,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    mem::replace,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tracing::{debug, error};
 
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
@@ -406,61 +410,77 @@ impl Model<Presentation> {
 }
 
 pub async fn remove_from_db(
-    db: PoolConnection<Sqlite>,
+    db: Arc<SqlitePool>,
+    mut presentations: Vec<Presentation>,
     id: i32,
-) -> Result<()> {
+) -> Result<Vec<Presentation>> {
     query!("DELETE FROM presentations WHERE id = $1", id)
-        .execute(&mut db.detach())
+        .execute(&*db)
         .await
         .into_diagnostic()
-        .map(|_| ())
+        .map(|_| ())?;
+
+    let index = presentations
+        .iter()
+        .position(|current_presentation| {
+            current_presentation.id == id
+        })
+        .ok_or_else(|| {
+            miette!("Could not find presentation in model")
+        })?;
+    presentations.remove(index);
+    Ok(presentations)
 }
 
-pub async fn add_presentation_to_db(
+pub async fn add_to_db(
+    new_presentations: Vec<Presentation>,
+    mut current_presentations: Vec<Presentation>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Presentation>> {
+    for presentation in new_presentations {
+        let path = presentation
+            .path
+            .to_str()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default();
+        let html = presentation.kind == PresKind::Html;
+        let (starting_index, ending_index) = if let PresKind::Pdf {
+            starting_index,
+            ending_index,
+        } = presentation.kind
+        {
+            (starting_index, ending_index)
+        } else {
+            (0, 0)
+        };
+        query!(
+            r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index) VALUES ($1, $2, $3, $4, $5)"#,
+            presentation.title,
+            path,
+            html,
+            starting_index,
+            ending_index
+        )
+            .execute(&*db)
+            .await
+            .into_diagnostic()?;
+
+        current_presentations.push(presentation);
+    }
+    Ok(current_presentations)
+}
+
+pub async fn update_in_db(
     presentation: Presentation,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
+    mut presentations: Vec<Presentation>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Presentation>> {
     let path = presentation
         .path
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let html = presentation.kind == PresKind::Html;
-    let mut db = db.detach();
-    let (starting_index, ending_index) = if let PresKind::Pdf {
-        starting_index,
-        ending_index,
-    } = presentation.kind
-    {
-        (starting_index, ending_index)
-    } else {
-        (0, 0)
-    };
-    query!(
-        r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index) VALUES ($1, $2, $3, $4, $5)"#,
-        presentation.title,
-        path,
-        html,
-        starting_index,
-        ending_index
-    )
-    .execute(&mut db)
-    .await
-    .into_diagnostic()?;
-    Ok(())
-}
-
-pub async fn update_presentation_in_db(
-    presentation: Presentation,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
-    let path = presentation
-        .path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_default();
-    let html = presentation.kind == PresKind::Html;
-    let mut db = db.detach();
     let (starting_index, ending_index) = if let PresKind::Pdf {
         starting_index: s_index,
         ending_index: e_index,
@@ -472,53 +492,8 @@ pub async fn update_presentation_in_db(
         (0, 0)
     };
     debug!(starting_index, ending_index);
-    let id = presentation.id;
-    if let Err(e) =
-        query!("SELECT id FROM presentations where id = $1", id)
-            .fetch_one(&mut db)
-            .await
-    {
-        if let Ok(ids) = query!("SELECT id FROM presentations")
-            .fetch_all(&mut db)
-            .await
-        {
-            let Some(mut max) = ids.iter().map(|r| r.id).max() else {
-                return Err(miette::miette!("cannot find max id"));
-            };
-            debug!(
-                ?e,
-                "Presentation not found adding a new presentation"
-            );
-            max += 1;
-            let result = query!(
-                r#"INSERT into presentations VALUES($1, $2, $3, $4, $5, $6)"#,
-                max,
-                presentation.title,
-                path,
-                html,
-                starting_index,
-                ending_index,
-            )
-            .execute(&mut db)
-            .await
-            .into_diagnostic();
 
-            return match result {
-                Ok(_) => {
-                    debug!("presentation should have been added");
-                    Ok(())
-                }
-                Err(e) => {
-                    error! {?e};
-                    Err(e)
-                }
-            };
-        }
-        return Err(miette::miette!("cannot find ids"));
-    }
-
-    debug!(?presentation, "should be been updated");
-    let result = query!(
+    query!(
         r#"UPDATE presentations SET title = $2, file_path = $3, html = $4, starting_index = $5, ending_index = $6 WHERE id = $1"#,
         presentation.id,
         presentation.title,
@@ -527,19 +502,25 @@ pub async fn update_presentation_in_db(
         starting_index,
         ending_index
     )
-        .execute(&mut db)
-        .await.into_diagnostic();
+        .execute(&*db)
+        .await.into_diagnostic()?;
 
-    match result {
-        Ok(_) => {
-            debug!("should have been updated");
-            Ok(())
-        }
-        Err(e) => {
-            error! {?e};
-            Err(e)
-        }
-    }
+    let current_presentation = presentations
+        .iter()
+        .position(|current_presentation| {
+            current_presentation.id == presentation.id
+        })
+        .ok_or_else(|| {
+            miette!("Could not find presentation in model")
+        })
+        .map(|index| {
+            presentations
+                .get_mut(index)
+                .expect("We should have this presentation already")
+        })?;
+
+    replace(current_presentation, presentation);
+    Ok(presentations)
 }
 
 pub async fn get_presentation_from_db(

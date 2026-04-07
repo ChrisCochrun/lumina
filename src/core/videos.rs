@@ -8,13 +8,17 @@ use super::{
     slide::Slide,
 };
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
     query, query_as,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    mem::replace,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tracing::{debug, error};
 
 #[derive(
@@ -254,52 +258,65 @@ impl Model<Video> {
 }
 
 pub async fn remove_from_db(
-    db: PoolConnection<Sqlite>,
+    db: Arc<SqlitePool>,
+    mut videos: Vec<Video>,
     id: i32,
-) -> Result<()> {
+) -> Result<Vec<Video>> {
     query!("DELETE FROM videos WHERE id = $1", id)
-        .execute(&mut db.detach())
+        .execute(&*db)
         .await
         .into_diagnostic()
-        .map(|_| ())
+        .map(|_| ())?;
+
+    let index = videos
+        .iter()
+        .position(|current_video| current_video.id == id)
+        .ok_or_else(|| miette!("Could not find video in model"))?;
+    videos.remove(index);
+    Ok(videos)
 }
 
-pub async fn add_video_to_db(
+pub async fn add_to_db(
+    new_videos: Vec<Video>,
+    mut current_videos: Vec<Video>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Video>> {
+    for video in new_videos {
+        let path = video
+            .path
+            .to_str()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default();
+
+        query!(
+            r#"INSERT INTO videos (title, file_path, start_time, end_time, loop) VALUES ($1, $2, $3, $4, $5)"#,
+            video.title,
+            path,
+            video.start_time,
+            video.end_time,
+            video.looping
+        )
+            .execute(&*db)
+            .await
+            .into_diagnostic()?;
+
+        current_videos.push(video);
+    }
+    Ok(current_videos)
+}
+
+pub async fn update_in_db(
     video: Video,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
+    mut videos: Vec<Video>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Video>> {
     let path = video
         .path
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
-    let mut db = db.detach();
+
     query!(
-        r#"INSERT INTO videos (title, file_path, start_time, end_time, loop) VALUES ($1, $2, $3, $4, $5)"#,
-        video.title,
-        path,
-        video.start_time,
-        video.end_time,
-        video.looping
-    )
-    .execute(&mut db)
-    .await
-    .into_diagnostic()?;
-    Ok(())
-}
-
-pub async fn update_video_in_db(
-    video: Video,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
-    let path = video
-        .path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_default();
-    let mut db = db.detach();
-    debug!(?video, "should be been updated");
-    let result = query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,
         video.id,
         video.title,
@@ -308,22 +325,24 @@ pub async fn update_video_in_db(
         video.end_time,
         video.looping,
     )
-        .execute(&mut db)
-        .await.into_diagnostic();
+        .execute(&*db)
+        .await.into_diagnostic()?;
 
-    match result {
-        Ok(_) => {
-            debug!("should have been updated");
-            Ok(())
-        }
-        Err(e) => {
-            error! {?e};
-            Err(e)
-        }
-    }
+    let current_video = videos
+        .iter()
+        .position(|current_video| current_video.id == video.id)
+        .ok_or_else(|| miette!("Could not find video in model"))
+        .map(|index| {
+            videos
+                .get_mut(index)
+                .expect("We should have this video already")
+        })?;
+
+    replace(current_video, video);
+    Ok(videos)
 }
 
-pub async fn get_video_from_db(
+pub async fn get_from_db(
     database_id: i32,
     db: &mut SqliteConnection,
 ) -> Result<Video> {

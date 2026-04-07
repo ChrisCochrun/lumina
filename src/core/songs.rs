@@ -1,6 +1,6 @@
 use std::{
-    borrow::Cow, collections::HashMap, option::Option, path::PathBuf,
-    sync::Arc,
+    borrow::Cow, collections::HashMap, mem::replace, option::Option,
+    path::PathBuf, sync::Arc,
 };
 
 use cosmic::{
@@ -1027,26 +1027,28 @@ pub async fn add_to_db(
     Ok(songs)
 }
 
-pub async fn update_song_in_db(
-    item: Song,
-    songs: Vec<Song>,
+pub async fn update_in_db(
+    song: Song,
+    mut songs: Vec<Song>,
     db: Arc<SqlitePool>,
-) -> Result<()> {
+) -> Result<Vec<Song>> {
     // self.update_item(item.clone(), index)?;
 
     // debug!(?item);
     let verse_order =
-        ron::ser::to_string(&item.verses).into_diagnostic()?;
+        ron::ser::to_string(&song.verses).into_diagnostic()?;
 
-    let audio = item
+    let audio = song
         .audio
+        .clone()
         .map(|a| a.to_str().unwrap_or_default().to_string());
 
-    let background = item
+    let background = song
         .background
+        .clone()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
-    let lyrics = item.verse_map.map(|map| {
+    let lyrics = song.verse_map.clone().map(|map| {
         map.iter()
             .map(|(name, lyric)| {
                 let lyric = lyric.trim_end_matches('\n').to_string();
@@ -1057,7 +1059,7 @@ pub async fn update_song_in_db(
     let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
     let (vertical_alignment, horizontal_alignment) =
-        item.text_alignment.map_or_else(
+        song.text_alignment.map_or_else(
             || ("center", "center"),
             |ta| match ta {
                 TextAlignment::TopLeft => ("top", "left"),
@@ -1072,20 +1074,20 @@ pub async fn update_song_in_db(
             },
         );
 
-    let stroke_size = item.stroke_size.unwrap_or_default();
-    let shadow_size = item.shadow_size.unwrap_or_default();
+    let stroke_size = song.stroke_size.unwrap_or_default();
+    let shadow_size = song.shadow_size.unwrap_or_default();
     let (shadow_offset_x, shadow_offset_y) =
-        item.shadow_offset.unwrap_or_default();
+        song.shadow_offset.unwrap_or_default();
 
     let stroke_color =
-        ron::ser::to_string(&item.stroke_color).into_diagnostic()?;
+        ron::ser::to_string(&song.stroke_color).into_diagnostic()?;
     let shadow_color =
-        ron::ser::to_string(&item.shadow_color).into_diagnostic()?;
+        ron::ser::to_string(&song.shadow_color).into_diagnostic()?;
 
     let style =
-        ron::ser::to_string(&item.font_style).into_diagnostic()?;
+        ron::ser::to_string(&song.font_style).into_diagnostic()?;
     let weight =
-        ron::ser::to_string(&item.font_weight).into_diagnostic()?;
+        ron::ser::to_string(&song.font_weight).into_diagnostic()?;
 
     // debug!(
     //     ?stroke_size,
@@ -1098,15 +1100,15 @@ pub async fn update_song_in_db(
 
     let result = query!(
         r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20 WHERE id = $1"#,
-        item.id,
-        item.title,
+        song.id,
+        song.title,
         lyrics,
-        item.author,
-        item.ccli,
+        song.author,
+        song.ccli,
         verse_order,
         audio,
-        item.font,
-        item.font_size,
+        song.font,
+        song.font_size,
         background,
         horizontal_alignment,
         vertical_alignment,
@@ -1124,8 +1126,18 @@ pub async fn update_song_in_db(
         .into_diagnostic()?;
 
     debug!(rows_affected = ?result.rows_affected());
+    let index = songs
+        .iter()
+        .position(|current_song| current_song.id == song.id)
+        .ok_or_else(|| miette!("Could not find song in model"))?;
 
-    Ok(())
+    replace(
+        songs
+            .get_mut(index)
+            .expect("We have found the song so this shouldn't fail"),
+        song,
+    );
+    Ok(songs)
 }
 
 impl Song {
