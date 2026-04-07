@@ -116,16 +116,20 @@ pub enum Message {
 
 impl<'a> Library {
     pub async fn new() -> Self {
-        let mut db = add_db().await.expect("probs");
+        let db = add_db().await.expect("probs");
         if let Err(e) = migrate!().run(&db).await {
             error!(?e);
         }
+        let db = Arc::new(db);
         Self {
-            song_library: Model::new_song_model(&mut db).await,
-            image_library: Model::new_image_model(&mut db).await,
-            video_library: Model::new_video_model(&mut db).await,
+            song_library: Model::new_song_model(Arc::clone(&db))
+                .await,
+            image_library: Model::new_image_model(Arc::clone(&db))
+                .await,
+            video_library: Model::new_video_model(Arc::clone(&db))
+                .await,
             presentation_library: Model::new_presentation_model(
-                &mut db,
+                Arc::clone(&db),
             )
             .await,
             library_open: None,
@@ -133,7 +137,7 @@ impl<'a> Library {
             selected_items: None,
             hovered_item: None,
             editing_item: None,
-            db: db.into(),
+            db,
             menu_keys: HashMap::new(),
             context_menu: None,
             modifiers_pressed: None,

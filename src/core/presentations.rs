@@ -302,22 +302,20 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    pub async fn new_presentation_model(db: &mut SqlitePool) -> Self {
+    pub async fn new_presentation_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Presentation,
         };
-        let mut db = db.acquire().await.expect("probs");
-
-        model.load_from_db(&mut db).await;
+        model.load_from_db(db).await;
         model
     }
 
-    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
+    pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
         let result = query!(
             r#"SELECT id as "id: i32", title, file_path as "path", html, starting_index, ending_index from presentations"#
         )
-            .fetch_all(db)
+            .fetch_all(&*db)
             .await;
 
         match result {
@@ -526,7 +524,7 @@ mod test {
     }
 
     async fn add_db() -> Result<SqlitePool> {
-        let mut db_url = String::from("sqlite://./test.db");
+        let db_url = String::from("sqlite://./test.db");
         SqlitePool::connect(&db_url).await.into_diagnostic()
     }
 
@@ -536,8 +534,8 @@ mod test {
             items: vec![],
             kind: LibraryKind::Presentation,
         };
-        let mut db = add_db().await.unwrap().acquire().await.unwrap();
-        presentation_model.load_from_db(&mut db).await;
+        let db = Arc::new(add_db().await.unwrap());
+        presentation_model.load_from_db(db).await;
         if let Some(presentation) =
             presentation_model.find(|p| p.id == 4)
         {

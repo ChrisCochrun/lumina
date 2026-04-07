@@ -14,10 +14,7 @@ use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    FromRow, Row, SqliteConnection, SqlitePool, query,
-    sqlite::SqliteRow,
-};
+use sqlx::{FromRow, Row, SqlitePool, query, sqlite::SqliteRow};
 use tracing::{debug, error};
 
 use crate::{
@@ -735,14 +732,14 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
 
 pub async fn get_song_from_db(
     index: i32,
-    db: &mut SqliteConnection,
+    db: Arc<SqlitePool>,
 ) -> Result<Song> {
-    let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, style, weight, id from songs where id = $1").bind(index).fetch_one(db).await.into_diagnostic()?;
+    let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, style, weight, id from songs where id = $1").bind(index).fetch_one(&*db).await.into_diagnostic()?;
     Song::from_row(&row).into_diagnostic()
 }
 
 impl Model<Song> {
-    pub async fn new_song_model(db: &mut SqlitePool) -> Self {
+    pub async fn new_song_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Song,
@@ -752,10 +749,9 @@ impl Model<Song> {
         model
     }
 
-    pub async fn load_from_db(&mut self, db: &mut SqlitePool) {
+    pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
         // static DATABASE_URL: &str = "sqlite:///home/chris/.local/share/lumina/library-db.sqlite3";
-        let db1 = db.acquire().await.expect("Database not found");
-        let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, style, weight, id from songs").fetch_all(&mut db1.detach()).await;
+        let result = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, shadow_size, stroke_color, shadow_color, shadow_offset_x, shadow_offset_y, style, weight, id from songs").fetch_all(&*db).await;
         match result {
             Ok(s) => {
                 for song in s {
@@ -1375,30 +1371,28 @@ You saved my soul"
             .await
             .into_diagnostic()
             .expect("broken migrations");
-        fill_db(&pool).await?;
         Ok(pool)
     }
 
-    async fn fill_db(db: &SqlitePool) -> Result<()> {
+    async fn fill_db(db: Arc<SqlitePool>) -> Result<()> {
+        let mut songs = Vec::new();
         for _ in 0..20 {
-            let conn = db.acquire().await.into_diagnostic()?;
-            let db_song = add_song(conn).await?;
+            songs = add_song(songs, db.clone()).await?;
             let mut song = test_song();
-            song.id = db_song.id;
-            let conn = db.acquire().await.into_diagnostic()?;
-            update_song(song, conn).await?;
+            song.id = (songs.len() - 1) as i32;
+            songs = update_song(song, songs, db.clone()).await?;
         }
         Ok(())
     }
 
     #[tokio::test]
     async fn song_db_and_model() {
-        let mut db = add_db().await.expect("ERROR OPENING");
-        if let Err(e) = fill_db(&db).await {
+        let db = Arc::new(add_db().await.expect("ERROR OPENING"));
+        if let Err(e) = fill_db(db.clone()).await {
             panic!("grrr {e}")
         };
         let mut song_model = model().await;
-        song_model.load_from_db(&mut db).await;
+        song_model.load_from_db(db).await;
         if let Some(song) = song_model.find(|s| s.id == 7) {
             let test_song = test_song();
             if let Ok(song_lyrics) = song.get_lyrics()
@@ -1428,8 +1422,8 @@ You saved my soul"
     #[tokio::test]
     async fn test_song_from_db() {
         let song = test_song();
-        let mut db = add_db().await.unwrap().acquire().await.unwrap();
-        let result = get_song_from_db(7, &mut db).await;
+        let db = Arc::new(add_db().await.unwrap());
+        let result = get_song_from_db(7, db).await;
         match result {
             Ok(db_song) => {
                 if let Ok(song_lyrics) = song.get_lyrics()
@@ -1446,38 +1440,21 @@ You saved my soul"
 
     #[tokio::test]
     async fn test_update() {
-        let mut db = add_db().await.unwrap();
+        let db = Arc::new(add_db().await.unwrap());
         let song = test_song();
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
-        song_model.load_from_db(&mut db).await;
+        song_model.load_from_db(db.clone()).await;
         let test_song = song_model.get_item(2);
         assert_ne!(test_song, Some(&cloned_song));
 
-        match song_model
-            .update_item(song, |song| song.id == cloned_song.id)
+        let songs = song_model.items.clone();
+        match update_song(cloned_song.clone(), songs, Arc::clone(&db))
+            .await
         {
-            Ok(()) => {
-                let updated_model_song =
-                    song_model.find(|s| s.id == 7).unwrap();
-                assert_eq!(&cloned_song, updated_model_song);
-                match update_song(
-                    cloned_song.clone(),
-                    db.acquire().await.unwrap(),
-                )
-                .await
-                {
-                    Ok(_) => {
-                        let db_song = get_song_from_db(
-                            7,
-                            &mut db.acquire().await.unwrap(),
-                        )
-                        .await
-                        .unwrap();
-                        assert_eq!(db_song, cloned_song);
-                    }
-                    Err(e) => assert!(false, "{e}"),
-                }
+            Ok(_) => {
+                let db_song = get_song_from_db(7, db).await.unwrap();
+                assert_eq!(db_song, cloned_song);
             }
             Err(e) => assert!(false, "{e}"),
         }

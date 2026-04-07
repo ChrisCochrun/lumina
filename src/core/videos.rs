@@ -199,19 +199,17 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
-    pub async fn new_video_model(db: &mut SqlitePool) -> Self {
+    pub async fn new_video_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Video,
         };
-        let mut db = db.acquire().await.expect("probs");
-
-        model.load_from_db(&mut db).await;
+        model.load_from_db(db).await;
         model
     }
 
-    pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
-        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(db).await;
+    pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
+        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(&*db).await;
         match result {
             Ok(v) => {
                 for video in v {
@@ -340,8 +338,8 @@ mod test {
             items: vec![],
             kind: LibraryKind::Video,
         };
-        let mut db = add_db().await.unwrap().acquire().await.unwrap();
-        video_model.load_from_db(&mut db).await;
+        let db = Arc::new(add_db().await.unwrap());
+        video_model.load_from_db(db).await;
         if let Some(video) = video_model.find(|v| v.id == 2) {
             let test_video = test_video("christ-our-hope.mp4".into());
             assert_eq!(test_video.title, video.title);

@@ -157,7 +157,7 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
-    pub async fn new_image_model(db: &mut SqlitePool) -> Self {
+    pub async fn new_image_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Image,
