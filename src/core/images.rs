@@ -7,13 +7,17 @@ use super::{
     service_items::ServiceTrait,
 };
 use crisp::types::{Keyword, Symbol, Value};
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
     query, query_as,
 };
-use std::path::{Path, PathBuf};
+use std::{
+    mem::replace,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tracing::{debug, error};
 
 #[derive(
@@ -254,70 +258,84 @@ impl Model<Image> {
 }
 
 pub async fn remove_from_db(
-    db: PoolConnection<Sqlite>,
+    db: Arc<SqlitePool>,
+    mut images: Vec<Image>,
     id: i32,
-) -> Result<()> {
+) -> Result<Vec<Image>> {
     query!("DELETE FROM images WHERE id = $1", id)
-        .execute(&mut db.detach())
+        .execute(&*db)
         .await
         .into_diagnostic()
-        .map(|_| ())
+        .map(|_| ())?;
+    let index = images
+        .iter()
+        .position(|current_image| current_image.id == id)
+        .ok_or_else(|| miette!("Could not find image in model"))?;
+    images.remove(index);
+    Ok(images)
 }
 
-pub async fn add_image_to_db(
-    image: Image,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
-    let path = image
-        .path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_default();
-    let mut db = db.detach();
-    query!(
+pub async fn add_to_db(
+    new_images: Vec<Image>,
+    mut current_images: Vec<Image>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Image>> {
+    for image in new_images {
+        let path = image
+            .path
+            .to_str()
+            .map(std::string::ToString::to_string)
+            .unwrap_or_default();
+
+        query!(
         r#"INSERT INTO images (title, file_path) VALUES ($1, $2)"#,
         image.title,
         path,
     )
-    .execute(&mut db)
+    .execute(&*db)
     .await
     .into_diagnostic()?;
-    Ok(())
+
+        current_images.push(image);
+    }
+    Ok(current_images)
 }
 
-pub async fn update_image_in_db(
+pub async fn update_in_db(
     image: Image,
-    db: PoolConnection<Sqlite>,
-) -> Result<()> {
+    mut images: Vec<Image>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Image>> {
     let path = image
         .path
         .to_str()
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
-    let mut db = db.detach();
-    debug!(?image, "should be been updated");
-    let result = query!(
+
+    query!(
         r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
         image.id,
         image.title,
         path,
     )
-        .execute(&mut db)
-        .await.into_diagnostic();
+        .execute(&*db)
+        .await.into_diagnostic()?;
 
-    match result {
-        Ok(_) => {
-            debug!("should have been updated");
-            Ok(())
-        }
-        Err(e) => {
-            error! {?e};
-            Err(e)
-        }
-    }
+    let current_image = images
+        .iter()
+        .position(|current_image| current_image.id == image.id)
+        .ok_or_else(|| miette!("Could not find image in model"))
+        .map(|index| {
+            images
+                .get_mut(index)
+                .expect("We should have this image already")
+        })?;
+
+    replace(current_image, image);
+    Ok(images)
 }
 
-pub async fn get_image_from_db(
+pub async fn get_from_db(
     database_id: i32,
     db: &mut SqliteConnection,
 ) -> Result<Image> {
