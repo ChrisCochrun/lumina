@@ -17,6 +17,8 @@ run-release:
     cargo run --release -- {{verbose}} {{ui}}
 run-file:
     cargo run -- {{verbose}} {{ui}} {{file}}
+fix:
+    cargo clippy --fix --bin "lumina" -p lumina -- -W clippy::pedantic -W clippy::perf -W clippy::nursery -W clippy::unwrap_used
 clean:
     cargo clean
 test:

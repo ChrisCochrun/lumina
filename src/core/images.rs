@@ -9,10 +9,7 @@ use super::{
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    query, query_as,
-};
+use sqlx::{SqliteConnection, SqlitePool, query, query_as};
 use std::{
     mem::replace,
     path::{Path, PathBuf},

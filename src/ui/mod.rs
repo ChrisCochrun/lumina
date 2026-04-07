@@ -6,10 +6,10 @@ pub mod library;
 pub mod presentation_editor;
 pub mod presenter;
 // pub mod service;
+pub mod gst_video;
 pub mod slide_editor;
 pub mod song_editor;
 pub mod text_svg;
-pub mod gst_video;
 pub mod video_editor;
 pub mod widgets;
 

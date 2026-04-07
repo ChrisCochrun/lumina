@@ -959,30 +959,30 @@ impl<'a> Library {
                                         let icon = match model {
                                             LibraryKind::Song => icon::from_name(
                                                 "folder-music-symbolic",
-                                                    ).symbolic(true)
-                                                        ,
-                                                    LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
-                                                    LibraryKind::Image => icon::from_name("folder-pictures-symbolic"),
-                                                    LibraryKind::Presentation => icon::from_name("x-office-presentation-symbolic"),
-                                                };
-                                            (
-                                                icon.into(),
-                                                state,
-                                                i,
-                                            )
-                            }})
-                            .drag_content(move || {
-                                KindWrapper((kind, i32_index))
-                            })
-                            .into()
+                                            ).symbolic(true)
+                                                ,
+                                            LibraryKind::Video => icon::from_name("folder-videos-symbolic"),
+                                            LibraryKind::Image => icon::from_name("folder-pictures-symbolic"),
+                                            LibraryKind::Presentation => icon::from_name("x-office-presentation-symbolic"),
+                                        };
+                                        (
+                                            icon.into(),
+                                            state,
+                                            i,
+                                        )
+                                    }})
+                                .drag_content(move || {
+                                    KindWrapper((kind, i32_index))
+                                })
+                                .into()
                         },
                     )
                 })
-                    .spacing(2)
-                    .width(Length::Fill),
+                 .spacing(2)
+                 .width(Length::Fill),
             )
-                .spacing(5)
-                .height(Length::Fill);
+            .spacing(5)
+            .height(Length::Fill);
 
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
