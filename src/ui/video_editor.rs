@@ -16,7 +16,7 @@ use iced_video_player::{Video, VideoPlayer};
 use tracing::{debug, error, warn};
 use url::Url;
 
-use crate::core::videos;
+use crate::{core::videos, ui::video::create_video};
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -180,8 +180,9 @@ impl VideoEditor {
     fn update_entire_video(&mut self, video: &videos::Video) {
         debug!(?video);
         let Ok(mut player_video) =
-            Url::from_file_path(video.path.clone())
-                .map(|url| Video::new(&url).expect("Should be here"))
+            Url::from_file_path(video.path.clone()).map(|url| {
+                create_video(&url).expect("Shouldn't have probs")
+            })
         else {
             self.video = None;
             self.title.clone_from(&video.title);
