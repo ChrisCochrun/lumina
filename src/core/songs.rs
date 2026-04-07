@@ -1379,7 +1379,7 @@ You saved my soul"
         for _ in 0..20 {
             songs = add_song(songs, db.clone()).await?;
             let mut song = test_song();
-            song.id = (songs.len() - 1) as i32;
+            song.id = songs.iter().next().unwrap().id;
             songs = update_song(song, songs, db.clone()).await?;
         }
         Ok(())
@@ -1391,8 +1391,8 @@ You saved my soul"
         if let Err(e) = fill_db(db.clone()).await {
             panic!("grrr {e}")
         };
-        let mut song_model = model().await;
-        song_model.load_from_db(db).await;
+
+        let song_model = Model::new_song_model(db.clone()).await;
         if let Some(song) = song_model.find(|s| s.id == 7) {
             let test_song = test_song();
             if let Ok(song_lyrics) = song.get_lyrics()
