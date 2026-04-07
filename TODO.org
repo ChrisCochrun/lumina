@@ -8,13 +8,17 @@ This will be based on each slide having the ability to activate an action (i.e. 
 
 This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
 
-* TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly
+* TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly [1/2]
 
 Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
 
 By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
 
 We should probably return a tuple with the original vector of items in case the db function fails somehow.
+
+** TODO [#A] Need to test the library
+** DONE Move to new design
+CLOSED: [2026-04-07 Tue 11:42]
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
