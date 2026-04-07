@@ -16,7 +16,7 @@ pub fn create_video(url: &Url) -> Result<Video> {
     gst::init().into_diagnostic()?;
 
     let pipeline = format!(
-        r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
+        r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,framerate=60/1,pixel-aspect-ratio=1/1""#,
         url.as_str()
     );
 
