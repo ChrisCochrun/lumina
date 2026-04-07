@@ -94,7 +94,7 @@ impl<T> Model<T> {
         self.items
             .iter()
             .position(predicate)
-            .ok_or(miette!("Item cannot be found"))
+            .ok_or_else(|| miette!("Item cannot be found"))
             .map(|index| self.items.get_mut(index).expect("Since we found position this should always exist"))
             .map(|current_item| {
                 let _old_item = replace(current_item, item);
@@ -108,7 +108,7 @@ impl<T> Model<T> {
         self.items
             .iter()
             .position(predicate)
-            .ok_or(miette!("Item cannot be found"))
+            .ok_or_else(|| miette!("Item cannot be found"))
             .map(|index| {
                 self.items.remove(index);
             })

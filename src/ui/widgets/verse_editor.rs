@@ -38,6 +38,8 @@ pub enum Action {
     None,
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_precision_loss)]
 impl VerseEditor {
     #[must_use]
     pub fn new(verse: VerseName, lyric: &str) -> Self {

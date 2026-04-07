@@ -10,16 +10,13 @@ use super::{
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    query, query_as,
-};
+use sqlx::{SqliteConnection, SqlitePool, query, query_as};
 use std::{
     mem::replace,
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(
     Clone, Debug, Default, PartialEq, Serialize, Deserialize,
@@ -202,33 +199,6 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
-    pub async fn append_video(
-        &mut self,
-        video: Video,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn new_video(&mut self, db: &SqlitePool) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn update_video(
-        &mut self,
-        video: Video,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn remove_video(
-        &mut self,
-        id: i32,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
     pub async fn new_video_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
@@ -338,7 +308,7 @@ pub async fn update_video(
                 .expect("We should have this video already")
         })?;
 
-    replace(current_video, video);
+    let _ = replace(current_video, video);
     Ok(videos)
 }
 

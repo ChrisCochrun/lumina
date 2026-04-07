@@ -4,8 +4,8 @@ use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    Row, Sqlite, SqliteConnection, SqlitePool, pool::PoolConnection,
-    prelude::FromRow, query, sqlite::SqliteRow,
+    Row, SqliteConnection, SqlitePool, prelude::FromRow, query,
+    sqlite::SqliteRow,
 };
 use std::{
     mem::replace,
@@ -302,35 +302,6 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    pub async fn append_presentation(
-        &mut self,
-        presentation: Presentation,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn new_presentation(
-        &mut self,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn update_presentation(
-        &mut self,
-        presentation: Presentation,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-    pub async fn remove_presentation(
-        &mut self,
-        id: i32,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
     pub async fn new_presentation_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
@@ -519,7 +490,7 @@ pub async fn update_presentation(
                 .expect("We should have this presentation already")
         })?;
 
-    replace(current_presentation, presentation);
+    let _ = replace(current_presentation, presentation);
     Ok(presentations)
 }
 

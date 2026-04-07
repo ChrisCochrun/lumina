@@ -1,4 +1,3 @@
-use miette::{IntoDiagnostic, Result};
 use obws::{Client, responses::scenes::Scene};
 use std::{
     collections::HashMap,

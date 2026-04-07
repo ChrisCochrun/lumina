@@ -18,7 +18,6 @@ use cosmic::iced::{
 use cosmic::iced_core::text::Wrapping;
 use cosmic::iced_futures::Subscription;
 use cosmic::iced_widget::{column, row, stack};
-use cosmic::prelude::*;
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};

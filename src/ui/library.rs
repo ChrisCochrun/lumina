@@ -21,7 +21,7 @@ use cosmic::{
 };
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
-use sqlx::{Sqlite, SqlitePool, migrate, pool::PoolConnection};
+use sqlx::{SqlitePool, migrate};
 use tracing::{debug, error, warn};
 
 use crate::core::{
@@ -145,10 +145,6 @@ impl<'a> Library {
         self.song_library.get_item(index)
     }
 
-    async fn test(&mut self) -> Result<Song> {
-        self.song_library.new_song(Arc::clone(&self.db)).await
-    }
-
     #[allow(clippy::cast_possible_wrap)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::too_many_lines)]
@@ -208,7 +204,7 @@ impl<'a> Library {
             }
             Message::AddVideos(videos) => {
                 debug!(?videos, "adding to db");
-                let mut index = self.video_library.items.len();
+                let _index = self.video_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
                 let after_task =
@@ -226,10 +222,9 @@ impl<'a> Library {
                             Arc::clone(&self.db),
                         ),
                         move |res| {
-                            res.map(|videos| {
+                            res.map_or(Message::None, |videos| {
                                 Message::ReaddVideos(videos)
                             })
-                            .unwrap_or(Message::None)
                         },
                     );
                     tasks.push(task);
@@ -254,22 +249,24 @@ impl<'a> Library {
                         .collect();
                     return Action::Task(Task::perform(
                         presentations::add_presentation(
-                            vec![presentation.clone()],
+                            vec![presentation],
                             presentations,
                             Arc::clone(&self.db),
                         ),
                         move |res| {
-                            res.map(|presentations| {
-                                Message::ReaddPres(presentations)
-                            })
-                            .unwrap_or(Message::None)
+                            res.map_or(
+                                Message::None,
+                                |presentations| {
+                                    Message::ReaddPres(presentations)
+                                },
+                            )
                         },
                     ));
                 }
             }
             Message::AddPresentations(presentations) => {
                 debug!(?presentations, "adding to db");
-                let mut index = self.presentation_library.items.len();
+                let _index = self.presentation_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
                 let after_task =
@@ -291,10 +288,12 @@ impl<'a> Library {
                             Arc::clone(&self.db),
                         ),
                         move |res| {
-                            res.map(|presentations| {
-                                Message::ReaddPres(presentations)
-                            })
-                            .unwrap_or(Message::None)
+                            res.map_or(
+                                Message::None,
+                                |presentations| {
+                                    Message::ReaddPres(presentations)
+                                },
+                            )
                         },
                     );
                     tasks.push(task);
@@ -305,7 +304,7 @@ impl<'a> Library {
             }
             Message::AddImages(images) => {
                 debug!(?images, "adding to db");
-                let mut index = self.image_library.items.len();
+                let _index = self.image_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
                 let after_task =
@@ -323,10 +322,9 @@ impl<'a> Library {
                             Arc::clone(&self.db),
                         ),
                         move |res| {
-                            res.map(|images| {
+                            res.map_or(Message::None, |images| {
                                 Message::ReaddImages(images)
                             })
-                            .unwrap_or(Message::None)
                         },
                     );
                     tasks.push(task);
@@ -436,7 +434,7 @@ impl<'a> Library {
                 return Action::DraggedItem(item);
             }
             Message::UpdateSong(song) => {
-                let Some((kind, index)) = self.editing_item else {
+                let Some((kind, _index)) = self.editing_item else {
                     error!("Not editing an item");
                     return Action::None;
                 };
@@ -454,10 +452,7 @@ impl<'a> Library {
                         songs,
                         Arc::clone(&self.db),
                     ),
-                    |r| {
-                        r.map(|songs| Message::ReaddSongs(songs))
-                            .unwrap_or(Message::None)
-                    },
+                    |r| r.map_or(Message::None, Message::ReaddSongs),
                 ));
             }
             Message::SongChanged => {
@@ -468,7 +463,7 @@ impl<'a> Library {
                 self.image_library.items = images;
             }
             Message::UpdateImage(image) => {
-                let Some((kind, index)) = self.editing_item else {
+                let Some((kind, _index)) = self.editing_item else {
                     error!("Not editing an item");
                     return Action::None;
                 };
@@ -486,10 +481,7 @@ impl<'a> Library {
                         images,
                         Arc::clone(&self.db),
                     ),
-                    |r| {
-                        r.map(|images| Message::ReaddImages(images))
-                            .unwrap_or(Message::None)
-                    },
+                    |r| r.map_or(Message::None, Message::ReaddImages),
                 ));
             }
             Message::ImageChanged => (),
@@ -497,7 +489,7 @@ impl<'a> Library {
                 self.video_library.items = videos;
             }
             Message::UpdateVideo(video) => {
-                let Some((kind, index)) = self.editing_item else {
+                let Some((kind, _index)) = self.editing_item else {
                     error!("Not editing an item");
                     return Action::None;
                 };
@@ -516,10 +508,7 @@ impl<'a> Library {
                         videos,
                         Arc::clone(&self.db),
                     ),
-                    |r| {
-                        r.map(|videos| Message::ReaddVideos(videos))
-                            .unwrap_or(Message::None)
-                    },
+                    |r| r.map_or(Message::None, Message::ReaddVideos),
                 ));
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
@@ -550,10 +539,9 @@ impl<'a> Library {
                         Arc::clone(&self.db),
                     ),
                     |r| {
-                        r.map(|presentations| {
+                        r.map_or(Message::None, |presentations| {
                             Message::ReaddPres(presentations)
                         })
-                        .unwrap_or(Message::None)
                     },
                 ));
             }
@@ -648,12 +636,14 @@ impl<'a> Library {
                                         Arc::clone(&self.db),
                                     ),
                                     move |res| {
-                                        res.map(|videos| {
-                                            Message::ReaddVideos(
-                                                videos,
-                                            )
-                                        })
-                                        .unwrap_or(Message::None)
+                                        res.map_or(
+                                            Message::None,
+                                            |videos| {
+                                                Message::ReaddVideos(
+                                                    videos,
+                                                )
+                                            },
+                                        )
                                     },
                                 );
                                 tasks.push(task);
@@ -679,12 +669,14 @@ impl<'a> Library {
                                         Arc::clone(&self.db),
                                     ),
                                     move |res| {
-                                        res.map(|images| {
-                                            Message::ReaddImages(
-                                                images,
-                                            )
-                                        })
-                                        .unwrap_or(Message::None)
+                                        res.map_or(
+                                            Message::None,
+                                            |images| {
+                                                Message::ReaddImages(
+                                                    images,
+                                                )
+                                            },
+                                        )
                                     },
                                 );
                                 tasks.push(task);
@@ -712,12 +704,14 @@ impl<'a> Library {
                                         Arc::clone(&self.db),
                                     ),
                                     move |res| {
-                                        res.map(|presentations| {
-                                            Message::ReaddPres(
-                                                presentations,
-                                            )
-                                        })
-                                        .unwrap_or(Message::None)
+                                        res.map_or(
+                                            Message::None,
+                                            |presentations| {
+                                                Message::ReaddPres(
+                                                    presentations,
+                                                )
+                                            },
+                                        )
                                     },
                                 );
                                 tasks.push(task);
@@ -1277,10 +1271,9 @@ impl<'a> Library {
                                 video.id,
                             ),
                             |r| {
-                                r.map(|videos| {
+                                r.map_or(Message::None, |videos| {
                                     Message::ReaddVideos(videos)
                                 })
-                                .unwrap_or(Message::None)
                             },
                         )
                     } else {
@@ -1304,10 +1297,9 @@ impl<'a> Library {
                                 image.id,
                             ),
                             |r| {
-                                r.map(|images| {
+                                r.map_or(Message::None, |images| {
                                     Message::ReaddImages(images)
                                 })
-                                .unwrap_or(Message::None)
                             },
                         )
                     } else {
@@ -1331,10 +1323,14 @@ impl<'a> Library {
                                 presentation.id,
                             ),
                             |r| {
-                                r.map(|presentations| {
-                                    Message::ReaddPres(presentations)
-                                })
-                                .unwrap_or(Message::None)
+                                r.map_or(
+                                    Message::None,
+                                    |presentations| {
+                                        Message::ReaddPres(
+                                            presentations,
+                                        )
+                                    },
+                                )
                             },
                         )
                     } else {

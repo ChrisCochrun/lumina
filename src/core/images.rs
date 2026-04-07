@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(
     Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
@@ -157,69 +157,6 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
-    pub async fn append_image(
-        &mut self,
-        image: Image,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    pub async fn new_image(
-        &mut self,
-        db: &SqlitePool,
-    ) -> Result<Image> {
-        todo!()
-    }
-    pub async fn update_image(
-        &mut self,
-        image: Image,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        let id = image.id;
-        self.update_item(image.clone(), |current_image| {
-            current_image.id == id
-        })?;
-        let path = image
-            .path
-            .to_str()
-            .map(std::string::ToString::to_string)
-            .unwrap_or_default();
-        debug!(?image, "should be been updated");
-        let result = query!(
-        r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
-        image.id,
-        image.title,
-        path,
-    )
-        .execute(db)
-        .await.into_diagnostic();
-
-        match result {
-            Ok(_) => {
-                debug!("should have been updated");
-                Ok(())
-            }
-            Err(e) => {
-                error! {?e};
-                Err(e)
-            }
-        }
-    }
-
-    pub async fn remove_image(
-        &mut self,
-        id: i32,
-        db: &SqlitePool,
-    ) -> Result<()> {
-        self.remove_item(|image| image.id == id)?;
-        query!("DELETE FROM images WHERE id = $1", id)
-            .execute(db)
-            .await
-            .into_diagnostic()
-            .map(|_| ())
-    }
-
     pub async fn new_image_model(db: &mut SqlitePool) -> Self {
         let mut model = Self {
             items: vec![],
@@ -328,7 +265,7 @@ pub async fn update_image(
                 .expect("We should have this image already")
         })?;
 
-    replace(current_image, image);
+    let _ = replace(current_image, image);
     Ok(images)
 }
 

@@ -35,7 +35,7 @@ use cosmic::{
         combo_box, container, divider, dnd_destination, dnd_source,
         dropdown,
         grid::{self},
-        icon, mouse_area, popover, progress_bar, scrollable,
+        icon, mouse_area, popover, scrollable,
         space::{self, horizontal},
         text, text_editor, text_input, tooltip,
     },
@@ -198,6 +198,7 @@ impl Display for Face {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 impl SongEditor {
     pub fn new(font_db: Arc<fontdb::Database>) -> Self {
         let fonts = font_dir();
@@ -1921,6 +1922,7 @@ impl SongEditor {
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::items_after_statements)]
+#[allow(clippy::cast_possible_truncation)]
 fn verse_chip(
     verse: VerseName,
     index: Option<usize>,
