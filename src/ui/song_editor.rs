@@ -910,12 +910,15 @@ impl SongEditor {
                             icon::from_name("media-playback-pause")
                         })
                         .on_press(Message::PauseVideo);
-                    let video_track = progress_bar(
-                        0.0..=video.duration().as_secs_f32(),
-                        video.position().as_secs_f32(),
-                    )
-                    .girth(cosmic::theme::spacing().space_s)
-                    .length(Length::Fill);
+
+                    let video_track =
+                        cosmic::iced_widget::progress_bar(
+                            0.0..=video.duration().as_secs_f32(),
+                            video.position().as_secs_f32(),
+                        )
+                        .girth(cosmic::theme::spacing().space_s)
+                        .length(Length::Fill);
+
                     container(
                         row![play_button, video_track]
                             .align_y(Vertical::Center)

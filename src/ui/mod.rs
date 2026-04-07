@@ -9,7 +9,7 @@ pub mod presenter;
 pub mod slide_editor;
 pub mod song_editor;
 pub mod text_svg;
-pub mod video;
+pub mod gst_video;
 pub mod video_editor;
 pub mod widgets;
 

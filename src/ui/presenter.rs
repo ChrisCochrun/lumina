@@ -41,7 +41,7 @@ use crate::{
         slide::Slide,
         slide_actions::{self, ObsAction},
     },
-    ui::video,
+    ui::gst_video,
 };
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
@@ -819,7 +819,7 @@ impl Presenter {
                 if path.exists() {
                     let url = Url::from_file_path(path)
                         .expect("There should be a video file here");
-                    let result = video::create_video(&url);
+                    let result = gst_video::create_video(&url, 60);
                     match result {
                         Ok(mut v) => {
                             v.set_looping(

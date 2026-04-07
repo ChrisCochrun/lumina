@@ -6,7 +6,7 @@ use iced_video_player::Video;
 use miette::{IntoDiagnostic, Result};
 use url::Url;
 
-pub fn create_video(url: &Url) -> Result<Video> {
+pub fn create_video(url: &Url, framerate: u16) -> Result<Video> {
     // Based on `iced_video_player::Video::new`,
     // but without a text sink so that the built-in subtitle functionality triggers.
     // and with some better gstreamer tweaks
@@ -17,7 +17,7 @@ pub fn create_video(url: &Url) -> Result<Video> {
     gst::init().into_diagnostic()?;
 
     let pipeline = format!(
-        r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,framerate=60/1,pixel-aspect-ratio=1/1""#,
+        r#"playbin uri="{}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,framerate={framerate}/1,pixel-aspect-ratio=1/1""#,
         url.as_str()
     );
 

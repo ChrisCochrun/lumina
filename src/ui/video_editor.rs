@@ -7,7 +7,7 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        Space, button, container, icon, progress_bar,
+        Space, button, container, icon,
         space::{self, horizontal},
         text, text_input,
     },
@@ -16,7 +16,7 @@ use iced_video_player::{Video, VideoPlayer};
 use tracing::{debug, error, warn};
 use url::Url;
 
-use crate::{core::videos, ui::video::create_video};
+use crate::{core::videos, ui::gst_video};
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -119,7 +119,7 @@ impl VideoEditor {
                     icon::from_name("media-playback-pause")
                 })
                 .on_press(Message::PauseVideo);
-                let video_track = progress_bar(
+                let video_track = cosmic::iced_widget::progress_bar(
                     0.0..=video.duration().as_secs_f32(),
                     video.position().as_secs_f32(),
                 )
@@ -181,7 +181,8 @@ impl VideoEditor {
         debug!(?video);
         let Ok(mut player_video) =
             Url::from_file_path(video.path.clone()).map(|url| {
-                create_video(&url).expect("Shouldn't have probs")
+                gst_video::create_video(&url, 60)
+                    .expect("Shouldn't have probs")
             })
         else {
             self.video = None;
