@@ -6,7 +6,7 @@ use miette::{IntoDiagnostic, Result, miette};
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::{tag, take_till1},
+    bytes::{tag, take_till, take_till1},
     character::{
         complete::{
             alpha0, alpha1, alphanumeric1, digit0, newline, space0,
@@ -101,9 +101,15 @@ fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
 }
 
 fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
-    let (input, (name, _, num)) = delimited(
+    let (input, (name, _, num, _, _)) = delimited(
         (tag("["), space0),
-        (take_till1(|c| c == ' ' || c == ']'), space0, digit0),
+        (
+            take_till1(|c| c == ' ' || c == ']' || c == ':'),
+            space0,
+            digit0,
+            alt((tag(":"), space0)),
+            take_till(|c| c == ']'),
+        ),
         (space0, tag("]")),
     )
     .parse(line)?;
