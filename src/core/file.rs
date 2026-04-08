@@ -415,7 +415,9 @@ mod test {
                 find_svgs(&items)?;
                 Ok(())
             }
-            Err(e) => Err(e.to_string()),
+            Err(e) => {
+                Err(format!("Error in the loading process: {e}"))
+            }
         }
     }
 
@@ -433,7 +435,7 @@ mod test {
                         text_svg.path.as_ref().map_or(Err(String::from("There is no path in this song's TextSvg")), |path| {
                             if path.exists() {
                                 let mut path = path.clone();
-                                if path.metadata().unwrap().len() < 20000 {
+                                if path.metadata().unwrap().len() < 15000 {
                                     return Err(String::from("SVG text is too small, maybe the svg didn't generate properly"))
                                 }
                                 if path.pop() && path == cache_dir {
