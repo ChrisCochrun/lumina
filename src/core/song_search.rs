@@ -1,5 +1,23 @@
+use std::collections::HashMap;
+
+use crate::core::songs::{Song, VerseName};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
+use nom::{
+    IResult, Parser,
+    branch::alt,
+    bytes::{tag, take_till1},
+    character::{
+        complete::{
+            alpha0, alpha1, alphanumeric1, digit0, newline, space0,
+        },
+        one_of,
+    },
+    combinator::success,
+    error::ParseError,
+    multi::separated_list1,
+    sequence::{delimited, pair, preceded, separated_pair},
+};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -9,9 +27,9 @@ use serde_json::Value;
     Debug,
     Default,
     PartialEq,
+    Eq,
     PartialOrd,
     Ord,
-    Eq,
     Serialize,
     Deserialize,
 )]
@@ -21,6 +39,94 @@ pub struct OnlineSong {
     pub author: String,
     pub site: String,
     pub link: String,
+}
+
+impl From<OnlineSong> for Song {
+    fn from(value: OnlineSong) -> Self {
+        let mut song = Self {
+            verse_map: Some(HashMap::new()),
+            ..Default::default()
+        };
+
+        for line in value.lyrics.lines() {
+            let next_verse = match line {
+                "[Chorus]" => VerseName::Chorus { number: 1 },
+                _ => song.get_next_verse_name(),
+            };
+            if let Some(verse_map) = song.verse_map.as_mut() {
+                verse_map
+                    .entry(next_verse)
+                    .or_insert_with(|| line.to_string());
+            }
+            if let Some(verses) = song.verses.as_mut() {
+                verses.push(next_verse);
+            } else {
+                song.verses = Some(vec![next_verse]);
+            }
+        }
+        song
+    }
+}
+
+fn parse_genius_lyrics(
+    lyrics: &str,
+) -> Result<HashMap<VerseName, String>> {
+    let (input, chunks) =
+        separated_list1(pair(newline, newline), block)
+            .parse(lyrics)
+            .map_err(|e| e.to_owned())
+            .into_diagnostic()?;
+
+    for chunk in chunks {
+        let chunk = chunk.join("\n");
+        let (_, (name, lyric)) = parse_verse
+            .parse(&chunk)
+            .map_err(|e| e.to_owned())
+            .into_diagnostic()?;
+    }
+
+    todo!()
+}
+
+fn ident(input: &str) -> IResult<&str, &str> {
+    preceded(space0, alphanumeric1).parse(input)
+}
+
+fn block(input: &str) -> IResult<&str, Vec<&str>> {
+    separated_list1(newline, ident).parse(input)
+}
+
+fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
+    todo!()
+}
+
+fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
+    let (input, (name, _, num)) = delimited(
+        (tag("["), space0),
+        (take_till1(|c| c == ' ' || c == ']'), space0, digit0),
+        (space0, tag("]")),
+    )
+    .parse(line)?;
+
+    let num = num.parse::<usize>().unwrap_or(1);
+
+    let verse_name = match name {
+        "Chorus" => VerseName::Chorus { number: num },
+        "Verse" => VerseName::Verse { number: num },
+        "Bridge" => VerseName::Bridge { number: num },
+        "Pre-Chorus" => VerseName::PreChorus { number: num },
+        "Post-Chorus" => VerseName::PostChorus { number: num },
+        "Outro" => VerseName::Outro { number: num },
+        "Intro" => VerseName::Intro { number: num },
+        "Instrumental" => VerseName::Instrumental { number: num },
+        _ => VerseName::Verse { number: 99 },
+    };
+
+    Ok((input, verse_name))
+}
+
+fn parse_verse_lyrics(lyrics: &str) -> IResult<&str, String> {
+    todo!()
 }
 
 pub async fn search_genius_links(
@@ -227,6 +333,8 @@ pub async fn lyrics_com_link_to_song(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use crate::core::songs::Song;
 
     use super::*;
@@ -266,6 +374,15 @@ mod test {
                     assert!(new_song.lyrics.contains("[Chorus 1]"))
                 }
             }
+            let mapped_song = Song::from(new_song);
+            dbg!(&mapped_song);
+            assert!(
+                mapped_song
+                    .verse_map
+                    .as_ref()
+                    .is_some_and(|map| map.len() > 3)
+            );
+            assert!(Some(HashMap::new()) == mapped_song.verse_map)
         }
 
         Ok(())
@@ -328,5 +445,30 @@ mod test {
             }
             Err(e) => assert!(false, "{}", e),
         }
+    }
+
+    #[test]
+    fn test_parse_verse_name() -> Result<()> {
+        let names = [
+            "[ Chorus ]",
+            "[Verse 1]",
+            "[Pre-Chorus]",
+            "[ Post-Chorus ]",
+            "[ Post-Chorus 3]",
+            "[Verse 2]",
+            "[Verse 3]",
+            "[Verse 4:]",
+            "[Verse 5: Coffee]",
+            "[Chorus 1]",
+            "[ Chorus 2 ]",
+        ];
+        for name in names {
+            let (input, parsed) = parse_verse_name
+                .parse(name)
+                .map_err(|e| e.to_owned())
+                .into_diagnostic()?;
+            dbg!(parsed);
+        }
+        Ok(())
     }
 }
