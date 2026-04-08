@@ -97,7 +97,9 @@ fn block(input: &str) -> IResult<&str, Vec<&str>> {
 }
 
 fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
-    todo!()
+    let (input, verse_name) = parse_verse_name.parse(chunk)?;
+    let lyrics = input.trim().to_string();
+    Ok((input, (verse_name, lyrics)))
 }
 
 fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
