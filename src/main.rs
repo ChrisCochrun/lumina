@@ -1576,7 +1576,7 @@ impl cosmic::Application for App {
                     button::icon(icon::from_name("media-play"))
                         .tooltip("Play")
                         .on_press(Message::Present(
-                            presenter::Message::StartVideo,
+                            presenter::Message::PlayPauseVideo,
                         ))
                 },
                 |video| {
@@ -1588,7 +1588,7 @@ impl cosmic::Application for App {
                     button::icon(icon::from_name(icon_name))
                         .tooltip(tooltip)
                         .on_press(Message::Present(
-                            presenter::Message::StartVideo,
+                            presenter::Message::PlayPauseVideo,
                         ))
                 },
             );

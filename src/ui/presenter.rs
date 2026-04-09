@@ -100,6 +100,7 @@ pub(crate) enum Message {
     #[debug("AddObsClient")]
     AddObsClient(Arc<Client>),
     AssignSlideAction(slide_actions::Action),
+    PlayPauseVideo,
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -505,6 +506,13 @@ impl Presenter {
             Message::StartVideo => {
                 if let Some(video) = &mut self.video {
                     video.set_paused(false);
+                    video
+                        .set_looping(self.current_slide.video_loop());
+                }
+            }
+            Message::PlayPauseVideo => {
+                if let Some(video) = &mut self.video {
+                    video.set_paused(!video.paused());
                     video
                         .set_looping(self.current_slide.video_loop());
                 }
