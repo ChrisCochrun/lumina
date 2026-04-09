@@ -6,21 +6,10 @@ use miette::{IntoDiagnostic, Result, miette};
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::{
-        complete::take_while, tag, take_till, take_till1, take_until,
-    },
-    character::{
-        complete::{
-            alpha0, alpha1, alphanumeric1, digit0, newline, space0,
-        },
-        one_of,
-    },
-    combinator::success,
-    error::ParseError,
-    multi::separated_list1,
-    sequence::{
-        delimited, pair, preceded, separated_pair, terminated,
-    },
+    bytes::{tag, take_till, take_till1, take_until},
+    character::complete::{digit0, newline, space0},
+    multi::{many0, separated_list1},
+    sequence::{delimited, pair, preceded, terminated},
 };
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -76,16 +65,21 @@ fn parse_genius_lyrics(
     lyrics: &str,
 ) -> Result<HashMap<VerseName, String>> {
     let (input, chunks) =
-        separated_list1(pair(newline, newline), block)
+        separated_list1(pair(newline, newline), many0(ident))
             .parse(lyrics)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
 
+    dbg!(input);
+    dbg!(&chunks);
+
     let mut map = HashMap::new();
 
     for chunk in chunks {
+        dbg!(&chunk);
+        let chunk = chunk.join("\n");
         let (_, (mut name, lyric)) = parse_verse
-            .parse(chunk)
+            .parse(&chunk)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
         while map.contains_key(&name) {
@@ -99,11 +93,11 @@ fn parse_genius_lyrics(
 }
 
 fn ident(input: &str) -> IResult<&str, &str> {
-    preceded(space0, any).parse(input)
+    preceded(alt((tag("\n\n"), space0)), any).parse(input)
 }
 
 fn any(input: &str) -> IResult<&str, &str> {
-    take_until("\n").parse(input)
+    take_until("\n\n").parse(input)
 }
 
 fn block(input: &str) -> IResult<&str, &str> {
@@ -548,6 +542,25 @@ Lord, I'm gonna sing (Sing it, Dave)
 I'm gonna sing
 Aw man, that was good"#;
         let map = parse_genius_lyrics(song)?;
+        dbg!(map);
+        assert!(false);
+        Ok(())
+    }
+
+    #[test]
+    fn test_block_parsing() -> Result<()> {
+        let chorus = r#"[Chorus]
+I'm singing, "Hallelujah" (Hallelujah)
+God is able, hallelujah (Hallelujah)
+God is faithful, hallelujah
+Lord, I'm gonna sing (Come on now, sing it)
+Oh I'm singing, "Hallelujah" (Hallelujah)
+God is able, hallelujah (Hallelujah)
+God is faithful, hallelujah (God is so good)
+Lord, I'm gonna sing (Sing it, Dave)
+
+"#;
+        let thing = block.parse(chorus).into_diagnostic()?;
         Ok(())
     }
 }

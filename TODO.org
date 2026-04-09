@@ -20,6 +20,9 @@ We should probably return a tuple with the original vector of items in case the 
 ** DONE Move to new design
 CLOSED: [2026-04-07 Tue 11:42]
 
+* TODO Presenter module needs 2 videos
+This will allow for us to have different parameters in the framerate and even ensure that we can modify them separately.
+
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
