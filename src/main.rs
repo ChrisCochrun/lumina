@@ -204,7 +204,8 @@ enum Message {
     AddSelectServiceItem(usize),
     HoveredServiceItem(Option<usize>),
     HoveredServiceDrop(Option<usize>),
-    AddServiceItem(usize, KindWrapper),
+    AddServiceItem(usize, ServiceItem),
+    AddServiceItemKind(usize, KindWrapper),
     AddServiceItemsFiles(usize, Vec<ServiceItem>),
     RemoveServiceItem(usize),
     AddServiceItemDrop(usize),
@@ -1251,6 +1252,12 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AddServiceItem(index, item) => {
+                self.service.insert(index, item);
+                self.presenter.update_items(self.service.clone());
+                self.hovered_dnd = None;
+                Task::none()
+            }
+            Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
                 let kind = item.0.0;
                 let mut item;
@@ -1315,18 +1322,19 @@ impl cosmic::Application for App {
                         .unwrap_or(slide)
                     })
                     .collect();
-                self.service.insert(index, item);
-                self.presenter.update_items(self.service.clone());
-                self.hovered_dnd = None;
-                Task::none()
+                return self
+                    .update(Message::AddServiceItem(index, item));
             }
             Message::AddServiceItemsFiles(index, items) => {
                 self.hovered_dnd = None;
-                for item in items {
-                    self.service.insert(index, item);
+                let mut tasks = Vec::new();
+                for (i, item) in items.into_iter().enumerate() {
+                    tasks.push(self.update(Message::AddServiceItem(
+                        index + i,
+                        item,
+                    )));
                 }
-                self.presenter.update_items(self.service.clone());
-                Task::none()
+                Task::batch(tasks)
             }
             Message::RemoveServiceItem(index) => {
                 self.service.remove(index);
@@ -1339,7 +1347,10 @@ impl cosmic::Application for App {
             }
             Message::AddServiceItemDrop(index) => {
                 if let Some(item) = &self.library_dragged_item {
-                    self.service.insert(index, item.clone());
+                    return self.update(Message::AddServiceItem(
+                        index,
+                        item.clone(),
+                    ));
                 }
                 Task::none()
             }
@@ -2001,7 +2012,7 @@ where
                                 return Message::None;
                             };
                             debug!(?item, index, "adding Service item");
-                            Message::AddServiceItem(index, item)
+                            Message::AddServiceItemKind(index, item)
                         }
                         "text/uri-list" => {
                             let Ok(text) = str::from_utf8(&data) else {
@@ -2095,7 +2106,7 @@ where
                             return Message::None;
                         };
                         debug!(?item, "adding Service item");
-                        Message::AddServiceItem(last_index, item)
+                        Message::AddServiceItemKind(last_index, item)
                     }
                     "text/uri-list" => {
                         let Ok(text) = str::from_utf8(&data) else {
