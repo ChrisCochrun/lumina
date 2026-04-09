@@ -1059,7 +1059,7 @@ impl<'a> Library {
 
         let texts = column([text.into(), subtext.into()]);
 
-        let add_button = button::icon(icon::from_name("caret-right"))
+        let add_button = button::icon(icon::from_name("arrow-right"))
             .on_press(Message::ToService(item.to_service_item()))
             .tooltip("Add to service");
 

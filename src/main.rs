@@ -1059,7 +1059,7 @@ impl cosmic::Application for App {
                             return Task::none();
                         }
                         library::Action::ToService(item) => {
-                            self.service.push(item);
+                            return self.update(Message::AppendServiceItem(item));
                         }
                         library::Action::Task(task) => {
                             return task.map(|message| {
