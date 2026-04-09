@@ -150,7 +150,7 @@ struct App {
     file: PathBuf,
     presenter: Presenter,
     windows: Vec<window::Id>,
-    service: Vec<ServiceItem>,
+    service: Arc<Vec<ServiceItem>>,
     selected_items: Vec<usize>,
     current_item: (usize, usize),
     hovered_item: Option<usize>,
@@ -342,7 +342,7 @@ impl cosmic::Application for App {
         //         item
         //     })
         //     .collect();
-        let items: Vec<ServiceItem> = vec![];
+        let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
 
         let presenter = Presenter::with_items(items.clone());
         let song_editor = SongEditor::new(Arc::clone(&fontdb));
@@ -1252,7 +1252,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AddServiceItem(index, item) => {
-                self.service.insert(index, item);
+                Arc::make_mut(&mut self.service).insert(index, item);
                 self.presenter.update_items(self.service.clone());
                 self.hovered_dnd = None;
                 Task::none()
@@ -1337,7 +1337,7 @@ impl cosmic::Application for App {
                 Task::batch(tasks)
             }
             Message::RemoveServiceItem(index) => {
-                self.service.remove(index);
+                Arc::make_mut(&mut self.service).remove(index);
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
@@ -1367,7 +1367,7 @@ impl cosmic::Application for App {
                         .unwrap_or(slide)
                     })
                     .collect();
-                self.service.push(item);
+                Arc::make_mut(&mut self.service).push(item);
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
@@ -1376,8 +1376,10 @@ impl cosmic::Application for App {
                 self.update(Message::AppendServiceItem(item))
             }
             Message::ReorderService(index, target_index) => {
-                let item = self.service.remove(index);
-                self.service.insert(target_index, item);
+                let item =
+                    Arc::make_mut(&mut self.service).remove(index);
+                Arc::make_mut(&mut self.service)
+                    .insert(target_index, item);
                 self.presenter.update_items(self.service.clone());
                 Task::none()
             }
@@ -1468,8 +1470,8 @@ impl cosmic::Application for App {
                 )
             }
             Message::OpenLoadItems(items) => {
-                self.service = items.clone();
-                self.presenter.service = items;
+                self.service = Arc::new(items);
+                self.presenter.service = self.service.clone();
                 Task::none()
             }
             Message::Save => {
@@ -1477,7 +1479,9 @@ impl cosmic::Application for App {
                 let file = self.file.clone();
                 let file_name = self.file.file_name().expect("Since we are saving we should have given a name by now").to_owned();
                 Task::perform(
-                    async move { file::save(service, file, true) },
+                    async move {
+                        file::save(service.to_owned(), file, true)
+                    },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!(

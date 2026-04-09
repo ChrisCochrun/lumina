@@ -48,7 +48,7 @@ static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 
 // #[derive(Default, Clone, Debug)]
 pub(crate) struct Presenter {
-    pub service: Vec<ServiceItem>,
+    pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
     pub current_item: usize,
     pub current_slide_index: usize,
@@ -138,7 +138,7 @@ impl menu::Action for MenuAction {
 }
 
 impl Presenter {
-    pub fn with_items(items: Vec<ServiceItem>) -> Self {
+    pub fn with_items(items: Arc<Vec<ServiceItem>>) -> Self {
         let video = {
             items.first().and_then(|item| {
                 item.slides.first().and_then(|slide| {
@@ -904,7 +904,7 @@ impl Presenter {
         }
     }
 
-    pub fn update_items(&mut self, items: Vec<ServiceItem>) {
+    pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
         self.service = items;
@@ -1072,7 +1072,7 @@ mod test {
     #[test]
     fn test_next_slide() -> Result<()> {
         let service = test_service();
-        let mut presenter = Presenter::with_items(service);
+        let mut presenter = Presenter::with_items(Arc::new(service));
         presenter.update(Message::NextSlide);
         dbg!(&presenter.service);
         assert_eq!(presenter.current_item, 1);

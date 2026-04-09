@@ -9,6 +9,7 @@ use std::{
     io::Write,
     iter,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 use tar::{Archive, Builder};
 use tracing::{debug, error};
@@ -16,7 +17,7 @@ use zstd::{Decoder, Encoder};
 
 #[allow(clippy::too_many_lines)]
 pub fn save(
-    list: Vec<ServiceItem>,
+    list: Arc<Vec<ServiceItem>>,
     path: impl AsRef<Path>,
     overwrite: bool,
 ) -> Result<()> {
@@ -85,7 +86,7 @@ pub fn save(
         Ok(())
     };
 
-    for item in list {
+    for item in list.iter() {
         let background;
         let audio: Option<PathBuf>;
         match &item.kind {
@@ -131,11 +132,11 @@ pub fn save(
             debug!(?path);
             append_file(path)?;
         }
-        for slide in item.slides {
-            if let Some(svg) = slide.text_svg
-                && let Some(path) = svg.path
+        for slide in &item.slides {
+            if let Some(svg) = &slide.text_svg
+                && let Some(path) = &svg.path
             {
-                append_file(path)?;
+                append_file(path.to_path_buf())?;
             }
         }
     }
@@ -515,7 +516,7 @@ mod test {
     fn test_save() {
         let path = PathBuf::from("./test.pres");
         let list = get_items();
-        match save(list, &path, true) {
+        match save(Arc::new(list), &path, true) {
             Ok(_) => {
                 assert!(path.is_file());
                 let Ok(file) = fs::File::open(path) else {

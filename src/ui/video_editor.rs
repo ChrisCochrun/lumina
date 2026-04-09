@@ -7,12 +7,12 @@ use cosmic::{
     iced_widget::{column, row},
     theme,
     widget::{
-        Space, button, container, icon,
+        Space, button, container, icon, slider,
         space::{self, horizontal},
         text, text_input,
     },
 };
-use iced_video_player::{Video, VideoPlayer};
+use iced_video_player::{Position, Video, VideoPlayer};
 use tracing::{debug, error, warn};
 use url::Url;
 
@@ -42,6 +42,7 @@ pub enum Message {
     None,
     PauseVideo,
     UpdateVideoFile(videos::Video),
+    VideoPos(f64),
 }
 
 impl VideoEditor {
@@ -81,6 +82,19 @@ impl VideoEditor {
                 warn!(?video);
                 return Action::UpdateVideo(video);
             }
+            Message::VideoPos(position) => {
+                if let Some(video) = self.video.as_mut() {
+                    let pausing = video.paused();
+                    video.set_paused(true);
+                    let position = Position::Time(
+                        std::time::Duration::from_secs_f64(position),
+                    );
+                    if let Err(e) = video.seek(position, false) {
+                        error!(?e);
+                    }
+                    video.set_paused(pausing);
+                }
+            }
             Message::PickVideo => {
                 let video_id = self
                     .core_video
@@ -119,12 +133,14 @@ impl VideoEditor {
                     icon::from_name("media-playback-pause")
                 })
                 .on_press(Message::PauseVideo);
-                let video_track = cosmic::iced_widget::progress_bar(
-                    0.0..=video.duration().as_secs_f32(),
-                    video.position().as_secs_f32(),
+                let video_track = slider(
+                    0.0..=video.duration().as_secs_f64(),
+                    video.position().as_secs_f64(),
+                    |pos| Message::VideoPos(pos),
                 )
-                .girth(cosmic::theme::spacing().space_s)
-                .length(Length::Fill);
+                .step(0.1)
+                .width(Length::Fill)
+                .height(cosmic::theme::spacing().space_s);
                 container(
                     row![play_button, video_track]
                         .align_y(Vertical::Center)
