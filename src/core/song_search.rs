@@ -6,7 +6,9 @@ use miette::{IntoDiagnostic, Result, miette};
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::{tag, take_till, take_till1},
+    bytes::{
+        complete::take_while, tag, take_till, take_till1, take_until,
+    },
     character::{
         complete::{
             alpha0, alpha1, alphanumeric1, digit0, newline, space0,
@@ -16,7 +18,9 @@ use nom::{
     combinator::success,
     error::ParseError,
     multi::separated_list1,
-    sequence::{delimited, pair, preceded, separated_pair},
+    sequence::{
+        delimited, pair, preceded, separated_pair, terminated,
+    },
 };
 use reqwest::header;
 use serde::{Deserialize, Serialize};
@@ -77,23 +81,33 @@ fn parse_genius_lyrics(
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
 
+    let mut map = HashMap::new();
+
     for chunk in chunks {
-        let chunk = chunk.join("\n");
-        let (_, (name, lyric)) = parse_verse
-            .parse(&chunk)
+        let (_, (mut name, lyric)) = parse_verse
+            .parse(chunk)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
+        while map.contains_key(&name) {
+            name = name.next();
+        }
+
+        map.entry(name).or_insert(lyric);
     }
 
-    todo!()
+    Ok(map)
 }
 
 fn ident(input: &str) -> IResult<&str, &str> {
-    preceded(space0, alphanumeric1).parse(input)
+    preceded(space0, any).parse(input)
 }
 
-fn block(input: &str) -> IResult<&str, Vec<&str>> {
-    separated_list1(newline, ident).parse(input)
+fn any(input: &str) -> IResult<&str, &str> {
+    take_until("\n").parse(input)
+}
+
+fn block(input: &str) -> IResult<&str, &str> {
+    terminated(ident, pair(newline, newline)).parse(input)
 }
 
 fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
@@ -477,6 +491,63 @@ mod test {
                 .into_diagnostic()?;
             dbg!(parsed);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_song() -> Result<()> {
+        let song = r#"[Verse 1]
+Glory, glory
+I've been singing
+Since I laid my burden down
+Glory, glory
+I've been singing
+Since I laid my burden down
+
+[Chorus]
+I'm singing, "Hallelujah"
+God is able, hallelujah
+God is faithful, hallelujah
+Lord, I'm gonna sing
+
+[Verse 2]
+I feel better
+So much better
+Since I laid my burden down
+Yeah, I feel better
+So much better
+Since I laid, O Lord, I laid my burden down
+
+[Chorus]
+I'm singing, "Hallelujah"
+God is able, hallelujah
+God is faithful, hallelujah
+Lord, I'm gonna sing
+I'm singing, "Hallelujah"
+God is able, hallelujah
+God is faithful, hallelujah
+Lord, I'm gonna sing
+
+[Bridge]
+As long as I'm alive there's gonna be praising
+As long as I'm alive there's gonna be shouting
+One thing that I know, oh, deep down in my soul
+As long as I'm alive, I'm gonna sing
+
+[Chorus]
+I'm singing, "Hallelujah" (Hallelujah)
+God is able, hallelujah (Hallelujah)
+God is faithful, hallelujah
+Lord, I'm gonna sing (Come on now, sing it)
+Oh I'm singing, "Hallelujah" (Hallelujah)
+God is able, hallelujah (Hallelujah)
+God is faithful, hallelujah (God is so good)
+Lord, I'm gonna sing (Sing it, Dave)
+
+[Outro]
+I'm gonna sing
+Aw man, that was good"#;
+        let map = parse_genius_lyrics(song)?;
         Ok(())
     }
 }
