@@ -214,10 +214,51 @@ impl Presenter {
                 self.obs_client = Some(client);
             }
             Message::NextSlide => {
-                return Action::NextSlide;
+                if self.service.get(self.current_item).is_some_and(
+                    |i| {
+                        i.slides.len() == self.current_slide_index + 1
+                    },
+                ) {
+                    return self.update(Message::ActivateSlide(
+                        self.current_item + 1,
+                        0,
+                    ));
+                } else if self
+                    .service
+                    .get(self.current_item)
+                    .is_some_and(|i| {
+                        i.slides.len() > self.current_slide_index + 1
+                    })
+                {
+                    return self.update(Message::ActivateSlide(
+                        self.current_item,
+                        self.current_slide_index + 1,
+                    ));
+                } else {
+                    return Action::None;
+                }
+                // return Action::NextSlide;
             }
             Message::PrevSlide => {
-                return Action::PrevSlide;
+                if self.current_item == 0
+                    && self.current_slide_index == 0
+                {
+                    return Action::None;
+                } else if self.current_slide_index == 0 {
+                    let target_item = self.current_item - 1;
+                    let last_slide = self.service.get(target_item).map(|i| i.slides.len() - 1).expect("We have checked that this item should be here.");
+                    return self.update(Message::ActivateSlide(
+                        target_item,
+                        last_slide,
+                    ));
+                } else {
+                    let target_slide = self.current_slide_index - 1;
+                    return self.update(Message::ActivateSlide(
+                        self.current_item,
+                        target_slide,
+                    ));
+                }
+                // return Action::PrevSlide;
             }
             Message::ClickSlide(item_index, slide_index) => {
                 return Action::ChangeSlide(item_index, slide_index);
@@ -1006,4 +1047,109 @@ pub(crate) fn slide_view<'a>(
         Container::new(stack).center(Length::Fill).into()
     })
     .into()
+}
+
+#[cfg(test)]
+mod test {
+    use crate::core::{
+        presentations::{PresKind, Presentation},
+        slide::TextAlignment,
+        songs::{Song, VerseName},
+    };
+
+    use super::*;
+    use miette::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_next_slide() -> Result<()> {
+        let service = test_service();
+        let mut presenter = Presenter::with_items(service);
+        presenter.update(Message::NextSlide);
+        dbg!(&presenter.service);
+        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_slide_index, 0);
+        presenter.update(Message::NextSlide);
+        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_slide_index, 1);
+        presenter.update(Message::NextSlide);
+        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_slide_index, 2);
+        presenter.update(Message::PrevSlide);
+        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_slide_index, 1);
+        presenter.update(Message::PrevSlide);
+        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_slide_index, 0);
+        presenter.update(Message::PrevSlide);
+        assert_eq!(presenter.current_item, 0);
+        assert_eq!(presenter.current_slide_index, 0);
+
+        Ok(())
+    }
+
+    fn test_service() -> Vec<ServiceItem> {
+        let mut service = Vec::new();
+        let song = test_song();
+        let video = test_video("Christ Nutshell".into());
+        let presentation = test_presentation();
+        let mut video_item = ServiceItem::from(&video);
+        video_item.slides = video_item.to_slides().unwrap();
+        let mut song_item = ServiceItem::from(&song);
+        song_item.slides = song_item.to_slides().unwrap();
+        let mut pres_item = ServiceItem::from(&presentation);
+        pres_item.slides = pres_item.to_slides().unwrap();
+        service.push(video_item);
+        service.push(song_item);
+        service.push(pres_item);
+        service
+    }
+
+    fn test_video(title: String) -> crate::core::videos::Video {
+        crate::core::videos::Video {
+            title,
+            path: PathBuf::from(
+                "/home/chris/nc/tfc/Documents/lessons/videos/christ-nutshell.mp4",
+            ),
+            ..Default::default()
+        }
+    }
+
+    pub fn test_song() -> Song {
+        let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
+        let verse_map: Option<HashMap<VerseName, String>> =
+            ron::from_str(&lyrics).unwrap();
+        Song {
+            id: 7,
+            title: "Death Was Arrested".to_string(),
+            lyrics: Some(lyrics),
+            author: Some(
+                "North Point Worship".to_string(),
+            ),
+            ccli: None,
+            audio: Some("file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
+            verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
+            background: Some(crate::core::slide::Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
+            text_alignment: Some(TextAlignment::MiddleCenter),
+            font: Some("Quicksand Bold".to_string()),
+            font_size: Some(80),
+            stroke_size: None,
+            verses: Some(vec![VerseName::Chorus { number: 1 }, VerseName::Intro { number: 1 }, VerseName::Other { number: 99 }, VerseName::Bridge { number: 1 }, VerseName::Verse { number: 4 }, VerseName::Verse { number: 2 }, VerseName::Verse { number: 3 }, VerseName::Verse { number: 1 }
+            ]),
+            verse_map,
+            ..Default::default()
+        }
+    }
+
+    fn test_presentation() -> Presentation {
+        Presentation {
+            id: 4,
+            title: "mzt52.pdf".into(),
+            path: PathBuf::from("/home/chris/docs/mzt52.pdf"),
+            kind: PresKind::Pdf {
+                starting_index: 0,
+                ending_index: 67,
+            },
+        }
+    }
 }

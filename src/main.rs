@@ -1013,122 +1013,39 @@ impl cosmic::Application for App {
                         }
                     }
                     presenter::Action::NextSlide => {
-                        let slide_index = self.current_item.1;
-                        let item_index = self.current_item.0;
-                        let mut tasks = vec![];
-                        debug!(slide_index, item_index);
-                        if let Some(item) =
-                            self.service.get(item_index)
+                        let action = self
+                            .presenter
+                            .update(presenter::Message::NextSlide);
+                        self.current_item = (
+                            self.presenter.current_item,
+                            self.presenter.current_slide_index,
+                        );
+                        if let presenter::Action::Task(task) = action
                         {
-                            if item.slides.len() > slide_index + 1 {
-                                let slide_index = slide_index + 1;
-                                debug!(slide_index, item_index);
-                                let action = self.presenter.update(
-                                    presenter::Message::ActivateSlide(
-                                        item_index,
-                                        slide_index,
-                                    ),
-                                );
-                                if let presenter::Action::Task(task) =
-                                    action
-                                {
-                                    tasks.push(task.map(|m| {
-                                        cosmic::Action::App(
-                                            Message::Present(m),
-                                        )
-                                    }));
-                                }
-                                self.current_item =
-                                    (item_index, slide_index);
-                            } else {
-                                // debug!("Slides are not longer");
-                                if self
-                                    .service
-                                    .get(item_index + 1)
-                                    .is_some()
-                                {
-                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
-                                    if let presenter::Action::Task(
-                                        task,
-                                    ) = action
-                                    {
-                                        tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
-                                                Message::Present(m),
-                                            )
-                                        }));
-                                    }
-                                    self.current_item =
-                                        (item_index + 1, 0);
-                                }
-                            }
-                            Task::batch(tasks)
+                            task.map(|m| {
+                                cosmic::Action::App(Message::Present(
+                                    m,
+                                ))
+                            })
                         } else {
                             Task::none()
                         }
                     }
                     presenter::Action::PrevSlide => {
-                        let slide_index = self.current_item.1;
-                        let item_index = self.current_item.0;
-                        let mut tasks = vec![];
-                        if let Some(_item) =
-                            self.service.get(item_index)
+                        let action = self
+                            .presenter
+                            .update(presenter::Message::PrevSlide);
+                        self.current_item = (
+                            self.presenter.current_item,
+                            self.presenter.current_slide_index,
+                        );
+                        if let presenter::Action::Task(task) = action
                         {
-                            if slide_index != 0 {
-                                let slide_index = slide_index - 1;
-                                let action = self.presenter.update(
-                                    presenter::Message::ActivateSlide(
-                                        item_index,
-                                        slide_index,
-                                    ),
-                                );
-                                if let presenter::Action::Task(task) =
-                                    action
-                                {
-                                    tasks.push(task.map(|m| {
-                                        cosmic::Action::App(
-                                            Message::Present(m),
-                                        )
-                                    }));
-                                }
-                                self.current_item =
-                                    (item_index, slide_index);
-                                Task::batch(tasks)
-                            } else if slide_index == 0
-                                && item_index == 0
-                            {
-                                Task::none()
-                            } else {
-                                // debug!("Change slide to previous items slides");
-                                let previous_item_slides_length =
-                                    self.service
-                                        .get(item_index - 1)
-                                        .map_or(0, |item| {
-                                            item.slides.len()
-                                        });
-                                self.current_item = (
-                                    item_index - 1,
-                                    previous_item_slides_length - 1,
-                                );
-                                if self
-                                    .service
-                                    .get(item_index - 1)
-                                    .is_some()
-                                {
-                                    let action = self.presenter.update(presenter::Message::ActivateSlide(self.current_item.0, self.current_item.1));
-                                    if let presenter::Action::Task(
-                                        task,
-                                    ) = action
-                                    {
-                                        tasks.push(task.map(|m| {
-                                            cosmic::Action::App(
-                                                Message::Present(m),
-                                            )
-                                        }));
-                                    }
-                                }
-                                Task::batch(tasks)
-                            }
+                            task.map(|m| {
+                                cosmic::Action::App(Message::Present(
+                                    m,
+                                ))
+                            })
                         } else {
                             Task::none()
                         }

@@ -326,7 +326,7 @@ mod test {
         Video {
             title,
             path: PathBuf::from(
-                "/home/chris/docs/notes/lessons/christ-our-hope.mp4",
+                "/home/chris/nc/tfc/Documents/lessons/videos/christ-nutshell.mp4",
             ),
             ..Default::default()
         }
