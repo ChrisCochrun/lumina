@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>xyz.cochrun.lumina.lumina</id>
+  
+  <name>Lumina</name>
+  <summary>A church presentation app that is built to be simple to use.</summary>
+  
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  
+  <description>
+    <p>
+      A church presentation app that is built to be simple to use.
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">xyz.cochrun.lumina.lumina.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-04-10_15-34-28.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-04-10_15-34-55.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-04-10_15-35-14.png</image>
+    </screenshot>
+  </screenshots>
+</component>

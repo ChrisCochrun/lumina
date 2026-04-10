@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+
+Name=Lumina
+Comment=A church presentation app that is built to be simple to use.
+Categories=AudioVideo;Player;
+
+Icon=lumina
+Exec=lumina -i
+Terminal=false
