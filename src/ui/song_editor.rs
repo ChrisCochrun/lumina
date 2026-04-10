@@ -46,6 +46,7 @@ use dirs::font_dir;
 use iced_video_player::Video;
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{debug, error};
 
 use crate::{
@@ -423,30 +424,26 @@ impl SongEditor {
                 self.song_slides = None;
                 let font_db = Arc::clone(&self.font_db);
 
-                tasks.push(Task::stream(
-                    iced_futures::stream::channel(
-                        song_slides.len(),
-                        async move |mut tx| {
-                            for (index, slide) in
-                                song_slides.into_iter().enumerate()
-                            {
-                                let slide =
-                                    text_svg::text_svg_generator(
-                                        slide.clone(),
-                                        &font_db,
-                                    )
-                                    .unwrap_or(slide);
-                                if let Err(e) =
-                                    tx.try_send(Message::UpdateSlide(
-                                        (index, slide),
-                                    ))
-                                {
-                                    error!(?e);
-                                }
-                            }
-                        },
-                    ),
-                ));
+                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+                std::thread::spawn(move || {
+                    for (index, slide) in
+                        song_slides.into_iter().enumerate()
+                    {
+                        let slide = text_svg::text_svg_generator(
+                            slide.clone(),
+                            &font_db,
+                        )
+                        .unwrap_or(slide);
+                        if let Err(e) = tx.send(Message::UpdateSlide(
+                            (index, slide),
+                        )) {
+                            error!(?e);
+                        }
+                    }
+                });
+
+                tasks.push(Task::stream());
 
                 self.verses = song.verse_map.map(|map| {
                     map.into_iter()
