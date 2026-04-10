@@ -44,6 +44,7 @@ impl AppTheme {
 pub struct Settings {
     pub app_theme: AppTheme,
     pub obs_url: Option<url::Url>,
+    pub genius_token: Option<String>,
 }
 
 impl Default for Settings {
@@ -51,6 +52,7 @@ impl Default for Settings {
         Self {
             app_theme: AppTheme::System,
             obs_url: None,
+            genius_token: None,
         }
     }
 }

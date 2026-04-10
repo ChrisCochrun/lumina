@@ -3,6 +3,8 @@
 #+CATEGORY: dev
 
 
+* TODO [#A] Deployment pipeline and get a MVP going
+
 * TODO [#A] Add Action system
 This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 

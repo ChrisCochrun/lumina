@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::core::songs::{Song, VerseName};
+use crate::core::{
+    settings,
+    songs::{Song, VerseName},
+};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use nom::{
@@ -147,13 +150,16 @@ fn parse_verse_lyrics(lyrics: &str) -> IResult<&str, String> {
 
 pub async fn search_genius_links(
     query: impl AsRef<str> + std::fmt::Display,
+    auth_token: String,
 ) -> Result<Vec<OnlineSong>> {
-    let auth_token = env!("GENIUS_TOKEN");
+    // let Some(auth_token) = option_env!("GENIUS_TOKEN") else {
+    //     return Err(miette!("No Genius Token"));
+    // };
+
+    let head_value = header::HeaderValue::from_str(&auth_token)
+        .into_diagnostic()?;
     let mut headers = header::HeaderMap::new();
-    headers.insert(
-        header::AUTHORIZATION,
-        header::HeaderValue::from_static(auth_token),
-    );
+    headers.insert(header::AUTHORIZATION, head_value);
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .build()
@@ -365,9 +371,12 @@ mod test {
             site: "https://genius.com".to_string(),
             link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
         };
-        let hits = search_genius_links("Death was arrested")
-            .await
-            .map_err(|e| e.to_string())?;
+        let hits = search_genius_links(
+            "Death was arrested",
+            "test".to_string(),
+        )
+        .await
+        .map_err(|e| e.to_string())?;
 
         assert!(
             hits.iter().find(|hit| **hit == song).is_some(),

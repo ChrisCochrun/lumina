@@ -7,6 +7,7 @@
     flake-utils.url = "github:numtide/flake-utils";
     fenix.url = "github:nix-community/fenix";
     rust-overlay.url = "github:oxalica/rust-overlay";
+    crane.url = "github:ipetkov/crane";
   };
 
   outputs =
@@ -21,10 +22,21 @@
           # overlays = [ rust-overlay.overlays.default ];
           # overlays = [cargo2nix.overlays.default];
         };
+        inherit (pkgs) lib;
+        craneLib = crane.mkLib pkgs;
         naersk' = pkgs.callPackage naersk { };
 
         # toolchain = (with pkgs.fenix.default; [cargo clippy rust-std rust-src rustc rustfmt rust-analyzer-nightly]);
-            
+        unfilteredRoot = ./.; # The original, unfiltered source
+        src = lib.fileset.toSource {
+          root = unfilteredRoot;
+          fileset = lib.fileset.unions [
+            # Default files from crane (Rust and cargo files)
+            (craneLib.fileset.commonCargoSources unfilteredRoot)
+            # Include all the .sql migrations as well
+            ./migrations
+          ];
+        };
 
         nativeBuildInputs = with pkgs; [
           # Rust tools
@@ -49,6 +61,10 @@
           libxkbcommon
           pkg-config
           sccache
+          just
+          sqlx-cli
+          cargo-watch
+          samply
         ];
 
         buildInputs = with pkgs; [
@@ -83,11 +99,6 @@
           ffmpeg-full
           mupdf
           # yt-dlp
-
-          just
-          sqlx-cli
-          cargo-watch
-          samply
         ];
 
         LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
@@ -112,6 +123,28 @@
             pkgs.libclang
           ]
         }";
+
+        commonArgs = {
+          strictDeps = false;
+          inherit src buildInputs nativeBuildInputs LD_LIBRARY_PATH;
+        };
+
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        lumina = craneLib.buildPackage (
+          commonArgs
+          // {
+            inherit cargoArtifacts buildInputs nativeBuildInputs LD_LIBRARY_PATH;
+
+            preBuild = ''
+              export DATABASE_URL=sqlite:./db.sqlite3
+              sqlx database create
+              sqlx migrate run
+            '';
+            cargoTestCommand = "";
+            cargoExtraArgs = "";
+          }
+        );
+
       in
       rec {
         devShell =
@@ -125,15 +158,9 @@
               DATABASE_URL = "sqlite://./test.db";
               # RUST_SRC_PATH = "${toolchain.rust-src}/lib/rustlib/src/rust/library";
             };
-        defaultPackage = naersk'.buildPackage {
-          inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
-          src = ./.;
-        };
+        defaultPackage = lumina;
         packages = {
-          default = naersk'.buildPackage {
-            inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
-            src = ./.;
-          };
+          default = lumina;
         };
       }
     );
