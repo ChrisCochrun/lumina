@@ -19,6 +19,7 @@ use cosmic::{
         task,
     },
     iced_core::widget::tree,
+    iced_futures,
     iced_wgpu::graphics::text::cosmic_text::fontdb,
     iced_widget::{
         column, row,
@@ -353,7 +354,9 @@ impl SongEditor {
             Message::ChangeSong(song) => {
                 let mut tasks = vec![];
                 self.song = Some(song.clone());
-                let song_slides = song.clone().to_slides();
+                let Ok(song_slides) = song.clone().to_slides() else {
+                    return Action::None;
+                };
                 self.title = song.title;
                 self.font_size_open = false;
                 self.font_selector_open = false;
@@ -420,24 +423,29 @@ impl SongEditor {
                 self.song_slides = None;
                 let font_db = Arc::clone(&self.font_db);
 
-                tasks.push(Task::perform(
-                    async move {
-                        song_slides
-                            .ok()
-                            .map(|v| {
-                                v.into_par_iter()
-                                    .map(|s| {
-                                        text_svg::text_svg_generator(
-                                            s.clone(),
-                                            &font_db,
-                                        )
-                                        .unwrap_or(s)
-                                    })
-                                    .collect::<Vec<Slide>>()
-                            })
-                            .unwrap_or_default()
-                    },
-                    Message::UpdateSlides,
+                tasks.push(Task::stream(
+                    iced_futures::stream::channel(
+                        song_slides.len(),
+                        async move |mut tx| {
+                            for (index, slide) in
+                                song_slides.into_iter().enumerate()
+                            {
+                                let slide =
+                                    text_svg::text_svg_generator(
+                                        slide.clone(),
+                                        &font_db,
+                                    )
+                                    .unwrap_or(slide);
+                                if let Err(e) =
+                                    tx.try_send(Message::UpdateSlide(
+                                        (index, slide),
+                                    ))
+                                {
+                                    error!(?e);
+                                }
+                            }
+                        },
+                    ),
                 ));
 
                 self.verses = song.verse_map.map(|map| {
