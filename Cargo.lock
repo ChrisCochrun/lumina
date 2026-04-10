@@ -4481,6 +4481,7 @@ dependencies = [
  "strum_macros",
  "tar",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tracing-log",
  "tracing-subscriber",

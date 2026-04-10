@@ -49,6 +49,7 @@ scraper = "0.25.0"
 itertools = "0.14.0"
 serde_json = "1.0.149"
 nom = "8.0.0"
+tokio-stream = "0.1.18"
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
 

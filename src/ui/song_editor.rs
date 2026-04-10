@@ -16,6 +16,10 @@ use cosmic::{
         alignment::{Horizontal, Vertical},
         color,
         font::{Style, Weight},
+        futures::{
+            SinkExt, StreamExt, TryStreamExt,
+            channel::mpsc::{UnboundedReceiver, unbounded},
+        },
         task,
     },
     iced_core::widget::tree,
@@ -46,7 +50,6 @@ use dirs::font_dir;
 use iced_video_player::Video;
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use tokio::sync::mpsc::UnboundedReceiver;
 use tracing::{debug, error};
 
 use crate::{
@@ -422,10 +425,10 @@ impl SongEditor {
                 self.background_video(song.background.as_ref());
                 self.background = song.background.clone();
                 self.song_slides = None;
-                let font_db = Arc::clone(&self.font_db);
 
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
+                let font_db = self.font_db.clone();
                 std::thread::spawn(move || {
                     for (index, slide) in
                         song_slides.into_iter().enumerate()
@@ -435,15 +438,33 @@ impl SongEditor {
                             &font_db,
                         )
                         .unwrap_or(slide);
-                        if let Err(e) = tx.send(Message::UpdateSlide(
-                            (index, slide),
-                        )) {
-                            error!(?e);
-                        }
+                        let _ = tx.send(Message::UpdateSlide((
+                            index, slide,
+                        )));
                     }
                 });
 
-                tasks.push(Task::stream());
+                let (task, handle) = Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx)).abortable();
+
+                // let (task, handle) = Task::perform(
+                //     async move {
+                //         song_slides
+                //             .into_par_iter()
+                //             .map(|s| {
+                //                 text_svg::text_svg_generator(
+                //                     s.clone(),
+                //                     &font_db,
+                //                 )
+                //                 .unwrap_or(s)
+                //             })
+                //             .collect::<Vec<Slide>>()
+                //     },
+                //     Message::UpdateSlides,
+                // )
+                // .abortable();
+
+                self.update_slide_handle = Some(handle);
+                tasks.push(task);
 
                 self.verses = song.verse_map.map(|map| {
                     map.into_iter()
@@ -1882,22 +1903,46 @@ impl SongEditor {
             // })
             // .abortable();
 
-            let (task, handle) = Task::perform(
-                async move {
-                    slides
-                        .into_par_iter()
-                        .map(|s| {
-                            text_svg::text_svg_generator(
-                                s.clone(),
-                                &font_db,
-                            )
-                            .unwrap_or(s)
-                        })
-                        .collect::<Vec<Slide>>()
-                },
-                Message::UpdateSlides,
+            // let (mut tx, rx) = unbounded();
+
+            let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+            let font_db = self.font_db.clone();
+            std::thread::spawn(move || {
+                for (index, slide) in slides.into_iter().enumerate() {
+                    let slide = text_svg::text_svg_generator(
+                        slide.clone(),
+                        &font_db,
+                    )
+                    .unwrap_or(slide);
+                    let _ =
+                        tx.send(Message::UpdateSlide((index, slide)));
+                }
+            });
+
+            let (task, handle) = Task::stream(
+                tokio_stream::wrappers::UnboundedReceiverStream::new(
+                    rx,
+                ),
             )
             .abortable();
+
+            // let (task, handle) = Task::perform(
+            //     async move {
+            //         slides
+            //             .into_par_iter()
+            //             .map(|s| {
+            //                 text_svg::text_svg_generator(
+            //                     s.clone(),
+            //                     &font_db,
+            //                 )
+            //                 .unwrap_or(s)
+            //             })
+            //             .collect::<Vec<Slide>>()
+            //     },
+            //     Message::UpdateSlides,
+            // )
+            // .abortable();
 
             self.update_slide_handle = Some(handle);
             tasks.push(task);
