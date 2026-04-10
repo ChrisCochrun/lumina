@@ -65,6 +65,7 @@
           sqlx-cli
           cargo-watch
           samply
+          flatpak-builder
         ];
 
         buildInputs = with pkgs; [
