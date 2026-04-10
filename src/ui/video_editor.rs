@@ -195,14 +195,20 @@ impl VideoEditor {
 
     fn update_entire_video(&mut self, video: &videos::Video) {
         debug!(?video);
-        let Ok(mut player_video) =
-            Url::from_file_path(video.path.clone()).map(|url| {
-                gst_video::create_video(&url, 60)
-                    .expect("Shouldn't have probs")
-            })
-        else {
+        let Ok(url) = Url::from_file_path(video.path.clone()) else {
             self.video = None;
             self.title.clone_from(&video.title);
+            self.core_video = Some(video.clone());
+            return;
+        };
+        let Ok(mut player_video) = gst_video::create_video(&url, 60)
+        else {
+            self.video = None;
+            self.title = format!(
+                "{}: {}",
+                String::from("Video Missing"),
+                &video.title
+            );
             self.core_video = Some(video.clone());
             return;
         };
