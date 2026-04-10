@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>xyz.cochrun.lumina.lumina</id>
+  <id>xyz.cochrun.lumina</id>
   
   <name>Lumina</name>
   <summary>A church presentation app that is built to be simple to use.</summary>
@@ -14,7 +14,7 @@
     </p>
   </description>
   
-  <launchable type="desktop-id">xyz.cochrun.lumina.lumina.desktop</launchable>
+  <launchable type="desktop-id">xyz.cochrun.lumina.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-04-10_15-34-28.png</image>
