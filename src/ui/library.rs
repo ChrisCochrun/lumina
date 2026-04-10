@@ -111,7 +111,7 @@ pub enum Message {
     ReaddImages(Vec<Image>),
     ReaddVideos(Vec<Video>),
     ReaddPres(Vec<Presentation>),
-    ToService(ServiceItem),
+    ToService((LibraryKind, i32)),
 }
 
 impl<'a> Library {
@@ -156,8 +156,30 @@ impl<'a> Library {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::None => (),
-            Message::ToService(item) => {
-                return Action::ToService(item);
+            Message::ToService((kind, index)) => {
+                let item = match kind {
+                    LibraryKind::Song => self
+                        .song_library
+                        .get_item(index)
+                        .map(|song| song.to_service_item()),
+                    LibraryKind::Video => self
+                        .video_library
+                        .get_item(index)
+                        .map(|video| video.to_service_item()),
+                    LibraryKind::Image => self
+                        .image_library
+                        .get_item(index)
+                        .map(|image| image.to_service_item()),
+                    LibraryKind::Presentation => self
+                        .presentation_library
+                        .get_item(index)
+                        .map(|presentation| {
+                            presentation.to_service_item()
+                        }),
+                };
+                if let Some(item) = item {
+                    return Action::ToService(item);
+                };
             }
             Message::DeleteItem => {
                 return self.delete_items();
@@ -1060,7 +1082,10 @@ impl<'a> Library {
         let texts = column([text.into(), subtext.into()]);
 
         let add_button = button::icon(icon::from_name("arrow-right"))
-            .on_press(Message::ToService(item.to_service_item()))
+            .on_press(Message::ToService((
+                model.kind,
+                index.try_into().expect("Shouldn't have issues"),
+            )))
             .tooltip("Add to service");
 
         Container::new(

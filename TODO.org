@@ -28,14 +28,14 @@ There seems to be some issue with fontdb not able to decipher all the versions o
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
-* TODO [#C] Rename menu actions to menu commands and build a reverse hashmap for settings to map commands to key-binding such that we can allow for remapping them on the fly.
-
 * TODO [#B] Saving and loading font awareness
 Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
 
 * TODO [#B] Develop ui for settings
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO [#C] Rename menu actions to menu commands and build a reverse hashmap for settings to map commands to key-binding such that we can allow for remapping them on the fly.
 
 * TODO [#C] Use orgize as a file parser and allow for orgdown files to represent a presentation.
 Orgize has some very nice features that will let me determine what things are in an orgdown file and thus take said file and turn it into a presentation.
@@ -108,6 +108,10 @@ This is necessary so that the entire song gets changed and we can propogate thos
 There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * DONE [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
+
+* DONE Song Editor has some sort of performance issue.
+CLOSED: [2026-04-10 Fri 13:08]
+=core::songs= logs in line 294 whenever even mousing over the song editor.
 
 * DONE [#B] Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
