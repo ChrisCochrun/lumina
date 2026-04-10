@@ -13,6 +13,7 @@ finish-args:
   - --device=dri
   - --share=network
   - --filesystem=xdg-documents
+  - --filesystem=xdg-config/cosmic:rw
 modules:
   - name: lumina
     buildsystem: simple
@@ -22,8 +23,9 @@ modules:
         CARGO_HOME: /run/build/cosmic-utils-enroll/cargo
         CARGO_NET_OFFLINE: 'true'
     build-commands:
-      - cargo --offline fetch --manifest-path Cargo.toml
-      - cargo build --offline --release
+      # - cargo --offline fetch --manifest-path Cargo.toml
+      # - cargo build --offline --release
+      - cargo build --release
 
       - install -Dm0755 target/release/lumina /app/bin/lumina
       - install -Dm0644 res/xyz.cochrun.lumina.desktop /app/share/applications/xyz.cochrun.lumina.desktop
@@ -31,7 +33,11 @@ modules:
       - install -Dm0644 res/icons/lumina.svg /app/share/icons/hicolor/scalable/apps/xyz.cochrun.lumina.svg
 
     sources:
-      - type: git
-        url: https://git.tfcconnection.org/chris/lumina.git
-        commit: 53d1ad6163634658a274293d3a2ca7a69a4d9421
-      - cargo-sources.json
+      # - type: git
+      #   url: https://git.tfcconnection.org/chris/lumina.git
+      #   commit: 53d1ad6163634658a274293d3a2ca7a69a4d9421
+
+      - type: dir
+        path: .
+
+      # - cargo-sources.json
