@@ -4,8 +4,8 @@ use crate::core::images::Image;
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::widget::{column, row},
     iced::{Length, alignment::Vertical},
-    iced_widget::{column, row},
     theme,
     widget::{
         self, Space, button, container, icon, space::horizontal,

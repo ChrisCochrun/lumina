@@ -9,8 +9,8 @@ use crate::core::presentations::{PresKind, Presentation};
 use cosmic::{
     Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::widget::{column, row},
     iced::{Background, ContentFit, Length, alignment::Vertical},
-    iced_widget::{column, row},
     theme,
     widget::{
         self, Space, button, container, context_menu, icon,

@@ -3,12 +3,12 @@ use std::{collections::HashMap, sync::Arc};
 use cosmic::{
     Element, Task,
     dialog::file_chooser::open::Dialog,
+    iced::core::widget::tree::State,
+    iced::widget::{column, row as rowm, text as textm},
     iced::{
         Background, Border, Color, Length, alignment::Vertical,
         clipboard::dnd::DndAction, keyboard::Modifiers,
     },
-    iced_core::widget::tree::State,
-    iced_widget::{column, row as rowm, text as textm},
     theme,
     widget::{
         Container, DndSource, Space, button, container, context_menu,
@@ -115,12 +115,11 @@ pub enum Message {
 }
 
 impl<'a> Library {
-    pub async fn new() -> Self {
-        let db = add_db().await.expect("probs");
-        if let Err(e) = migrate!().run(&db).await {
+    pub async fn new(db: Arc<SqlitePool>) -> Self {
+        // let db = add_db().await.expect("probs");
+        if let Err(e) = migrate!().run(&*db).await {
             error!(?e);
         }
-        let db = Arc::new(db);
         Self {
             song_library: Model::new_song_model(Arc::clone(&db))
                 .await,
@@ -1420,7 +1419,7 @@ async fn add_presentations() -> Option<Vec<Presentation>> {
     )
 }
 
-async fn add_db() -> Result<SqlitePool> {
+pub async fn add_db() -> Result<SqlitePool> {
     let mut data = dirs::data_local_dir()
         .expect("Should always find a data dir");
     data.push("lumina");
@@ -1464,5 +1463,32 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
         )
     } else {
         text
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::core::songs::test::add_db;
+    use crate::core::songs::test::fill_db;
+    use crate::core::songs::test::test_song;
+    use pretty_assertions::assert_eq;
+
+    #[tokio::test]
+    async fn test_library_add() -> Result<()> {
+        let db = Arc::new(add_db().await?);
+        fill_db(db.clone()).await?;
+        let mut library = Library::new(db).await;
+        let pre_length = library.song_library.items.len();
+        library.selected_items = Some(vec![(LibraryKind::Song, 5)]);
+        library.update(Message::DeleteItem);
+        let post_length = library.song_library.items.len();
+        assert!(pre_length > post_length);
+        assert_eq!(pre_length, post_length);
+        // let song =
+        //     library.get_song(5).expect("Should be here").clone();
+        // let test_song = test_song();
+
+        Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use cosmic::{
     Element, Task,
     cosmic_theme::palette::WithAlpha,
+    iced::widget::{column, row},
     iced::{Background, Border},
-    iced_widget::{column, row},
     theme,
     widget::{
         button, combo_box, container, icon, space, text_editor,

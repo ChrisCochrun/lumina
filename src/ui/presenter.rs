@@ -9,16 +9,16 @@ use std::{
 
 use cosmic::{
     Task,
-    iced::{
-        Background, Border, Color, ContentFit, Font, Length, Shadow,
-        Vector,
-        font::{Family, Stretch, Style, Weight},
-    },
-    iced_widget::{
+    iced::widget::{
         scrollable::{
             AbsoluteOffset, Direction, Scrollbar, scroll_to,
         },
         stack,
+    },
+    iced::{
+        Background, Border, Color, ContentFit, Font, Length, Shadow,
+        Vector,
+        font::{Family, Stretch, Style, Weight},
     },
     prelude::*,
     widget::{

@@ -1185,7 +1185,7 @@ impl Song {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use std::{str::FromStr, sync::Arc};
 
     use crate::ui::text_svg::text_svg_generator_with_cache;
@@ -1338,7 +1338,7 @@ You saved my soul"
         song_model
     }
 
-    async fn add_db() -> Result<SqlitePool> {
+    pub async fn add_db() -> Result<SqlitePool> {
         let db_url = String::from("sqlite::memory:");
         let pool =
             SqlitePool::connect(&db_url).await.into_diagnostic()?;
@@ -1350,7 +1350,7 @@ You saved my soul"
         Ok(pool)
     }
 
-    async fn fill_db(db: Arc<SqlitePool>) -> Result<()> {
+    pub async fn fill_db(db: Arc<SqlitePool>) -> Result<()> {
         let mut songs = Vec::new();
         for _ in 0..20 {
             songs = add_song(songs, db.clone()).await?;

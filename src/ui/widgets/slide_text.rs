@@ -3,9 +3,9 @@ use cosmic::iced::advanced::renderer;
 use cosmic::iced::advanced::widget::{self, Widget};
 use cosmic::iced::border;
 use cosmic::iced::mouse;
+use cosmic::iced::wgpu::Primitive;
+use cosmic::iced::wgpu::primitive::Renderer as PrimitiveRenderer;
 use cosmic::iced::{Color, Element, Length, Rectangle, Size};
-use cosmic::iced_wgpu::Primitive;
-use cosmic::iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 
 pub struct SlideText {
     _text: String,

@@ -86,7 +86,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         renderer: &Renderer,
         _theme: &cosmic::Theme,
         bounds: cosmic::iced::Rectangle,
-        _cursor: cosmic::iced_core::mouse::Cursor,
+        _cursor: cosmic::iced::core::mouse::Cursor,
     ) -> Vec<canvas::Geometry<Renderer>> {
         // We prepare a new `Frame`
         let mut frame = canvas::Frame::new(renderer, bounds.size());
@@ -123,8 +123,8 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         _state: &mut Self::State,
         event: &canvas::Event,
         bounds: cosmic::iced::Rectangle,
-        _cursor: cosmic::iced_core::mouse::Cursor,
-    ) -> Option<cosmic::iced_widget::Action<SlideWidget>> {
+        _cursor: cosmic::iced::core::mouse::Cursor,
+    ) -> Option<cosmic::iced::widget::Action<SlideWidget>> {
         match event {
             canvas::Event::Mouse(event) => match event {
                 cosmic::iced::mouse::Event::CursorEntered => {
@@ -172,8 +172,8 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         &self,
         _state: &Self::State,
         _bounds: cosmic::iced::Rectangle,
-        _cursor: cosmic::iced_core::mouse::Cursor,
-    ) -> cosmic::iced_core::mouse::Interaction {
-        cosmic::iced_core::mouse::Interaction::default()
+        _cursor: cosmic::iced::core::mouse::Cursor,
+    ) -> cosmic::iced::core::mouse::Interaction {
+        cosmic::iced::core::mouse::Interaction::default()
     }
 }

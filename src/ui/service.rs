@@ -3,13 +3,13 @@ use cosmic::iced::Size;
 use cosmic::iced_core::widget::tree;
 use cosmic::{
     Element,
+    iced::core::{
+        self, Clipboard, Shell, layout, renderer, widget::Tree,
+    },
     iced::{
         Event, Length, Point, Rectangle, Vector,
         clipboard::dnd::{DndEvent, SourceEvent},
         event, mouse,
-    },
-    iced_core::{
-        self, Clipboard, Shell, layout, renderer, widget::Tree,
     },
     widget::Widget,
 };

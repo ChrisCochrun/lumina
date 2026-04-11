@@ -3,8 +3,8 @@ use std::{io, path::PathBuf};
 use cosmic::{
     Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::widget::{column, row},
     iced::{Length, alignment::Vertical},
-    iced_widget::{column, row},
     theme,
     widget::{
         Space, button, container, icon, slider,

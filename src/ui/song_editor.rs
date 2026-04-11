@@ -10,6 +10,16 @@ use std::{
 use cosmic::{
     Apply, Element, Task,
     dialog::file_chooser::{FileFilter, open::Dialog},
+    iced::core::widget::tree,
+    iced::futures,
+    iced::widget::{
+        column, row,
+        scrollable::{
+            self as iced_scrollable, AbsoluteOffset, Direction,
+            Scrollbar,
+        },
+        stack,
+    },
     iced::{
         Background as ContainerBackground, Border, Color, Length,
         Padding, Shadow, Vector,
@@ -21,17 +31,6 @@ use cosmic::{
             channel::mpsc::{UnboundedReceiver, unbounded},
         },
         task,
-    },
-    iced_core::widget::tree,
-    iced_futures,
-    iced_wgpu::graphics::text::cosmic_text::fontdb,
-    iced_widget::{
-        column, row,
-        scrollable::{
-            self as iced_scrollable, AbsoluteOffset, Direction,
-            Scrollbar,
-        },
-        stack,
     },
     theme,
     widget::{
@@ -47,6 +46,7 @@ use cosmic::{
 };
 use derive_more::Debug;
 use dirs::font_dir;
+use fontdb;
 use iced_video_player::Video;
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -949,7 +949,7 @@ impl SongEditor {
                         .on_press(Message::PauseVideo);
 
                     let video_track =
-                        cosmic::iced_widget::progress_bar(
+                        cosmic::iced::widget::progress_bar(
                             0.0..=video.duration().as_secs_f32(),
                             video.position().as_secs_f32(),
                         )

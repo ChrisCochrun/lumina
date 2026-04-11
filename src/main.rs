@@ -8,16 +8,16 @@ use core::slide::{
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::{open, save};
+use cosmic::iced::Subscription;
 use cosmic::iced::alignment::Vertical;
+use cosmic::iced::core::text::Wrapping;
 use cosmic::iced::keyboard::{Key, Modifiers};
+use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
     self, Background as IcedBackground, Border, Color, Length, event,
     window,
 };
-use cosmic::iced_core::text::Wrapping;
-use cosmic::iced_futures::Subscription;
-use cosmic::iced_widget::{column, row, stack};
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
@@ -1940,11 +1940,11 @@ where
                 let visual_item = if self.hovered_dnd.is_some_and(|h| h == index) {
                     let divider = divider::horizontal::default().class(theme::Rule::custom(|t| {
                         let color = t.cosmic().accent_color();
-                        cosmic::iced_widget::rule::Style {
+                        cosmic::iced::widget::rule::Style {
                             color: color.into(),
                             snap: true,
                             radius: t.cosmic().corner_radii.radius_xs.into(),
-                            fill_mode: cosmic::iced_widget::rule::FillMode::Full,
+                            fill_mode: cosmic::iced::widget::rule::FillMode::Full,
                         }
                     } )).width(2);
                     Container::new(column![divider, container].spacing(theme::spacing().space_s))
@@ -2150,8 +2150,11 @@ where
 }
 
 fn add_library() -> Task<Message> {
-    Task::perform(async move { Library::new().await }, |x| {
-        cosmic::Action::App(Message::AddLibrary(x))
+    cosmic::Task::future(library::add_db()).then(|res| {
+        Task::perform(
+            Library::new(Arc::new(res.expect("probs"))),
+            |x| cosmic::Action::App(Message::AddLibrary(x)),
+        )
     })
 }
 

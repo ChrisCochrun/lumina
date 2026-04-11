@@ -16,7 +16,7 @@ Let's build some tests that ensure that these functions are working for the mode
 
 By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
 
-We should probably return a tuple with the original vector of items in case the db function fails somehow.
+We should probably return a tuple with the original vector of items in case the db function fails somehow. This would be extremely important if we eventually create a server/client architecture and for whatever reason the server fails to respond with an answer, we'd lose all our items.
 
 ** TODO [#A] Need to test the library
 ** DONE Move to new design
