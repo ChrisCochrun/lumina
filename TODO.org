@@ -22,6 +22,9 @@ We should probably return a tuple with the original vector of items in case the 
 ** DONE Move to new design
 CLOSED: [2026-04-07 Tue 11:42]
 
+* TODO [#A] Add a title/info slide system for songs
+This can include title, author, and ccli info so that it will be compliant and helpful
+
 * TODO Presenter module needs 2 videos
 This will allow for us to have different parameters in the framerate and even ensure that we can modify them separately.
 
