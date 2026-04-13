@@ -535,8 +535,12 @@ impl Presenter {
             }
             Message::VideoFrame => {
                 if let Some(video) = &self.video {
-                    self.video_position =
-                        video.position().as_secs_f32();
+                    if self.video_position > 0.0
+                        && video.position().as_secs_f32() != 0.0
+                    {
+                        self.video_position =
+                            video.position().as_secs_f32();
+                    }
                 }
             }
             Message::MissingPlugin(element) => {

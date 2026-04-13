@@ -24,6 +24,7 @@ pub struct VideoEditor {
     core_video: Option<videos::Video>,
     title: String,
     editing: bool,
+    position: f64,
 }
 
 pub enum Action {
@@ -43,6 +44,7 @@ pub enum Message {
     PauseVideo,
     UpdateVideoFile(videos::Video),
     VideoPos(f64),
+    NewFrame,
 }
 
 impl VideoEditor {
@@ -53,6 +55,7 @@ impl VideoEditor {
             core_video: None,
             title: "Death was Arrested".to_string(),
             editing: false,
+            position: 0.0,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -118,6 +121,14 @@ impl VideoEditor {
                 self.update_entire_video(&video);
                 return Action::UpdateVideo(video);
             }
+            Message::NewFrame => {
+                if let Some(video) = &self.video
+                    && self.position > 0.0
+                    && video.position().as_secs_f64() != 0.0
+                {
+                    self.position = video.position().as_secs_f64();
+                }
+            }
             Message::None => (),
         }
         Action::None
@@ -153,7 +164,12 @@ impl VideoEditor {
 
         let video_player = self.video.as_ref().map_or_else(
             || Element::from(Space::new()),
-            |video| Element::from(VideoPlayer::new(video)),
+            |video| {
+                Element::from(
+                    VideoPlayer::new(video)
+                        .on_new_frame(Message::NewFrame),
+                )
+            },
         );
 
         let video_section = column![video_player, video_elements]
