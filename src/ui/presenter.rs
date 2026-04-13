@@ -9,22 +9,27 @@ use std::{
 
 use cosmic::{
     Task,
-    iced::widget::{
-        scrollable::{
-            AbsoluteOffset, Direction, Scrollbar, scroll_to,
-        },
-        stack,
-    },
+    cosmic_theme::Spacing,
     iced::{
         Background, Border, Color, ContentFit, Font, Length, Shadow,
         Vector,
+        alignment::Horizontal,
+        core::text::{Ellipsize, EllipsizeHeightLimit},
         font::{Family, Stretch, Style, Weight},
+        widget::{
+            grid,
+            scrollable::{
+                AbsoluteOffset, Direction, Scrollbar, scroll_to,
+            },
+            stack,
+        },
     },
     prelude::*,
+    theme,
     widget::{
-        Container, Id, Row, Space, container, context_menu,
-        divider::vertical, image, menu, mouse_area, responsive,
-        scrollable, text,
+        Container, Id, Row, Space, column, container, context_menu,
+        divider::vertical, flex_row, image, menu, mouse_area,
+        responsive, scrollable, space, text,
     },
 };
 use derive_more::Debug;
@@ -40,7 +45,7 @@ use crate::{
         slide::Slide,
         slide_actions::{self, ObsAction},
     },
-    ui::gst_video,
+    ui::{gst_video, library::elide_text},
 };
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
@@ -615,6 +620,144 @@ impl Presenter {
     }
 
     #[allow(clippy::too_many_lines)]
+    pub fn preview_grid(&self) -> Element<Message> {
+        let Spacing {
+            space_none,
+            space_xs,
+            space_s,
+            space_m,
+            space_l,
+            ..
+        } = theme::spacing();
+        // let mut grid = grid(vec![]).spacing(space_m);
+        let mut items = vec![];
+        for (item_index, item) in self.service.iter().enumerate() {
+            let slides_length = item.slides.len();
+            for (slide_index, slide) in item.slides.iter().enumerate()
+            {
+                let is_current_slide = (item_index, slide_index)
+                    == (self.current_item, self.current_slide_index);
+
+                let slide = slide_view(
+                    slide,
+                    self.video.as_ref(),
+                    true,
+                    false,
+                );
+                let delegate = mouse_area(
+                    Container::new(slide)
+                        .style(move |t| {
+                            let mut style =
+                                container::Style::default();
+                            let theme = t.cosmic();
+                            let hovered = self.hovered_slide
+                                == Some((item_index, slide_index));
+                            style.background =
+                                Some(Background::Color(
+                                    if is_current_slide {
+                                        theme.accent.base.into()
+                                    } else if hovered {
+                                        theme.accent.hover.into()
+                                    } else {
+                                        theme.palette.neutral_3.into()
+                                    },
+                                ));
+                            style.border =
+                                Border::default().rounded(10.0);
+                            style.shadow = Shadow {
+                                color: Color::BLACK,
+                                offset: {
+                                    if is_current_slide || hovered {
+                                        Vector::new(5.0, 5.0)
+                                    } else {
+                                        Vector::new(0.0, 0.0)
+                                    }
+                                },
+                                blur_radius: {
+                                    if is_current_slide || hovered {
+                                        10.0
+                                    } else {
+                                        0.0
+                                    }
+                                },
+                            };
+                            style
+                        })
+                        .center_x(100.0 * 16.0 / 9.0)
+                        .height(100)
+                        .padding(10),
+                )
+                .interaction(
+                    cosmic::iced::mouse::Interaction::Pointer,
+                )
+                .on_move(move |_| {
+                    Message::HoveredSlide(Some((
+                        item_index,
+                        slide_index,
+                    )))
+                })
+                .on_exit(Message::HoveredSlide(None))
+                .on_release(Message::ClickSlide(
+                    item_index,
+                    slide_index,
+                ))
+                .on_right_release(
+                    Message::RightClickSlide(item_index, slide_index),
+                );
+                let item = if slide_index == 0 {
+                    let label =
+                        text::body(elide_text(&item.title, 150.0));
+
+                    column![label, delegate]
+                        .align_x(Horizontal::Center)
+                        .spacing(space_s)
+                        .apply(container)
+                } else {
+                    delegate.apply(container).padding([
+                        space_l, space_none, space_none, space_none,
+                    ])
+                };
+                items.push(item.into());
+
+                items.push(
+                    container(
+                        vertical::light()
+                            .width(20)
+                            .height(Length::Fill),
+                    )
+                    .class(if slide_index + 1 == slides_length {
+                        theme::Container::Card
+                    } else {
+                        theme::Container::WindowBackground
+                    })
+                    .padding([
+                        space_none, space_xs, space_none, space_xs,
+                    ])
+                    .into(),
+                );
+            }
+        }
+        let scrollable = scrollable(
+            container(
+                flex_row(items)
+                    .align_items(cosmic::iced::Alignment::Center)
+                    .justify_items(cosmic::iced::Alignment::End)
+                    .column_spacing(space_s)
+                    .row_spacing(space_s),
+            )
+            .style(|_t| {
+                let style = container::Style::default();
+                style.border(Border::default().width(2))
+            }),
+        )
+        // .direction(Direction::Horizontal(Scrollbar::new()))
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .id(self.scroll_id.clone());
+        self.context_menu(scrollable.into())
+    }
+
+    #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
         let mut items = vec![];
         self.service.iter().enumerate().for_each(
@@ -774,7 +917,7 @@ impl Presenter {
                 menu::Item::Folder("Obs Scene".to_string(), scenes),
             ];
             let context_menu = context_menu(
-                items,
+                container(items),
                 self.context_menu_id.map_or_else(
                     || None,
                     |_| {

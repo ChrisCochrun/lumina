@@ -22,7 +22,7 @@ use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
-use cosmic::widget::space::horizontal;
+use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     Container, divider, menu, settings, text_input,
@@ -177,6 +177,7 @@ struct App {
     settings: core::settings::Settings,
     config_handler: Option<Config>,
     obs_connection: String,
+    view_mode: ViewMode,
 }
 
 #[allow(dead_code)]
@@ -231,6 +232,14 @@ enum Message {
     SetObsUrl(String),
     SetObsConnection(String),
     ModifiersPressed(Modifiers),
+    ViewModeSwitch(ViewMode),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ViewMode {
+    Grid,
+    Row,
+    Detail,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -424,6 +433,7 @@ impl cosmic::Application for App {
             settings,
             config_handler,
             obs_connection: String::new(),
+            view_mode: ViewMode::Row,
         };
 
         let mut batch = vec![];
@@ -1554,6 +1564,10 @@ impl cosmic::Application for App {
                 self.modifiers_pressed = Some(modifiers);
                 Task::none()
             }
+            Message::ViewModeSwitch(mode) => {
+                self.view_mode = mode;
+                Task::none()
+            }
         }
     }
 
@@ -1562,8 +1576,9 @@ impl cosmic::Application for App {
     fn view(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
             space_none,
-
             space_s,
+            space_m,
+            space_l,
             ..
         } = cosmic::theme::spacing();
         let icon_left = icon::from_name("arrow-left");
@@ -1632,7 +1647,16 @@ impl cosmic::Application for App {
         .spacing(3);
 
         let service_list = Container::new(self.service_list())
-            .padding([space_s, space_s, space_s, space_none])
+            .padding([
+                space_s,
+                space_s,
+                space_s,
+                if self.library_open {
+                    space_none
+                } else {
+                    space_s
+                },
+            ])
             .width(Length::FillPortion(2));
 
         let library = if self.library_open {
@@ -1669,41 +1693,9 @@ impl cosmic::Application for App {
             },
         );
 
-        let service_row = row![
-            service_list,
-            Container::new(
-                button::icon(icon_left)
-                    .icon_size(128)
-                    .tooltip("Previous Slide")
-                    .width(128)
-                    .on_press(Message::Present(
-                        presenter::Message::PrevSlide
-                    ))
-                    .class(theme::style::Button::Transparent)
-            )
-            .center_y(Length::Fill)
-            .align_right(Length::FillPortion(1)),
-            Container::new(slide_preview)
-                .center_y(Length::Fill)
-                .width(Length::FillPortion(3)),
-            Container::new(
-                button::icon(icon_right)
-                    .icon_size(128)
-                    .tooltip("Next Slide")
-                    .width(128)
-                    .on_press(Message::Present(
-                        presenter::Message::NextSlide
-                    ))
-                    .class(theme::style::Button::Transparent)
-            )
-            .center_y(Length::Fill)
-            .align_left(Length::FillPortion(1)),
-        ]
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .spacing(20);
-
-        let preview_bar = if self.editor_mode.is_none() {
+        let preview_slides = if self.editor_mode.is_none()
+            && self.view_mode == ViewMode::Row
+        {
             if self.service.is_empty() {
                 Container::new(horizontal())
             } else {
@@ -1720,8 +1712,112 @@ impl cosmic::Application for App {
             Container::new(horizontal())
         };
 
+        let icon_size = if self.view_mode == ViewMode::Row {
+            128
+        } else {
+            64
+        };
+
+        let presenter_controls = row![
+            button::icon(icon_left)
+                .icon_size(icon_size)
+                .tooltip("Previous Slide")
+                .width(icon_size)
+                .on_press(Message::Present(
+                    presenter::Message::PrevSlide
+                ))
+                .class(theme::style::Button::Transparent)
+                .apply(container)
+                .center_y(Length::Fill)
+                .align_right(Length::FillPortion(1)),
+            Container::new(slide_preview)
+                .center_y(Length::Fill)
+                .width(Length::FillPortion(3)),
+            button::icon(icon_right)
+                .icon_size(icon_size)
+                .tooltip("Next Slide")
+                .width(icon_size)
+                .on_press(Message::Present(
+                    presenter::Message::NextSlide
+                ))
+                .class(theme::style::Button::Transparent)
+                .apply(container)
+                .center_y(Length::Fill)
+                .align_left(Length::FillPortion(1)),
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(space_s);
+
+        let presenter_row = match self.view_mode {
+            ViewMode::Grid => row![
+                self.presenter
+                    .preview_grid()
+                    .map(|m| Message::Present(m))
+                    .apply(container)
+                    .width(Length::FillPortion(2)),
+                column![presenter_controls, space::vertical()]
+                    .width(Length::FillPortion(1))
+                    .height(Length::Fill)
+            ]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .apply(container),
+            ViewMode::Row => presenter_controls.apply(container),
+            ViewMode::Detail => todo!(),
+        };
+
+        let presenter_tool_bar = if self.editor_mode.is_none() {
+            let grid_button = button::standard("Grid")
+                .on_press(Message::ViewModeSwitch(ViewMode::Grid))
+                .leading_icon(
+                    icon::from_name("show-grid")
+                        .symbolic(true)
+                        .size(space_l),
+                )
+                .class(if self.view_mode == ViewMode::Grid {
+                    theme::Button::Suggested
+                } else {
+                    theme::Button::Standard
+                });
+            let list_button = button::standard("Preview")
+                .on_press(Message::ViewModeSwitch(ViewMode::Row))
+                .leading_icon(
+                    icon::from_name("view-more-horizontal-symbolic")
+                        .symbolic(true)
+                        .size(space_l),
+                )
+                .class(if self.view_mode == ViewMode::Row {
+                    theme::Button::Suggested
+                } else {
+                    theme::Button::Standard
+                });
+            row![grid_button, list_button, space::horizontal()]
+                .spacing(space_m)
+                .apply(container)
+                .class(theme::Container::Primary)
+                .padding(space_s)
+        } else {
+            horizontal().apply(container)
+        };
+
+        let presenter_view =
+            column![presenter_tool_bar, presenter_row]
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .padding([space_s, space_s, space_s, space_none])
+                .spacing(space_s);
+
+        let service_row = row![
+            service_list.width(Length::FillPortion(1)),
+            presenter_view.width(Length::FillPortion(3))
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(space_s);
+
         let main_area = self.editor_mode.as_ref().map_or_else(
-            || Container::new(service_row).center_y(Length::Fill),
+            || container(service_row),
             |_| container(editor).padding(space_s),
         );
 
@@ -1735,7 +1831,7 @@ impl cosmic::Application for App {
                 main_area.width(Length::FillPortion(4))
             ]
             .spacing(space_none),
-            preview_bar
+            preview_slides
         ];
 
         column.into()

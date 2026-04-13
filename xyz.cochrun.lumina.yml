@@ -20,12 +20,12 @@ modules:
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin
       env:
-        CARGO_HOME: /run/build/cosmic-utils-enroll/cargo
+        CARGO_HOME: /run/build/lumina/cargo
         CARGO_NET_OFFLINE: 'true'
     build-commands:
-      # - cargo --offline fetch --manifest-path Cargo.toml
-      # - cargo build --offline --release
-      - cargo build --release
+      - cargo --offline fetch --manifest-path Cargo.toml
+      - cargo build --offline --release
+      # - cargo build --release
 
       - install -Dm0755 target/release/lumina /app/bin/lumina
       - install -Dm0644 res/xyz.cochrun.lumina.desktop /app/share/applications/xyz.cochrun.lumina.desktop
