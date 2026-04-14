@@ -37,6 +37,7 @@ use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
 use crate::ui::library::elide_text;
+// use crate::ui::widgets::context_popover::{Context, Entry};
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -739,9 +740,10 @@ impl Presenter {
         )
         // .direction(Direction::Horizontal(Scrollbar::new()))
         .height(Length::Fill)
-        .width(Length::Fill)
+        // .width(Length::Fill)
         .id(self.scroll_id.clone());
         self.context_menu(scrollable.into()).apply(container).into()
+        // scrollable.into()
     }
 
     #[allow(clippy::too_many_lines)]
@@ -869,7 +871,7 @@ impl Presenter {
             }))
             .direction(Direction::Horizontal(Scrollbar::new()))
             .height(Length::Fill)
-            .width(Length::Fill)
+            // .width(Length::Fill)
             .id(self.scroll_id.clone());
         self.context_menu(scrollable.into())
     }
@@ -903,6 +905,45 @@ impl Presenter {
                 ),
                 menu::Item::Folder("Obs Scene".to_string(), scenes),
             ];
+
+            // let entries = vec![
+            //     Entry::Node((
+            //         String::from("Start Stream"),
+            //         Message::AssignSlideAction(
+            //             slide_actions::Action::Obs {
+            //                 action: ObsAction::StartStream,
+            //             },
+            //         ),
+            //     )),
+            //     Entry::Node((
+            //         String::from("Stop Stream"),
+            //         Message::AssignSlideAction(
+            //             slide_actions::Action::Obs {
+            //                 action: ObsAction::StopStream,
+            //             },
+            //         ),
+            //     )),
+            //     Entry::Tree((
+            //         String::from("Obs Scene"),
+            //         self.obs_scenes.map_or(Vec::new(), |scenes| {
+            //             scenes
+            //                 .iter()
+            //                 .map(|scene| {
+            //                     Entry::Node((
+            //                         scene.id.name.clone(),
+            //                         Message::AssignObsScene(
+            //                             scene.index,
+            //                         ),
+            //                     ))
+            //                 })
+            //                 .collect::<Vec<Entry<Message>>>()
+            //         }),
+            //     )),
+            // ];
+
+            // let context_menu = Context::with_entries(entries);
+            // context_menu.view()
+
             let context_menu = context_menu(
                 container(items),
                 self.context_menu_id.map_or_else(
@@ -912,7 +953,7 @@ impl Presenter {
                     },
                 ),
             );
-            Element::from(context_menu)
+            context_menu.into()
         } else {
             items
         }

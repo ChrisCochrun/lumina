@@ -71,5 +71,20 @@ features = ["wgpu"]
 opt-level = 3
 debug = true
 
+# [profile.production]
+# opt-level = 3
+# lto = true
+# codegen-units = 1
+# panic = 'abort'
+# strip = "symbols"
+
 [lints.rust]
 mismatched_lifetime_syntaxes = "allow"
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"
+unwrap_used = "warn"
+perf = "warn"
+enum_glob_use = "warn"
