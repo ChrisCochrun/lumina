@@ -1470,7 +1470,7 @@ mod test {
     #[tokio::test]
     async fn test_library_add() -> Result<()> {
         let db = Arc::new(add_db().await?);
-        fill_db(db.clone()).await?;
+        fill_db(Arc::clone(&db)).await?;
         let mut library = Library::new(db).await;
         let pre_length = library.song_library.items.len();
         library.selected_items = Some(vec![(LibraryKind::Song, 5)]);

@@ -1347,11 +1347,11 @@ You saved my soul"
     pub async fn fill_db(db: Arc<SqlitePool>) -> Result<()> {
         let mut songs = Vec::new();
         for _ in 0..20 {
-            songs = add_song(songs, db.clone()).await?;
+            songs = add_song(songs, Arc::clone(&db)).await?;
             let mut song = test_song();
             let last_song = songs.last().expect("Should be here");
             song.id = last_song.id;
-            songs = update_song(song, songs, db.clone()).await?;
+            songs = update_song(song, songs, Arc::clone(&db)).await?;
         }
         Ok(())
     }
@@ -1359,11 +1359,11 @@ You saved my soul"
     #[tokio::test]
     async fn song_db_and_model() {
         let db = Arc::new(add_db().await.expect("ERROR OPENING"));
-        if let Err(e) = fill_db(db.clone()).await {
+        if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
         };
 
-        let song_model = Model::new_song_model(db.clone()).await;
+        let song_model = Model::new_song_model(Arc::clone(&db)).await;
         let length = song_model.items.len();
         assert!(song_model.items.len() == 20, "Length is {length}");
         let ids: Vec<i32> =
@@ -1402,7 +1402,7 @@ You saved my soul"
     async fn test_song_from_db() {
         let song = test_song();
         let db = Arc::new(add_db().await.unwrap());
-        if let Err(e) = fill_db(db.clone()).await {
+        if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
         };
         let result = get_song_from_db(7, db).await;
@@ -1423,13 +1423,13 @@ You saved my soul"
     #[tokio::test]
     async fn test_update() {
         let db = Arc::new(add_db().await.unwrap());
-        if let Err(e) = fill_db(db.clone()).await {
+        if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
         };
         let song = test_song();
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
-        song_model.load_from_db(db.clone()).await;
+        song_model.load_from_db(Arc::clone(&db)).await;
         let test_song = song_model.get_item(2);
         assert_ne!(test_song, Some(&cloned_song));
 
