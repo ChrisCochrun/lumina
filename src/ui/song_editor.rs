@@ -1,49 +1,37 @@
 #![allow(clippy::similar_names)]
 #![allow(clippy::too_many_lines)]
-use std::{
-    fmt::Display,
-    io::{self},
-    path::PathBuf,
-    sync::Arc,
-};
+use std::fmt::Display;
+use std::io::{self};
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use cosmic::{
-    Apply, Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::core::widget::tree,
-    iced::futures,
-    iced::widget::{
-        column, row,
-        scrollable::{
-            self as iced_scrollable, AbsoluteOffset, Direction,
-            Scrollbar,
-        },
-        stack,
-    },
-    iced::{
-        Background as ContainerBackground, Border, Color, Length,
-        Padding, Shadow, Vector,
-        alignment::{Horizontal, Vertical},
-        color,
-        font::{Style, Weight},
-        futures::{
-            SinkExt, StreamExt, TryStreamExt,
-            channel::mpsc::{UnboundedReceiver, unbounded},
-        },
-        task,
-    },
-    theme,
-    widget::{
-        ColorPickerModel, Id, RcElementWrapper, button,
-        color_picker::ColorPickerUpdate,
-        combo_box, container, divider, dnd_destination, dnd_source,
-        dropdown,
-        grid::{self},
-        icon, mouse_area, popover, scrollable,
-        space::{self, horizontal},
-        text, text_editor, text_input, tooltip,
-    },
+use cosmic::dialog::file_chooser::FileFilter;
+use cosmic::dialog::file_chooser::open::Dialog;
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::core::widget::tree;
+use cosmic::iced::font::{Style, Weight};
+use cosmic::iced::futures::channel::mpsc::{
+    UnboundedReceiver, unbounded,
 };
+use cosmic::iced::futures::{SinkExt, StreamExt, TryStreamExt};
+use cosmic::iced::widget::scrollable::{
+    self as iced_scrollable, AbsoluteOffset, Direction, Scrollbar,
+};
+use cosmic::iced::widget::{column, row, stack};
+use cosmic::iced::{
+    Background as ContainerBackground, Border, Color, Length,
+    Padding, Shadow, Vector, color, futures, task,
+};
+use cosmic::widget::color_picker::ColorPickerUpdate;
+use cosmic::widget::grid::{self};
+use cosmic::widget::space::{self, horizontal};
+use cosmic::widget::{
+    ColorPickerModel, Id, RcElementWrapper, button, combo_box,
+    container, divider, dnd_destination, dnd_source, dropdown, icon,
+    mouse_area, popover, scrollable, text, text_editor, text_input,
+    tooltip,
+};
+use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
 use dirs::font_dir;
 use fontdb;
@@ -52,23 +40,15 @@ use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, error};
 
-use crate::{
-    Background, BackgroundKind,
-    core::{
-        service_items::ServiceTrait,
-        slide::{Slide, TextAlignment},
-        songs::{Song, VerseName},
-    },
-    ui::{
-        presenter::slide_view,
-        slide_editor::SlideEditor,
-        text_svg,
-        widgets::{
-            draggable,
-            verse_editor::{self, VerseEditor},
-        },
-    },
-};
+use crate::core::service_items::ServiceTrait;
+use crate::core::slide::{Slide, TextAlignment};
+use crate::core::songs::{Song, VerseName};
+use crate::ui::presenter::slide_view;
+use crate::ui::slide_editor::SlideEditor;
+use crate::ui::text_svg;
+use crate::ui::widgets::draggable;
+use crate::ui::widgets::verse_editor::{self, VerseEditor};
+use crate::{Background, BackgroundKind};
 
 // This should get refactored into holding a state machine
 // then each state of what is being edited can be caught by the compiler

@@ -8,15 +8,14 @@ use core::slide::{
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::{open, save};
-use cosmic::iced::Subscription;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::core::text::Wrapping;
 use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
-    self, Background as IcedBackground, Border, Color, Length, event,
-    window,
+    self, Background as IcedBackground, Border, Color, Length,
+    Subscription, event, window,
 };
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::menu::key_bind::Modifier;
@@ -25,16 +24,15 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
-    Container, divider, menu, settings, text_input,
+    Container, Space, button, container, context_menu, divider, icon,
+    menu, mouse_area, nav_bar, nav_bar_toggle, responsive,
+    scrollable, search_input, settings, slider, text, text_input,
+    tooltip,
 };
-use cosmic::widget::{
-    Space, button, context_menu, mouse_area, nav_bar, nav_bar_toggle,
-    responsive, scrollable, search_input, tooltip,
+use cosmic::{
+    Application, ApplicationExt, Apply, Element, cosmic_config,
+    executor, theme,
 };
-use cosmic::widget::{container, text};
-use cosmic::widget::{icon, slider};
-use cosmic::{Application, ApplicationExt, Apply, Element, executor};
-use cosmic::{cosmic_config, theme};
 // use crisp::types::Value;
 // use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};
@@ -43,8 +41,8 @@ use resvg::usvg::fontdb;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{debug, level_filters::LevelFilter};
-use tracing::{error, warn};
+use tracing::level_filters::LevelFilter;
+use tracing::{debug, error, warn};
 use tracing_subscriber::EnvFilter;
 use ui::EditorMode;
 use ui::library::{self, Library};

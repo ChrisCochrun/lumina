@@ -1,25 +1,21 @@
-use std::{
-    collections::HashMap,
-    io,
-    ops::RangeBounds,
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
+use std::io;
+use std::ops::RangeBounds;
+use std::path::{Path, PathBuf};
 
 use crate::core::presentations::{PresKind, Presentation};
-use cosmic::{
-    Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::widget::{column, row},
-    iced::{Background, ContentFit, Length, alignment::Vertical},
-    theme,
-    widget::{
-        self, Space, button, container, context_menu, icon,
-        image::Handle,
-        menu, mouse_area, scrollable,
-        space::{self, horizontal},
-        text, text_input,
-    },
+use cosmic::dialog::file_chooser::FileFilter;
+use cosmic::dialog::file_chooser::open::Dialog;
+use cosmic::iced::alignment::Vertical;
+use cosmic::iced::widget::{column, row};
+use cosmic::iced::{Background, ContentFit, Length};
+use cosmic::widget::image::Handle;
+use cosmic::widget::space::{self, horizontal};
+use cosmic::widget::{
+    self, Space, button, container, context_menu, icon, menu,
+    mouse_area, scrollable, text, text_input,
 };
+use cosmic::{Element, Task, theme};
 use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use tracing::{debug, error, warn};

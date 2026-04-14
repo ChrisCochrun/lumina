@@ -1,33 +1,28 @@
-use std::{
-    borrow::Cow, collections::HashMap, mem::replace, option::Option,
-    path::PathBuf, sync::Arc,
-};
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::mem::replace;
+use std::option::Option;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use cosmic::{
-    cosmic_theme::palette::Srgb,
-    iced::{
-        clipboard::mime::AsMimeTypes,
-        font::{Style, Weight},
-    },
-};
+use cosmic::cosmic_theme::palette::Srgb;
+use cosmic::iced::clipboard::mime::AsMimeTypes;
+use cosmic::iced::font::{Style, Weight};
 use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, Row, SqlitePool, query, sqlite::SqliteRow};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{FromRow, Row, SqlitePool, query};
 use tracing::{debug, error};
 
-use crate::{
-    Slide, SlideBuilder,
-    core::{
-        content::Content,
-        kinds::ServiceItemKind,
-        model::{LibraryKind, Model},
-        service_items::ServiceTrait,
-        slide::{self, Background, TextAlignment},
-    },
-    ui::text_svg::{Color, Font, Stroke, shadow, stroke},
-};
+use crate::core::content::Content;
+use crate::core::kinds::ServiceItemKind;
+use crate::core::model::{LibraryKind, Model};
+use crate::core::service_items::ServiceTrait;
+use crate::core::slide::{self, Background, TextAlignment};
+use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
+use crate::{Slide, SlideBuilder};
 
 #[derive(
     Clone, Debug, Default, PartialEq, Serialize, Deserialize,
@@ -1186,7 +1181,8 @@ impl Song {
 
 #[cfg(test)]
 pub mod test {
-    use std::{str::FromStr, sync::Arc};
+    use std::str::FromStr;
+    use std::sync::Arc;
 
     use crate::ui::text_svg::text_svg_generator_with_cache;
 
@@ -1194,12 +1190,10 @@ pub mod test {
     use pretty_assertions::{assert_eq, assert_ne};
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
-    use sqlx::{
-        Connection, migrate,
-        sqlite::{
-            SqliteConnectOptions, SqliteConnection, SqlitePoolOptions,
-        },
+    use sqlx::sqlite::{
+        SqliteConnectOptions, SqliteConnection, SqlitePoolOptions,
     };
+    use sqlx::{Connection, migrate};
 
     #[test]
     pub fn test_song_lyrics() {

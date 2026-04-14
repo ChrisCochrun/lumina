@@ -1,10 +1,9 @@
 use dirs;
 use std::error::Error;
-use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str;
+use std::{fs, str};
 use tracing::debug;
 
 pub fn bg_from_video(

@@ -1,19 +1,15 @@
 use std::collections::HashMap;
 
-use crate::core::{
-    settings,
-    songs::{Song, VerseName},
-};
+use crate::core::settings;
+use crate::core::songs::{Song, VerseName};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
-use nom::{
-    IResult, Parser,
-    branch::alt,
-    bytes::{tag, take_till, take_till1, take_until},
-    character::complete::{digit0, newline, space0},
-    multi::{many0, separated_list1},
-    sequence::{delimited, pair, preceded, terminated},
-};
+use nom::branch::alt;
+use nom::bytes::{tag, take_till, take_till1, take_until};
+use nom::character::complete::{digit0, newline, space0};
+use nom::multi::{many0, separated_list1};
+use nom::sequence::{delimited, pair, preceded, terminated};
+use nom::{IResult, Parser};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

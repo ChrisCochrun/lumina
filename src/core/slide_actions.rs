@@ -2,7 +2,8 @@ use miette::{IntoDiagnostic, Result};
 use std::sync::Arc;
 use tracing::warn;
 
-use obws::{Client, responses::scenes::Scene};
+use obws::Client;
+use obws::responses::scenes::Scene;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

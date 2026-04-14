@@ -10,9 +10,8 @@ pub fn create_video(url: &Url, framerate: u16) -> Result<Video> {
     // Based on `iced_video_player::Video::new`,
     // but without a text sink so that the built-in subtitle functionality triggers.
     // and with some better gstreamer tweaks
-    use gstreamer as gst;
-    use gstreamer_app as gst_app;
     use gstreamer_app::prelude::*;
+    use {gstreamer as gst, gstreamer_app as gst_app};
 
     gst::init().into_diagnostic()?;
 

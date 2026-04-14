@@ -28,10 +28,9 @@ use cosmic::iced::advanced::widget::{Operation, Tree, Widget, tree};
 use cosmic::iced::advanced::{Clipboard, Shell, overlay, renderer};
 use cosmic::iced::alignment::{self, Alignment};
 use cosmic::iced::event::Event;
-use cosmic::iced::{self, Transformation, mouse};
 use cosmic::iced::{
-    Background, Border, Color, Element, Length, Padding, Pixels,
-    Point, Rectangle, Size, Vector,
+    self, Background, Border, Color, Element, Length, Padding,
+    Pixels, Point, Rectangle, Size, Transformation, Vector, mouse,
 };
 
 use super::{Action, DragEvent, DropPosition};

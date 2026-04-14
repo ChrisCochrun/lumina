@@ -1,20 +1,16 @@
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
-use super::{
-    content::Content,
-    kinds::ServiceItemKind,
-    model::{LibraryKind, Model},
-    service_items::ServiceTrait,
-};
+use super::content::Content;
+use super::kinds::ServiceItemKind;
+use super::model::{LibraryKind, Model};
+use super::service_items::ServiceTrait;
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{SqliteConnection, SqlitePool, query, query_as};
-use std::{
-    mem::replace,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::mem::replace;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::error;
 
 #[derive(

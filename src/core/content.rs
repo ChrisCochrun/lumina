@@ -1,6 +1,7 @@
 use crate::Background;
 
-use super::{kinds::ServiceItemKind, service_items::ServiceItem};
+use super::kinds::ServiceItemKind;
+use super::service_items::ServiceItem;
 
 pub trait Content {
     fn title(&self) -> String;

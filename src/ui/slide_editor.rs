@@ -1,14 +1,10 @@
-use std::{io, path::PathBuf};
+use std::io;
+use std::path::PathBuf;
 
-use cosmic::{
-    Renderer,
-    iced::{Color, Font, Length, Size},
-    widget::{
-        self,
-        canvas::{self, Program, Stroke},
-        container,
-    },
-};
+use cosmic::Renderer;
+use cosmic::iced::{Color, Font, Length, Size};
+use cosmic::widget::canvas::{self, Program, Stroke};
+use cosmic::widget::{self, container};
 use tracing::debug;
 
 #[derive(Debug, Default)]

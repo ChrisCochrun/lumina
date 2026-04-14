@@ -5,10 +5,8 @@ use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::Display,
-    path::{Path, PathBuf},
-};
+use std::fmt::Display;
+use std::path::{Path, PathBuf};
 use tracing::error;
 
 use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};

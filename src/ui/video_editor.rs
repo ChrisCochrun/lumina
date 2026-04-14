@@ -1,22 +1,22 @@
-use std::{io, path::PathBuf};
+use std::io;
+use std::path::PathBuf;
 
-use cosmic::{
-    Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::widget::{column, row},
-    iced::{Length, alignment::Vertical},
-    theme,
-    widget::{
-        Space, button, container, icon, slider,
-        space::{self, horizontal},
-        text, text_input,
-    },
+use cosmic::dialog::file_chooser::FileFilter;
+use cosmic::dialog::file_chooser::open::Dialog;
+use cosmic::iced::Length;
+use cosmic::iced::alignment::Vertical;
+use cosmic::iced::widget::{column, row};
+use cosmic::widget::space::{self, horizontal};
+use cosmic::widget::{
+    Space, button, container, icon, slider, text, text_input,
 };
+use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
 use tracing::{debug, error, warn};
 use url::Url;
 
-use crate::{core::videos, ui::gst_video};
+use crate::core::videos;
+use crate::ui::gst_video;
 
 #[derive(Debug)]
 pub struct VideoEditor {

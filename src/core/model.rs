@@ -1,4 +1,7 @@
-use std::{borrow::Cow, fs, mem::replace, path::PathBuf};
+use std::borrow::Cow;
+use std::fs;
+use std::mem::replace;
+use std::path::PathBuf;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use miette::{IntoDiagnostic, Result, miette};

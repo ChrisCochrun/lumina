@@ -1,13 +1,10 @@
-use cosmic::{
-    Element, Task,
-    cosmic_theme::palette::WithAlpha,
-    iced::widget::{column, row},
-    iced::{Background, Border},
-    theme,
-    widget::{
-        button, combo_box, container, icon, space, text_editor,
-    },
+use cosmic::cosmic_theme::palette::WithAlpha;
+use cosmic::iced::widget::{column, row};
+use cosmic::iced::{Background, Border};
+use cosmic::widget::{
+    button, combo_box, container, icon, space, text_editor,
 };
+use cosmic::{Element, Task, theme};
 
 use crate::core::songs::VerseName;
 

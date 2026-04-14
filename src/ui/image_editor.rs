@@ -1,17 +1,17 @@
-use std::{io, path::PathBuf};
+use std::io;
+use std::path::PathBuf;
 
 use crate::core::images::Image;
-use cosmic::{
-    Apply, Element, Task,
-    dialog::file_chooser::{FileFilter, open::Dialog},
-    iced::widget::{column, row},
-    iced::{Length, alignment::Vertical},
-    theme,
-    widget::{
-        self, Space, button, container, icon, space::horizontal,
-        text, text_input,
-    },
+use cosmic::dialog::file_chooser::FileFilter;
+use cosmic::dialog::file_chooser::open::Dialog;
+use cosmic::iced::Length;
+use cosmic::iced::alignment::Vertical;
+use cosmic::iced::widget::{column, row};
+use cosmic::widget::space::horizontal;
+use cosmic::widget::{
+    self, Space, button, container, icon, text, text_input,
 };
+use cosmic::{Apply, Element, Task, theme};
 use tracing::{debug, error, warn};
 
 #[derive(Debug)]

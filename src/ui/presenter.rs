@@ -1,52 +1,42 @@
-use obws::{Client, responses::scenes::Scene};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::BufReader,
-    path::PathBuf,
-    sync::{Arc, LazyLock},
-};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::PathBuf;
+use std::sync::{Arc, LazyLock};
 
-use cosmic::{
-    Task,
-    cosmic_theme::Spacing,
-    iced::{
-        Background, Border, Color, ContentFit, Font, Length, Shadow,
-        Vector,
-        alignment::Horizontal,
-        core::text::{Ellipsize, EllipsizeHeightLimit},
-        font::{Family, Stretch, Style, Weight},
-        widget::{
-            grid,
-            scrollable::{
-                AbsoluteOffset, Direction, Scrollbar, scroll_to,
-            },
-            stack,
-        },
-    },
-    prelude::*,
-    theme,
-    widget::{
-        Container, Id, Row, Space, column, container, context_menu,
-        divider::vertical, flex_row, image, menu, mouse_area,
-        responsive, scrollable, space, text,
-    },
+use cosmic::cosmic_theme::Spacing;
+use cosmic::iced::alignment::Horizontal;
+use cosmic::iced::font::{Family, Stretch, Style, Weight};
+use cosmic::iced::widget::scrollable::{
+    AbsoluteOffset, Direction, Scrollbar, scroll_to,
 };
+use cosmic::iced::widget::{grid, stack};
+use cosmic::iced::{
+    Background, Border, Color, ContentFit, Font, Length, Shadow,
+    Vector,
+};
+use cosmic::prelude::*;
+use cosmic::widget::divider::vertical;
+use cosmic::widget::{
+    Container, Id, Row, Space, column, container, context_menu,
+    flex_row, image, menu, mouse_area, responsive, row, scrollable,
+    space, text,
+};
+use cosmic::{Task, theme};
 use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
+use obws::Client;
+use obws::responses::scenes::Scene;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
-use crate::{
-    BackgroundKind,
-    core::{
-        service_items::ServiceItem,
-        slide::Slide,
-        slide_actions::{self, ObsAction},
-    },
-    ui::{gst_video, library::elide_text},
-};
+use crate::BackgroundKind;
+use crate::core::service_items::ServiceItem;
+use crate::core::slide::Slide;
+use crate::core::slide_actions::{self, ObsAction};
+use crate::ui::gst_video;
+use crate::ui::library::elide_text;
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -720,20 +710,17 @@ impl Presenter {
                 items.push(item.into());
 
                 items.push(
-                    container(
-                        vertical::light()
-                            .width(20)
-                            .height(Length::Fill),
-                    )
-                    .class(if slide_index + 1 == slides_length {
-                        theme::Container::Card
-                    } else {
-                        theme::Container::WindowBackground
-                    })
-                    .padding([
-                        space_none, space_xs, space_none, space_xs,
-                    ])
-                    .into(),
+                    container(space::vertical().width(space_s))
+                        .class(if slide_index + 1 == slides_length {
+                            theme::Container::Card
+                        } else {
+                            theme::Container::WindowBackground
+                        })
+                        .padding([
+                            space_none, space_xs, space_none,
+                            space_xs,
+                        ])
+                        .into(),
                 );
             }
         }
@@ -754,7 +741,7 @@ impl Presenter {
         .height(Length::Fill)
         .width(Length::Fill)
         .id(self.scroll_id.clone());
-        self.context_menu(scrollable.into())
+        self.context_menu(scrollable.into()).apply(container).into()
     }
 
     #[allow(clippy::too_many_lines)]
@@ -1206,11 +1193,9 @@ pub(crate) fn slide_view<'a>(
 
 #[cfg(test)]
 mod test {
-    use crate::core::{
-        presentations::{PresKind, Presentation},
-        slide::TextAlignment,
-        songs::{Song, VerseName},
-    };
+    use crate::core::presentations::{PresKind, Presentation};
+    use crate::core::slide::TextAlignment;
+    use crate::core::songs::{Song, VerseName};
 
     use super::*;
     use miette::Result;

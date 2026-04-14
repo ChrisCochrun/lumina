@@ -1,39 +1,34 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use cosmic::{
-    Element, Task,
-    dialog::file_chooser::open::Dialog,
-    iced::core::widget::tree::State,
-    iced::widget::{column, row as rowm, text as textm},
-    iced::{
-        Background, Border, Color, Length, alignment::Vertical,
-        clipboard::dnd::DndAction, keyboard::Modifiers,
-    },
-    theme,
-    widget::{
-        Container, DndSource, Space, button, container, context_menu,
-        divider, dnd_destination, icon,
-        menu::{self, Action as MenuAction},
-        mouse_area, responsive, row, scrollable,
-        space::{self, horizontal},
-        text, text_input,
-    },
+use cosmic::dialog::file_chooser::open::Dialog;
+use cosmic::iced::alignment::Vertical;
+use cosmic::iced::clipboard::dnd::DndAction;
+use cosmic::iced::core::widget::tree::State;
+use cosmic::iced::keyboard::Modifiers;
+use cosmic::iced::widget::{column, row as rowm, text as textm};
+use cosmic::iced::{Background, Border, Color, Length};
+use cosmic::widget::menu::{self, Action as MenuAction};
+use cosmic::widget::space::{self, horizontal};
+use cosmic::widget::{
+    Container, DndSource, Space, button, container, context_menu,
+    divider, dnd_destination, icon, mouse_area, responsive, row,
+    scrollable, text, text_input,
 };
+use cosmic::{Element, Task, theme};
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
 use sqlx::{SqlitePool, migrate};
 use tracing::{debug, error, warn};
 
-use crate::core::{
-    content::Content,
-    images::{self, Image},
-    kinds::ServiceItemKind,
-    model::{KindWrapper, LibraryKind, Model},
-    presentations::{self, Presentation},
-    service_items::ServiceItem,
-    songs::{self, Song},
-    videos::{self, Video},
-};
+use crate::core::content::Content;
+use crate::core::images::{self, Image};
+use crate::core::kinds::ServiceItemKind;
+use crate::core::model::{KindWrapper, LibraryKind, Model};
+use crate::core::presentations::{self, Presentation};
+use crate::core::service_items::ServiceItem;
+use crate::core::songs::{self, Song};
+use crate::core::videos::{self, Video};
 
 #[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
@@ -1469,9 +1464,7 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::songs::test::add_db;
-    use crate::core::songs::test::fill_db;
-    use crate::core::songs::test::test_song;
+    use crate::core::songs::test::{add_db, fill_db, test_song};
     use pretty_assertions::assert_eq;
 
     #[tokio::test]

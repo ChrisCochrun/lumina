@@ -3,25 +3,20 @@ use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    Row, SqliteConnection, SqlitePool, prelude::FromRow, query,
-    sqlite::SqliteRow,
-};
-use std::{
-    mem::replace,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use sqlx::prelude::FromRow;
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Row, SqliteConnection, SqlitePool, query};
+use std::mem::replace;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
-use super::{
-    content::Content,
-    kinds::ServiceItemKind,
-    model::{LibraryKind, Model},
-    service_items::ServiceTrait,
-};
+use super::content::Content;
+use super::kinds::ServiceItemKind;
+use super::model::{LibraryKind, Model};
+use super::service_items::ServiceTrait;
 
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,

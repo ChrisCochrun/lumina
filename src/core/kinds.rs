@@ -1,16 +1,17 @@
-use std::{error::Error, fmt::Display, path::PathBuf};
+use std::error::Error;
+use std::fmt::Display;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    Slide,
-    core::{content::Content, service_items::ServiceItem},
-};
+use crate::Slide;
+use crate::core::content::Content;
+use crate::core::service_items::ServiceItem;
 
-use super::{
-    images::Image, presentations::Presentation, songs::Song,
-    videos::Video,
-};
+use super::images::Image;
+use super::presentations::Presentation;
+use super::songs::Song;
+use super::videos::Video;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ServiceItemKind {

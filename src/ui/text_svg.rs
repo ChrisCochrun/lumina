@@ -1,31 +1,26 @@
-use std::{
-    fmt::{Display, Write},
-    fs,
-    hash::{Hash, Hasher},
-    path::PathBuf,
-    sync::Arc,
-};
+use std::fmt::{Display, Write};
+use std::fs;
+use std::hash::{Hash, Hasher};
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use cosmic::{
-    cosmic_theme::palette::{IntoColor, Srgb, rgb::Rgba},
-    iced::{
-        ContentFit, Length, Size,
-        font::{Style, Weight},
-    },
-    prelude::*,
-    widget::{Image, Space, image::Handle},
-};
+use cosmic::cosmic_theme::palette::rgb::Rgba;
+use cosmic::cosmic_theme::palette::{IntoColor, Srgb};
+use cosmic::iced::font::{Style, Weight};
+use cosmic::iced::{ContentFit, Length, Size};
+use cosmic::prelude::*;
+use cosmic::widget::image::Handle;
+use cosmic::widget::{Image, Space};
 use derive_more::Debug;
 use miette::{IntoDiagnostic, Result, miette};
 use rapidhash::v3::rapidhash_v3;
-use resvg::{
-    tiny_skia::{self, Pixmap},
-    usvg::{Tree, fontdb},
-};
+use resvg::tiny_skia::{self, Pixmap};
+use resvg::usvg::{Tree, fontdb};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::{TextAlignment, core::slide::Slide};
+use crate::TextAlignment;
+use crate::core::slide::Slide;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct TextSvg {
