@@ -747,6 +747,28 @@ impl Model<Song> {
     }
 }
 
+pub async fn remove_songs(
+    db: Arc<SqlitePool>,
+    songs: Vec<Song>,
+    ids: Vec<i32>,
+) -> Result<Vec<Song>> {
+    let songs = songs
+        .into_iter()
+        .filter(|current_song| !ids.contains(&current_song.id))
+        .collect();
+
+    let delete = format!(
+        "DELETE FROM songs WHERE id IN ({:})",
+        ids.iter().map(|id| id.to_string()).join(", ")
+    );
+
+    query(&delete)
+        .execute(&*db)
+        .await
+        .into_diagnostic()
+        .map(|_| songs)
+}
+
 pub async fn remove_song(
     db: Arc<SqlitePool>,
     mut songs: Vec<Song>,

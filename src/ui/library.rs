@@ -4,6 +4,7 @@ use std::sync::Arc;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::clipboard::dnd::DndAction;
+use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::core::widget::tree::State;
 use cosmic::iced::keyboard::Modifiers;
 use cosmic::iced::widget::{column, row as rowm, text as textm};
@@ -16,6 +17,7 @@ use cosmic::widget::{
     scrollable, text, text_input,
 };
 use cosmic::{Element, Task, theme};
+use itertools::Itertools;
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
 use sqlx::{SqlitePool, migrate};
@@ -1027,7 +1029,10 @@ impl<'a> Library {
             space_xxs, space_s, ..
         } = theme::spacing();
         let text = Container::new(responsive(|size| {
-            text::heading(elide_text(item.title(), size.width))
+            text::heading(item.title())
+                .ellipsize(Ellipsize::End(
+                    EllipsizeHeightLimit::Lines(1),
+                ))
                 .center()
                 .wrapping(textm::Wrapping::None)
                 .into()
@@ -1064,7 +1069,10 @@ impl<'a> Library {
                     .destructive_text_color()
                     .into()
             };
-            text::body(elide_text(item.subtext(), size.width))
+            text::body(item.subtext())
+                .ellipsize(Ellipsize::End(
+                    EllipsizeHeightLimit::Lines(1),
+                ))
                 .center()
                 .wrapping(textm::Wrapping::None)
                 .class(color)
@@ -1243,129 +1251,146 @@ impl<'a> Library {
             return Action::None;
         };
         items.sort_by_key(|(_, index)| *index);
-        let tasks: Vec<Task<Message>> = items
-            .iter()
-            .rev()
-            .map(|(kind, index)| match kind {
-                LibraryKind::Song => {
-                    if let Some(song) =
-                        self.song_library.get_item(*index)
-                    {
-                        let song = song.clone();
-                        let songs = self
-                            .song_library
-                            .items
-                            .drain(..)
-                            .collect();
-                        Task::perform(
-                            songs::remove_song(
-                                Arc::clone(&self.db),
-                                songs,
-                                song.id,
-                            ),
-                            |r| match r {
-                                Ok(songs) => {
-                                    Message::ReaddSongs(songs)
-                                }
-                                Err(e) => {
-                                    error!(?e);
-                                    Message::None
-                                }
-                            },
-                        )
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Video => {
-                    if let Some(video) =
-                        self.video_library.get_item(*index)
-                    {
-                        let video = video.clone();
-                        let videos = self
-                            .video_library
-                            .items
-                            .drain(..)
-                            .collect();
-                        Task::perform(
-                            videos::remove_video(
-                                Arc::clone(&self.db),
-                                videos,
-                                video.id,
-                            ),
-                            |r| {
-                                r.map_or(Message::None, |videos| {
-                                    Message::ReaddVideos(videos)
-                                })
-                            },
-                        )
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Image => {
-                    if let Some(image) =
-                        self.image_library.get_item(*index)
-                    {
-                        let image = image.clone();
-                        let images = self
-                            .image_library
-                            .items
-                            .drain(..)
-                            .collect();
-                        Task::perform(
-                            images::remove_image(
-                                Arc::clone(&self.db),
-                                images,
-                                image.id,
-                            ),
-                            |r| {
-                                r.map_or(Message::None, |images| {
-                                    Message::ReaddImages(images)
-                                })
-                            },
-                        )
-                    } else {
-                        Task::none()
-                    }
-                }
-                LibraryKind::Presentation => {
-                    if let Some(presentation) =
-                        self.presentation_library.get_item(*index)
-                    {
-                        let presentation = presentation.clone();
-                        let presentations = self
-                            .presentation_library
-                            .items
-                            .drain(..)
-                            .collect();
-                        Task::perform(
-                            presentations::remove_presentation(
-                                Arc::clone(&self.db),
-                                presentations,
-                                presentation.id,
-                            ),
-                            |r| {
-                                r.map_or(
-                                    Message::None,
-                                    |presentations| {
-                                        Message::ReaddPres(
-                                            presentations,
-                                        )
-                                    },
-                                )
-                            },
-                        )
-                    } else {
-                        Task::none()
-                    }
-                }
-            })
+        let ids: Vec<usize> = items
+            .into_iter()
+            .map(|(_, id)| id.to_owned() as usize)
+            .dedup()
             .collect();
-        if !tasks.is_empty() {
-            self.selected_items = None;
-        }
-        Action::Task(Task::batch(tasks))
+        debug!(?ids);
+        let task = match self.library_open {
+            Some(LibraryKind::Song) => {
+                let songs: Vec<Song> =
+                    self.song_library.items.drain(..).collect();
+
+                let ids = songs
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, song)| {
+                        if ids.contains(&index) {
+                            Some(song.id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                Task::perform(
+                    songs::remove_songs(
+                        Arc::clone(&self.db),
+                        songs,
+                        ids,
+                    ),
+                    |r| match r {
+                        Ok(songs) => Message::ReaddSongs(songs),
+                        Err(e) => {
+                            error!(?e);
+                            Message::None
+                        }
+                    },
+                )
+            }
+            Some(LibraryKind::Video) => {
+                let videos: Vec<Video> =
+                    self.video_library.items.drain(..).collect();
+
+                let ids = videos
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, video)| {
+                        if ids.contains(&index) {
+                            Some(video.id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                Task::perform(
+                    videos::remove_videos(
+                        Arc::clone(&self.db),
+                        videos.clone(),
+                        ids,
+                    ),
+                    |r| match r {
+                        Ok(videos) => Message::ReaddVideos(videos),
+                        Err(e) => {
+                            error!(?e);
+                            Message::ReaddVideos(videos)
+                        }
+                    },
+                )
+            }
+            Some(LibraryKind::Image) => {
+                let images: Vec<Image> =
+                    self.image_library.items.drain(..).collect();
+
+                let ids = images
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, image)| {
+                        if ids.contains(&index) {
+                            Some(image.id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                Task::perform(
+                    images::remove_images(
+                        Arc::clone(&self.db),
+                        images,
+                        ids,
+                    ),
+                    |r| match r {
+                        Ok(images) => Message::ReaddImages(images),
+                        Err(e) => {
+                            error!(?e);
+                            Message::None
+                        }
+                    },
+                )
+            }
+            Some(LibraryKind::Presentation) => {
+                let presentations: Vec<Presentation> = self
+                    .presentation_library
+                    .items
+                    .drain(..)
+                    .collect();
+
+                let ids = presentations
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, presentation)| {
+                        if ids.contains(&index) {
+                            Some(presentation.id)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                Task::perform(
+                    presentations::remove_presentations(
+                        Arc::clone(&self.db),
+                        presentations,
+                        ids,
+                    ),
+                    |r| match r {
+                        Ok(presentations) => {
+                            Message::ReaddPres(presentations)
+                        }
+                        Err(e) => {
+                            error!(?e);
+                            Message::None
+                        }
+                    },
+                )
+            }
+            None => todo!(),
+        };
+        self.selected_items = None;
+        Action::Task(task)
     }
 }
 

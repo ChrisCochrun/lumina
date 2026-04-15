@@ -1,5 +1,6 @@
 use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
+use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
@@ -371,6 +372,30 @@ impl Model<Presentation> {
             ),
         }
     }
+}
+
+pub async fn remove_presentations(
+    db: Arc<SqlitePool>,
+    presentations: Vec<Presentation>,
+    ids: Vec<i32>,
+) -> Result<Vec<Presentation>> {
+    let presentations = presentations
+        .into_iter()
+        .filter(|current_presentation| {
+            !ids.contains(&current_presentation.id)
+        })
+        .collect();
+
+    let delete = format!(
+        "DELETE FROM presentations WHERE id IN ({:})",
+        ids.iter().map(|id| id.to_string()).join(", ")
+    );
+
+    query(&delete)
+        .execute(&*db)
+        .await
+        .into_diagnostic()
+        .map(|_| presentations)
 }
 
 pub async fn remove_presentation(

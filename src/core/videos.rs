@@ -6,13 +6,14 @@ use super::model::{LibraryKind, Model};
 use super::service_items::ServiceTrait;
 use super::slide::Slide;
 use crisp::types::{Keyword, Symbol, Value};
+use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{SqliteConnection, SqlitePool, query, query_as};
+use sqlx::{Execute, SqliteConnection, SqlitePool, query, query_as};
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(
     Clone, Debug, Default, PartialEq, Serialize, Deserialize,
@@ -219,6 +220,28 @@ impl Model<Video> {
             }
         }
     }
+}
+
+pub async fn remove_videos(
+    db: Arc<SqlitePool>,
+    videos: Vec<Video>,
+    ids: Vec<i32>,
+) -> Result<Vec<Video>> {
+    let videos = videos
+        .into_iter()
+        .filter(|current_video| !ids.contains(&current_video.id))
+        .collect();
+
+    let delete = format!(
+        "DELETE FROM videos WHERE id IN ({:})",
+        ids.iter().map(|id| id.to_string()).join(", ")
+    );
+
+    query(&delete)
+        .execute(&*db)
+        .await
+        .into_diagnostic()
+        .map(|_| videos)
 }
 
 pub async fn remove_video(

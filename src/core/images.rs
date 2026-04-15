@@ -5,6 +5,7 @@ use super::kinds::ServiceItemKind;
 use super::model::{LibraryKind, Model};
 use super::service_items::ServiceTrait;
 use crisp::types::{Keyword, Symbol, Value};
+use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::{SqliteConnection, SqlitePool, query, query_as};
@@ -185,6 +186,28 @@ impl Model<Image> {
             }
         }
     }
+}
+
+pub async fn remove_images(
+    db: Arc<SqlitePool>,
+    images: Vec<Image>,
+    ids: Vec<i32>,
+) -> Result<Vec<Image>> {
+    let images = images
+        .into_iter()
+        .filter(|current_image| !ids.contains(&current_image.id))
+        .collect();
+
+    let delete = format!(
+        "DELETE FROM images WHERE id IN ({:})",
+        ids.iter().map(|id| id.to_string()).join(", ")
+    );
+
+    query(&delete)
+        .execute(&*db)
+        .await
+        .into_diagnostic()
+        .map(|_| images)
 }
 
 pub async fn remove_image(
