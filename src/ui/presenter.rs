@@ -28,7 +28,7 @@ use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use obws::Client;
 use obws::responses::scenes::Scene;
-use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
+use rodio::{Decoder, MixerDeviceSink, Player};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
@@ -52,7 +52,7 @@ pub(crate) struct Presenter {
     pub video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
-    sink: (Arc<Sink>, OutputStream),
+    sink: (Arc<MixerDeviceSink>, Arc<rodio::Player>),
     hovered_slide: Option<(usize, usize)>,
     hovered_point: Option<Point>,
     scroll_id: Id,
@@ -190,14 +190,12 @@ impl Presenter {
             hovered_point: None,
             sink: {
                 let stream_handle =
-                    OutputStreamBuilder::open_default_stream()
+                    rodio::DeviceSinkBuilder::open_default_sink()
                         .expect("Can't open default rodio stream");
-                (
-                    Arc::new(Sink::connect_new(
-                        stream_handle.mixer(),
-                    )),
-                    stream_handle,
-                )
+                let player = Arc::new(rodio::Player::connect_new(
+                    &stream_handle.mixer(),
+                ));
+                (Arc::new(stream_handle), player)
             },
             scroll_id: Id::unique(),
             current_font: cosmic::font::default(),
@@ -594,7 +592,7 @@ impl Presenter {
             //     return Action::Task(self.start_audio());
             // }
             Message::EndAudio => {
-                self.sink.0.stop();
+                self.sink.1.stop();
             }
             Message::None => debug!("Presenter Message::None"),
             Message::Error(error) => {
@@ -1096,7 +1094,7 @@ impl Presenter {
             debug!(?audio, "This is where audio should be changing");
             let audio = audio.clone();
             Task::perform(
-                start_audio(Arc::clone(&self.sink.0), audio),
+                start_audio(Arc::clone(&self.sink.1), audio),
                 |()| Message::None,
             )
         } else {
@@ -1155,7 +1153,7 @@ impl Presenter {
 
 // This needs to be async so that rodio's audio will work
 #[allow(clippy::unused_async)]
-async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
+async fn start_audio(player: Arc<rodio::Player>, audio: PathBuf) {
     debug!(?audio);
     let file = BufReader::new(
         File::open(audio)
@@ -1164,9 +1162,9 @@ async fn start_audio(sink: Arc<Sink>, audio: PathBuf) {
     debug!(?file);
     let source = Decoder::new(file)
         .expect("There should be an audio decoder here");
-    sink.append(source);
-    let empty = sink.empty();
-    let paused = sink.is_paused();
+    player.append(source);
+    let empty = player.empty();
+    let paused = player.is_paused();
     debug!(empty, paused, "Finished running");
 }
 

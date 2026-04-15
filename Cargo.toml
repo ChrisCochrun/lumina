@@ -21,7 +21,6 @@ sqlx = { version = "0.8.2", features = ["sqlite", "runtime-tokio"] }
 dirs = "6.0.0"
 tokio = "1.41.1"
 crisp = { git = "https://git.tfcconnection.org/chris/crisp", version = "0.1.3" }
-rodio = { version = "0.21.1", features = ["symphonia-all", "tracing"] }
 gstreamer = "0.23"
 gstreamer-app = "0.23"
 # gstreamer-video = "0.23"
@@ -53,6 +52,10 @@ tokio-stream = "0.1.18"
 fontdb = "0.23.0"
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
+
+[dependencies.rodio]
+git = "https://github.com/RustAudio/rodio"
+features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libopus"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
