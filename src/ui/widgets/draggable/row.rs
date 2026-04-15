@@ -423,6 +423,24 @@ where
     ) {
         let action = tree.state.downcast_mut::<Action>();
 
+        // let children have precedence
+        self.children
+            .iter_mut()
+            .zip(&mut tree.children)
+            .zip(layout.children())
+            .for_each(|((child, state), layout)| {
+                child.as_widget_mut().update(
+                    state,
+                    &event.clone(),
+                    layout,
+                    cursor,
+                    renderer,
+                    clipboard,
+                    shell,
+                    viewport,
+                )
+            });
+
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(
                 mouse::Button::Left,
@@ -533,23 +551,6 @@ where
             }
             _ => {}
         }
-
-        self.children
-            .iter_mut()
-            .zip(&mut tree.children)
-            .zip(layout.children())
-            .for_each(|((child, state), layout)| {
-                child.as_widget_mut().update(
-                    state,
-                    &event.clone(),
-                    layout,
-                    cursor,
-                    renderer,
-                    clipboard,
-                    shell,
-                    viewport,
-                )
-            });
     }
 
     fn mouse_interaction(
