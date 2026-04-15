@@ -6,21 +6,22 @@ use std::sync::{Arc, LazyLock};
 
 use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
+use cosmic::iced::core::text::Alignment;
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{
     AbsoluteOffset, Direction, Scrollbar, scroll_to,
 };
 use cosmic::iced::widget::{grid, stack};
 use cosmic::iced::{
-    Background, Border, Color, ContentFit, Font, Length, Shadow,
-    Vector,
+    Background, Border, Color, ContentFit, Font, Length, Point,
+    Shadow, Vector,
 };
 use cosmic::prelude::*;
-use cosmic::widget::divider::vertical;
+use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
-    Container, Id, Row, Space, column, container, context_menu,
-    flex_row, image, menu, mouse_area, responsive, row, scrollable,
-    space, text,
+    Container, Id, Row, Space, column, container, flex_row, image,
+    menu, mouse_area, popover, responsive, row, scrollable, space,
+    text,
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
@@ -37,7 +38,6 @@ use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
 use crate::ui::library::elide_text;
-// use crate::ui::widgets::context_popover::{Context, Entry};
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -54,12 +54,14 @@ pub(crate) struct Presenter {
     pub audio: Option<PathBuf>,
     sink: (Arc<Sink>, OutputStream),
     hovered_slide: Option<(usize, usize)>,
+    hovered_point: Option<Point>,
     scroll_id: Id,
     current_font: Font,
     slide_action_map:
         Option<HashMap<(usize, usize), Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
     context_menu_id: Option<(usize, usize)>,
+    context_point: Point,
     obs_scenes: Option<Vec<Scene>>,
 }
 
@@ -86,7 +88,7 @@ pub(crate) enum Message {
     VideoPos(f32),
     VideoFrame,
     MissingPlugin(gstreamer::Message),
-    HoveredSlide(Option<(usize, usize)>),
+    HoveredSlide(Option<(usize, usize, Point)>),
     ChangeFont(String),
     Error(String),
     None,
@@ -97,6 +99,7 @@ pub(crate) enum Message {
     AddObsClient(Arc<Client>),
     AssignSlideAction(slide_actions::Action),
     PlayPauseVideo,
+    CloseContextMenu,
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -184,6 +187,7 @@ impl Presenter {
             service: items,
             video_position: 0.0,
             hovered_slide: None,
+            hovered_point: None,
             sink: {
                 let stream_handle =
                     OutputStreamBuilder::open_default_stream()
@@ -200,6 +204,7 @@ impl Presenter {
             slide_action_map: None,
             obs_client: None,
             context_menu_id: None,
+            context_point: Point::ORIGIN,
             obs_scenes: None,
         }
     }
@@ -267,6 +272,8 @@ impl Presenter {
                 );
                 self.context_menu_id =
                     Some((item_index, slide_index));
+                self.context_point =
+                    self.hovered_point.unwrap_or_default();
                 if let Some(client) = &self.obs_client {
                     let client = Arc::clone(client);
                     return Action::Task(Task::perform(
@@ -575,8 +582,13 @@ impl Presenter {
                     |x| x,
                 ));
             }
-            Message::HoveredSlide(slide) => {
-                self.hovered_slide = slide;
+            Message::HoveredSlide(Some((item, slide, point))) => {
+                self.hovered_slide = Some((item, slide));
+                self.hovered_point = Some(point);
+            }
+            Message::HoveredSlide(None) => {
+                self.hovered_slide = None;
+                self.hovered_point = None;
             }
             // Message::StartAudio => {
             //     return Action::Task(self.start_audio());
@@ -588,6 +600,7 @@ impl Presenter {
             Message::Error(error) => {
                 error!(error);
             }
+            Message::CloseContextMenu => self.context_menu_id = None,
         }
         Action::None
     }
@@ -681,10 +694,11 @@ impl Presenter {
                 .interaction(
                     cosmic::iced::mouse::Interaction::Pointer,
                 )
-                .on_move(move |_| {
+                .on_move(move |point| {
                     Message::HoveredSlide(Some((
                         item_index,
                         slide_index,
+                        point,
                     )))
                 })
                 .on_exit(Message::HoveredSlide(None))
@@ -708,7 +722,10 @@ impl Presenter {
                         space_l, space_none, space_none, space_none,
                     ])
                 };
-                items.push(item.into());
+                items.push(self.context_menu(
+                    (item_index, slide_index),
+                    item.into(),
+                ));
 
                 items.push(
                     container(space::vertical().width(space_s))
@@ -740,9 +757,10 @@ impl Presenter {
         )
         // .direction(Direction::Horizontal(Scrollbar::new()))
         .height(Length::Fill)
-        // .width(Length::Fill)
+        .width(Length::Fill)
         .id(self.scroll_id.clone());
-        self.context_menu(scrollable.into()).apply(container).into()
+        scrollable.into()
+
         // scrollable.into()
     }
 
@@ -829,10 +847,11 @@ impl Presenter {
                         .interaction(
                             cosmic::iced::mouse::Interaction::Pointer,
                         )
-                        .on_move(move |_| {
+                        .on_move(move |point| {
                             Message::HoveredSlide(Some((
                                 item_index,
                                 slide_index,
+                                point,
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
@@ -844,7 +863,11 @@ impl Presenter {
                             item_index,
                             slide_index,
                         ));
-                        slides.push(delegate.into());
+                        let context_menu = self.context_menu(
+                            (item_index, slide_index),
+                            delegate.into(),
+                        );
+                        slides.push(context_menu);
                     },
                 );
                 let row = Row::from_vec(slides)
@@ -873,87 +896,90 @@ impl Presenter {
             .height(Length::Fill)
             // .width(Length::Fill)
             .id(self.scroll_id.clone());
-        self.context_menu(scrollable.into())
+        scrollable.into()
     }
 
     fn context_menu<'a>(
-        &self,
+        &'a self,
+        id: (usize, usize),
         items: Element<'a, Message>,
     ) -> Element<'a, Message> {
-        if self.context_menu_id.is_some() {
-            let mut scenes = vec![];
-            if let Some(obs_scenes) = &self.obs_scenes {
-                for scene in obs_scenes {
-                    let menu_item = menu::Item::Button(
-                        scene.id.name.clone(),
-                        None,
-                        MenuAction::ObsSceneAssign(scene.index),
-                    );
-                    scenes.push(menu_item);
+        if self
+            .context_menu_id
+            .is_some_and(|context_id| context_id == id)
+        {
+            let menu_item = |label, message| {
+                menu::menu_button(vec![
+                    text(label).into(),
+                    space::horizontal().into(),
+                ])
+                .on_press(message)
+            };
+            let obs_scenes = self.obs_scenes.as_ref().map(|scenes| {
+                scenes.iter().map(|scene| {
+                    menu_item(
+                        scene.id.name.as_ref(),
+                        Message::AssignObsScene(scene.index),
+                    )
+                })
+            });
+
+            let mut menu_items: Vec<Element<Message>> = vec![
+                menu_item(
+                    "Start Stream",
+                    Message::AssignSlideAction(
+                        slide_actions::Action::Obs {
+                            action: ObsAction::StartStream,
+                        },
+                    ),
+                )
+                .into(),
+                menu_item(
+                    "Stop Stream",
+                    Message::AssignSlideAction(
+                        slide_actions::Action::Obs {
+                            action: ObsAction::StopStream,
+                        },
+                    ),
+                )
+                .into(),
+            ];
+            if let Some(scenes) = obs_scenes {
+                menu_items.push(divider::horizontal::light().into());
+                menu_items.push(
+                    text("Scenes")
+                        .class(theme::Text::Color(
+                            theme::active()
+                                .cosmic()
+                                .palette
+                                .neutral_7
+                                .into(),
+                        ))
+                        .align_x(Alignment::Center)
+                        .apply(container)
+                        .padding(theme::spacing().space_s)
+                        .into(),
+                );
+                menu_items.push(divider::horizontal::light().into());
+                for scene in scenes {
+                    menu_items.push(scene.into())
                 }
             }
-            let menu_items = vec![
-                menu::Item::Button(
-                    "Start Stream".to_string(),
-                    None,
-                    MenuAction::ObsStartStream,
-                ),
-                menu::Item::Button(
-                    "Stop Stream".to_string(),
-                    None,
-                    MenuAction::ObsStopStream,
-                ),
-                menu::Item::Folder("Obs Scene".to_string(), scenes),
-            ];
 
-            // let entries = vec![
-            //     Entry::Node((
-            //         String::from("Start Stream"),
-            //         Message::AssignSlideAction(
-            //             slide_actions::Action::Obs {
-            //                 action: ObsAction::StartStream,
-            //             },
-            //         ),
-            //     )),
-            //     Entry::Node((
-            //         String::from("Stop Stream"),
-            //         Message::AssignSlideAction(
-            //             slide_actions::Action::Obs {
-            //                 action: ObsAction::StopStream,
-            //             },
-            //         ),
-            //     )),
-            //     Entry::Tree((
-            //         String::from("Obs Scene"),
-            //         self.obs_scenes.map_or(Vec::new(), |scenes| {
-            //             scenes
-            //                 .iter()
-            //                 .map(|scene| {
-            //                     Entry::Node((
-            //                         scene.id.name.clone(),
-            //                         Message::AssignObsScene(
-            //                             scene.index,
-            //                         ),
-            //                     ))
-            //                 })
-            //                 .collect::<Vec<Entry<Message>>>()
-            //         }),
-            //     )),
-            // ];
+            let item_column = column::with_children(menu_items)
+                .spacing(theme::spacing().space_s)
+                .apply(container)
+                .width(300)
+                .padding(theme::spacing().space_s)
+                .class(theme::Container::Dropdown);
 
-            // let context_menu = Context::with_entries(entries);
-            // context_menu.view()
-
-            let context_menu = context_menu(
-                container(items),
-                self.context_menu_id.map_or_else(
-                    || None,
-                    |_| {
-                        Some(menu::items(&HashMap::new(), menu_items))
-                    },
-                ),
-            );
-            context_menu.into()
+            popover(items)
+                .position(popover::Position::Point(
+                    self.context_point,
+                ))
+                .on_close(Message::CloseContextMenu)
+                .popup(item_column)
+                .into()
         } else {
             items
         }
