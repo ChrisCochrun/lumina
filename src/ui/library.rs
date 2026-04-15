@@ -465,13 +465,11 @@ impl<'a> Library {
                     error!("Not editing a song item");
                     return Action::None;
                 }
-                let songs =
-                    self.song_library.items.drain(..).collect();
 
                 return Action::Task(Task::perform(
                     songs::update_song(
                         song,
-                        songs,
+                        self.song_library.items.clone(),
                         Arc::clone(&self.db),
                     ),
                     |r| r.map_or(Message::None, Message::ReaddSongs),
@@ -494,13 +492,11 @@ impl<'a> Library {
                     error!("Not editing a image item");
                     return Action::None;
                 }
-                let images =
-                    self.image_library.items.drain(..).collect();
 
                 return Action::Task(Task::perform(
                     images::update_image(
                         image,
-                        images,
+                        self.image_library.items.clone(),
                         Arc::clone(&self.db),
                     ),
                     |r| r.map_or(Message::None, Message::ReaddImages),
@@ -521,13 +517,10 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                let videos =
-                    self.video_library.items.drain(..).collect();
-
                 return Action::Task(Task::perform(
                     videos::update_video(
                         video,
-                        videos,
+                        self.video_library.items.clone(),
                         Arc::clone(&self.db),
                     ),
                     |r| r.map_or(Message::None, Message::ReaddVideos),
@@ -548,16 +541,10 @@ impl<'a> Library {
                     return Action::None;
                 }
 
-                let presentations = self
-                    .presentation_library
-                    .items
-                    .drain(..)
-                    .collect();
-
                 return Action::Task(Task::perform(
                     presentations::update_presentation(
                         presentation,
-                        presentations,
+                        self.presentation_library.items.clone(),
                         Arc::clone(&self.db),
                     ),
                     |r| {
