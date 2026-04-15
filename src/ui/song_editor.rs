@@ -117,9 +117,11 @@ pub enum Message {
     UpdateSlides(Vec<Slide>),
     UpdateSlide((usize, Slide)),
     PickBackground,
+    PickAudio,
     Edit(bool),
     None,
     ChangeAuthor(String),
+    ChangeAudio(Result<PathBuf, SongError>),
     PauseVideo,
     UpdateStrokeSize(usize),
     UpdateStrokeColor(ColorPickerUpdate),
@@ -562,6 +564,22 @@ impl SongEditor {
                     song.author = Some(author);
                     return Action::Task(self.update_song(&song));
                 }
+            }
+            Message::PickAudio => {
+                return Action::Task(Task::perform(
+                    pick_audio(),
+                    Message::ChangeAudio,
+                ));
+            }
+            Message::ChangeAudio(Ok(path)) => {
+                debug!(?path);
+                if let Some(mut song) = self.song.clone() {
+                    song.audio = Some(path);
+                    return Action::Task(self.update_song(&song));
+                }
+            }
+            Message::ChangeAudio(Err(error)) => {
+                error!(?error);
             }
             Message::ChangeBackground(Ok(path)) => {
                 debug!(?path);
@@ -1797,6 +1815,17 @@ impl SongEditor {
             tooltip::Position::Bottom,
         );
 
+        let audio_selector = tooltip(
+            button::icon(
+                icon::from_name("audio-speakers-symbolic").scale(2),
+            )
+            .label("Audio")
+            .on_press(Message::PickAudio)
+            .padding(space_s),
+            "Select an image or video audio",
+            tooltip::Position::Bottom,
+        );
+
         // let stroke_size_selector = tooltip(
         //     stroke_popup,
         //     "Outline of the text",
@@ -1819,6 +1848,7 @@ impl SongEditor {
             divider::vertical::default().height(space_l),
             text_alignment_popup,
             space::horizontal(),
+            audio_selector,
             background_selector
         ]
         .align_y(Vertical::Center)
@@ -2071,6 +2101,27 @@ impl Default for SongEditor {
     }
 }
 
+async fn pick_audio() -> Result<PathBuf, SongError> {
+    let dialog = Dialog::new().title("Choose audio...");
+    let bg_filter = FileFilter::new("Audio")
+        .extension("mp3")
+        .extension("wav")
+        .extension("opus")
+        .extension("flac");
+    dialog
+        .filter(bg_filter)
+        .directory(dirs::home_dir().expect("oops"))
+        .open_file()
+        .await
+        .map_err(|e| {
+            error!(?e);
+            SongError::AudioDialogClosed
+        })
+        .map(|file| {
+            file.url().to_file_path().expect("Should be a file here")
+        })
+}
+
 async fn pick_background() -> Result<PathBuf, SongError> {
     let dialog = Dialog::new().title("Choose a background...");
     let bg_filter = FileFilter::new("Videos and Images")
@@ -2108,5 +2159,6 @@ async fn pick_background() -> Result<PathBuf, SongError> {
 #[derive(Debug, Clone)]
 pub enum SongError {
     BackgroundDialogClosed,
+    AudioDialogClosed,
     IOError(io::ErrorKind),
 }
