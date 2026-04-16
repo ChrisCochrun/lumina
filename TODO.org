@@ -5,12 +5,6 @@
 
 * TODO [#A] Deployment pipeline and get a MVP going
 
-* DONE [#A] Add Action system
-CLOSED: [2026-04-15 Wed 15:57]
-This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
-
-This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
-
 * TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly [2/2]
 
 Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
@@ -27,9 +21,6 @@ CLOSED: [2026-04-07 Tue 11:42]
 
 * TODO [#A] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful
-
-* TODO Presenter module needs 2 videos
-This will allow for us to have different parameters in the framerate and even ensure that we can modify them separately.
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
@@ -82,10 +73,11 @@ Since strings are allocated on the heap, I've changed how to construct the svg s
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
-* DONE [#C] Figure out why the Video element seems to have problems when moving the mouse around
-CLOSED: [2026-04-15 Wed 15:59]
+* DONE [#A] Add Action system
+CLOSED: [2026-04-15 Wed 15:57]
+This will be based on each slide having the ability to activate an action (i.e. OBS scene switch, OBS start or stop) when it is active.
 
-I think this got fixed in a recent update
+This is working but the right click context menu is all the way on the edge of the ui so you can't control all the slides. It also needs a lot of help in making the system more robust and potentially lest reliant on the Presenter struct itself.
 
 * DONE [#A] Create a view of all slides in a PDF presenation
 
@@ -122,6 +114,10 @@ This is necessary so that the entire song gets changed and we can propogate thos
 There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * DONE [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
+
+* DONE Presenter module needs 2 videos
+CLOSED: [2026-04-16 Thu 13:49]
+This will allow for us to have different parameters in the framerate and even ensure that we can modify them separately.
 
 * DONE Song Editor has some sort of performance issue.
 CLOSED: [2026-04-10 Fri 13:08]
@@ -170,3 +166,8 @@ This will make it so that we can add styling to the text like borders and backgr
 * DONE Build Menu
 * DONE Find a way for text to pass through a service item to a slide i.e. content piece
 This proved easier by just creating the =Slide= first and inserting it into the =ServiceItem=.
+* DONE [#C] Figure out why the Video element seems to have problems when moving the mouse around
+CLOSED: [2026-04-15 Wed 15:59]
+
+I think this got fixed in a recent update
+
