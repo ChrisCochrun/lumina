@@ -988,9 +988,16 @@ impl cosmic::Application for App {
             Message::Present(message) => {
                 // debug!(?message);
                 if self.presentation_open
-                    && let Some(video) = &mut self.presenter.video
+                    && let Some(video) =
+                        &mut self.presenter.presentation_video
                 {
                     video.set_muted(false);
+                }
+                if self.presentation_open
+                    && let Some(video) =
+                        &mut self.presenter.preview_video
+                {
+                    video.set_muted(true);
                 }
                 match self.presenter.update(message) {
                     presenter::Action::Task(task) => task.map(|m| {
@@ -1170,10 +1177,13 @@ impl cosmic::Application for App {
                             || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
                                                         {
                                                             self.presentation_open = true;
-                                                            if let Some(video) = &mut self.presenter.video {
+                                                            if let Some(video) = &mut self.presenter.preview_video {
+                                                                video.set_muted(true);
+                                                            }
+                                                            if let Some(video) = &mut self.presenter.presentation_video {
                                                                 video.set_muted(false);
                                                             }
-                                                            window::maximize(id, true)
+                                                            window::disable_blur(id).chain(window::set_mode(id, window::Mode::Fullscreen))
                                                         } else {
                                                             Task::none()
                                                         }
@@ -1192,7 +1202,14 @@ impl cosmic::Application for App {
                     self.update(Message::Quit)
                 } else {
                     self.presentation_open = false;
-                    if let Some(video) = &mut self.presenter.video {
+                    if let Some(video) =
+                        &mut self.presenter.preview_video
+                    {
+                        video.set_muted(true);
+                    }
+                    if let Some(video) =
+                        &mut self.presenter.presentation_video
+                    {
                         video.set_muted(true);
                     }
                     Task::none()
@@ -1582,13 +1599,14 @@ impl cosmic::Application for App {
         let icon_left = icon::from_name("arrow-left");
         let icon_right = icon::from_name("arrow-right");
 
-        let video_range = self.presenter.video.as_ref().map_or_else(
-            || 0.0,
-            |video| video.duration().as_secs_f32(),
-        );
+        let video_range =
+            self.presenter.preview_video.as_ref().map_or_else(
+                || 0.0,
+                |video| video.duration().as_secs_f32(),
+            );
 
         let video_button_icon =
-            self.presenter.video.as_ref().map_or_else(
+            self.presenter.preview_video.as_ref().map_or_else(
                 || {
                     button::icon(icon::from_name("media-play"))
                         .tooltip("Play")
@@ -1617,28 +1635,32 @@ impl cosmic::Application for App {
             )
             .height(250)
             .align_bottom(Length::Fill),
-            Container::new(if self.presenter.video.is_some() {
-                row![
-                    video_button_icon,
-                    Container::new(
-                        slider(
-                            0.0..=video_range,
-                            self.presenter.video_position,
-                            |pos| {
-                                Message::Present(
-                                    presenter::Message::VideoPos(pos),
-                                )
-                            }
+            Container::new(
+                if self.presenter.preview_video.is_some() {
+                    row![
+                        video_button_icon,
+                        Container::new(
+                            slider(
+                                0.0..=video_range,
+                                self.presenter.video_position,
+                                |pos| {
+                                    Message::Present(
+                                        presenter::Message::VideoPos(
+                                            pos,
+                                        ),
+                                    )
+                                }
+                            )
+                            .step(0.1)
                         )
-                        .step(0.1)
-                    )
-                    .center_x(Length::Fill)
-                    .padding([7, 0, 0, 0])
-                ]
-                .padding(5)
-            } else {
-                row![]
-            })
+                        .center_x(Length::Fill)
+                        .padding([7, 0, 0, 0])
+                    ]
+                    .padding(5)
+                } else {
+                    row![]
+                }
+            )
             .center_x(Length::Fill),
             Space::new().height(Length::Fill)
         ]

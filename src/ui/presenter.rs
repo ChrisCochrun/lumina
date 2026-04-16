@@ -49,7 +49,8 @@ pub(crate) struct Presenter {
     pub current_item: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
-    pub video: Option<Video>,
+    pub presentation_video: Option<Video>,
+    pub preview_video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
     sink: (Arc<MixerDeviceSink>, Arc<rodio::Player>),
@@ -138,17 +139,48 @@ impl menu::Action for MenuAction {
 
 impl Presenter {
     pub fn with_items(items: Arc<Vec<ServiceItem>>) -> Self {
-        let video = {
+        let preview_video = {
             items.first().and_then(|item| {
                 item.slides.first().and_then(|slide| {
                     let path = slide.background().path.clone();
                     if !path.exists() {
                         return None;
                     }
+
                     let url = Url::from_file_path(path).expect(
                         "There should be a video file here",
                     );
-                    match Video::new(&url) {
+
+                    let result = gst_video::create_video(&url, 15);
+                    match result {
+                        Ok(mut v) => {
+                            v.set_paused(true);
+                            Some(v)
+                        }
+                        Err(e) => {
+                            error!(
+                                "Had an error creating the video object: {e}, likely the first slide isn't a video"
+                            );
+                            None
+                        }
+                    }
+                })
+            })
+        };
+        let presentation_video = {
+            items.first().and_then(|item| {
+                item.slides.first().and_then(|slide| {
+                    let path = slide.background().path.clone();
+                    if !path.exists() {
+                        return None;
+                    }
+
+                    let url = Url::from_file_path(path).expect(
+                        "There should be a video file here",
+                    );
+
+                    let result = gst_video::create_video(&url, 60);
+                    match result {
                         Ok(mut v) => {
                             v.set_paused(true);
                             Some(v)
@@ -182,7 +214,8 @@ impl Presenter {
             current_item: 0,
             current_slide_index: 0,
             total_slides,
-            video,
+            preview_video,
+            presentation_video,
             audio,
             service: items,
             video_position: 0.0,
@@ -397,7 +430,11 @@ impl Presenter {
                 let _ = self.update(Message::ChangeFont(font));
                 debug!("changing video now...");
                 if !backgrounds_match {
-                    if let Some(video) = &mut self.video {
+                    if let Some(video) = &mut self.preview_video {
+                        let _ = video.restart_stream();
+                    }
+                    if let Some(video) = &mut self.presentation_video
+                    {
                         let _ = video.restart_stream();
                     }
                     self.reset_video();
@@ -505,21 +542,31 @@ impl Presenter {
                 // }
             }
             Message::StartVideo => {
-                if let Some(video) = &mut self.video {
+                if let Some(video) = &mut self.preview_video {
+                    video.set_paused(false);
+                    video
+                        .set_looping(self.current_slide.video_loop());
+                }
+                if let Some(video) = &mut self.presentation_video {
                     video.set_paused(false);
                     video
                         .set_looping(self.current_slide.video_loop());
                 }
             }
             Message::PlayPauseVideo => {
-                if let Some(video) = &mut self.video {
+                if let Some(video) = &mut self.preview_video {
+                    video.set_paused(!video.paused());
+                    video
+                        .set_looping(self.current_slide.video_loop());
+                }
+                if let Some(video) = &mut self.presentation_video {
                     video.set_paused(!video.paused());
                     video
                         .set_looping(self.current_slide.video_loop());
                 }
             }
             Message::VideoPos(position) => {
-                if let Some(video) = &mut self.video {
+                if let Some(video) = &mut self.preview_video {
                     let position = Position::Time(
                         std::time::Duration::from_secs_f32(position),
                     );
@@ -535,7 +582,7 @@ impl Presenter {
                 }
             }
             Message::VideoFrame => {
-                if let Some(video) = &self.video {
+                if let Some(video) = &self.preview_video {
                     if self.video_position > 0.0
                         && video.position().as_secs_f32() != 0.0
                     {
@@ -545,7 +592,7 @@ impl Presenter {
                 }
             }
             Message::MissingPlugin(element) => {
-                if let Some(video) = &mut self.video {
+                if let Some(video) = &mut self.preview_video {
                     video.set_paused(true);
                 }
                 return Action::Task(Task::perform(
@@ -606,7 +653,7 @@ impl Presenter {
     pub fn view(&self) -> Element<Message> {
         slide_view(
             &self.current_slide,
-            self.video.as_ref(),
+            self.presentation_video.as_ref(),
             false,
             true,
         )
@@ -615,7 +662,7 @@ impl Presenter {
     pub fn view_preview(&self) -> Element<Message> {
         slide_view(
             &self.current_slide,
-            self.video.as_ref(),
+            self.preview_video.as_ref(),
             false,
             false,
         )
@@ -642,7 +689,7 @@ impl Presenter {
 
                 let slide = slide_view(
                     slide,
-                    self.video.as_ref(),
+                    self.preview_video.as_ref(),
                     true,
                     false,
                 );
@@ -779,7 +826,7 @@ impl Presenter {
 
                         let container = slide_view(
                             slide,
-                            self.video.as_ref(),
+                            self.preview_video.as_ref(),
                             true,
                             false,
                         );
@@ -1066,26 +1113,45 @@ impl Presenter {
                 if path.exists() {
                     let url = Url::from_file_path(path)
                         .expect("There should be a video file here");
+                    let result = gst_video::create_video(&url, 15);
+                    match result {
+                        Ok(mut v) => {
+                            v.set_looping(
+                                self.current_slide.video_loop(),
+                            );
+                            self.preview_video = Some(v);
+                        }
+                        Err(e) => {
+                            error!(
+                                "Had an error creating the video object: {e}"
+                            );
+                            self.preview_video = None;
+                        }
+                    }
                     let result = gst_video::create_video(&url, 60);
                     match result {
                         Ok(mut v) => {
                             v.set_looping(
                                 self.current_slide.video_loop(),
                             );
-                            self.video = Some(v);
+                            self.presentation_video = Some(v);
                         }
                         Err(e) => {
                             error!(
                                 "Had an error creating the video object: {e}"
                             );
-                            self.video = None;
+                            self.presentation_video = None;
                         }
                     }
                 } else {
-                    self.video = None;
+                    self.preview_video = None;
+                    self.presentation_video = None;
                 }
             }
-            _ => self.video = None,
+            _ => {
+                self.preview_video = None;
+                self.presentation_video = None;
+            }
         }
     }
 
