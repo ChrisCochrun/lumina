@@ -1594,6 +1594,7 @@ impl cosmic::Application for App {
             space_s,
             space_m,
             space_l,
+            space_xl,
             ..
         } = cosmic::theme::spacing();
         let icon_left = icon::from_name("arrow-left");
@@ -1793,27 +1794,35 @@ impl cosmic::Application for App {
                 .leading_icon(
                     icon::from_name("show-grid")
                         .symbolic(true)
-                        .size(space_l),
+                        .size(space_xl),
                 )
+                .height(space_xl)
                 .class(if self.view_mode == ViewMode::Grid {
-                    theme::Button::Suggested
-                } else {
                     theme::Button::Standard
+                } else {
+                    theme::Button::HeaderBar
                 });
-            let list_button = button::standard("Preview")
-                .on_press(Message::ViewModeSwitch(ViewMode::Row))
-                .leading_icon(
-                    icon::from_name("view-more-horizontal-symbolic")
+            let list_button = button::custom(
+                row![
+                    icon::from_path("./res/carousel.svg".into())
                         .symbolic(true)
-                        .size(space_l),
-                )
-                .class(if self.view_mode == ViewMode::Row {
-                    theme::Button::Suggested
-                } else {
-                    theme::Button::Standard
-                });
+                        .icon()
+                        .size(space_l)
+                        .apply(container)
+                        .center(Length::Shrink),
+                    "Preview"
+                ]
+                .align_y(Vertical::Center),
+            )
+            .on_press(Message::ViewModeSwitch(ViewMode::Row))
+            .height(space_xl)
+            .class(if self.view_mode == ViewMode::Row {
+                theme::Button::Standard
+            } else {
+                theme::Button::HeaderBar
+            });
             row![grid_button, list_button, space::horizontal()]
-                .spacing(space_m)
+                .spacing(space_s)
                 .apply(container)
                 .class(theme::Container::Primary)
                 .padding(space_s)
@@ -1834,7 +1843,7 @@ impl cosmic::Application for App {
         ]
         .width(Length::Fill)
         .height(Length::Fill)
-        .spacing(space_s);
+        .spacing(space_none);
 
         let main_area = self.editor_mode.as_ref().map_or_else(
             || container(service_row),

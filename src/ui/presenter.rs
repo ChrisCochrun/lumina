@@ -1119,6 +1119,7 @@ impl Presenter {
                             v.set_looping(
                                 self.current_slide.video_loop(),
                             );
+                            v.set_muted(true);
                             self.preview_video = Some(v);
                         }
                         Err(e) => {

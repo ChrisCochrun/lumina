@@ -232,15 +232,13 @@ impl<'a> Library {
                 let after_task =
                     Task::done(Message::OpenItem(Some((
                         LibraryKind::Video,
-                        self.video_library.items.len() as i32 - 1,
+                        self.video_library.items.len() as i32,
                     ))));
                 if let Some(new_videos) = videos {
-                    let current_videos =
-                        self.video_library.items.drain(..).collect();
                     let task = Task::perform(
                         videos::add_video(
                             new_videos,
-                            current_videos,
+                            self.video_library.items.clone(),
                             Arc::clone(&self.db),
                         ),
                         move |res| {
@@ -264,15 +262,10 @@ impl<'a> Library {
                     {
                         error!(?e);
                     }
-                    let presentations = self
-                        .presentation_library
-                        .items
-                        .drain(..)
-                        .collect();
                     return Action::Task(Task::perform(
                         presentations::add_presentation(
                             vec![presentation],
-                            presentations,
+                            self.presentation_library.items.clone(),
                             Arc::clone(&self.db),
                         ),
                         move |res| {
@@ -294,19 +287,13 @@ impl<'a> Library {
                 let after_task =
                     Task::done(Message::OpenItem(Some((
                         LibraryKind::Presentation,
-                        self.presentation_library.items.len() as i32
-                            - 1,
+                        self.presentation_library.items.len() as i32,
                     ))));
                 if let Some(new_presentations) = presentations {
-                    let current_presentations = self
-                        .presentation_library
-                        .items
-                        .drain(..)
-                        .collect();
                     let task = Task::perform(
                         presentations::add_presentation(
                             new_presentations,
-                            current_presentations,
+                            self.presentation_library.items.clone(),
                             Arc::clone(&self.db),
                         ),
                         move |res| {
@@ -332,15 +319,13 @@ impl<'a> Library {
                 let after_task =
                     Task::done(Message::OpenItem(Some((
                         LibraryKind::Image,
-                        self.image_library.items.len() as i32 - 1,
+                        self.image_library.items.len() as i32,
                     ))));
                 if let Some(new_images) = images {
-                    let current_images =
-                        self.image_library.items.drain(..).collect();
                     let task = Task::perform(
                         images::add_image(
                             new_images,
-                            current_images,
+                            self.image_library.items.clone(),
                             Arc::clone(&self.db),
                         ),
                         move |res| {
@@ -592,141 +577,89 @@ impl<'a> Library {
                 for item in items {
                     match item {
                         ServiceItemKind::Song(song) => {
-                            let Some(e) = self
-                                .song_library
-                                .add_item(song.clone())
-                                .err()
-                            else {
-                                let songs = self
-                                    .song_library
-                                    .items
-                                    .drain(..)
-                                    .collect();
-                                let task = Task::perform(
-                                    songs::add_song(
-                                        songs,
-                                        Arc::clone(&self.db),
-                                    ),
-                                    {
-                                        move |res| match res {
-                                            Ok(songs) => {
-                                                Message::ReaddSongs(
-                                                    songs,
-                                                )
-                                            }
-
-                                            Err(e) => {
-                                                error!(?e);
-                                                Message::None
-                                            }
+                            let task = Task::perform(
+                                songs::add_song(
+                                    self.song_library.items.clone(),
+                                    Arc::clone(&self.db),
+                                ),
+                                {
+                                    move |res| match res {
+                                        Ok(songs) => {
+                                            Message::ReaddSongs(songs)
                                         }
-                                    },
-                                );
-                                tasks.push(task);
-                                continue;
-                            };
-                            error!(?e);
+
+                                        Err(e) => {
+                                            error!(?e);
+                                            Message::None
+                                        }
+                                    }
+                                },
+                            );
+                            tasks.push(task);
                         }
                         ServiceItemKind::Video(video) => {
-                            let Some(e) = self
-                                .video_library
-                                .add_item(video.clone())
-                                .err()
-                            else {
-                                let videos = self
-                                    .video_library
-                                    .items
-                                    .drain(..)
-                                    .collect();
-                                let task = Task::perform(
-                                    videos::add_video(
-                                        vec![video.clone()],
-                                        videos,
-                                        Arc::clone(&self.db),
-                                    ),
-                                    move |res| {
-                                        res.map_or(
-                                            Message::None,
-                                            |videos| {
-                                                Message::ReaddVideos(
-                                                    videos,
-                                                )
-                                            },
-                                        )
-                                    },
-                                );
-                                tasks.push(task);
-                                continue;
-                            };
-                            error!(?e);
+                            let task = Task::perform(
+                                videos::add_video(
+                                    vec![video],
+                                    self.video_library.items.clone(),
+                                    Arc::clone(&self.db),
+                                ),
+                                move |res| {
+                                    res.map_or(
+                                        Message::None,
+                                        |videos| {
+                                            Message::ReaddVideos(
+                                                videos,
+                                            )
+                                        },
+                                    )
+                                },
+                            );
+                            tasks.push(task);
                         }
                         ServiceItemKind::Image(image) => {
-                            let Some(e) = self
-                                .image_library
-                                .add_item(image.clone())
-                                .err()
-                            else {
-                                let images = self
-                                    .image_library
-                                    .items
-                                    .drain(..)
-                                    .collect();
-                                let task = Task::perform(
-                                    images::add_image(
-                                        vec![image.clone()],
-                                        images,
-                                        Arc::clone(&self.db),
-                                    ),
-                                    move |res| {
-                                        res.map_or(
-                                            Message::None,
-                                            |images| {
-                                                Message::ReaddImages(
-                                                    images,
-                                                )
-                                            },
-                                        )
-                                    },
-                                );
-                                tasks.push(task);
-                                continue;
-                            };
-                            error!(?e);
+                            let task = Task::perform(
+                                images::add_image(
+                                    vec![image],
+                                    self.image_library.items.clone(),
+                                    Arc::clone(&self.db),
+                                ),
+                                move |res| {
+                                    res.map_or(
+                                        Message::None,
+                                        |images| {
+                                            Message::ReaddImages(
+                                                images,
+                                            )
+                                        },
+                                    )
+                                },
+                            );
+                            tasks.push(task);
                         }
                         ServiceItemKind::Presentation(
                             presentation,
                         ) => {
-                            let Some(e) = self
-                                .presentation_library
-                                .add_item(presentation.clone())
-                                .err()
-                            else {
-                                let presentations = self
-                                    .presentation_library
-                                    .items
-                                    .drain(..)
-                                    .collect();
-                                let task = Task::perform(
-                                    presentations::add_presentation(
-                                        vec![presentation.clone()],
-                                        presentations,
-                                        Arc::clone(&self.db),
-                                    ),
-                                    move |res| {
-                                        res.map_or(
-                                            Message::None,
-                                            |presentations| {
-                                                Message::ReaddPres(
-                                                    presentations,
-                                                )
-                                            },
-                                        )
-                                    },
-                                );
-                                tasks.push(task);
-                                continue;
-                            };
-                            error!(?e);
+                            let task = Task::perform(
+                                presentations::add_presentation(
+                                    vec![presentation],
+                                    self.presentation_library
+                                        .items
+                                        .clone(),
+                                    Arc::clone(&self.db),
+                                ),
+                                move |res| {
+                                    res.map_or(
+                                        Message::None,
+                                        |presentations| {
+                                            Message::ReaddPres(
+                                                presentations,
+                                            )
+                                        },
+                                    )
+                                },
+                            );
+                            tasks.push(task);
                         }
                         ServiceItemKind::Content(_slide) => todo!(),
                     }
