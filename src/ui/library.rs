@@ -561,113 +561,7 @@ impl<'a> Library {
                 }
                 self.context_menu = Some(index);
             }
-            Message::AddFiles(items) => {
-                let mut tasks = Vec::new();
-                let last_item = &items.last();
-
-                let after_task = match last_item {
-                    Some(ServiceItemKind::Image(_image)) => {
-                        Task::done(Message::OpenItem(Some((
-                            LibraryKind::Image,
-                            self.image_library.items.len() as i32 - 1,
-                        ))))
-                    }
-                    _ => Task::none(),
-                };
-                for item in items {
-                    match item {
-                        ServiceItemKind::Song(song) => {
-                            let task = Task::perform(
-                                songs::add_song(
-                                    self.song_library.items.clone(),
-                                    Arc::clone(&self.db),
-                                ),
-                                {
-                                    move |res| match res {
-                                        Ok(songs) => {
-                                            Message::ReaddSongs(songs)
-                                        }
-
-                                        Err(e) => {
-                                            error!(?e);
-                                            Message::None
-                                        }
-                                    }
-                                },
-                            );
-                            tasks.push(task);
-                        }
-                        ServiceItemKind::Video(video) => {
-                            let task = Task::perform(
-                                videos::add_video(
-                                    vec![video],
-                                    self.video_library.items.clone(),
-                                    Arc::clone(&self.db),
-                                ),
-                                move |res| {
-                                    res.map_or(
-                                        Message::None,
-                                        |videos| {
-                                            Message::ReaddVideos(
-                                                videos,
-                                            )
-                                        },
-                                    )
-                                },
-                            );
-                            tasks.push(task);
-                        }
-                        ServiceItemKind::Image(image) => {
-                            let task = Task::perform(
-                                images::add_image(
-                                    vec![image],
-                                    self.image_library.items.clone(),
-                                    Arc::clone(&self.db),
-                                ),
-                                move |res| {
-                                    res.map_or(
-                                        Message::None,
-                                        |images| {
-                                            Message::ReaddImages(
-                                                images,
-                                            )
-                                        },
-                                    )
-                                },
-                            );
-                            tasks.push(task);
-                        }
-                        ServiceItemKind::Presentation(
-                            presentation,
-                        ) => {
-                            let task = Task::perform(
-                                presentations::add_presentation(
-                                    vec![presentation],
-                                    self.presentation_library
-                                        .items
-                                        .clone(),
-                                    Arc::clone(&self.db),
-                                ),
-                                move |res| {
-                                    res.map_or(
-                                        Message::None,
-                                        |presentations| {
-                                            Message::ReaddPres(
-                                                presentations,
-                                            )
-                                        },
-                                    )
-                                },
-                            );
-                            tasks.push(task);
-                        }
-                        ServiceItemKind::Content(_slide) => todo!(),
-                    }
-                }
-                return Action::Task(
-                    Task::batch(tasks).chain(after_task),
-                );
-            }
+            Message::AddFiles(items) => return self.add_files(items),
         }
         Action::None
     }
@@ -1311,6 +1205,108 @@ impl<'a> Library {
         };
         self.selected_items = None;
         Action::Task(task)
+    }
+
+    fn add_files(&mut self, items: Vec<ServiceItemKind>) -> Action {
+        let mut tasks = Vec::new();
+
+        let videos: Vec<Video> = items
+            .iter()
+            .filter_map(|item| match item {
+                ServiceItemKind::Video(video) => {
+                    Some(video.to_owned())
+                }
+                _ => None,
+            })
+            .collect();
+
+        let task = Task::perform(
+            videos::add_video(
+                videos,
+                self.video_library.items.clone(),
+                Arc::clone(&self.db),
+            ),
+            move |res| {
+                res.map_or(Message::None, |videos| {
+                    Message::ReaddVideos(videos)
+                })
+            },
+        );
+        tasks.push(task);
+
+        let presentations: Vec<Presentation> = items
+            .iter()
+            .filter_map(|item| match item {
+                ServiceItemKind::Presentation(presentation) => {
+                    Some(presentation.to_owned())
+                }
+                _ => None,
+            })
+            .collect();
+
+        let task = Task::perform(
+            presentations::add_presentation(
+                presentations,
+                self.presentation_library.items.clone(),
+                Arc::clone(&self.db),
+            ),
+            move |res| {
+                res.map_or(Message::None, |presentations| {
+                    Message::ReaddPres(presentations)
+                })
+            },
+        );
+        tasks.push(task);
+
+        let images: Vec<Image> = items
+            .iter()
+            .filter_map(|item| match item {
+                ServiceItemKind::Image(image) => {
+                    Some(image.to_owned())
+                }
+                _ => None,
+            })
+            .collect();
+
+        let task = Task::perform(
+            images::add_image(
+                images,
+                self.image_library.items.clone(),
+                Arc::clone(&self.db),
+            ),
+            move |res| {
+                res.map_or(Message::None, |images| {
+                    Message::ReaddImages(images)
+                })
+            },
+        );
+        tasks.push(task);
+
+        let last_item = &items.last();
+
+        let after_task = match last_item {
+            Some(ServiceItemKind::Image(_image)) => {
+                Task::done(Message::OpenItem(Some((
+                    LibraryKind::Image,
+                    self.image_library.items.len() as i32,
+                ))))
+            }
+
+            Some(ServiceItemKind::Video(_image)) => {
+                Task::done(Message::OpenItem(Some((
+                    LibraryKind::Video,
+                    self.video_library.items.len() as i32,
+                ))))
+            }
+            Some(ServiceItemKind::Presentation(_image)) => {
+                Task::done(Message::OpenItem(Some((
+                    LibraryKind::Presentation,
+                    self.presentation_library.items.len() as i32,
+                ))))
+            }
+            _ => Task::none(),
+        };
+        Action::Task(Task::batch(tasks).chain(after_task))
     }
 }
 
