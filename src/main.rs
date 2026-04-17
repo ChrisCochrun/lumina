@@ -233,6 +233,7 @@ enum Message {
     ViewModeSwitch(ViewMode),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ViewMode {
     Grid,
@@ -1503,9 +1504,7 @@ impl cosmic::Application for App {
                 let file = self.file.clone();
                 let file_name = self.file.file_name().expect("Since we are saving we should have given a name by now").to_owned();
                 Task::perform(
-                    async move {
-                        file::save(Arc::clone(&service), file, true)
-                    },
+                    async move { file::save(&service, file, true) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!(
@@ -1591,7 +1590,6 @@ impl cosmic::Application for App {
         let cosmic::cosmic_theme::Spacing {
             space_none,
             space_s,
-            space_m,
             space_l,
             space_xl,
             ..

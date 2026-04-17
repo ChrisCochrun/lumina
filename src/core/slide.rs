@@ -778,7 +778,7 @@ mod test {
         Slide {
             text: "This is frodo".to_string(),
             background: Background::try_from("~/pics/frodo.jpg")
-                .unwrap(),
+                .expect(""),
             font: Some("Quicksand".to_string().into()),
             font_size: 140,
             ..Default::default()
@@ -787,11 +787,11 @@ mod test {
 
     fn test_second_slide() -> Slide {
         Slide {
-            text: "".to_string(),
+            text: String::new(),
             background: Background::try_from(
                 "~/vids/test/camprules2024.mp4",
             )
-            .unwrap(),
+            .expect(""),
             font: Some("Quicksand".to_string().into()),
             ..Default::default()
         }
@@ -801,13 +801,8 @@ mod test {
     fn test_ron_deserialize() {
         let slide = read_to_string("./test_presentation.ron")
             .expect("Problem getting file read");
-        match ron::from_str::<Vec<Slide>>(&slide) {
-            Ok(_s) => {
-                assert!(true)
-            }
-            Err(e) => {
-                assert!(false, "{:?}", e)
-            }
+        if let Err(e) = ron::from_str::<Vec<Slide>>(&slide) {
+            panic!("{e:?}")
         }
     }
 }

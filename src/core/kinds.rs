@@ -145,6 +145,6 @@ impl Display for ParseError {
 mod test {
     #[test]
     pub fn test_kinds() {
-        assert_eq!(true, true)
+        assert_eq!(true, true);
     }
 }

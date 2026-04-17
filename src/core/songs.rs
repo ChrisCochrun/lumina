@@ -759,7 +759,7 @@ pub async fn remove_songs(
 
     let delete = format!(
         "DELETE FROM songs WHERE id IN ({:})",
-        ids.iter().map(|id| id.to_string()).join(", ")
+        ids.iter().map(ToString::to_string).join(", ")
     );
 
     query(&delete)
@@ -1203,21 +1203,16 @@ impl Song {
 
 #[cfg(test)]
 pub mod test {
-    use std::str::FromStr;
-    use std::sync::Arc;
-
-    use crate::ui::text_svg::text_svg_generator_with_cache;
-
     use super::*;
+    use crate::ui::text_svg::text_svg_generator_with_cache;
     use pretty_assertions::{assert_eq, assert_ne};
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use resvg::usvg::fontdb;
-    use sqlx::sqlite::{
-        SqliteConnectOptions, SqliteConnection, SqlitePoolOptions,
-    };
-    use sqlx::{Connection, migrate};
+    use sqlx::migrate;
+    use std::sync::Arc;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     pub fn test_song_lyrics() {
         let mut song = Song::default();
         let mut map = HashMap::new();
@@ -1292,7 +1287,7 @@ From the day
 You saved my soul"
                 .into(),
         );
-        map.insert(VerseName::Blank, "".into());
+        map.insert(VerseName::Blank, String::new());
         song.verse_map = Some(map);
         song.verses = Some(vec![
             VerseName::Other { number: 1 },
@@ -1312,7 +1307,6 @@ You saved my soul"
         ]);
         song.verse_order =
             "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
-                .to_string()
                 .split(' ')
                 .map(|s| Some(s.to_string()))
                 .collect();
@@ -1340,7 +1334,7 @@ You saved my soul"
                 );
             }
             Err(e) => {
-                assert!(false, "{:?}", e)
+                panic!("{e:?}")
             }
         }
     }
@@ -1384,7 +1378,7 @@ You saved my soul"
         let db = Arc::new(add_db().await.expect("ERROR OPENING"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
-        };
+        }
 
         let song_model = Model::new_song_model(Arc::clone(&db)).await;
         let length = song_model.items.len();
@@ -1396,16 +1390,14 @@ You saved my soul"
             if let Ok(song_lyrics) = song.get_lyrics()
                 && let Ok(test_lyrics) = test_song.get_lyrics()
             {
-                assert_eq!(song_lyrics, test_lyrics)
+                assert_eq!(song_lyrics, test_lyrics);
             } else {
-                assert!(false, "lyrics aren't retrieving")
+                panic!("lyrics aren't retrieving")
             }
         } else {
             dbg!(song_model);
-            assert!(
-                false,
-                "Failed to find song in model: Id's of all songs are {:?}",
-                ids
+            panic!(
+                "Failed to find song in model: Id's of all songs are {ids:?}"
             );
         }
     }
@@ -1414,10 +1406,8 @@ You saved my soul"
     fn test_song_slide_speed() {
         let song = test_song();
         let slides = song.to_slides();
-        if let Ok(slides) = slides {
-            assert!(true, "{:?}", slides);
-        } else {
-            assert!(false, "Slides failed");
+        if let Err(e) = slides {
+            panic!("Slides failed: {e}");
         }
     }
 
@@ -1427,19 +1417,19 @@ You saved my soul"
         let db = Arc::new(add_db().await.expect("Error getting db"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
-        };
+        }
         let result = get_song_from_db(7, db).await;
         match result {
             Ok(db_song) => {
                 if let Ok(song_lyrics) = song.get_lyrics()
                     && let Ok(db_lyrics) = db_song.get_lyrics()
                 {
-                    assert_eq!(song_lyrics, db_lyrics)
+                    assert_eq!(song_lyrics, db_lyrics);
                 } else {
-                    assert!(false, "lyrics aren't retrieving")
+                    panic!("lyrics aren't retrieving")
                 }
             }
-            Err(e) => assert!(false, "{e}"),
+            Err(e) => panic!("{e}"),
         }
     }
 
@@ -1448,7 +1438,7 @@ You saved my soul"
         let db = Arc::new(add_db().await.expect("Error getting db"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
-        };
+        }
         let song = test_song();
         let cloned_song = song.clone();
         let mut song_model: Model<Song> = model().await;
@@ -1474,10 +1464,11 @@ You saved my soul"
                 );
                 assert_eq!(db_song.verse_map, cloned_song.verse_map);
             }
-            Err(e) => assert!(false, "{e}"),
+            Err(e) => panic!("{e}"),
         }
     }
 
+    #[must_use]
     pub fn test_song() -> Song {
         let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
         let verse_map: Option<HashMap<VerseName, String>> =
@@ -1507,7 +1498,10 @@ You saved my soul"
 
     #[test]
     fn test_verse_names_and_adding() {
-        let mut song = Song::default();
+        let mut song = Song {
+            verses: Some(Vec::new()),
+            ..Default::default()
+        };
         song.verses = Some(vec![]);
         let name = song.get_next_verse_name();
         assert_eq!(name, VerseName::Verse { number: 1 });

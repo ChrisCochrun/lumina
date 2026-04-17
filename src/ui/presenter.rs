@@ -11,7 +11,7 @@ use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{
     AbsoluteOffset, Direction, Scrollbar, scroll_to,
 };
-use cosmic::iced::widget::{grid, stack};
+use cosmic::iced::widget::stack;
 use cosmic::iced::{
     Background, Border, Color, ContentFit, Font, Length, Point,
     Shadow, Vector,
@@ -20,8 +20,7 @@ use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
     Container, Id, Row, Space, column, container, flex_row, image,
-    menu, mouse_area, popover, responsive, row, scrollable, space,
-    text,
+    menu, mouse_area, popover, responsive, scrollable, space, text,
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
@@ -53,7 +52,7 @@ pub(crate) struct Presenter {
     pub preview_video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
-    sink: (Arc<MixerDeviceSink>, Arc<rodio::Player>),
+    sink: (Arc<MixerDeviceSink>, Arc<Player>),
     hovered_slide: Option<(usize, usize)>,
     hovered_point: Option<Point>,
     scroll_id: Id,
@@ -66,6 +65,7 @@ pub(crate) struct Presenter {
     obs_scenes: Option<Vec<Scene>>,
 }
 
+#[allow(dead_code)]
 pub(crate) enum Action {
     Task(Task<Message>),
     NextSlide,
@@ -75,6 +75,7 @@ pub(crate) enum Action {
 }
 
 #[allow(clippy::large_enum_variant)]
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub(crate) enum Message {
     NextSlide,
@@ -103,39 +104,39 @@ pub(crate) enum Message {
     CloseContextMenu,
 }
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MenuAction {
-    ObsSceneAssign(usize),
-    ObsStartStream,
-    ObsStopStream,
-    // ObsStartRecord,
-    // ObsStopRecord,
-}
+// #[allow(clippy::enum_variant_names)]
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// enum MenuAction {
+//     ObsSceneAssign(usize),
+//     ObsStartStream,
+//     ObsStopStream,
+//     // ObsStartRecord,
+//     // ObsStopRecord,
+// }
 
-impl menu::Action for MenuAction {
-    type Message = Message;
+// impl menu::Action for MenuAction {
+//     type Message = Message;
 
-    fn message(&self) -> Self::Message {
-        match self {
-            Self::ObsSceneAssign(scene) => {
-                Message::AssignObsScene(*scene)
-            }
-            Self::ObsStartStream => Message::AssignSlideAction(
-                slide_actions::Action::Obs {
-                    action: ObsAction::StartStream,
-                },
-            ),
-            Self::ObsStopStream => Message::AssignSlideAction(
-                slide_actions::Action::Obs {
-                    action: ObsAction::StopStream,
-                },
-            ),
-            // Self::ObsStartRecord => todo!(),
-            // Self::ObsStopRecord => todo!(),
-        }
-    }
-}
+//     fn message(&self) -> Self::Message {
+//         match self {
+//             Self::ObsSceneAssign(scene) => {
+//                 Message::AssignObsScene(*scene)
+//             }
+//             Self::ObsStartStream => Message::AssignSlideAction(
+//                 slide_actions::Action::Obs {
+//                     action: ObsAction::StartStream,
+//                 },
+//             ),
+//             Self::ObsStopStream => Message::AssignSlideAction(
+//                 slide_actions::Action::Obs {
+//                     action: ObsAction::StopStream,
+//                 },
+//             ),
+//             // Self::ObsStartRecord => todo!(),
+//             // Self::ObsStopRecord => todo!(),
+//         }
+//     }
+// }
 
 impl Presenter {
     pub fn with_items(items: Arc<Vec<ServiceItem>>) -> Self {
@@ -226,7 +227,7 @@ impl Presenter {
                     rodio::DeviceSinkBuilder::open_default_sink()
                         .expect("Can't open default rodio stream");
                 let player = Arc::new(rodio::Player::connect_new(
-                    &stream_handle.mixer(),
+                    stream_handle.mixer(),
                 ));
                 (Arc::new(stream_handle), player)
             },
@@ -267,10 +268,8 @@ impl Presenter {
                         self.current_item,
                         self.current_slide_index + 1,
                     ));
-                } else {
-                    return Action::None;
                 }
-                // return Action::NextSlide;
+                return Action::None;
             }
             Message::PrevSlide => {
                 if self.current_item == 0
@@ -284,14 +283,12 @@ impl Presenter {
                         target_item,
                         last_slide,
                     ));
-                } else {
-                    let target_slide = self.current_slide_index - 1;
-                    return self.update(Message::ActivateSlide(
-                        self.current_item,
-                        target_slide,
-                    ));
                 }
-                // return Action::PrevSlide;
+                let target_slide = self.current_slide_index - 1;
+                return self.update(Message::ActivateSlide(
+                    self.current_item,
+                    target_slide,
+                ));
             }
             Message::ClickSlide(item_index, slide_index) => {
                 return Action::ChangeSlide(item_index, slide_index);
@@ -673,7 +670,6 @@ impl Presenter {
             space_none,
             space_xs,
             space_s,
-            space_m,
             space_l,
             ..
         } = theme::spacing();
@@ -1242,7 +1238,6 @@ mod test {
     use crate::core::songs::{Song, VerseName};
 
     use super::*;
-    use miette::Result;
     use pretty_assertions::assert_eq;
 
     #[test]

@@ -388,7 +388,7 @@ pub async fn remove_presentations(
 
     let delete = format!(
         "DELETE FROM presentations WHERE id IN ({:})",
-        ids.iter().map(|id| id.to_string()).join(", ")
+        ids.iter().map(ToString::to_string).join(", ")
     );
 
     query(&delete)
@@ -540,7 +540,7 @@ mod test {
     #[test]
     pub fn test_pres() {
         let pres = Presentation::new();
-        assert_eq!(pres.get_kind(), &PresKind::Generic)
+        assert_eq!(pres.get_kind(), &PresKind::Generic);
     }
 
     async fn add_db() -> Result<SqlitePool> {
@@ -554,7 +554,7 @@ mod test {
             items: vec![],
             kind: LibraryKind::Presentation,
         };
-        let db = Arc::new(add_db().await.unwrap());
+        let db = Arc::new(add_db().await.expect("Getting db error"));
         presentation_model.load_from_db(db).await;
         if let Some(presentation) =
             presentation_model.find(|p| p.id == 4)
@@ -562,7 +562,7 @@ mod test {
             let test_presentation = test_presentation();
             assert_eq!(&test_presentation, presentation);
         } else {
-            assert!(false);
+            panic!();
         }
     }
 }

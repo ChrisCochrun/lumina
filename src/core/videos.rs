@@ -9,11 +9,11 @@ use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{Execute, SqliteConnection, SqlitePool, query, query_as};
+use sqlx::{SqliteConnection, SqlitePool, query, query_as};
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(
     Clone, Debug, Default, PartialEq, Serialize, Deserialize,
@@ -234,7 +234,7 @@ pub async fn remove_videos(
 
     let delete = format!(
         "DELETE FROM videos WHERE id IN ({:})",
-        ids.iter().map(|id| id.to_string()).join(", ")
+        ids.iter().map(ToString::to_string).join(", ")
     );
 
     query(&delete)
@@ -387,11 +387,9 @@ mod test {
                     video_model.find(|v| v.id == 0).expect("")
                 );
             }
-            Err(e) => assert!(
-                false,
-                "There was an error adding the video: {:?}",
-                e
-            ),
+            Err(e) => {
+                panic!("There was an error adding the video: {e}",)
+            }
         }
     }
 

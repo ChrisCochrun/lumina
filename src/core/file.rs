@@ -14,7 +14,7 @@ use zstd::{Decoder, Encoder};
 
 #[allow(clippy::too_many_lines)]
 pub fn save(
-    list: Arc<Vec<ServiceItem>>,
+    list: &Arc<Vec<ServiceItem>>,
     path: impl AsRef<Path>,
     overwrite: bool,
 ) -> Result<()> {
@@ -133,7 +133,7 @@ pub fn save(
             if let Some(svg) = &slide.text_svg
                 && let Some(path) = &svg.path
             {
-                append_file(path.to_path_buf())?;
+                append_file(path.clone())?;
             }
         }
     }
@@ -325,7 +325,7 @@ mod test {
     fn test_song() -> Song {
         let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
         let verse_map: Option<HashMap<VerseName, String>> =
-            ron::from_str(&lyrics).unwrap();
+            ron::from_str(&lyrics).expect("");
         Song {
             id: 7,
             title: "Death Was Arrested".to_string(),
@@ -336,7 +336,7 @@ mod test {
             ccli: None,
             audio: Some("/home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
-            background: Some(Background::try_from("/home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
+            background: Some(Background::try_from("/home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").expect("")),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: None,
             font_size: Some(120),
@@ -358,20 +358,13 @@ mod test {
         let fontdb = Arc::new(fontdb);
         let slides = song
             .to_slides()
-            .unwrap()
+            .expect("")
             .into_par_iter()
             .map(|slide| {
-                text_svg_generator(
-                    slide.clone(),
-                    &Arc::clone(&fontdb),
-                )
-                .map_or_else(
-                    |e| {
-                        assert!(false, "Couldn't create svg: {e}");
-                        slide
-                    },
-                    |slide| slide,
-                )
+                text_svg_generator(slide, &Arc::clone(&fontdb))
+                    .unwrap_or_else(|e| {
+                        panic!("Couldn't create svg: {e}");
+                    })
             })
             .collect::<Vec<Slide>>();
         let items = vec![
@@ -387,7 +380,7 @@ mod test {
                 kind: ServiceItemKind::Song(song),
                 id: 1,
                 title: "Death was Arrested".into(),
-                slides: slides,
+                slides,
             },
         ];
         items
@@ -400,7 +393,7 @@ mod test {
         let result = load(&path);
         match result {
             Ok(items) => {
-                assert!(items.len() > 0);
+                assert!(!items.is_empty());
                 // assert_eq!(items, get_items());
                 let cache_dir = cache_dir();
                 assert!(fs::read_dir(&cache_dir).is_ok());
@@ -417,21 +410,21 @@ mod test {
         }
     }
 
-    fn find_svgs(items: &Vec<ServiceItem>) -> Result<(), String> {
+    fn find_svgs(items: &[ServiceItem]) -> Result<(), String> {
         let cache_dir = cache_dir();
         items.iter().try_for_each(|item| {
             if let ServiceItemKind::Song(..) = item.kind {
                 item.slides.iter().try_for_each(|slide| {
-                    slide.text_svg.as_ref().map_or(Err(String::from("There is no TextSvg for this song")), |text_svg| {
+                    slide.text_svg.as_ref().map_or_else(|| Err(String::from("There is no TextSvg for this song")), |text_svg| {
 
                         if text_svg.handle.is_none() {
                             return Err(String::from("There is no handle in this song's TextSvg"));
-                        };
+                        }
 
-                        text_svg.path.as_ref().map_or(Err(String::from("There is no path in this song's TextSvg")), |path| {
+                        text_svg.path.as_ref().map_or_else(|| Err(String::from("There is no path in this song's TextSvg")), |path| {
                             if path.exists() {
                                 let mut path = path.clone();
-                                if path.metadata().unwrap().len() < 15000 {
+                                if path.metadata().expect("").len() < 15000 {
                                     return Err(String::from("SVG text is too small, maybe the svg didn't generate properly"))
                                 }
                                 if path.pop() && path == cache_dir {
@@ -452,20 +445,20 @@ mod test {
     }
 
     // checks to make sure all paths in slides and items point to cache_dir
-    fn find_paths(items: &Vec<ServiceItem>) -> bool {
+    fn find_paths(items: &[ServiceItem]) -> bool {
         let cache_dir = cache_dir();
         items.iter().all(|item| {
             match &item.kind {
                 ServiceItemKind::Song(song) => {
-                    if let Some(bg) = &song.background {
-                        if !bg.path.starts_with(&cache_dir) {
-                            return false;
-                        }
+                    if let Some(bg) = &song.background
+                        && !bg.path.starts_with(&cache_dir)
+                    {
+                        return false;
                     }
-                    if let Some(audio) = &song.audio {
-                        if !audio.starts_with(&cache_dir) {
-                            return false;
-                        }
+                    if let Some(audio) = &song.audio
+                        && !audio.starts_with(&cache_dir)
+                    {
+                        return false;
                     }
                 }
                 ServiceItemKind::Video(video) => {
@@ -489,9 +482,10 @@ mod test {
                 if !slide.background().path.starts_with(&cache_dir) {
                     return false;
                 }
-                if !slide.audio().map_or(true, |audio| {
-                    audio.starts_with(&cache_dir)
-                }) {
+                if !slide
+                    .audio()
+                    .is_none_or(|audio| audio.starts_with(&cache_dir))
+                {
                     return false;
                 }
             }
@@ -500,7 +494,7 @@ mod test {
     }
 
     fn cache_dir() -> PathBuf {
-        let mut cache_dir = dirs::cache_dir().unwrap();
+        let mut cache_dir = dirs::cache_dir().expect("");
         cache_dir.push("lumina");
         cache_dir.push("cached_save_files");
         cache_dir.push("test");
@@ -511,22 +505,19 @@ mod test {
     fn test_save() {
         let path = PathBuf::from("./test.pres");
         let list = get_items();
-        match save(Arc::new(list), &path, true) {
-            Ok(_) => {
+        match save(&Arc::new(list), &path, true) {
+            Ok(()) => {
                 assert!(path.is_file());
                 let Ok(file) = fs::File::open(path) else {
-                    return assert!(false, "couldn't open file");
+                    panic!("couldn't open file");
                 };
                 let Ok(size) = file.metadata().map(|data| data.len())
                 else {
-                    return assert!(
-                        false,
-                        "couldn't get file metadata"
-                    );
+                    panic!("couldn't get file metadata");
                 };
                 assert!(size > 0);
             }
-            Err(e) => assert!(false, "{e}"),
+            Err(e) => panic!("{e}"),
         }
     }
 }

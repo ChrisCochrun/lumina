@@ -13,8 +13,8 @@ use cosmic::widget::menu::{self, Action as MenuAction};
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     Container, DndSource, Space, button, container, context_menu,
-    divider, dnd_destination, icon, mouse_area, responsive, row,
-    scrollable, text, text_input,
+    divider, dnd_destination, icon, mouse_area, row, scrollable,
+    text, text_input,
 };
 use cosmic::{Element, Task, theme};
 use itertools::Itertools;
@@ -157,21 +157,19 @@ impl<'a> Library {
                     LibraryKind::Song => self
                         .song_library
                         .get_item(index)
-                        .map(|song| song.to_service_item()),
+                        .map(Content::to_service_item),
                     LibraryKind::Video => self
                         .video_library
                         .get_item(index)
-                        .map(|video| video.to_service_item()),
+                        .map(Content::to_service_item),
                     LibraryKind::Image => self
                         .image_library
                         .get_item(index)
-                        .map(|image| image.to_service_item()),
+                        .map(Content::to_service_item),
                     LibraryKind::Presentation => self
                         .presentation_library
                         .get_item(index)
-                        .map(|presentation| {
-                            presentation.to_service_item()
-                        }),
+                        .map(Content::to_service_item),
                 };
                 if let Some(item) = item {
                     return Action::ToService(item);
@@ -842,18 +840,17 @@ impl<'a> Library {
         let cosmic::cosmic_theme::Spacing {
             space_xxs, space_s, ..
         } = theme::spacing();
-        let text = Container::new(responsive(|size| {
+        let text = Container::new(
             text::heading(item.title())
                 .ellipsize(Ellipsize::End(
                     EllipsizeHeightLimit::Lines(1),
                 ))
                 .center()
-                .wrapping(textm::Wrapping::None)
-                .into()
-        }))
+                .wrapping(textm::Wrapping::None),
+        )
         .center_y(20)
         .center_x(Length::Fill);
-        let subtext = container(responsive(move |size| {
+        let subtext = container({
             let color: Color = if item.background().is_some() {
                 if let Some(items) = &self.selected_items
                     && items.contains(&(
@@ -890,8 +887,7 @@ impl<'a> Library {
                 .center()
                 .wrapping(textm::Wrapping::None)
                 .class(color)
-                .into()
-        }))
+        })
         .center_y(20)
         .center_x(Length::Fill);
 
@@ -1066,8 +1062,12 @@ impl<'a> Library {
         };
         items.sort_by_key(|(_, index)| *index);
         let ids: Vec<usize> = items
-            .into_iter()
-            .map(|(_, id)| id.to_owned() as usize)
+            .iter_mut()
+            .map(|(_, id)| {
+                id.to_owned()
+                    .try_into()
+                    .expect("id should not get this high")
+            })
             .dedup()
             .collect();
         debug!(?ids);
@@ -1263,9 +1263,7 @@ impl<'a> Library {
             }
         }
 
-        if videos.is_empty() {
-            ();
-        } else {
+        if !videos.is_empty() {
             tasks.push(Task::perform(
                 videos::add_video(
                     videos,
@@ -1280,9 +1278,7 @@ impl<'a> Library {
             ));
         }
 
-        if presentations.is_empty() {
-            ();
-        } else {
+        if !presentations.is_empty() {
             tasks.push(Task::perform(
                 presentations::add_presentation(
                     presentations,
@@ -1297,9 +1293,7 @@ impl<'a> Library {
             ));
         }
 
-        if images.is_empty() {
-            ();
-        } else {
+        if !images.is_empty() {
             tasks.push(Task::perform(
                 images::add_image(
                     images,
@@ -1413,7 +1407,7 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::songs::test::{add_db, fill_db, test_song};
+    use crate::core::songs::test::{add_db, fill_db};
     use pretty_assertions::assert_eq;
 
     #[tokio::test]

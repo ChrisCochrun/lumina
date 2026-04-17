@@ -10,17 +10,13 @@ use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::widget::tree;
 use cosmic::iced::font::{Style, Weight};
-use cosmic::iced::futures::channel::mpsc::{
-    UnboundedReceiver, unbounded,
-};
-use cosmic::iced::futures::{SinkExt, StreamExt, TryStreamExt};
 use cosmic::iced::widget::scrollable::{
     self as iced_scrollable, AbsoluteOffset, Direction, Scrollbar,
 };
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::{
     Background as ContainerBackground, Border, Color, Length,
-    Padding, Shadow, Vector, color, futures, task,
+    Padding, Shadow, Vector, color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::grid::{self};
@@ -37,7 +33,6 @@ use dirs::font_dir;
 use fontdb;
 use iced_video_player::Video;
 use itertools::Itertools;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, error};
 
 use crate::core::service_items::ServiceTrait;
@@ -1871,63 +1866,16 @@ impl SongEditor {
     // fn update_verse_slide_subscription(&self)
 
     fn update_song(&mut self, song: &Song) -> Task<Message> {
-        // use cosmic::iced_futures::futures::stream;
-        // use cosmic::iced_futures::futures::{Stream, StreamExt};
-        // use cosmic::iced_futures::stream::channel;
-        // use cosmic::task::stream;
-        let font_db = Arc::clone(&self.font_db);
-        // need to test to see which of these methods yields faster
-        // text_svg slide creation. There is a small thought in me that
-        // believes it's better for the user to see the slides being added
-        // one by one, rather than all at once, but that isn't how
-        // the task appears to happen.
-
-        // let slides = song.to_slides().ok();
-        // let mut task = vec![];
-        // if let Some(slides) = slides {
-        //     for (index, mut slide) in slides.into_iter().enumerate() {
-        //         let font_db = Arc::clone(&font_db);
-        //         task.push(Task::perform(
-        //             async move {
-        //                 text_svg::text_svg_generator(
-        //                     &mut slide, font_db,
-        //                 );
-        //                 (index, slide)
-        //             },
-        //             Message::UpdateSlide,
-        //         ));
-        //     }
-        // }
-
         // I think this implementation is faster
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
+            let font_db = Arc::clone(&self.font_db);
             if let Some(handle) = &self.update_slide_handle {
                 handle.abort();
             }
-            let _size = slides.len();
-
-            // let (task, handle) = stream(stream::iter(
-            //     slides.into_iter().enumerate().map(
-            //         move |(index, mut slide)| {
-            //             text_svg::text_svg_generator(
-            //                 &mut slide,
-            //                 Arc::clone(&font_db),
-            //             );
-            //             (index, slide)
-            //         },
-            //     ),
-            // ))
-            // .then(|(index, slide)| {
-            //     Task::done(Message::UpdateSlide((index, slide)))
-            // })
-            // .abortable();
-
-            // let (mut tx, rx) = unbounded();
 
             let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
-            let font_db = self.font_db.clone();
             std::thread::spawn(move || {
                 for (index, slide) in slides.into_iter().enumerate() {
                     let slide = text_svg::text_svg_generator(

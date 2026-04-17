@@ -200,7 +200,7 @@ pub async fn remove_images(
 
     let delete = format!(
         "DELETE FROM images WHERE id IN ({:})",
-        ids.iter().map(|id| id.to_string()).join(", ")
+        ids.iter().map(ToString::to_string).join(", ")
     );
 
     query(&delete)
@@ -237,7 +237,7 @@ pub async fn add_image(
         let path = image
             .path
             .to_str()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .unwrap_or_default();
 
         query!(
@@ -316,13 +316,18 @@ mod test {
             items: vec![],
             kind: LibraryKind::Image,
         };
-        let mut db = add_db().await.unwrap().acquire().await.unwrap();
+        let mut db = add_db()
+            .await
+            .expect("Error getting db")
+            .acquire()
+            .await
+            .expect("");
         image_model.load_from_db(&mut db).await;
         if let Some(image) = image_model.find(|i| i.id == 23) {
             let test_image = test_image("no-i-dont-think.gif".into());
             assert_eq!(test_image.title, image.title);
         } else {
-            assert!(false);
+            panic!();
         }
     }
 
@@ -336,21 +341,19 @@ mod test {
         let result = image_model.add_item(image.clone());
         let new_image = test_image("A newer image".into());
         match result {
-            Ok(_) => {
+            Ok(()) => {
                 assert_eq!(
                     &image,
-                    image_model.find(|i| i.id == 0).unwrap()
+                    image_model.find(|i| i.id == 0).expect("")
                 );
                 assert_ne!(
                     &new_image,
-                    image_model.find(|i| i.id == 0).unwrap()
+                    image_model.find(|i| i.id == 0).expect("")
                 );
             }
-            Err(e) => assert!(
-                false,
-                "There was an error adding the image: {:?}",
-                e
-            ),
+            Err(e) => {
+                panic!("There was an error adding the image: {e:?}",)
+            }
         }
     }
 

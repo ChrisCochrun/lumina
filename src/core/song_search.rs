@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[allow(unused)]
 use crate::core::settings;
 use crate::core::songs::{Song, VerseName};
 use itertools::Itertools;
@@ -60,6 +61,8 @@ impl From<OnlineSong> for Song {
     }
 }
 
+#[allow(unused)]
+#[allow(clippy::redundant_closure_for_method_calls)]
 fn parse_genius_lyrics(
     lyrics: &str,
 ) -> Result<HashMap<VerseName, String>> {
@@ -91,24 +94,29 @@ fn parse_genius_lyrics(
     Ok(map)
 }
 
+#[allow(unused)]
 fn ident(input: &str) -> IResult<&str, &str> {
     preceded(alt((tag("\n\n"), space0)), any).parse(input)
 }
 
+#[allow(unused)]
 fn any(input: &str) -> IResult<&str, &str> {
     take_until("\n\n").parse(input)
 }
 
+#[allow(unused)]
 fn block(input: &str) -> IResult<&str, &str> {
     terminated(ident, pair(newline, newline)).parse(input)
 }
 
+#[allow(unused)]
 fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
     let (input, verse_name) = parse_verse_name.parse(chunk)?;
     let lyrics = input.trim().to_string();
     Ok((input, (verse_name, lyrics)))
 }
 
+#[allow(unused)]
 fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     let (input, (name, _, num, _, _)) = delimited(
         (tag("["), space0),
@@ -140,6 +148,7 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     Ok((input, verse_name))
 }
 
+#[allow(unused)]
 fn parse_verse_lyrics(lyrics: &str) -> IResult<&str, String> {
     todo!()
 }
@@ -375,7 +384,7 @@ mod test {
         .map_err(|e| e.to_string())?;
 
         assert!(
-            hits.iter().find(|hit| **hit == song).is_some(),
+            hits.contains(&song),
             "There was no song that matched on Genius"
         );
 
@@ -387,13 +396,13 @@ mod test {
                 .await
                 .map_err(|e| e.to_string())?;
             dbg!(&new_song);
-            if !new_song.lyrics.starts_with("[Verse 1]") {
-                assert!(new_song.lyrics.len() > 10);
-            } else {
+            if new_song.lyrics.starts_with("[Verse 1]") {
                 assert!(new_song.lyrics.contains("[Verse 2]"));
                 if !new_song.lyrics.contains("[Chorus]") {
-                    assert!(new_song.lyrics.contains("[Chorus 1]"))
+                    assert!(new_song.lyrics.contains("[Chorus 1]"));
                 }
+            } else {
+                assert!(new_song.lyrics.len() > 10);
             }
             let mapped_song = Song::from(new_song);
             dbg!(&mapped_song);
@@ -403,7 +412,7 @@ mod test {
                     .as_ref()
                     .is_some_and(|map| map.len() > 3)
             );
-            assert!(Some(HashMap::new()) == mapped_song.verse_map)
+            assert!(Some(HashMap::new()) == mapped_song.verse_map);
         }
 
         Ok(())
@@ -428,7 +437,7 @@ mod test {
             song.author == "North Point InsideOut"
         }) {
             assert_eq!(&song, first);
-            online_song_to_song(song)?
+            online_song_to_song(song)?;
         }
         Ok(())
     }
@@ -438,15 +447,14 @@ mod test {
         if let Some(verse_map) = song.verse_map.as_ref() {
             if verse_map.len() < 2 {
                 return Err(format!(
-                    "VerseMap wasn't built right likely: {:?}",
-                    song
+                    "VerseMap wasn't built right likely: {song:?}",
                 ));
             }
         } else {
             return Err(String::from(
                 "There is no VerseMap in this song",
             ));
-        };
+        }
         Ok(())
     }
 
@@ -464,11 +472,12 @@ mod test {
                     ]
                 );
             }
-            Err(e) => assert!(false, "{}", e),
+            Err(e) => panic!("{e}"),
         }
     }
 
     #[test]
+    #[allow(clippy::redundant_closure_for_method_calls)]
     fn test_parse_verse_name() -> Result<()> {
         let names = [
             "[ Chorus ]",
@@ -484,7 +493,7 @@ mod test {
             "[ Chorus 2 ]",
         ];
         for name in names {
-            let (input, parsed) = parse_verse_name
+            let (_input, parsed) = parse_verse_name
                 .parse(name)
                 .map_err(|e| e.to_owned())
                 .into_diagnostic()?;
@@ -493,6 +502,7 @@ mod test {
         Ok(())
     }
 
+    #[allow(unreachable_code)]
     #[test]
     fn test_parse_song() -> Result<()> {
         let song = r#"[Verse 1]
@@ -548,7 +558,7 @@ I'm gonna sing
 Aw man, that was good"#;
         let map = parse_genius_lyrics(song)?;
         dbg!(map);
-        assert!(false);
+        panic!();
         Ok(())
     }
 
@@ -565,7 +575,7 @@ God is faithful, hallelujah (God is so good)
 Lord, I'm gonna sing (Sing it, Dave)
 
 "#;
-        let thing = block.parse(chorus).into_diagnostic()?;
+        let _thing = block.parse(chorus).into_diagnostic()?;
         Ok(())
     }
 }
