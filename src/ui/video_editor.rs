@@ -147,7 +147,7 @@ impl VideoEditor {
                 let video_track = slider(
                     0.0..=video.duration().as_secs_f64(),
                     video.position().as_secs_f64(),
-                    |pos| Message::VideoPos(pos),
+                    Message::VideoPos,
                 )
                 .step(0.1)
                 .width(Length::Fill)

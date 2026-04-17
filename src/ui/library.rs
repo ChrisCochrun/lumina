@@ -175,7 +175,7 @@ impl<'a> Library {
                 };
                 if let Some(item) = item {
                     return Action::ToService(item);
-                };
+                }
             }
             Message::DeleteItem => {
                 return self.delete_items();
@@ -1207,7 +1207,7 @@ impl<'a> Library {
         Action::Task(task)
     }
 
-    fn add_files(&mut self, items: Vec<ServiceItemKind>) -> Action {
+    fn add_files(&self, items: Vec<ServiceItemKind>) -> Action {
         let mut tasks = Vec::new();
         let last_item = &items.last();
 
@@ -1215,20 +1215,34 @@ impl<'a> Library {
             Some(ServiceItemKind::Image(_image)) => {
                 Task::done(Message::OpenItem(Some((
                     LibraryKind::Image,
-                    self.image_library.items.len() as i32,
+                    self.image_library
+                        .items
+                        .len()
+                        .try_into()
+                        .expect("too many items in image_library"),
                 ))))
             }
 
             Some(ServiceItemKind::Video(_image)) => {
                 Task::done(Message::OpenItem(Some((
                     LibraryKind::Video,
-                    self.video_library.items.len() as i32,
+                    self.video_library
+                        .items
+                        .len()
+                        .try_into()
+                        .expect("too many items in video_library"),
                 ))))
             }
             Some(ServiceItemKind::Presentation(_image)) => {
                 Task::done(Message::OpenItem(Some((
                     LibraryKind::Presentation,
-                    self.presentation_library.items.len() as i32,
+                    self.presentation_library
+                        .items
+                        .len()
+                        .try_into()
+                        .expect(
+                            "too many items in presentation_library",
+                        ),
                 ))))
             }
             _ => Task::none(),
@@ -1243,14 +1257,14 @@ impl<'a> Library {
                 ServiceItemKind::Video(video) => videos.push(video),
                 ServiceItemKind::Image(image) => images.push(image),
                 ServiceItemKind::Presentation(presentation) => {
-                    presentations.push(presentation)
+                    presentations.push(presentation);
                 }
                 _ => (),
             }
         }
 
         if videos.is_empty() {
-            ()
+            ();
         } else {
             tasks.push(Task::perform(
                 videos::add_video(
@@ -1267,7 +1281,7 @@ impl<'a> Library {
         }
 
         if presentations.is_empty() {
-            ()
+            ();
         } else {
             tasks.push(Task::perform(
                 presentations::add_presentation(
@@ -1284,7 +1298,7 @@ impl<'a> Library {
         }
 
         if images.is_empty() {
-            ()
+            ();
         } else {
             tasks.push(Task::perform(
                 images::add_image(

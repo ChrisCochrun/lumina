@@ -638,10 +638,10 @@ mod tests {
                         slide
                             .text_svg
                             .is_some_and(|svg| svg.handle.is_some())
-                    )
+                    );
                 },
-                Err(e) => assert!(false, "There was an issue creating the TextSvg: {e}"),
-            };
+                Err(e) => panic!("There was an issue creating the TextSvg: {e}"),
+            }
         });
     }
 }

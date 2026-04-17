@@ -582,13 +582,12 @@ impl Presenter {
                 }
             }
             Message::VideoFrame => {
-                if let Some(video) = &self.preview_video {
-                    if self.video_position > 0.0
-                        && video.position().as_secs_f32() != 0.0
-                    {
-                        self.video_position =
-                            video.position().as_secs_f32();
-                    }
+                if let Some(video) = &self.preview_video
+                    && self.video_position > 0.0
+                    && video.position().as_secs_f32() != 0.0
+                {
+                    self.video_position =
+                        video.position().as_secs_f32();
                 }
             }
             Message::MissingPlugin(element) => {
@@ -1007,7 +1006,7 @@ impl Presenter {
                 );
                 menu_items.push(divider::horizontal::light().into());
                 for scene in scenes {
-                    menu_items.push(scene.into())
+                    menu_items.push(scene.into());
                 }
             }
 
@@ -1031,52 +1030,41 @@ impl Presenter {
     }
 
     fn reset_video(&mut self) {
-        match self.current_slide.background().kind {
-            BackgroundKind::Video => {
-                let path = &self.current_slide.background().path;
-                if path.exists() {
-                    let url = Url::from_file_path(path)
-                        .expect("There should be a video file here");
-                    let result = gst_video::create_video(&url, 15);
-                    match result {
-                        Ok(mut v) => {
-                            v.set_looping(
-                                self.current_slide.video_loop(),
-                            );
-                            v.set_muted(true);
-                            self.preview_video = Some(v);
-                        }
-                        Err(e) => {
-                            error!(
-                                "Had an error creating the video object: {e}"
-                            );
-                            self.preview_video = None;
-                        }
-                    }
-                    let result = gst_video::create_video(&url, 60);
-                    match result {
-                        Ok(mut v) => {
-                            v.set_looping(
-                                self.current_slide.video_loop(),
-                            );
-                            self.presentation_video = Some(v);
-                        }
-                        Err(e) => {
-                            error!(
-                                "Had an error creating the video object: {e}"
-                            );
-                            self.presentation_video = None;
-                        }
-                    }
-                } else {
+        if self.current_slide.background().kind
+            == BackgroundKind::Video
+            && let path = &self.current_slide.background().path
+            && path.exists()
+        {
+            let url = Url::from_file_path(path)
+                .expect("There should be a video file here");
+            match gst_video::create_video(&url, 15) {
+                Ok(mut v) => {
+                    v.set_looping(self.current_slide.video_loop());
+                    v.set_muted(true);
+                    self.preview_video = Some(v);
+                }
+                Err(e) => {
+                    error!(
+                        "Had an error creating the video object: {e}"
+                    );
                     self.preview_video = None;
+                }
+            }
+            match gst_video::create_video(&url, 60) {
+                Ok(mut v) => {
+                    v.set_looping(self.current_slide.video_loop());
+                    self.presentation_video = Some(v);
+                }
+                Err(e) => {
+                    error!(
+                        "Had an error creating the video object: {e}"
+                    );
                     self.presentation_video = None;
                 }
             }
-            _ => {
-                self.preview_video = None;
-                self.presentation_video = None;
-            }
+        } else {
+            self.preview_video = None;
+            self.presentation_video = None;
         }
     }
 
@@ -1258,7 +1246,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_next_slide() -> Result<()> {
+    fn test_next_slide() {
         let service = test_service();
         let mut presenter = Presenter::with_items(Arc::new(service));
         presenter.update(Message::NextSlide);
@@ -1280,8 +1268,6 @@ mod test {
         presenter.update(Message::PrevSlide);
         assert_eq!(presenter.current_item, 0);
         assert_eq!(presenter.current_slide_index, 0);
-
-        Ok(())
     }
 
     fn test_service() -> Vec<ServiceItem> {
@@ -1290,11 +1276,11 @@ mod test {
         let video = test_video("Christ Nutshell".into());
         let presentation = test_presentation();
         let mut video_item = ServiceItem::from(&video);
-        video_item.slides = video_item.to_slides().unwrap();
+        video_item.slides = video_item.to_slides().expect("");
         let mut song_item = ServiceItem::from(&song);
-        song_item.slides = song_item.to_slides().unwrap();
+        song_item.slides = song_item.to_slides().expect("");
         let mut pres_item = ServiceItem::from(&presentation);
-        pres_item.slides = pres_item.to_slides().unwrap();
+        pres_item.slides = pres_item.to_slides().expect("");
         service.push(video_item);
         service.push(song_item);
         service.push(pres_item);
@@ -1314,7 +1300,7 @@ mod test {
     pub fn test_song() -> Song {
         let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
         let verse_map: Option<HashMap<VerseName, String>> =
-            ron::from_str(&lyrics).unwrap();
+            ron::from_str(&lyrics).expect("");
         Song {
             id: 7,
             title: "Death Was Arrested".to_string(),
@@ -1325,7 +1311,7 @@ mod test {
             ccli: None,
             audio: Some("file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
-            background: Some(crate::core::slide::Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
+            background: Some(crate::core::slide::Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").expect("")),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(80),

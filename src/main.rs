@@ -1347,8 +1347,7 @@ impl cosmic::Application for App {
                         .unwrap_or(slide)
                     })
                     .collect();
-                return self
-                    .update(Message::AddServiceItem(index, item));
+                self.update(Message::AddServiceItem(index, item))
             }
             Message::AddServiceItemsFiles(index, items) => {
                 self.hovered_dnd = None;
@@ -1505,7 +1504,7 @@ impl cosmic::Application for App {
                 let file_name = self.file.file_name().expect("Since we are saving we should have given a name by now").to_owned();
                 Task::perform(
                     async move {
-                        file::save(service.to_owned(), file, true)
+                        file::save(Arc::clone(&service), file, true)
                     },
                     move |res| match res {
                         Ok(()) => {
@@ -1774,7 +1773,7 @@ impl cosmic::Application for App {
             ViewMode::Grid => row![
                 self.presenter
                     .preview_grid()
-                    .map(|m| Message::Present(m))
+                    .map(Message::Present)
                     .apply(container)
                     .width(Length::FillPortion(2)),
                 column![presenter_controls, space::vertical()]

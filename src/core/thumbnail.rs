@@ -98,8 +98,7 @@ mod test {
             Ok(_o) => assert!(screenshot.exists()),
             Err(e) => debug_assert!(
                 false,
-                "There was an error in the runtime future. {:?}",
-                e
+                "There was an error in the runtime future. {e}",
             ),
         }
     }

@@ -357,13 +357,13 @@ mod test {
             items: vec![],
             kind: LibraryKind::Video,
         };
-        let db = Arc::new(add_db().await.unwrap());
+        let db = Arc::new(add_db().await.expect(""));
         video_model.load_from_db(db).await;
         if let Some(video) = video_model.find(|v| v.id == 2) {
             let test_video = test_video("christ-our-hope.mp4".into());
             assert_eq!(test_video.title, video.title);
         } else {
-            assert!(false);
+            panic!();
         }
     }
 
@@ -377,14 +377,14 @@ mod test {
         let result = video_model.add_item(video.clone());
         let new_video = test_video("A newer video".into());
         match result {
-            Ok(_) => {
+            Ok(()) => {
                 assert_eq!(
                     &video,
-                    video_model.find(|v| v.id == 0).unwrap()
+                    video_model.find(|v| v.id == 0).expect("")
                 );
                 assert_ne!(
                     &new_video,
-                    video_model.find(|v| v.id == 0).unwrap()
+                    video_model.find(|v| v.id == 0).expect("")
                 );
             }
             Err(e) => assert!(

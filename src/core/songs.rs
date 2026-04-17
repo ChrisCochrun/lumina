@@ -1345,6 +1345,7 @@ You saved my soul"
         }
     }
 
+    #[allow(clippy::unused_async)]
     async fn model() -> Model<Song> {
         let song_model: Model<Song> = Model {
             items: vec![],
@@ -1423,7 +1424,7 @@ You saved my soul"
     #[tokio::test]
     async fn test_song_from_db() {
         let song = test_song();
-        let db = Arc::new(add_db().await.unwrap());
+        let db = Arc::new(add_db().await.expect("Error getting db"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
         };
@@ -1444,7 +1445,7 @@ You saved my soul"
 
     #[tokio::test]
     async fn test_update() {
-        let db = Arc::new(add_db().await.unwrap());
+        let db = Arc::new(add_db().await.expect("Error getting db"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {
             panic!("grrr {e}")
         };
@@ -1460,7 +1461,9 @@ You saved my soul"
             .await
         {
             Ok(_) => {
-                let db_song = get_song_from_db(7, db).await.unwrap();
+                let db_song = get_song_from_db(7, db)
+                    .await
+                    .expect("Error getting song from db");
                 // these are the important tests to check
                 // lyrics will be in the wrong order since serialization
                 // can sometimes change the order of the verse_map
@@ -1478,7 +1481,8 @@ You saved my soul"
     pub fn test_song() -> Song {
         let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
         let verse_map: Option<HashMap<VerseName, String>> =
-            ron::from_str(&lyrics).unwrap();
+            ron::from_str(&lyrics)
+                .expect("Error creating lyrics object from string");
         Song {
             id: 7,
             title: "Death Was Arrested".to_string(),
@@ -1489,7 +1493,7 @@ You saved my soul"
             ccli: None,
             audio: Some("file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
-            background: Some(Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").unwrap()),
+            background: Some(Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").expect("Error getting background from known file")),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(80),
@@ -1563,17 +1567,19 @@ You saved my soul"
             .collect();
         let fontdb = Arc::new(fontdb::Database::new());
         songs.into_par_iter().for_each(|song| {
-            let slides = song.to_slides().unwrap();
+            let slides = song
+                .to_slides()
+                .expect("Error in making slides from song");
             slides.into_par_iter().for_each(|slide| {
                 text_svg_generator_with_cache(slide, &fontdb, None)
                     .map_or_else(
-                        |e| assert!(false, "{e}"),
+                        |e| panic!("{e}"),
                         |slide| {
                             assert!(slide.text_svg.is_some_and(
                                 |svg| svg.handle.is_some()
-                            ))
+                            ));
                         },
-                    )
+                    );
             });
         });
     }
