@@ -7,7 +7,10 @@ use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use nom::branch::alt;
 use nom::bytes::{tag, take_till, take_till1, take_until};
-use nom::character::complete::{digit0, newline, space0};
+use nom::character::complete::{
+    digit0, multispace0, newline, space0,
+};
+use nom::combinator::{complete, eof, rest};
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{IResult, Parser};
@@ -30,44 +33,46 @@ pub struct OnlineSong {
     pub lyrics: String,
     pub title: String,
     pub author: String,
-    pub site: String,
+    pub provider: Provider,
     pub link: String,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+)]
+pub enum Provider {
+    #[default]
+    Genius,
+    LyricsCom,
 }
 
 impl From<OnlineSong> for Song {
     fn from(value: OnlineSong) -> Self {
-        let mut song = Self {
-            verse_map: Some(HashMap::new()),
+        let song = Self {
+            verse_map: parse_genius_lyrics(
+                &value.lyrics.replace("\\n", "\n"),
+            )
+            .ok(),
             ..Default::default()
         };
-
-        for line in value.lyrics.lines() {
-            let next_verse = match line {
-                "[Chorus]" => VerseName::Chorus { number: 1 },
-                _ => song.get_next_verse_name(),
-            };
-            if let Some(verse_map) = song.verse_map.as_mut() {
-                verse_map
-                    .entry(next_verse)
-                    .or_insert_with(|| line.to_string());
-            }
-            if let Some(verses) = song.verses.as_mut() {
-                verses.push(next_verse);
-            } else {
-                song.verses = Some(vec![next_verse]);
-            }
-        }
         song
     }
 }
 
-#[allow(unused)]
 #[allow(clippy::redundant_closure_for_method_calls)]
 fn parse_genius_lyrics(
     lyrics: &str,
 ) -> Result<HashMap<VerseName, String>> {
     let (input, chunks) =
-        separated_list1(pair(newline, newline), many0(ident))
+        separated_list1(pair(newline, newline), ident)
             .parse(lyrics)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
@@ -79,7 +84,7 @@ fn parse_genius_lyrics(
 
     for chunk in chunks {
         dbg!(&chunk);
-        let chunk = chunk.join("\n");
+        // let chunk = chunk.join("\n");
         let (_, (mut name, lyric)) = parse_verse
             .parse(&chunk)
             .map_err(|e| e.to_owned())
@@ -96,16 +101,19 @@ fn parse_genius_lyrics(
 
 #[allow(unused)]
 fn ident(input: &str) -> IResult<&str, &str> {
-    preceded(alt((tag("\n\n"), space0)), any).parse(input)
+    dbg!(&input);
+    preceded(space0, any).parse(input)
 }
 
 #[allow(unused)]
 fn any(input: &str) -> IResult<&str, &str> {
-    take_until("\n\n").parse(input)
+    dbg!(&input);
+    complete(take_until("\n\n")).parse(input)
 }
 
 #[allow(unused)]
 fn block(input: &str) -> IResult<&str, &str> {
+    dbg!(&input);
     terminated(ident, pair(newline, newline)).parse(input)
 }
 
@@ -132,6 +140,7 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     .parse(line)?;
 
     let num = num.parse::<usize>().unwrap_or(1);
+    dbg!(&name);
 
     let verse_name = match name {
         "Chorus" => VerseName::Chorus { number: num },
@@ -146,11 +155,6 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     };
 
     Ok((input, verse_name))
-}
-
-#[allow(unused)]
-fn parse_verse_lyrics(lyrics: &str) -> IResult<&str, String> {
-    todo!()
 }
 
 pub async fn search_genius_links(
@@ -215,7 +219,7 @@ pub async fn search_genius_links(
                 lyrics: String::new(),
                 title,
                 author,
-                site: String::from("https://genius.com"),
+                provider: Provider::Genius,
                 link,
             }
         })
@@ -348,7 +352,7 @@ pub async fn lyrics_com_link_to_song(
                 lyrics,
                 title: title.clone(),
                 author: author.clone(),
-                site: "https://www.lyrics.com".into(),
+                provider: Provider::LyricsCom,
                 link,
             };
 
@@ -360,8 +364,6 @@ pub async fn lyrics_com_link_to_song(
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
     use crate::core::songs::Song;
 
     use super::*;
@@ -373,12 +375,12 @@ mod test {
             lyrics: String::new(),
             title: "Death Was Arrested by North Point Worship (Ft. Seth Condrey)".to_string(),
             author: "North Point Worship (Ft. Seth Condrey)".to_string(),
-            site: "https://genius.com".to_string(),
+            provider: Provider::Genius,
             link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
         };
         let hits = search_genius_links(
             "Death was arrested",
-            "test".to_string(),
+            env!("GENIUS_TOKEN").to_string(),
         )
         .await
         .map_err(|e| e.to_string())?;
@@ -412,7 +414,18 @@ mod test {
                     .as_ref()
                     .is_some_and(|map| map.len() > 3)
             );
-            assert!(Some(HashMap::new()) == mapped_song.verse_map);
+            assert!(mapped_song.verse_map.is_some_and(|map| {
+                map.keys().contains(&VerseName::Verse { number: 1 })
+                    && map
+                        .keys()
+                        .contains(&VerseName::Verse { number: 2 })
+                    && map
+                        .keys()
+                        .contains(&VerseName::Chorus { number: 1 })
+                    && map
+                        .keys()
+                        .contains(&VerseName::Outro { number: 1 })
+            }));
         }
 
         Ok(())
@@ -424,7 +437,7 @@ mod test {
             lyrics: "Alone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love Made a way to let mercy come in\nWhen death was arrested and my life began\n\nAsh was redeemed only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet my feet rose to dance\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nReleased from my chains I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOur savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\nOh, Your grace so free\nWashes over me\nYou have made me new\nNow life begins with You\nIt's your endless love\nPouring down on us\nYou have made us new\nNow life begins with You\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nOh, we're free, free\nForever we're free\nCome join the song\nOf all the redeemed\nYes, we're free free\nForever amen\nWhen death was arrested and my life began\n\nWhen death was arrested and my life began\nWhen death was arrested and my life began".to_string(),
             title: "Death Was Arrested".to_string(),
             author: "North Point InsideOut".to_string(),
-            site: "https://www.lyrics.com".to_string(),
+            provider: Provider::LyricsCom,
             link: "https://www.lyrics.com/lyric/35090938/North+Point+InsideOut/Death+Was+Arrested".to_string(),
         };
         let links = search_lyrics_com_links("Death was arrested")
@@ -556,9 +569,11 @@ Lord, I'm gonna sing (Sing it, Dave)
 [Outro]
 I'm gonna sing
 Aw man, that was good"#;
+        let new_song = r#"[Verse 1]\nAlone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love made a way to let mercy come in\nWhen death was arrested and my life began\nAsh was redeemed, only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet, my feet rose to dance\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Verse 2]\nReleased from my chains, I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n[Verse 3]\nOur Savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Outro]\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nWhen death was arrested and my life began\nWhen death was arrested and my life began"#.replace("\\n", "\n");
         let map = parse_genius_lyrics(song)?;
+        let new_map = parse_genius_lyrics(&new_song)?;
         dbg!(map);
-        panic!();
+        dbg!(new_map);
         Ok(())
     }
 
