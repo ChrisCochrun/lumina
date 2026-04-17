@@ -1209,79 +1209,6 @@ impl<'a> Library {
 
     fn add_files(&mut self, items: Vec<ServiceItemKind>) -> Action {
         let mut tasks = Vec::new();
-
-        let videos: Vec<Video> = items
-            .iter()
-            .filter_map(|item| match item {
-                ServiceItemKind::Video(video) => {
-                    Some(video.to_owned())
-                }
-                _ => None,
-            })
-            .collect();
-
-        let task = Task::perform(
-            videos::add_video(
-                videos,
-                self.video_library.items.clone(),
-                Arc::clone(&self.db),
-            ),
-            move |res| {
-                res.map_or(Message::None, |videos| {
-                    Message::ReaddVideos(videos)
-                })
-            },
-        );
-        tasks.push(task);
-
-        let presentations: Vec<Presentation> = items
-            .iter()
-            .filter_map(|item| match item {
-                ServiceItemKind::Presentation(presentation) => {
-                    Some(presentation.to_owned())
-                }
-                _ => None,
-            })
-            .collect();
-
-        let task = Task::perform(
-            presentations::add_presentation(
-                presentations,
-                self.presentation_library.items.clone(),
-                Arc::clone(&self.db),
-            ),
-            move |res| {
-                res.map_or(Message::None, |presentations| {
-                    Message::ReaddPres(presentations)
-                })
-            },
-        );
-        tasks.push(task);
-
-        let images: Vec<Image> = items
-            .iter()
-            .filter_map(|item| match item {
-                ServiceItemKind::Image(image) => {
-                    Some(image.to_owned())
-                }
-                _ => None,
-            })
-            .collect();
-
-        let task = Task::perform(
-            images::add_image(
-                images,
-                self.image_library.items.clone(),
-                Arc::clone(&self.db),
-            ),
-            move |res| {
-                res.map_or(Message::None, |images| {
-                    Message::ReaddImages(images)
-                })
-            },
-        );
-        tasks.push(task);
-
         let last_item = &items.last();
 
         let after_task = match last_item {
@@ -1306,6 +1233,73 @@ impl<'a> Library {
             }
             _ => Task::none(),
         };
+
+        let mut videos: Vec<Video> = Vec::new();
+        let mut presentations: Vec<Presentation> = Vec::new();
+        let mut images: Vec<Image> = Vec::new();
+
+        for item in items {
+            match item {
+                ServiceItemKind::Video(video) => videos.push(video),
+                ServiceItemKind::Image(image) => images.push(image),
+                ServiceItemKind::Presentation(presentation) => {
+                    presentations.push(presentation)
+                }
+                _ => (),
+            }
+        }
+
+        if videos.is_empty() {
+            ()
+        } else {
+            tasks.push(Task::perform(
+                videos::add_video(
+                    videos,
+                    self.video_library.items.clone(),
+                    Arc::clone(&self.db),
+                ),
+                move |res| {
+                    res.map_or(Message::None, |videos| {
+                        Message::ReaddVideos(videos)
+                    })
+                },
+            ));
+        }
+
+        if presentations.is_empty() {
+            ()
+        } else {
+            tasks.push(Task::perform(
+                presentations::add_presentation(
+                    presentations,
+                    self.presentation_library.items.clone(),
+                    Arc::clone(&self.db),
+                ),
+                move |res| {
+                    res.map_or(Message::None, |presentations| {
+                        Message::ReaddPres(presentations)
+                    })
+                },
+            ));
+        }
+
+        if images.is_empty() {
+            ()
+        } else {
+            tasks.push(Task::perform(
+                images::add_image(
+                    images,
+                    self.image_library.items.clone(),
+                    Arc::clone(&self.db),
+                ),
+                move |res| {
+                    res.map_or(Message::None, |images| {
+                        Message::ReaddImages(images)
+                    })
+                },
+            ));
+        }
+
         Action::Task(Task::batch(tasks).chain(after_task))
     }
 }
