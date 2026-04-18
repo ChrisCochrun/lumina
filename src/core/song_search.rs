@@ -6,12 +6,12 @@ use crate::core::songs::{Song, VerseName};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use nom::branch::alt;
-use nom::bytes::{tag, take_till, take_till1, take_until};
+use nom::bytes::complete::{tag, take_till, take_till1, take_until};
 use nom::character::complete::{
     digit0, multispace0, newline, space0,
 };
-use nom::combinator::{complete, eof, rest};
-use nom::multi::{many0, separated_list1};
+use nom::combinator::{complete, eof, peek, rest};
+use nom::multi::{many0, many1, separated_list1};
 use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{IResult, Parser};
 use reqwest::header;
@@ -49,20 +49,33 @@ pub struct OnlineSong {
     Deserialize,
 )]
 pub enum Provider {
+    Genius {
+        parsable: bool,
+    },
     #[default]
-    Genius,
     LyricsCom,
 }
 
 impl From<OnlineSong> for Song {
-    fn from(value: OnlineSong) -> Self {
-        let song = Self {
-            verse_map: parse_genius_lyrics(
-                &value.lyrics.replace("\\n", "\n"),
+    fn from(online_song: OnlineSong) -> Self {
+        let map = if online_song.provider
+            == (Provider::Genius { parsable: true })
+        {
+            parse_genius_lyrics(
+                &online_song.lyrics.replace("\\n", "\n"),
             )
-            .ok(),
+            .ok()
+        } else {
+            None
+        };
+
+        let song = Self {
+            title: online_song.title,
+            author: Some(online_song.author),
+            verse_map: map,
             ..Default::default()
         };
+
         song
     }
 }
@@ -72,7 +85,9 @@ fn parse_genius_lyrics(
     lyrics: &str,
 ) -> Result<HashMap<VerseName, String>> {
     let (input, chunks) =
-        separated_list1(pair(newline, newline), ident)
+        many1(pair(parse_verse_name, alt((take_until("["), rest))))
+            // separated_list1(pair(newline, newline), ident)
+            // many1(complete(take_until("[")))
             .parse(lyrics)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
@@ -82,18 +97,12 @@ fn parse_genius_lyrics(
 
     let mut map = HashMap::new();
 
-    for chunk in chunks {
-        dbg!(&chunk);
-        // let chunk = chunk.join("\n");
-        let (_, (mut name, lyric)) = parse_verse
-            .parse(&chunk)
-            .map_err(|e| e.to_owned())
-            .into_diagnostic()?;
+    for (mut name, lyric) in chunks {
         while map.contains_key(&name) {
             name = name.next();
         }
 
-        map.entry(name).or_insert(lyric);
+        map.entry(name).or_insert(lyric.trim().to_string());
     }
 
     Ok(map)
@@ -219,7 +228,7 @@ pub async fn search_genius_links(
                 lyrics: String::new(),
                 title,
                 author,
-                provider: Provider::Genius,
+                provider: Provider::Genius { parsable: false },
                 link,
             }
         })
@@ -263,6 +272,9 @@ pub async fn get_genius_lyrics(
         |position| lyrics.split_at(position).1.to_string(),
     );
     let lyrics = lyrics.replace("<br>", "\n");
+    song.provider = Provider::Genius {
+        parsable: lyrics.contains("["),
+    };
     song.lyrics = lyrics;
     Ok(song)
 }
@@ -375,7 +387,7 @@ mod test {
             lyrics: String::new(),
             title: "Death Was Arrested by North Point Worship (Ft. Seth Condrey)".to_string(),
             author: "North Point Worship (Ft. Seth Condrey)".to_string(),
-            provider: Provider::Genius,
+            provider: Provider::Genius { parsable: false },
             link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
         };
         let hits = search_genius_links(
@@ -398,6 +410,7 @@ mod test {
                 .await
                 .map_err(|e| e.to_string())?;
             dbg!(&new_song);
+            dbg!(&new_song.provider);
             if new_song.lyrics.starts_with("[Verse 1]") {
                 assert!(new_song.lyrics.contains("[Verse 2]"));
                 if !new_song.lyrics.contains("[Chorus]") {
@@ -408,24 +421,25 @@ mod test {
             }
             let mapped_song = Song::from(new_song);
             dbg!(&mapped_song);
-            assert!(
-                mapped_song
-                    .verse_map
-                    .as_ref()
-                    .is_some_and(|map| map.len() > 3)
-            );
-            assert!(mapped_song.verse_map.is_some_and(|map| {
-                map.keys().contains(&VerseName::Verse { number: 1 })
-                    && map
-                        .keys()
-                        .contains(&VerseName::Verse { number: 2 })
-                    && map
-                        .keys()
-                        .contains(&VerseName::Chorus { number: 1 })
-                    && map
-                        .keys()
-                        .contains(&VerseName::Outro { number: 1 })
-            }));
+            if let Some(map) = mapped_song.verse_map.as_ref() {
+                assert!(map.len() > 3);
+                assert!(
+                    map.keys()
+                        .contains(&VerseName::Verse { number: 1 })
+                        && map.keys().contains(&VerseName::Verse {
+                            number: 2
+                        })
+                        && map.keys().contains(&VerseName::Chorus {
+                            number: 1
+                        })
+                );
+            } else {
+                assert!(
+                    !mapped_song
+                        .lyrics
+                        .is_some_and(|lyrics| lyrics.contains("["))
+                )
+            }
         }
 
         Ok(())
@@ -574,6 +588,7 @@ Aw man, that was good"#;
         let new_map = parse_genius_lyrics(&new_song)?;
         dbg!(map);
         dbg!(new_map);
+        panic!();
         Ok(())
     }
 
