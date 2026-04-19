@@ -5,11 +5,13 @@ use std::io::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::widget::tree;
 use cosmic::iced::font::{Style, Weight};
+use cosmic::iced::theme::Base;
 use cosmic::iced::widget::scrollable::{
     self as iced_scrollable, AbsoluteOffset, Direction, Scrollbar,
 };
@@ -18,6 +20,7 @@ use cosmic::iced::{
     Background as ContainerBackground, Border, Color, Length,
     Padding, Shadow, Vector, color, task,
 };
+use cosmic::widget::button::Catalog;
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::grid::{self};
 use cosmic::widget::space::{self, horizontal};
@@ -36,7 +39,9 @@ use itertools::Itertools;
 use tracing::{debug, error};
 
 use crate::core::service_items::ServiceTrait;
+use crate::core::settings;
 use crate::core::slide::{Slide, TextAlignment};
+use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
 use crate::ui::presenter::slide_view;
 use crate::ui::slide_editor::SlideEditor;
@@ -89,6 +94,9 @@ pub struct SongEditor {
     shadow_color_model: ColorPickerModel,
     shadow_tools_open: bool,
     importing: bool,
+    search_input: String,
+    search_results: Option<Vec<OnlineSong>>,
+    pub genius_token: Option<String>,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -143,6 +151,9 @@ pub enum Message {
     UpdateShadowOffsetX(usize),
     UpdateShadowOffsetY(usize),
     ChangeFontWeight,
+    SearchUpdate(String),
+    SearchSong(String),
+    UpdateSearchResults(Result<Vec<OnlineSong>, String>),
 }
 
 #[derive(Debug, Clone)]
@@ -182,7 +193,10 @@ impl Display for Face {
 
 #[allow(clippy::cast_possible_truncation)]
 impl SongEditor {
-    pub fn new(font_db: Arc<fontdb::Database>) -> Self {
+    pub fn new(
+        font_db: Arc<fontdb::Database>,
+        genius_token: Option<String>,
+    ) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
         let fonts: Vec<Face> = font_db
@@ -337,6 +351,9 @@ impl SongEditor {
             ),
             shadow_tools_open: false,
             importing: false,
+            search_input: String::new(),
+            search_results: None,
+            genius_token,
         }
     }
 
@@ -923,6 +940,28 @@ impl SongEditor {
             Message::OpenShadowTools => {
                 self.shadow_tools_open = !self.shadow_tools_open;
             }
+            Message::SearchUpdate(query) => {
+                self.search_input = query;
+            }
+            Message::SearchSong(query) => {
+                return Action::Task(Task::perform(
+                    song_search::search_genius_links(
+                        query,
+                        self.genius_token.clone().unwrap_or_default(),
+                    ),
+                    |res| {
+                        Message::UpdateSearchResults(
+                            res.map_err(|e| e.to_string()),
+                        )
+                    },
+                ));
+            }
+            Message::UpdateSearchResults(result) => match result {
+                Ok(songs) => self.search_results = Some(songs),
+                Err(e) => {
+                    error!("Cannot find songs: {e}");
+                }
+            },
             Message::None => (),
         }
         Action::None
@@ -1852,7 +1891,73 @@ impl SongEditor {
     }
 
     pub fn import_view(&self) -> Element<Message> {
-        todo!("need to add an import view")
+        let search_bar =
+            cosmic::widget::search_input("", &self.search_input)
+                .on_input(Message::SearchUpdate)
+                .on_submit(Message::SearchSong)
+                .label("Search for Song");
+        let submit_button =
+            button::icon(icon::from_name("document-send-symbolic"))
+                .on_press(Message::SearchSong(
+                    self.search_input.clone(),
+                ));
+
+        let search_results =
+            self.search_results.as_ref().map_or_else(
+                || space::horizontal().apply(container),
+                |songs| {
+                    let songs: Vec<Element<Message>> = songs
+                        .iter()
+                        .map(|song| {
+                            let title = text::heading(&song.title);
+                            let author = text::body(&song.author);
+                            let link = text::body(&song.link);
+                            let provider =
+                                text::body(song.provider.to_string())
+                                    .apply(container)
+                                    .style(|t| {
+                                        container::Style::default()
+                                            .color(
+                                                t.cosmic()
+                                                    .palette
+                                                    .accent_green,
+                                            )
+                                            .border(
+                                                Border::default()
+                                                    .rounded(
+                                                        t.cosmic()
+                                                            .radius_s(
+                                                            ),
+                                                    ),
+                                            )
+                                    })
+                                    .padding(
+                                        theme::spacing().space_s,
+                                    );
+                            row![
+                                column![title, author, link].spacing(
+                                    theme::spacing().space_xxs
+                                ),
+                                space::horizontal(),
+                                provider
+                            ]
+                            .padding(theme::spacing().space_s)
+                            .apply(container)
+                            .class(theme::Container::Card)
+                            .into()
+                        })
+                        .collect();
+
+                    column::with_children(songs)
+                        .spacing(theme::spacing().space_s)
+                        .apply(container)
+                },
+            );
+
+        let search_row =
+            row![search_bar, space::horizontal(), submit_button];
+
+        column![search_row, search_results].into()
     }
 
     pub const fn editing(&self) -> bool {
@@ -2045,7 +2150,7 @@ impl Default for SongEditor {
     fn default() -> Self {
         let mut fontdb = fontdb::Database::new();
         fontdb.load_system_fonts();
-        Self::new(Arc::new(fontdb))
+        Self::new(Arc::new(fontdb), None)
     }
 }
 

@@ -1,22 +1,18 @@
-use std::collections::HashMap;
-
-#[allow(unused)]
-use crate::core::settings;
 use crate::core::songs::{Song, VerseName};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till, take_till1, take_until};
-use nom::character::complete::{
-    digit0, multispace0, newline, space0,
-};
-use nom::combinator::{complete, eof, peek, rest};
-use nom::multi::{many0, many1, separated_list1};
-use nom::sequence::{delimited, pair, preceded, terminated};
+use nom::character::complete::{digit0, space0};
+use nom::combinator::rest;
+use nom::multi::many1;
+use nom::sequence::{delimited, pair};
 use nom::{IResult, Parser};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(
     Clone,
@@ -56,6 +52,18 @@ pub enum Provider {
     LyricsCom,
 }
 
+impl Display for Provider {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        match self {
+            Provider::Genius { .. } => f.write_str("Genius"),
+            Provider::LyricsCom => f.write_str("Lyrics.com"),
+        }
+    }
+}
+
 impl From<OnlineSong> for Song {
     fn from(online_song: OnlineSong) -> Self {
         let map = if online_song.provider
@@ -66,17 +74,18 @@ impl From<OnlineSong> for Song {
             )
             .ok()
         } else {
-            None
+            let mut map = HashMap::new();
+            map.entry(VerseName::Verse { number: 1 })
+                .or_insert(online_song.lyrics);
+            Some(map)
         };
 
-        let song = Self {
+        Self {
             title: online_song.title,
             author: Some(online_song.author),
             verse_map: map,
             ..Default::default()
-        };
-
-        song
+        }
     }
 }
 
@@ -86,8 +95,6 @@ fn parse_genius_lyrics(
 ) -> Result<HashMap<VerseName, String>> {
     let (input, chunks) =
         many1(pair(parse_verse_name, alt((take_until("["), rest))))
-            // separated_list1(pair(newline, newline), ident)
-            // many1(complete(take_until("[")))
             .parse(lyrics)
             .map_err(|e| e.to_owned())
             .into_diagnostic()?;
@@ -102,38 +109,12 @@ fn parse_genius_lyrics(
             name = name.next();
         }
 
-        map.entry(name).or_insert(lyric.trim().to_string());
+        map.entry(name).or_insert_with(|| lyric.trim().to_string());
     }
 
     Ok(map)
 }
 
-#[allow(unused)]
-fn ident(input: &str) -> IResult<&str, &str> {
-    dbg!(&input);
-    preceded(space0, any).parse(input)
-}
-
-#[allow(unused)]
-fn any(input: &str) -> IResult<&str, &str> {
-    dbg!(&input);
-    complete(take_until("\n\n")).parse(input)
-}
-
-#[allow(unused)]
-fn block(input: &str) -> IResult<&str, &str> {
-    dbg!(&input);
-    terminated(ident, pair(newline, newline)).parse(input)
-}
-
-#[allow(unused)]
-fn parse_verse(chunk: &str) -> IResult<&str, (VerseName, String)> {
-    let (input, verse_name) = parse_verse_name.parse(chunk)?;
-    let lyrics = input.trim().to_string();
-    Ok((input, (verse_name, lyrics)))
-}
-
-#[allow(unused)]
 fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     let (input, (name, _, num, _, _)) = delimited(
         (tag("["), space0),
@@ -167,7 +148,7 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
 }
 
 pub async fn search_genius_links(
-    query: impl AsRef<str> + std::fmt::Display,
+    query: String,
     auth_token: String,
 ) -> Result<Vec<OnlineSong>> {
     // let Some(auth_token) = option_env!("GENIUS_TOKEN") else {
@@ -273,7 +254,7 @@ pub async fn get_genius_lyrics(
     );
     let lyrics = lyrics.replace("<br>", "\n");
     song.provider = Provider::Genius {
-        parsable: lyrics.contains("["),
+        parsable: lyrics.contains('['),
     };
     song.lyrics = lyrics;
     Ok(song)
@@ -391,7 +372,7 @@ mod test {
             link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
         };
         let hits = search_genius_links(
-            "Death was arrested",
+            "Death was arrested".to_string(),
             env!("GENIUS_TOKEN").to_string(),
         )
         .await
@@ -529,7 +510,6 @@ mod test {
         Ok(())
     }
 
-    #[allow(unreachable_code)]
     #[test]
     fn test_parse_song() -> Result<()> {
         let song = r#"[Verse 1]
@@ -588,24 +568,6 @@ Aw man, that was good"#;
         let new_map = parse_genius_lyrics(&new_song)?;
         dbg!(map);
         dbg!(new_map);
-        panic!();
-        Ok(())
-    }
-
-    #[test]
-    fn test_block_parsing() -> Result<()> {
-        let chorus = r#"[Chorus]
-I'm singing, "Hallelujah" (Hallelujah)
-God is able, hallelujah (Hallelujah)
-God is faithful, hallelujah
-Lord, I'm gonna sing (Come on now, sing it)
-Oh I'm singing, "Hallelujah" (Hallelujah)
-God is able, hallelujah (Hallelujah)
-God is faithful, hallelujah (God is so good)
-Lord, I'm gonna sing (Sing it, Dave)
-
-"#;
-        let _thing = block.parse(chorus).into_diagnostic()?;
         Ok(())
     }
 }

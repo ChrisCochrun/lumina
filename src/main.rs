@@ -176,6 +176,7 @@ struct App {
     config_handler: Option<Config>,
     obs_connection: String,
     view_mode: ViewMode,
+    genius_token_hidden: bool,
 }
 
 #[allow(dead_code)]
@@ -231,6 +232,8 @@ enum Message {
     SetObsConnection(String),
     ModifiersPressed(Modifiers),
     ViewModeSwitch(ViewMode),
+    ShowGeniusToken,
+    SetGeniusToken(String),
 }
 
 #[allow(dead_code)]
@@ -353,7 +356,10 @@ impl cosmic::Application for App {
         let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
 
         let presenter = Presenter::with_items(items.clone());
-        let song_editor = SongEditor::new(Arc::clone(&fontdb));
+        let song_editor = SongEditor::new(
+            Arc::clone(&fontdb),
+            settings.genius_token.clone(),
+        );
 
         // for item in items.iter() {
         //     nav_model.insert().text(item.title()).data(item.clone());
@@ -433,6 +439,7 @@ impl cosmic::Application for App {
             config_handler,
             obs_connection: String::new(),
             view_mode: ViewMode::Row,
+            genius_token_hidden: true,
         };
 
         let mut batch = vec![];
@@ -826,6 +833,20 @@ impl cosmic::Application for App {
                     Message::SetObsUrl(self.obs_connection.clone()),
                 ),
             );
+            let genius_token = settings::item::builder("Token")
+                .control(
+                    text_input::secure_input(
+                        "",
+                        self.settings
+                            .genius_token
+                            .clone()
+                            .unwrap_or_default(),
+                        Some(Message::ShowGeniusToken),
+                        self.genius_token_hidden,
+                    )
+                    .select_on_focus(true)
+                    .on_input(Message::SetGeniusToken),
+                );
             let settings_column = column![
                 icon::from_name("dialog-close")
                     .symbolic(true)
@@ -837,17 +858,25 @@ impl cosmic::Application for App {
                     .padding(space_s)
                     .align_right(Length::Fill)
                     .align_top(60),
-                horizontal().height(space_xxl),
                 settings::section()
                     .title("Obs Settings")
                     .add(obs_socket)
                     .add(apply_button)
                     .apply(container)
                     .center_x(Length::Fill)
-                    .align_top(Length::Fill)
-                    .padding([0, space_xxxl * 2])
+                    .align_top(Length::Fill),
+                settings::section()
+                    .title("Genius Auth Token")
+                    .add(genius_token)
+                    .apply(container)
+                    .center_x(Length::Fill)
+                    .align_top(Length::Fill),
+                horizontal().height(space_xxl),
             ]
-            .height(Length::Fill);
+            .spacing(space_s)
+            .height(Length::Fill)
+            .apply(container)
+            .padding(space_xxl);
             let settings_container = settings_column
                 .apply(container)
                 .style(nav_bar_style)
@@ -1560,7 +1589,29 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::SetObsConnection(url) => {
+                if let Some(config_handler) =
+                    self.config_handler.as_ref()
+                {
+                    // todo!()
+                    ();
+                }
                 self.obs_connection = url;
+                Task::none()
+            }
+            Message::SetGeniusToken(token) => {
+                if let Some(config_handler) =
+                    self.config_handler.as_ref()
+                {
+                    self.settings.set_genius_token(
+                        config_handler,
+                        Some(token.clone()),
+                    );
+                    self.song_editor.genius_token = Some(token);
+                }
+                Task::none()
+            }
+            Message::ShowGeniusToken => {
+                self.genius_token_hidden = !self.genius_token_hidden;
                 Task::none()
             }
             Message::ModifiersPressed(modifiers) => {
