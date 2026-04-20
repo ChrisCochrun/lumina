@@ -9,6 +9,7 @@ use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::core::widget::tree;
 use cosmic::iced::font::{Style, Weight};
 use cosmic::iced::theme::Base;
@@ -23,6 +24,7 @@ use cosmic::iced::{
 use cosmic::widget::button::Catalog;
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::grid::{self};
+use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     ColorPickerModel, Id, RcElementWrapper, button, combo_box,
@@ -154,6 +156,7 @@ pub enum Message {
     SearchUpdate(String),
     SearchSong(String),
     UpdateSearchResults(Result<Vec<OnlineSong>, String>),
+    ToggleSongDialog,
 }
 
 #[derive(Debug, Clone)]
@@ -945,7 +948,7 @@ impl SongEditor {
             }
             Message::SearchSong(query) => {
                 return Action::Task(Task::perform(
-                    song_search::search_genius_links(
+                    song_search::search_genius(
                         query,
                         self.genius_token.clone().unwrap_or_default(),
                     ),
@@ -962,6 +965,9 @@ impl SongEditor {
                     error!("Cannot find songs: {e}");
                 }
             },
+            Message::ToggleSongDialog => {
+                self.importing = !self.importing;
+            }
             Message::None => (),
         }
         Action::None
@@ -1400,7 +1406,7 @@ impl SongEditor {
                         .color(t.cosmic().primary_container_divider())
                         .rounded(t.cosmic().radius_s()),
                 )
-                .background(cosmic::iced::Background::Color(
+                .background(ContainerBackground::Color(
                     t.cosmic().primary_container_color().into(),
                 ))
         };
@@ -1891,16 +1897,26 @@ impl SongEditor {
     }
 
     pub fn import_view(&self) -> Element<Message> {
+        const GENIUS_COLOR: cosmic::iced::Color = color!(0x47e5bc);
+        let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_xxs,
+            space_s,
+            space_m,
+            space_l,
+            space_xl,
+            space_xxl,
+            ..
+        } = theme::spacing();
         let search_bar =
             cosmic::widget::search_input("", &self.search_input)
                 .on_input(Message::SearchUpdate)
                 .on_submit(Message::SearchSong)
-                .label("Search for Song");
-        let submit_button =
-            button::icon(icon::from_name("document-send-symbolic"))
-                .on_press(Message::SearchSong(
-                    self.search_input.clone(),
-                ));
+                .width(Length::Fill);
+        let submit_button = icon::from_name("document-send-symbolic")
+            .apply(button::icon)
+            .icon_size(space_xl)
+            .on_press(Message::SearchSong(self.search_input.clone()));
 
         let search_results =
             self.search_results.as_ref().map_or_else(
@@ -1909,39 +1925,67 @@ impl SongEditor {
                     let songs: Vec<Element<Message>> = songs
                         .iter()
                         .map(|song| {
-                            let title = text::heading(&song.title);
-                            let author = text::body(&song.author);
-                            let link = text::body(&song.link);
+                            let title = text::heading(&song.title)
+                                .ellipsize(Ellipsize::End(
+                                    EllipsizeHeightLimit::Lines(1),
+                                ));
+                            let author = text::heading(&song.author)
+                                .class(theme::Text::Accent)
+                                .ellipsize(Ellipsize::End(
+                                    EllipsizeHeightLimit::Lines(1),
+                                ));
+                            let link = text::body(&song.link)
+                                .ellipsize(Ellipsize::End(
+                                    EllipsizeHeightLimit::Lines(1),
+                                ));
+                            let lyrics = song
+                                .lyrics
+                                .lines()
+                                .enumerate()
+                                .filter(|(i, _)| *i < 7)
+                                .map(|(_, s)| s)
+                                .collect::<Vec<&str>>();
+                            let lyrics =
+                                text::body(lyrics.join("\n"))
+                                    .ellipsize(Ellipsize::End(
+                                        EllipsizeHeightLimit::Lines(
+                                            7,
+                                        ),
+                                    ));
+
                             let provider =
                                 text::body(song.provider.to_string())
                                     .apply(container)
                                     .style(|t| {
                                         container::Style::default()
-                                            .color(
-                                                t.cosmic()
-                                                    .palette
-                                                    .accent_green,
-                                            )
-                                            .border(
-                                                Border::default()
-                                                    .rounded(
-                                                        t.cosmic()
-                                                            .radius_s(
-                                                            ),
-                                                    ),
-                                            )
+                                    .background(
+                                        ContainerBackground::Color(
+                                            GENIUS_COLOR
+                                        ),
+                                    )
+                                    .color(
+                                        Color::BLACK,
+                                    )
+                                    .border(
+                                        Border::default().rounded(
+                                            t.cosmic().radius_s(),
+                                        ),
+                                    )
                                     })
-                                    .padding(
-                                        theme::spacing().space_s,
-                                    );
+                                    .padding(space_s);
                             row![
-                                column![title, author, link].spacing(
-                                    theme::spacing().space_xxs
-                                ),
-                                space::horizontal(),
+                                column![
+                                    title,
+                                    author,
+                                    space::vertical().height(space_m),
+                                    lyrics
+                                ]
+                                .width(Length::Fill)
+                                .spacing(space_xxs),
                                 provider
                             ]
-                            .padding(theme::spacing().space_s)
+                            .spacing(space_s)
+                            .padding(space_m)
                             .apply(container)
                             .class(theme::Container::Card)
                             .into()
@@ -1949,15 +1993,34 @@ impl SongEditor {
                         .collect();
 
                     column::with_children(songs)
-                        .spacing(theme::spacing().space_s)
+                        .spacing(space_s)
+                        .apply(scrollable)
                         .apply(container)
                 },
             );
 
-        let search_row =
-            row![search_bar, space::horizontal(), submit_button];
+        let search_row = row![search_bar, submit_button]
+            .spacing(space_s)
+            .align_y(Vertical::Center);
 
-        column![search_row, search_results].into()
+        column![
+            column![
+                text::heading("Search for song")
+                    .apply(container)
+                    .padding([
+                        space_none, space_none, space_none, space_m
+                    ]),
+                search_row
+            ]
+            .spacing(space_s),
+            search_results
+        ]
+        .spacing(space_xl)
+        .apply(container)
+        .style(nav_bar_style)
+        .max_width(600)
+        .padding(space_xxl)
+        .into()
     }
 
     pub const fn editing(&self) -> bool {

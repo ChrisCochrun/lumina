@@ -9,10 +9,12 @@ use nom::multi::many1;
 use nom::sequence::{delimited, pair};
 use nom::{IResult, Parser};
 use reqwest::header;
+use scraper::Element;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Display;
+use tracing::{debug, error};
 
 #[derive(
     Clone,
@@ -147,7 +149,7 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     Ok((input, verse_name))
 }
 
-pub async fn search_genius_links(
+pub async fn search_genius(
     query: String,
     auth_token: String,
 ) -> Result<Vec<OnlineSong>> {
@@ -182,38 +184,48 @@ pub async fn search_genius_links(
         .expect("hits")
         .as_array()
         .expect("array");
-    Ok(hits
-        .iter()
-        .map(|hit| {
-            let result = hit.get("result").expect("result");
-            let title = result
-                .get("full_title")
-                .expect("title")
-                .as_str()
-                .expect("title")
-                .to_string();
-            let title = title.replace("\u{a0}", " ");
-            let author = result
-                .get("artist_names")
-                .expect("artists")
-                .as_str()
-                .expect("artists")
-                .to_string();
-            let link = result
-                .get("url")
-                .expect("url")
-                .as_str()
-                .expect("url")
-                .to_string();
-            OnlineSong {
-                lyrics: String::new(),
-                title,
-                author,
-                provider: Provider::Genius { parsable: false },
-                link,
-            }
-        })
-        .collect())
+    let songs: Vec<Option<OnlineSong>> =
+        cosmic::iced::futures::future::join_all(hits.iter().map(
+            |hit| async {
+                let result = hit.get("result").expect("result");
+                let title = result
+                    .get("full_title")
+                    .expect("title")
+                    .as_str()
+                    .expect("title")
+                    .to_string();
+                let title = title.replace("\u{a0}", " ");
+                let author = result
+                    .get("artist_names")
+                    .expect("artists")
+                    .as_str()
+                    .expect("artists")
+                    .to_string();
+                let link = result
+                    .get("url")
+                    .expect("url")
+                    .as_str()
+                    .expect("url")
+                    .to_string();
+                let song = OnlineSong {
+                    lyrics: String::new(),
+                    title,
+                    author,
+                    provider: Provider::Genius { parsable: false },
+                    link,
+                };
+
+                match get_genius_lyrics(song).await {
+                    Ok(song) => Some(song),
+                    Err(e) => {
+                        error!("Couldn't get lyrics: {e}");
+                        None
+                    }
+                }
+            },
+        ))
+        .await;
+    Ok(songs.into_iter().filter_map(|s| s).collect())
 }
 
 pub async fn get_genius_lyrics(
@@ -236,9 +248,48 @@ pub async fn get_genius_lyrics(
 
     let lyrics = document
         .select(&lyrics_root_selector)
-        .map(|root| {
+        .filter(|element| {
+            element.attr("data-exclude-from-selection").is_none()
+        })
+        .filter(|element| {
+            !element.value().classes().any(|class| {
+                class.contains("Contrib")
+                    || class.contains("LyricsHeader")
+                    || class.contains("StyledLink")
+            })
+        })
+        .flat_map(|element| {
             // dbg!(&root);
-            root.inner_html()
+            // debug!(?element);
+            let inner = element.inner_html().replace("<br>", "\n");
+            // debug!(inner);
+            let line_broken = scraper::Html::parse_fragment(&inner);
+            line_broken
+                .root_element()
+                .descendent_elements()
+                .filter(|element| {
+                    element
+                        .attr("data-exclude-from-selection")
+                        .is_none()
+                })
+                .filter(|element| {
+                    let element_name = element.value().name();
+                    element_name != "div" && element_name != "path"
+                })
+                .filter(|element| {
+                    !element.value().classes().any(|class| {
+                        class.contains("Contrib")
+                            || class.contains("LyricsHeader")
+                            || class.contains("StyledLink")
+                    })
+                })
+                .flat_map(|t| {
+                    // let html = t.html();
+                    // debug!(html);
+                    t.text().collect::<Vec<&str>>()
+                })
+                .map(|t| t.to_string())
+                .collect::<Vec<String>>()
         })
         .collect::<String>();
     let lyrics = lyrics.find('[').map_or_else(
@@ -252,7 +303,6 @@ pub async fn get_genius_lyrics(
         },
         |position| lyrics.split_at(position).1.to_string(),
     );
-    let lyrics = lyrics.replace("<br>", "\n");
     song.provider = Provider::Genius {
         parsable: lyrics.contains('['),
     };
@@ -371,7 +421,7 @@ mod test {
             provider: Provider::Genius { parsable: false },
             link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
         };
-        let hits = search_genius_links(
+        let hits = search_genius(
             "Death was arrested".to_string(),
             env!("GENIUS_TOKEN").to_string(),
         )

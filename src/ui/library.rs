@@ -72,8 +72,9 @@ pub enum Action {
     OpenItem(Option<(LibraryKind, i32)>),
     DraggedItem(ServiceItem),
     Task(Task<Message>),
-    None,
     ToService(ServiceItem),
+    CreateSong,
+    None,
 }
 
 #[derive(Clone, Debug)]
@@ -182,18 +183,7 @@ impl<'a> Library {
                 self.song_library.items = songs;
             }
             Message::AddSong => {
-                let songs =
-                    self.song_library.items.drain(..).collect();
-                return Action::Task(Task::perform(
-                    songs::add_song(songs, Arc::clone(&self.db)),
-                    move |res| match res {
-                        Ok(songs) => Message::ReaddSongs(songs),
-                        Err(e) => {
-                            error!("adding error: {e}");
-                            Message::None
-                        }
-                    },
-                ));
+                return Action::CreateSong;
             }
             Message::AddItem => {
                 let kind =
@@ -845,11 +835,10 @@ impl<'a> Library {
                 .ellipsize(Ellipsize::End(
                     EllipsizeHeightLimit::Lines(1),
                 ))
-                .center()
                 .wrapping(textm::Wrapping::None),
         )
         .center_y(20)
-        .center_x(Length::Fill);
+        .align_left(Length::Fill);
         let subtext = container({
             let color: Color = if item.background().is_some() {
                 if let Some(items) = &self.selected_items
@@ -884,12 +873,11 @@ impl<'a> Library {
                 .ellipsize(Ellipsize::End(
                     EllipsizeHeightLimit::Lines(1),
                 ))
-                .center()
                 .wrapping(textm::Wrapping::None)
                 .class(color)
         })
         .center_y(20)
-        .center_x(Length::Fill);
+        .align_left(Length::Fill);
 
         let texts = column([text.into(), subtext.into()]);
 

@@ -833,7 +833,7 @@ impl cosmic::Application for App {
                     Message::SetObsUrl(self.obs_connection.clone()),
                 ),
             );
-            let genius_token = settings::item::builder("Token")
+            let genius_token = settings::item::builder("Auth Token")
                 .control(
                     text_input::secure_input(
                         "",
@@ -847,41 +847,35 @@ impl cosmic::Application for App {
                     .select_on_focus(true)
                     .on_input(Message::SetGeniusToken),
                 );
+            let close_button = icon::from_name("dialog-close")
+                .symbolic(true)
+                .prefer_svg(true)
+                .apply(button::icon)
+                .class(theme::Button::Icon)
+                .icon_size(space_xl)
+                .on_press(Message::CloseSettings)
+                .apply(container)
+                .padding(space_s)
+                .align_right(Length::Fill)
+                .align_top(space_xl * 2);
             let settings_column = column![
-                icon::from_name("dialog-close")
-                    .symbolic(true)
-                    .prefer_svg(true)
-                    .apply(button::icon)
-                    .class(theme::Button::Icon)
-                    .on_press(Message::CloseSettings)
-                    .apply(container)
-                    .padding(space_s)
-                    .align_right(Length::Fill)
-                    .align_top(60),
                 settings::section()
                     .title("Obs Settings")
                     .add(obs_socket)
-                    .add(apply_button)
-                    .apply(container)
-                    .center_x(Length::Fill)
-                    .align_top(Length::Fill),
-                settings::section()
-                    .title("Genius Auth Token")
-                    .add(genius_token)
-                    .apply(container)
-                    .center_x(Length::Fill)
-                    .align_top(Length::Fill),
-                horizontal().height(space_xxl),
+                    .add(apply_button),
+                settings::section().title("Genius").add(genius_token),
+                space::vertical(),
             ]
             .spacing(space_s)
             .height(Length::Fill)
             .apply(container)
             .padding(space_xxl);
-            let settings_container = settings_column
-                .apply(container)
-                .style(nav_bar_style)
-                .center_x(Length::Fill)
-                .align_top(Length::Fill);
+            let settings_container =
+                column![close_button, settings_column]
+                    .apply(container)
+                    .style(nav_bar_style)
+                    .center_x(Length::Fill)
+                    .align_top(Length::Fill);
             let modal = mouse_area(settings_container)
                 .on_press(Message::None)
                 .apply(container)
@@ -905,11 +899,35 @@ impl cosmic::Application for App {
             );
             Some(mouse_stack.into())
         } else if self.song_editor.importing() {
-            Some(
-                self.song_editor
-                    .import_view()
-                    .map(Message::SongEditor),
-            )
+            let song_editor_dialog = self
+                .song_editor
+                .import_view()
+                .map(Message::SongEditor);
+            let modal = mouse_area(song_editor_dialog)
+                .on_press(Message::None)
+                .apply(container)
+                .center_x(Length::Fill)
+                .padding([space_xxl, space_xxxl * 2]);
+            let mouse_stack = stack!(
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(
+                                Color::BLACK,
+                            )
+                            .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::SongEditor(
+                        song_editor::Message::ToggleSongDialog
+                    )),
+                modal
+            );
+            Some(mouse_stack.into())
         } else {
             None
         }
@@ -1101,6 +1119,9 @@ impl cosmic::Application for App {
             Message::Library(message) => {
                 if let Some(library) = &mut self.library {
                     match library.update(message) {
+                        library::Action::CreateSong => {
+                            return self.update(Message::SongEditor(song_editor::Message::ToggleSongDialog));
+                        }
                         library::Action::OpenItem(None) => {
                             return Task::none();
                         }
