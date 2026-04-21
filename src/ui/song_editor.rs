@@ -99,6 +99,7 @@ pub struct SongEditor {
     search_input: String,
     search_results: Option<Vec<OnlineSong>>,
     pub genius_token: Option<String>,
+    hovered_online_song: Option<usize>,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -157,6 +158,8 @@ pub enum Message {
     SearchSong(String),
     UpdateSearchResults(Result<Vec<OnlineSong>, String>),
     ToggleSongDialog,
+    HoverSong(Option<usize>),
+    AddSong(OnlineSong),
 }
 
 #[derive(Debug, Clone)]
@@ -357,6 +360,7 @@ impl SongEditor {
             search_input: String::new(),
             search_results: None,
             genius_token,
+            hovered_online_song: None,
         }
     }
 
@@ -967,6 +971,13 @@ impl SongEditor {
             },
             Message::ToggleSongDialog => {
                 self.importing = !self.importing;
+            }
+            Message::AddSong(song) => {
+                let song = Song::from(song);
+                return self.update(Message::ChangeSong(song));
+            }
+            Message::HoverSong(index) => {
+                self.hovered_online_song = index;
             }
             Message::None => (),
         }
@@ -1924,7 +1935,8 @@ impl SongEditor {
                 |songs| {
                     let songs: Vec<Element<Message>> = songs
                         .iter()
-                        .map(|song| {
+                        .enumerate()
+                        .map(|(index, song)| {
                             let title = text::heading(&song.title)
                                 .ellipsize(Ellipsize::End(
                                     EllipsizeHeightLimit::Lines(1),
@@ -1987,7 +1999,63 @@ impl SongEditor {
                             .spacing(space_s)
                             .padding(space_m)
                             .apply(container)
-                            .class(theme::Container::Card)
+                            .style(move |theme| {
+                                container::Style::default()
+                                    .background(
+                                        ContainerBackground::Color({
+                                            if self
+                                                .hovered_online_song
+                                                .is_some_and(
+                                                    |hovered| {
+                                                        index
+                                                            == hovered
+                                                    },
+                                                )
+                                            {
+                                                theme
+                                                    .cosmic()
+                                                    .background
+                                                    .component
+                                                    .base
+                                                    .into()
+                                            } else {
+                                                theme
+                                                    .cosmic()
+                                                    .background
+                                                    .component
+                                                    .hover
+                                                    .into()
+                                            }
+                                        }),
+                                    )
+                                    .shadow(Shadow {
+                                        color: Color::BLACK,
+                                        offset: Vector {
+                                            x: 0.0,
+                                            y: 0.0,
+                                        },
+                                        blur_radius: if self
+                                            .hovered_online_song
+                                            .is_some_and(|hovered| {
+                                                hovered == index
+                                            }) {
+                                            5.0
+                                        } else {
+                                            0.0
+                                        },
+                                    })
+                                    .border(
+                                        Border::default().rounded(
+                                            theme.cosmic().radius_m(),
+                                        ),
+                                    )
+                            })
+                            .apply(mouse_area)
+                            .on_enter(Message::HoverSong(Some(index)))
+                            .on_exit(Message::HoverSong(None))
+                            .on_release(Message::AddSong(
+                                song.clone(),
+                            ))
                             .into()
                         })
                         .collect();
