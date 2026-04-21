@@ -1621,12 +1621,9 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::SetObsConnection(url) => {
-                if let Some(config_handler) =
+                if let Some(_config_handler) =
                     self.config_handler.as_ref()
-                {
-                    // todo!()
-                    ();
-                }
+                {}
                 self.obs_connection = url;
                 Task::none()
             }
@@ -1634,7 +1631,7 @@ impl cosmic::Application for App {
                 if let Some(config_handler) =
                     self.config_handler.as_ref()
                 {
-                    self.settings.set_genius_token(
+                    let _ = self.settings.set_genius_token(
                         config_handler,
                         Some(token.clone()),
                     );

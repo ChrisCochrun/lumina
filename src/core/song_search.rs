@@ -9,12 +9,11 @@ use nom::multi::many1;
 use nom::sequence::{delimited, pair};
 use nom::{IResult, Parser};
 use reqwest::header;
-use scraper::Element;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Display;
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(
     Clone,
@@ -60,15 +59,15 @@ impl Display for Provider {
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         match self {
-            Provider::Genius { .. } => f.write_str("Genius"),
-            Provider::LyricsCom => f.write_str("Lyrics.com"),
+            Self::Genius { .. } => f.write_str("Genius"),
+            Self::LyricsCom => f.write_str("Lyrics.com"),
         }
     }
 }
 
 impl From<OnlineSong> for Song {
     fn from(online_song: OnlineSong) -> Self {
-        let map = if online_song.provider
+        let verse_map = if online_song.provider
             == (Provider::Genius { parsable: true })
         {
             parse_genius_lyrics(
@@ -81,26 +80,20 @@ impl From<OnlineSong> for Song {
                 .or_insert(online_song.lyrics);
             Some(map)
         };
-        let lyrics = ron::ser::to_string(&map).ok();
+        let lyrics = ron::ser::to_string(&verse_map).ok();
 
-        let verse_order: Option<Vec<String>> =
-            if let Some(map) = map.as_ref() {
-                Some(map.keys().map(|v| v.get_name()).collect())
-            } else {
-                None
-            };
+        let verse_order: Option<Vec<String>> = verse_map
+            .as_ref()
+            .map(|map| map.keys().map(VerseName::get_name).collect());
 
-        let verses: Option<Vec<VerseName>> =
-            if let Some(map) = map.as_ref() {
-                Some(map.keys().map(|v| v.to_owned()).collect())
-            } else {
-                None
-            };
+        let verses: Option<Vec<VerseName>> = verse_map
+            .as_ref()
+            .map(|map| map.keys().map(ToOwned::to_owned).collect());
 
         Self {
             title: online_song.title,
             author: Some(online_song.author),
-            verse_map: map,
+            verse_map,
             lyrics,
             verse_order,
             verses,
@@ -243,7 +236,7 @@ pub async fn search_genius(
             },
         ))
         .await;
-    Ok(songs.into_iter().filter_map(|s| s).collect())
+    Ok(songs.into_iter().flatten().collect())
 }
 
 pub async fn get_genius_lyrics(
@@ -306,7 +299,7 @@ pub async fn get_genius_lyrics(
                     // debug!(html);
                     t.text().collect::<Vec<&str>>()
                 })
-                .map(|t| t.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<String>>()
         })
         .collect::<String>();
@@ -486,8 +479,8 @@ mod test {
                 assert!(
                     !mapped_song
                         .lyrics
-                        .is_some_and(|lyrics| lyrics.contains("["))
-                )
+                        .is_some_and(|lyrics| lyrics.contains('['))
+                );
             }
         }
 
@@ -631,7 +624,7 @@ Lord, I'm gonna sing (Sing it, Dave)
 [Outro]
 I'm gonna sing
 Aw man, that was good"#;
-        let new_song = r#"[Verse 1]\nAlone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love made a way to let mercy come in\nWhen death was arrested and my life began\nAsh was redeemed, only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet, my feet rose to dance\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Verse 2]\nReleased from my chains, I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n[Verse 3]\nOur Savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Outro]\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nWhen death was arrested and my life began\nWhen death was arrested and my life began"#.replace("\\n", "\n");
+        let new_song = r"[Verse 1]\nAlone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love made a way to let mercy come in\nWhen death was arrested and my life began\nAsh was redeemed, only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet, my feet rose to dance\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Verse 2]\nReleased from my chains, I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n[Verse 3]\nOur Savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Outro]\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nWhen death was arrested and my life began\nWhen death was arrested and my life began".replace("\\n", "\n");
         let map = parse_genius_lyrics(song)?;
         let new_map = parse_genius_lyrics(&new_song)?;
         dbg!(map);

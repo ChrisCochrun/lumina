@@ -5,14 +5,12 @@ use std::io::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::core::widget::tree;
 use cosmic::iced::font::{Style, Weight};
-use cosmic::iced::theme::Base;
 use cosmic::iced::widget::scrollable::{
     self as iced_scrollable, AbsoluteOffset, Direction, Scrollbar,
 };
@@ -21,7 +19,6 @@ use cosmic::iced::{
     Background as ContainerBackground, Border, Color, Length,
     Padding, Shadow, Vector, color, task,
 };
-use cosmic::widget::button::Catalog;
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::grid::{self};
 use cosmic::widget::nav_bar::nav_bar_style;
@@ -41,7 +38,6 @@ use itertools::Itertools;
 use tracing::{debug, error};
 
 use crate::core::service_items::ServiceTrait;
-use crate::core::settings;
 use crate::core::slide::{Slide, TextAlignment};
 use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
@@ -1909,6 +1905,7 @@ impl SongEditor {
         .into()
     }
 
+    #[allow(clippy::unreadable_literal)]
     pub fn import_view(&self) -> Element<Message> {
         const GENIUS_COLOR: cosmic::iced::Color = color!(0x47e5bc);
         let cosmic::cosmic_theme::Spacing {
@@ -1948,7 +1945,7 @@ impl SongEditor {
                                 .ellipsize(Ellipsize::End(
                                     EllipsizeHeightLimit::Lines(1),
                                 ));
-                            let link = text::body(&song.link)
+                            let _link = text::body(&song.link)
                                 .ellipsize(Ellipsize::End(
                                     EllipsizeHeightLimit::Lines(1),
                                 ));
