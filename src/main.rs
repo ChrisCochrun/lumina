@@ -958,6 +958,17 @@ impl cosmic::Application for App {
                             Task::none()
                         }
                     }
+                    song_editor::Action::AddSong(song) => {
+                        if self.library.is_some() {
+                            self.update(Message::Library(
+                                library::Message::AddSongFromEditor(
+                                    song,
+                                ),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
                     song_editor::Action::None => Task::none(),
                 }
             }

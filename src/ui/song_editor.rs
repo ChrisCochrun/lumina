@@ -106,6 +106,7 @@ pub struct SongEditor {
 pub enum Action {
     Task(Task<Message>),
     UpdateSong(Song),
+    AddSong(Song),
     None,
 }
 
@@ -974,7 +975,8 @@ impl SongEditor {
             }
             Message::AddSong(song) => {
                 let song = Song::from(song);
-                return self.update(Message::ChangeSong(song));
+                self.importing = false;
+                return Action::AddSong(song);
             }
             Message::HoverSong(index) => {
                 self.hovered_online_song = index;
@@ -1997,8 +1999,8 @@ impl SongEditor {
                                 provider
                             ]
                             .spacing(space_s)
-                            .padding(space_m)
                             .apply(container)
+                            .padding(space_m)
                             .style(move |theme| {
                                 container::Style::default()
                                     .background(
@@ -2061,8 +2063,10 @@ impl SongEditor {
                         .collect();
 
                     column::with_children(songs)
+                        .padding([space_s, space_l, space_s, space_s])
                         .spacing(space_s)
                         .apply(scrollable)
+                        .scrollbar_padding(space_s)
                         .apply(container)
                 },
             );

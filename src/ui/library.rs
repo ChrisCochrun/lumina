@@ -29,7 +29,7 @@ use crate::core::kinds::ServiceItemKind;
 use crate::core::model::{KindWrapper, LibraryKind, Model};
 use crate::core::presentations::{self, Presentation};
 use crate::core::service_items::ServiceItem;
-use crate::core::songs::{self, Song};
+use crate::core::songs::{self, Song, insert_song};
 use crate::core::videos::{self, Video};
 
 #[allow(clippy::struct_field_names)]
@@ -110,6 +110,7 @@ pub enum Message {
     ReaddVideos(Vec<Video>),
     ReaddPres(Vec<Presentation>),
     ToService((LibraryKind, i32)),
+    AddSongFromEditor(Song),
 }
 
 impl<'a> Library {
@@ -184,6 +185,25 @@ impl<'a> Library {
             }
             Message::AddSong => {
                 return Action::CreateSong;
+            }
+            Message::AddSongFromEditor(song) => {
+                let after_task =
+                    Task::done(Message::OpenItem(Some((
+                        LibraryKind::Song,
+                        self.song_library.items.len() as i32,
+                    ))));
+                debug!(?song);
+                let task = Task::perform(
+                    insert_song(
+                        song,
+                        self.song_library.items.clone(),
+                        Arc::clone(&self.db),
+                    ),
+                    |res| {
+                        res.map_or(Message::None, Message::ReaddSongs)
+                    },
+                );
+                return Action::Task(task.chain(after_task));
             }
             Message::AddItem => {
                 let kind =

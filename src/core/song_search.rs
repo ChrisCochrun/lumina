@@ -81,11 +81,29 @@ impl From<OnlineSong> for Song {
                 .or_insert(online_song.lyrics);
             Some(map)
         };
+        let lyrics = ron::ser::to_string(&map).ok();
+
+        let verse_order: Option<Vec<String>> =
+            if let Some(map) = map.as_ref() {
+                Some(map.keys().map(|v| v.get_name()).collect())
+            } else {
+                None
+            };
+
+        let verses: Option<Vec<VerseName>> =
+            if let Some(map) = map.as_ref() {
+                Some(map.keys().map(|v| v.to_owned()).collect())
+            } else {
+                None
+            };
 
         Self {
             title: online_song.title,
             author: Some(online_song.author),
             verse_map: map,
+            lyrics,
+            verse_order,
+            verses,
             ..Default::default()
         }
     }

@@ -788,6 +788,54 @@ pub async fn remove_song(
     }
 }
 
+pub async fn insert_song(
+    mut song: Song,
+    mut songs: Vec<Song>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Song>> {
+    let verse_order = {
+        song.verse_order.clone().map_or_else(String::new, |vo| {
+            vo.into_iter()
+                .map(|mut s| {
+                    s.push(' ');
+                    s
+                })
+                .collect::<String>()
+        })
+    };
+
+    let audio = song
+        .audio
+        .clone()
+        .map(|a| a.to_str().unwrap_or_default().to_string());
+
+    let background = song
+        .background
+        .clone()
+        .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+    let res = query!(
+        r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+        song.title,
+        song.lyrics,
+        song.author,
+        song.ccli,
+        verse_order,
+        audio,
+        song.font,
+        song.font_size,
+        background
+    )
+    .execute(&*db)
+    .await
+    .into_diagnostic()?;
+    song.id = i32::try_from(res.last_insert_rowid()).expect(
+        "Fairly confident that this number won't get that high",
+    );
+    songs.push(song);
+    Ok(songs)
+}
+
 pub async fn add_song(
     mut songs: Vec<Song>,
     db: Arc<SqlitePool>,
