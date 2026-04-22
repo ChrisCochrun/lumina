@@ -464,7 +464,7 @@ mod test {
             let mapped_song = Song::from(new_song);
             dbg!(&mapped_song);
             if let Some(map) = mapped_song.verse_map.as_ref() {
-                assert!(map.len() > 0);
+                assert!(!map.is_empty());
                 // Need to leave commented until I work on more robust tests.
                 assert!(
                     map.keys()
@@ -511,10 +511,11 @@ mod test {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn online_song_to_song(song: OnlineSong) -> Result<(), String> {
         let song = Song::from(song);
         if let Some(verse_map) = song.verse_map.as_ref() {
-            if verse_map.len() < 1 {
+            if verse_map.is_empty() {
                 return Err(format!(
                     "VerseMap wasn't built right likely: {song:?}",
                 ));
