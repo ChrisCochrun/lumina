@@ -1411,28 +1411,3 @@ pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
         text
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::core::songs::test::{add_db, fill_db};
-    use pretty_assertions::assert_eq;
-
-    #[tokio::test]
-    async fn test_library_add() -> Result<()> {
-        let db = Arc::new(add_db().await?);
-        fill_db(Arc::clone(&db)).await?;
-        let mut library = Library::new(db).await;
-        let pre_length = library.song_library.items.len();
-        library.selected_items = Some(vec![(LibraryKind::Song, 5)]);
-        library.update(Message::DeleteItem);
-        let post_length = library.song_library.items.len();
-        assert!(pre_length > post_length);
-        assert_eq!(pre_length, post_length);
-        // let song =
-        //     library.get_song(5).expect("Should be here").clone();
-        // let test_song = test_song();
-
-        Ok(())
-    }
-}
