@@ -62,8 +62,6 @@ pub struct SongEditor {
     author: String,
     audio: PathBuf,
     font_size: usize,
-    font_size_open: bool,
-    font_selector_open: bool,
     verse_order: String,
     pub lyrics: text_editor::Content,
     editing: bool,
@@ -77,20 +75,16 @@ pub struct SongEditor {
     shadow_sizes: [String; 21],
     shadow_offset_sizes: [String; 21],
     stroke_size: u16,
-    stroke_open: bool,
     #[debug(skip)]
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
     verses_scroll_id: Id,
     hovered_verse_chip: Option<usize>,
     hovered_dnd_verse_chip: Option<usize>,
-    stroke_color_picker_open: bool,
     dragging_verse_chip: bool,
     update_slide_handle: Option<task::Handle>,
-    alignment_popup: bool,
     #[debug(skip)]
     shadow_color_model: ColorPickerModel,
-    shadow_tools_open: bool,
     importing: bool,
     search_input: String,
     search_results: Option<Vec<OnlineSong>>,
@@ -129,13 +123,11 @@ pub enum Message {
     PauseVideo,
     UpdateStrokeSize(usize),
     UpdateStrokeColor(ColorPickerUpdate),
-    OpenStroke,
-    CloseStroke,
     VerseEditorMessage((usize, verse_editor::Message)),
     FontSizeOpen(bool),
     FontSelectorOpen(bool),
     EditVerseOrder,
-    OpenStrokeColorPicker,
+    ToggleStrokeTools,
     ChipHovered(Option<usize>),
     ChipDndHovered(Option<usize>),
     ChipDropped((usize, Vec<u8>, String)),
@@ -144,9 +136,9 @@ pub enum Message {
     ChipDroppedEnd((Vec<u8>, String)),
     AddVerse((VerseName, String)),
     RemoveVerse(usize),
-    AlignmentPopupOpen,
+    ToggleAlignmentTools,
     SetTextAlignment(TextAlignment),
-    OpenShadowTools,
+    ToggleShadowTools,
     UpdateShadowColor(ColorPickerUpdate),
     UpdateShadowSize(usize),
     UpdateShadowOffsetX(usize),
@@ -169,7 +161,16 @@ pub enum State {
     AlignmentToolOpen,
     EditingVerseOrder,
     DraggingVerseChip,
+    FontSizeOpen,
+    FontPickerOpen,
     Idle,
+}
+
+impl State {
+    #[must_use]
+    pub const fn is_importing(&self) -> bool {
+        matches!(self, Self::Importing { .. })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -261,8 +262,6 @@ impl SongEditor {
             font: None,
             font_size: 100,
             font_sizes: combo_box::State::new(font_sizes),
-            font_size_open: false,
-            font_selector_open: false,
             verse_order: String::new(),
             lyrics: text_editor::Content::new(),
             editing: false,
@@ -343,14 +342,12 @@ impl SongEditor {
                 "20".to_string(),
             ],
             stroke_size: 0,
-            stroke_open: false,
             stroke_color_model: ColorPickerModel::new(
                 "hex",
                 "rgb",
                 Some(Color::BLACK),
                 Some(Color::BLACK),
             ),
-            stroke_color_picker_open: false,
             verses: None,
             verses_scroll_id: Id::unique(),
             editing_verse_order: false,
@@ -358,14 +355,12 @@ impl SongEditor {
             hovered_verse_chip: None,
             dragging_verse_chip: false,
             update_slide_handle: None,
-            alignment_popup: false,
             shadow_color_model: ColorPickerModel::new(
                 "hex",
                 "rgb",
                 Some(Color::BLACK),
                 Some(Color::BLACK),
             ),
-            shadow_tools_open: false,
             importing: false,
             search_input: String::new(),
             search_results: None,
@@ -384,12 +379,7 @@ impl SongEditor {
                     return Action::None;
                 };
                 self.title = song.title;
-                self.font_size_open = false;
-                self.font_selector_open = false;
                 self.editing_verse_order = false;
-                self.alignment_popup = false;
-                self.stroke_color_picker_open = false;
-                self.shadow_tools_open = false;
                 if let Some(stroke_size) = song.stroke_size {
                     self.stroke_size = stroke_size;
                 }
@@ -680,15 +670,11 @@ impl SongEditor {
                 self.song = Some(song.clone());
                 return Action::UpdateSong(song);
             }
-            Message::OpenStroke => {
-                self.stroke_open = true;
-            }
-            Message::CloseStroke => {
-                self.stroke_open = false;
-            }
-            Message::OpenStrokeColorPicker => {
-                self.stroke_color_picker_open =
-                    !self.stroke_color_picker_open;
+            Message::ToggleStrokeTools => {
+                self.state = match self.state {
+                    State::StrokeToolOpen => State::Idle,
+                    _ => State::StrokeToolOpen,
+                };
             }
             Message::VerseEditorMessage((index, message)) => {
                 if let Some(verses) = self.verses.as_mut()
@@ -786,10 +772,18 @@ impl SongEditor {
                 }
             }
             Message::FontSizeOpen(open) => {
-                self.font_size_open = open;
+                self.state = if open {
+                    State::FontSizeOpen
+                } else {
+                    State::Idle
+                };
             }
             Message::FontSelectorOpen(open) => {
-                self.font_selector_open = open;
+                self.state = if open {
+                    State::FontPickerOpen
+                } else {
+                    State::Idle
+                };
             }
             Message::EditVerseOrder => {
                 self.editing_verse_order = !self.editing_verse_order;
@@ -887,8 +881,11 @@ impl SongEditor {
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
             }
-            Message::AlignmentPopupOpen => {
-                self.alignment_popup = !self.alignment_popup;
+            Message::ToggleAlignmentTools => {
+                self.state = match self.state {
+                    State::AlignmentToolOpen => State::Idle,
+                    _ => State::AlignmentToolOpen,
+                };
             }
             Message::SetTextAlignment(alignment) => {
                 if let Some(mut song) = self.song.clone() {
@@ -955,8 +952,11 @@ impl SongEditor {
                 }
                 return Action::Task(Task::batch(tasks));
             }
-            Message::OpenShadowTools => {
-                self.shadow_tools_open = !self.shadow_tools_open;
+            Message::ToggleShadowTools => {
+                self.state = match self.state {
+                    State::ShadowToolOpen => State::Idle,
+                    _ => State::ShadowToolOpen,
+                };
             }
             Message::SearchUpdate(query) => {
                 self.search_input = query;
@@ -989,16 +989,12 @@ impl SongEditor {
                 }
             },
             Message::ToggleSongDialog => {
-                if let State::Importing { loading_songs } = self.state
-                {
-                    self.state = State::Importing {
-                        loading_songs: !loading_songs,
-                    };
-                } else {
-                    self.state = State::Importing {
+                self.state = match self.state {
+                    State::Importing { .. } => State::Idle,
+                    _ => State::Importing {
                         loading_songs: false,
-                    };
-                }
+                    },
+                };
             }
             Message::AddSong(song) => {
                 let song = Song::from(song);
@@ -1465,7 +1461,7 @@ impl SongEditor {
                 .on_open(Message::FontSelectorOpen(true))
                 .on_close(Message::FontSelectorOpen(false))
                 .width(300),
-                container(if self.font_selector_open {
+                container(if self.state == State::FontPickerOpen {
                     Element::from(space::horizontal())
                 } else {
                     Element::from(
@@ -1501,7 +1497,7 @@ impl SongEditor {
                 .on_open(Message::FontSizeOpen(true))
                 .on_close(Message::FontSizeOpen(false))
                 .width(space_xxxl),
-                container(if self.font_size_open {
+                container(if self.state == State::FontSizeOpen {
                     Element::from(space::horizontal())
                 } else {
                     Element::from(
@@ -1556,13 +1552,13 @@ impl SongEditor {
                     .symbolic(true),
             )
             .label("Text Stroke")
-            .on_press(Message::OpenStrokeColorPicker),
+            .on_press(Message::ToggleStrokeTools),
             "Outline of the text",
             tooltip::Position::Bottom,
         ))
         .modal(false)
         .position(popover::Position::Bottom)
-        .on_close(Message::OpenStrokeColorPicker);
+        .on_close(Message::ToggleStrokeTools);
 
         // let stroke_width_selector = combo_box(
         //     &self.stroke_sizes,
@@ -1572,7 +1568,7 @@ impl SongEditor {
         // )
         // .width(theme::active().cosmic().space_xxl());
 
-        if self.stroke_color_picker_open {
+        if self.state == State::StrokeToolOpen {
             let stroke_size_row = row![
                 "Stroke Size: ",
                 dropdown(
@@ -1630,15 +1626,15 @@ impl SongEditor {
             )
             .label("Text Shadow")
             .padding(space_s)
-            .on_press(Message::OpenShadowTools),
+            .on_press(Message::ToggleShadowTools),
             "Set the shadow of the text",
             tooltip::Position::Bottom,
         ))
         .modal(false)
         .position(popover::Position::Bottom)
-        .on_close(Message::OpenShadowTools);
+        .on_close(Message::ToggleShadowTools);
 
-        if self.shadow_tools_open {
+        if self.state == State::ShadowToolOpen {
             let shadow_color_picker = self
                 .shadow_color_model
                 .builder(Message::UpdateShadowColor)
@@ -1744,145 +1740,146 @@ impl SongEditor {
             )
             .label("Text Alignment")
             .padding(space_s)
-            .on_press(Message::AlignmentPopupOpen),
+            .on_press(Message::ToggleAlignmentTools),
             "Set where text should be on slide",
             tooltip::Position::Bottom,
         ))
         .modal(false)
         .position(popover::Position::Bottom)
-        .on_close(Message::AlignmentPopupOpen);
+        .on_close(Message::ToggleAlignmentTools);
 
-        let text_alignment_popup = if self.alignment_popup {
-            text_alignment_popover.popup(
-                grid::grid()
-                    .row_spacing(space_s)
-                    .column_spacing(space_s)
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_top_left",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::TopLeft,
+        let text_alignment_popup =
+            if self.state == State::AlignmentToolOpen {
+                text_alignment_popover.popup(
+                    grid::grid()
+                        .row_spacing(space_s)
+                        .column_spacing(space_s)
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_top_left",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::TopLeft,
+                                ),
                             ),
-                        ),
-                        |a| a.column(0).row(0),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_top",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::TopCenter,
+                            |a| a.column(0).row(0),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_top",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::TopCenter,
+                                ),
                             ),
-                        ),
-                        |a| a.column(1).row(0),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_top_right",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::TopRight,
+                            |a| a.column(1).row(0),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_top_right",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::TopRight,
+                                ),
                             ),
-                        ),
-                        |a| a.column(2).row(0),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_left",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::MiddleLeft,
+                            |a| a.column(2).row(0),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_left",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::MiddleLeft,
+                                ),
                             ),
-                        ),
-                        |a| a.column(0).row(1),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_center",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::MiddleCenter,
+                            |a| a.column(0).row(1),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_center",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::MiddleCenter,
+                                ),
                             ),
-                        ),
-                        |a| a.column(1).row(1),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_right",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::MiddleRight,
+                            |a| a.column(1).row(1),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_right",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::MiddleRight,
+                                ),
                             ),
-                        ),
-                        |a| a.column(2).row(1),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_bottom_left",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::BottomLeft,
+                            |a| a.column(2).row(1),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_bottom_left",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::BottomLeft,
+                                ),
                             ),
-                        ),
-                        |a| a.column(0).row(2),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_bottom",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::BottomCenter,
+                            |a| a.column(0).row(2),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_bottom",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::BottomCenter,
+                                ),
                             ),
-                        ),
-                        |a| a.column(1).row(2),
-                    )
-                    .push_with(
-                        button::icon(icon::from_name(
-                            "boundingbox_bottom_right",
-                        ))
-                        .class(theme::Button::Standard)
-                        .padding(space_s)
-                        .on_press(
-                            Message::SetTextAlignment(
-                                TextAlignment::BottomRight,
+                            |a| a.column(1).row(2),
+                        )
+                        .push_with(
+                            button::icon(icon::from_name(
+                                "boundingbox_bottom_right",
+                            ))
+                            .class(theme::Button::Standard)
+                            .padding(space_s)
+                            .on_press(
+                                Message::SetTextAlignment(
+                                    TextAlignment::BottomRight,
+                                ),
                             ),
-                        ),
-                        |a| a.column(2).row(2),
-                    )
-                    .apply(container)
-                    .padding(space_s)
-                    .class(theme::Container::custom(
-                        floating_container_style,
-                    )),
-            )
-        } else {
-            text_alignment_popover
-        };
+                            |a| a.column(2).row(2),
+                        )
+                        .apply(container)
+                        .padding(space_s)
+                        .class(theme::Container::custom(
+                            floating_container_style,
+                        )),
+                )
+            } else {
+                text_alignment_popover
+            };
 
         let background_selector = tooltip(
             button::icon(

@@ -898,15 +898,7 @@ impl cosmic::Application for App {
                 modal
             );
             Some(mouse_stack.into())
-        } else if self.song_editor.state
-            == (song_editor::State::Importing {
-                loading_songs: false,
-            })
-            || self.song_editor.state
-                == (song_editor::State::Importing {
-                    loading_songs: true,
-                })
-        {
+        } else if self.song_editor.state.is_importing() {
             let song_editor_dialog = self
                 .song_editor
                 .import_view()
