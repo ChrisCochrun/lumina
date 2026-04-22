@@ -49,6 +49,8 @@ pub struct Song {
     pub shadow_color: Option<Srgb>,
     pub verses: Option<Vec<VerseName>>,
     pub verse_map: Option<HashMap<VerseName, String>>,
+    pub lyric_video: Option<PathBuf>,
+    pub music_video: Option<PathBuf>,
 }
 
 #[derive(
@@ -441,6 +443,14 @@ impl FromRow<'_, SqliteRow> for Song {
                 .ok()
                 .flatten();
 
+        let lyric_video = row
+            .try_get::<String, &str>("lyric_video")
+            .map_or(None, |vid| Some(PathBuf::from(vid)));
+
+        let music_video = row
+            .try_get::<String, &str>("music_video")
+            .map_or(None, |vid| Some(PathBuf::from(vid)));
+
         Ok(Self {
             id: row.try_get("id")?,
             title: row.try_get("title")?,
@@ -493,6 +503,8 @@ impl FromRow<'_, SqliteRow> for Song {
             shadow_offset,
             verses,
             verse_map,
+            lyric_video,
+            music_video,
             ..Default::default()
         })
     }
@@ -814,8 +826,18 @@ pub async fn insert_song(
         .clone()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
 
+    let lyric_video = song
+        .lyric_video
+        .clone()
+        .map(|vid| vid.to_str().unwrap_or_default().to_string());
+
+    let music_video = song
+        .music_video
+        .clone()
+        .map(|vid| vid.to_str().unwrap_or_default().to_string());
+
     let res = query!(
-        r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
+        r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background, lyric_video, music_video) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
         song.title,
         song.lyrics,
         song.author,
@@ -824,7 +846,9 @@ pub async fn insert_song(
         audio,
         song.font,
         song.font_size,
-        background
+        background,
+        lyric_video,
+        music_video
     )
     .execute(&*db)
     .await
@@ -837,52 +861,11 @@ pub async fn insert_song(
 }
 
 pub async fn add_song(
-    mut songs: Vec<Song>,
+    songs: Vec<Song>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Song>> {
-    let mut song = Song::default();
-
-    let verse_order = {
-        song.verse_order.clone().map_or_else(String::new, |vo| {
-            vo.into_iter()
-                .map(|mut s| {
-                    s.push(' ');
-                    s
-                })
-                .collect::<String>()
-        })
-    };
-
-    let audio = song
-        .audio
-        .clone()
-        .map(|a| a.to_str().unwrap_or_default().to_string());
-
-    let background = song
-        .background
-        .clone()
-        .map(|b| b.path.to_str().unwrap_or_default().to_string());
-
-    let res = query!(
-        r#"INSERT INTO songs (title, lyrics, author, ccli, verse_order, audio, font, font_size, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#,
-        song.title,
-        song.lyrics,
-        song.author,
-        song.ccli,
-        verse_order,
-        audio,
-        song.font,
-        song.font_size,
-        background
-    )
-    .execute(&*db)
-    .await
-    .into_diagnostic()?;
-    song.id = i32::try_from(res.last_insert_rowid()).expect(
-        "Fairly confident that this number won't get that high",
-    );
-    songs.push(song);
-    Ok(songs)
+    let song = Song::default();
+    insert_song(song, songs, db).await
 }
 
 pub async fn update_song(
@@ -905,6 +888,16 @@ pub async fn update_song(
         .background
         .clone()
         .map(|b| b.path.to_str().unwrap_or_default().to_string());
+
+    let lyric_video = song
+        .lyric_video
+        .clone()
+        .map(|vid| vid.to_str().unwrap_or_default().to_string());
+
+    let music_video = song
+        .music_video
+        .clone()
+        .map(|vid| vid.to_str().unwrap_or_default().to_string());
 
     let lyrics = song.verse_map.clone().map(|map| {
         map.iter()
@@ -957,7 +950,7 @@ pub async fn update_song(
     // );
 
     let result = query!(
-        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20 WHERE id = $1"#,
+        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20, lyric_video = $21, music_video = $22 WHERE id = $1"#,
         song.id,
         song.title,
         lyrics,
@@ -977,7 +970,9 @@ pub async fn update_song(
         shadow_offset_x,
         shadow_offset_y,
         style,
-        weight
+        weight,
+        lyric_video,
+        music_video
     )
         .execute(&*db)
         .await
