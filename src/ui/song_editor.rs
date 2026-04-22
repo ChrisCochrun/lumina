@@ -26,8 +26,8 @@ use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     ColorPickerModel, Id, RcElementWrapper, button, combo_box,
     container, divider, dnd_destination, dnd_source, dropdown, icon,
-    mouse_area, popover, scrollable, text, text_editor, text_input,
-    tooltip,
+    indeterminate_circular, mouse_area, popover, scrollable, text,
+    text_editor, text_input, tooltip,
 };
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
@@ -96,6 +96,7 @@ pub struct SongEditor {
     search_results: Option<Vec<OnlineSong>>,
     pub genius_token: Option<String>,
     hovered_online_song: Option<usize>,
+    pub state: State,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -157,6 +158,18 @@ pub enum Message {
     ToggleSongDialog,
     HoverSong(Option<usize>),
     AddSong(OnlineSong),
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum State {
+    LoadingSlides,
+    Importing { loading_songs: bool },
+    StrokeToolOpen,
+    ShadowToolOpen,
+    AlignmentToolOpen,
+    EditingVerseOrder,
+    DraggingVerseChip,
+    Idle,
 }
 
 #[derive(Debug, Clone)]
@@ -358,6 +371,7 @@ impl SongEditor {
             search_results: None,
             genius_token,
             hovered_online_song: None,
+            state: State::Idle,
         }
     }
 
@@ -948,6 +962,9 @@ impl SongEditor {
                 self.search_input = query;
             }
             Message::SearchSong(query) => {
+                self.state = State::Importing {
+                    loading_songs: true,
+                };
                 return Action::Task(Task::perform(
                     song_search::search_genius(
                         query,
@@ -961,17 +978,31 @@ impl SongEditor {
                 ));
             }
             Message::UpdateSearchResults(result) => match result {
-                Ok(songs) => self.search_results = Some(songs),
+                Ok(songs) => {
+                    self.state = State::Importing {
+                        loading_songs: false,
+                    };
+                    self.search_results = Some(songs);
+                }
                 Err(e) => {
                     error!("Cannot find songs: {e}");
                 }
             },
             Message::ToggleSongDialog => {
-                self.importing = !self.importing;
+                if let State::Importing { loading_songs } = self.state
+                {
+                    self.state = State::Importing {
+                        loading_songs: !loading_songs,
+                    };
+                } else {
+                    self.state = State::Importing {
+                        loading_songs: false,
+                    };
+                }
             }
             Message::AddSong(song) => {
                 let song = Song::from(song);
-                self.importing = false;
+                self.state = State::Idle;
                 return Action::AddSong(song);
             }
             Message::HoverSong(index) => {
@@ -1928,7 +1959,15 @@ impl SongEditor {
             .icon_size(space_xl)
             .on_press(Message::SearchSong(self.search_input.clone()));
 
-        let search_results =
+        let search_results = if self.state
+            == (State::Importing {
+                loading_songs: true,
+            }) {
+            indeterminate_circular()
+                .apply(container)
+                .padding(space_l)
+                .center(Length::Fill)
+        } else {
             self.search_results.as_ref().map_or_else(
                 || space::horizontal().apply(container),
                 |songs| {
@@ -2066,7 +2105,8 @@ impl SongEditor {
                         .scrollbar_padding(space_s)
                         .apply(container)
                 },
-            );
+            )
+        };
 
         let search_row = row![search_bar, submit_button]
             .spacing(space_s)
