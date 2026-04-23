@@ -18,13 +18,16 @@ use cosmic::iced::{
 };
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
+use cosmic::widget::image::Handle;
 use cosmic::widget::{
-    Container, Id, Row, Space, column, container, flex_row, image,
-    menu, mouse_area, popover, responsive, scrollable, space, text,
+    Container, Id, Row, Space, column, container, flex_row,
+    image as cosmic_image, menu, mouse_area, popover, responsive,
+    scrollable, space, text,
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
+use image;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player};
@@ -37,6 +40,7 @@ use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
 use crate::ui::library::elide_text;
+use crate::ui::widgets::loaded_image::loaded_image;
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -45,6 +49,8 @@ static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 pub(crate) struct Presenter {
     pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
+    pub next_slide: Option<Slide>,
+    pub prev_slide: Option<Slide>,
     pub current_item: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
@@ -201,6 +207,18 @@ impl Presenter {
 
         let slide =
             items.first().and_then(|item| item.slides.first());
+
+        let next_slide =
+            items.get(0).and_then(|item| item.slides.get(1));
+        let next_slide = if next_slide.is_none() {
+            items
+                .get(1)
+                .and_then(|item| item.slides.get(0))
+                .map(|slide| slide.clone())
+        } else {
+            next_slide.map(|slide| slide.clone())
+        };
+
         let audio = items
             .first()
             .and_then(|item| {
@@ -212,6 +230,8 @@ impl Presenter {
 
         Self {
             current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
+            next_slide,
+            prev_slide: None,
             current_item: 0,
             current_slide_index: 0,
             total_slides,
@@ -244,9 +264,6 @@ impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::AddObsClient(client) => {
-                self.obs_client = Some(client);
-            }
             Message::NextSlide => {
                 if self.service.get(self.current_item).is_some_and(
                     |i| {
@@ -292,6 +309,145 @@ impl Presenter {
             }
             Message::ClickSlide(item_index, slide_index) => {
                 return Action::ChangeSlide(item_index, slide_index);
+            }
+            Message::ActivateSlide(item_index, slide_index) => {
+                debug!(slide_index, item_index);
+                if let Some(slide) = self
+                    .service
+                    .get(item_index)
+                    .and_then(|item| item.slides.get(slide_index))
+                {
+                    self.current_item = item_index;
+                    self.current_slide_index = slide_index;
+                    return self
+                        .update(Message::SlideChange(slide.clone()));
+                }
+            }
+            Message::SlideChange(mut slide) => {
+                let slide_text = slide.text();
+                debug!(slide_text, "slide changed");
+                let bg = slide.background().clone();
+                debug!(?bg, "comparing background...");
+                let backgrounds_match =
+                    self.current_slide.background()
+                        == slide.background();
+                // self.current_slide_index = slide;
+
+                if matches!(
+                    slide.background().kind,
+                    BackgroundKind::Image
+                ) {
+                    if let Ok((width, height, pixels)) = image::open(
+                        &slide.background().path,
+                    )
+                    .map(|image| {
+                        (
+                            image.width(),
+                            image.height(),
+                            image.to_rgba8().to_vec(),
+                        )
+                    }) {
+                        let handle =
+                            Handle::from_rgba(width, height, pixels);
+                        slide.background.image_handle = Some(handle);
+                    };
+                }
+
+                debug!("cloning slide...");
+                self.current_slide = slide.clone();
+                let font = slide
+                    .font()
+                    .map_or_else(String::new, |font| font.get_name());
+                let _ = self.update(Message::ChangeFont(font));
+                debug!("changing video now...");
+                if !backgrounds_match {
+                    if let Some(video) = &mut self.preview_video {
+                        let _ = video.restart_stream();
+                    }
+                    if let Some(video) = &mut self.presentation_video
+                    {
+                        let _ = video.restart_stream();
+                    }
+                    self.reset_video();
+                }
+
+                let mut target_item = 0;
+
+                self.service.iter().enumerate().try_for_each(
+                    |(index, item)| {
+                        item.slides.iter().enumerate().try_for_each(
+                            |(slide_index, _)| {
+                                target_item += 1;
+                                if (index, slide_index)
+                                    == (
+                                        self.current_item,
+                                        self.current_slide_index,
+                                    )
+                                {
+                                    None
+                                } else {
+                                    Some(())
+                                }
+                            },
+                        )
+                    },
+                );
+
+                debug!(target_item);
+
+                #[allow(clippy::cast_precision_loss)]
+                let offset = AbsoluteOffset {
+                    x: {
+                        if target_item > 2 {
+                            (target_item as f32)
+                                .mul_add(187.5, -187.5)
+                        } else {
+                            0.0
+                        }
+                    },
+                    y: 0.0,
+                };
+
+                let mut tasks = vec![];
+                tasks.push(scroll_to(
+                    self.scroll_id.clone(),
+                    offset.into(),
+                ));
+
+                if self.slide_action_map.is_some() {
+                    debug!("Found slide actions, running them");
+                    tasks.push(self.run_slide_actions());
+                }
+
+                if let Some(mut new_audio) =
+                    self.current_slide.audio()
+                {
+                    if let Some(stripped_audio) = new_audio
+                        .to_str()
+                        .expect("Should be no problem")
+                        .to_string()
+                        .strip_prefix(r"file://")
+                    {
+                        new_audio = PathBuf::from(stripped_audio);
+                    }
+                    debug!("{:?}", new_audio);
+                    if new_audio.exists() {
+                        self.audio = Some(new_audio);
+                        tasks.push(self.start_audio());
+                    } else {
+                        self.audio = None;
+                        self.update(Message::EndAudio);
+                    }
+                } else {
+                    self.audio = None;
+                    self.update(Message::EndAudio);
+                }
+                let task_count = tasks.len();
+                debug!(?task_count);
+                return Action::Task(Task::batch(tasks));
+            }
+            Message::AddObsClient(client) => {
+                self.obs_client = Some(client);
             }
             Message::RightClickSlide(item_index, slide_index) => {
                 debug!(
@@ -396,121 +552,6 @@ impl Presenter {
                     map.insert(slide_id, vec![action]);
                     self.slide_action_map = Some(map);
                 }
-            }
-            Message::ActivateSlide(item_index, slide_index) => {
-                debug!(slide_index, item_index);
-                if let Some(slide) = self
-                    .service
-                    .get(item_index)
-                    .and_then(|item| item.slides.get(slide_index))
-                {
-                    self.current_item = item_index;
-                    self.current_slide_index = slide_index;
-                    return self
-                        .update(Message::SlideChange(slide.clone()));
-                }
-            }
-            Message::SlideChange(slide) => {
-                let slide_text = slide.text();
-                debug!(slide_text, "slide changed");
-                let bg = slide.background().clone();
-                debug!(?bg, "comparing background...");
-                let backgrounds_match =
-                    self.current_slide.background()
-                        == slide.background();
-                // self.current_slide_index = slide;
-                debug!("cloning slide...");
-                self.current_slide = slide.clone();
-                let font = slide
-                    .font()
-                    .map_or_else(String::new, |font| font.get_name());
-                let _ = self.update(Message::ChangeFont(font));
-                debug!("changing video now...");
-                if !backgrounds_match {
-                    if let Some(video) = &mut self.preview_video {
-                        let _ = video.restart_stream();
-                    }
-                    if let Some(video) = &mut self.presentation_video
-                    {
-                        let _ = video.restart_stream();
-                    }
-                    self.reset_video();
-                }
-
-                let mut target_item = 0;
-
-                self.service.iter().enumerate().try_for_each(
-                    |(index, item)| {
-                        item.slides.iter().enumerate().try_for_each(
-                            |(slide_index, _)| {
-                                target_item += 1;
-                                if (index, slide_index)
-                                    == (
-                                        self.current_item,
-                                        self.current_slide_index,
-                                    )
-                                {
-                                    None
-                                } else {
-                                    Some(())
-                                }
-                            },
-                        )
-                    },
-                );
-
-                debug!(target_item);
-
-                #[allow(clippy::cast_precision_loss)]
-                let offset = AbsoluteOffset {
-                    x: {
-                        if target_item > 2 {
-                            (target_item as f32)
-                                .mul_add(187.5, -187.5)
-                        } else {
-                            0.0
-                        }
-                    },
-                    y: 0.0,
-                };
-
-                let mut tasks = vec![];
-                tasks.push(scroll_to(
-                    self.scroll_id.clone(),
-                    offset.into(),
-                ));
-
-                if self.slide_action_map.is_some() {
-                    debug!("Found slide actions, running them");
-                    tasks.push(self.run_slide_actions());
-                }
-
-                if let Some(mut new_audio) =
-                    self.current_slide.audio()
-                {
-                    if let Some(stripped_audio) = new_audio
-                        .to_str()
-                        .expect("Should be no problem")
-                        .to_string()
-                        .strip_prefix(r"file://")
-                    {
-                        new_audio = PathBuf::from(stripped_audio);
-                    }
-                    debug!("{:?}", new_audio);
-                    if new_audio.exists() {
-                        self.audio = Some(new_audio);
-                        tasks.push(self.start_audio());
-                    } else {
-                        self.audio = None;
-                        self.update(Message::EndAudio);
-                    }
-                } else {
-                    self.audio = None;
-                    self.update(Message::EndAudio);
-                }
-                let task_count = tasks.len();
-                debug!(?task_count);
-                return Action::Task(Task::batch(tasks));
             }
             Message::ChangeFont(s) => {
                 let font_name = s.into_boxed_str();
@@ -1162,10 +1203,9 @@ pub(crate) fn slide_view<'a>(
 
         match slide.background().kind {
             BackgroundKind::Image => {
-                let path = slide.background().path.clone();
                 stack = stack.push(
                     Container::new(
-                        image(path)
+                        loaded_image(slide.background().path.into())
                             .content_fit(ContentFit::Contain)
                             .width(width)
                             .height(Length::Fill),
@@ -1206,7 +1246,7 @@ pub(crate) fn slide_view<'a>(
                 if let Some(pdf) = slide.pdf_page() {
                     stack = stack.push(
                         Container::new(
-                            image(pdf)
+                            cosmic_image(pdf)
                                 .content_fit(ContentFit::Contain),
                         )
                         .center(Length::Fill)
@@ -1220,7 +1260,7 @@ pub(crate) fn slide_view<'a>(
             && let Some(handle) = &text.handle
         {
             stack = stack.push(
-                image(handle)
+                cosmic_image(handle)
                     .content_fit(ContentFit::Contain)
                     .width(Length::Fill)
                     .height(Length::Fill),

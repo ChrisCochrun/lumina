@@ -463,8 +463,8 @@ impl FromRow<'_, SqliteRow> for Song {
             })),
             verse_order: Some(verse_order),
             background: {
-                let string: String = row.try_get("background")?;
-                Background::try_from(string).ok()
+                let path: String = row.try_get("background")?;
+                Background::try_from(path).ok()
             },
             text_alignment: Some({
                 let horizontal_alignment: String =

@@ -1,8 +1,11 @@
 #![allow(clippy::similar_names, unused)]
+use cosmic::iced::Size;
+use cosmic::iced::core::image::{Allocation, allocate};
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
+use image::EncodableLayout;
 use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -93,6 +96,8 @@ impl From<&Value> for TextAlignment {
 pub struct Background {
     pub path: PathBuf,
     pub kind: BackgroundKind,
+    #[serde(skip)]
+    pub image_handle: Option<Handle>,
 }
 
 impl TryFrom<&Background> for Video {
@@ -161,18 +166,22 @@ impl TryFrom<PathBuf> for Background {
                     "jpeg" | "jpg" | "png" | "webp" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Image,
+                        image_handle: None,
                     }),
                     "mp4" | "mkv" | "webm" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Video,
+                        image_handle: None,
                     }),
                     "pdf" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Pdf,
+                        image_handle: None,
                     }),
                     "html" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Html,
+                        image_handle: None,
                     }),
                     _ => Err(ParseError::NonBackgroundFile),
                 }
