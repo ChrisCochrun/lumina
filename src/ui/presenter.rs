@@ -40,7 +40,7 @@ use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
 use crate::ui::library::elide_text;
-use crate::ui::widgets::loaded_image::loaded_image;
+// use crate::ui::widgets::loaded_image::loaded_image;
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -323,7 +323,7 @@ impl Presenter {
                         .update(Message::SlideChange(slide.clone()));
                 }
             }
-            Message::SlideChange(mut slide) => {
+            Message::SlideChange(slide) => {
                 let slide_text = slide.text();
                 debug!(slide_text, "slide changed");
                 let bg = slide.background().clone();
@@ -333,25 +333,25 @@ impl Presenter {
                         == slide.background();
                 // self.current_slide_index = slide;
 
-                if matches!(
-                    slide.background().kind,
-                    BackgroundKind::Image
-                ) {
-                    if let Ok((width, height, pixels)) = image::open(
-                        &slide.background().path,
-                    )
-                    .map(|image| {
-                        (
-                            image.width(),
-                            image.height(),
-                            image.to_rgba8().to_vec(),
-                        )
-                    }) {
-                        let handle =
-                            Handle::from_rgba(width, height, pixels);
-                        slide.background.image_handle = Some(handle);
-                    };
-                }
+                // if matches!(
+                //     slide.background().kind,
+                //     BackgroundKind::Image
+                // ) {
+                //     if let Ok((width, height, pixels)) = image::open(
+                //         &slide.background().path,
+                //     )
+                //     .map(|image| {
+                //         (
+                //             image.width(),
+                //             image.height(),
+                //             image.to_rgba8().to_vec(),
+                //         )
+                //     }) {
+                //         let handle =
+                //             Handle::from_rgba(width, height, pixels);
+                //         slide.background.image_handle = Some(handle);
+                //     };
+                // }
 
                 debug!("cloning slide...");
                 self.current_slide = slide.clone();
@@ -1204,14 +1204,29 @@ pub(crate) fn slide_view<'a>(
         match slide.background().kind {
             BackgroundKind::Image => {
                 stack = stack.push(
-                    Container::new(
-                        loaded_image(slide.background().path.into())
-                            .content_fit(ContentFit::Contain)
-                            .width(width)
-                            .height(Length::Fill),
-                    )
-                    .center(Length::Fill)
-                    .clip(true),
+                    if let Some(handle) =
+                        slide.background().image_handle.as_ref()
+                    {
+                        debug!("I am rendering a handle");
+                        Container::new(
+                            cosmic_image(handle)
+                                .content_fit(ContentFit::Contain)
+                                .width(width)
+                                .height(Length::Fill),
+                        )
+                        .center(Length::Fill)
+                        .clip(true)
+                    } else {
+                        debug!("Am a punk!");
+                        Container::new(
+                            cosmic_image(&slide.background().path)
+                                .content_fit(ContentFit::Contain)
+                                .width(width)
+                                .height(Length::Fill),
+                        )
+                        .center(Length::Fill)
+                        .clip(true)
+                    },
                 );
             }
             BackgroundKind::Video => {

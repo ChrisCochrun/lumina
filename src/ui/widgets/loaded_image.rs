@@ -8,15 +8,18 @@ use iced_core::{
     Widget, layout, mouse, overlay, renderer,
 };
 
-pub fn loaded_image<'a, Message: 'static, Theme>(
+pub fn loaded_image<'a, Message: 'static, Theme, Renderer>(
     handle: <cosmic::Renderer as iced_core::image::Renderer>::Handle,
+    content: cosmic::iced::Element<'a, Message, Theme, Renderer>,
 ) -> LoadedImage<'a, Message, Theme, cosmic::Renderer>
 where
     Theme: iced_widget::container::Catalog,
     <Theme as iced_widget::container::Catalog>::Class<'a>:
         From<cosmic::theme::Container<'a>>,
+    Renderer: iced_core::Renderer + iced_core::image::Renderer,
+    <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
-    LoadedImage::new(handle)
+    LoadedImage::new(handle, content)
 }
 
 /// Forces the wrapped image to be loaded before drawing.
@@ -42,10 +45,13 @@ where
     /// Creates an empty [`LoadedImage`].
     pub(crate) fn new(
         handle: <Renderer as iced_core::image::Renderer>::Handle,
+        content: impl Into<
+            cosmic::iced::Element<'a, Message, Theme, Renderer>,
+        >,
     ) -> Self {
         LoadedImage {
             handle: handle.clone(),
-            content: cosmic::widget::Image::new(handle).into(),
+            content: content.into(),
         }
     }
 }

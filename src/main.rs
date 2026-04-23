@@ -54,6 +54,7 @@ use crate::core::file;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::KindWrapper;
 use crate::ui::image_editor::{self, ImageEditor};
+use crate::ui::image_loader::load_images;
 use crate::ui::presentation_editor::{self, PresentationEditor};
 use crate::ui::text_svg::{self};
 use crate::ui::video_editor::{self, VideoEditor};
@@ -1397,16 +1398,25 @@ impl cosmic::Application for App {
                         item = presentation.to_service_item();
                     }
                 }
+                if matches!(kind, core::model::LibraryKind::Song) {
+                    item.slides = item
+                        .slides
+                        .into_par_iter()
+                        .map(|slide| {
+                            let fontdb = Arc::clone(&self.fontdb);
+                            text_svg::text_svg_generator(
+                                slide.clone(),
+                                &fontdb,
+                            )
+                            .unwrap_or(slide)
+                        })
+                        .collect();
+                }
                 item.slides = item
                     .slides
                     .into_par_iter()
                     .map(|slide| {
-                        let fontdb = Arc::clone(&self.fontdb);
-                        text_svg::text_svg_generator(
-                            slide.clone(),
-                            &fontdb,
-                        )
-                        .unwrap_or(slide)
+                        load_images(slide.clone()).unwrap_or(slide)
                     })
                     .collect();
                 self.update(Message::AddServiceItem(index, item))
@@ -1441,18 +1451,28 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AppendServiceItem(mut item) => {
+                if matches!(item.kind, ServiceItemKind::Song(_)) {
+                    item.slides = item
+                        .slides
+                        .into_par_iter()
+                        .map(|slide| {
+                            let fontdb = Arc::clone(&self.fontdb);
+                            text_svg::text_svg_generator(
+                                slide.clone(),
+                                &fontdb,
+                            )
+                            .unwrap_or(slide)
+                        })
+                        .collect();
+                }
                 item.slides = item
                     .slides
                     .into_par_iter()
                     .map(|slide| {
-                        let fontdb = Arc::clone(&self.fontdb);
-                        text_svg::text_svg_generator(
-                            slide.clone(),
-                            &fontdb,
-                        )
-                        .unwrap_or(slide)
+                        load_images(slide.clone()).unwrap_or(slide)
                     })
                     .collect();
+
                 Arc::make_mut(&mut self.service).push(item);
                 self.presenter.update_items(self.service.clone());
                 Task::none()

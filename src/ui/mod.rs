@@ -7,6 +7,7 @@ pub mod presentation_editor;
 pub mod presenter;
 // pub mod service;
 pub mod gst_video;
+pub mod image_loader;
 pub mod slide_editor;
 pub mod song_editor;
 pub mod text_svg;
