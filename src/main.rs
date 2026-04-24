@@ -235,6 +235,7 @@ enum Message {
     ViewModeSwitch(ViewMode),
     ShowGeniusToken,
     SetGeniusToken(String),
+    InsertBackgroundImage((iced::core::image::Handle, usize)),
 }
 
 #[allow(dead_code)]
@@ -1229,13 +1230,13 @@ impl cosmic::Application for App {
             }
             Message::WindowOpened(id) => {
                 debug!(?id, "Window opened");
-                let radii =
-                    self.core.sync_window_border_radii_to_theme();
-                self.core.set_sync_window_border_radii_to_theme(true);
-                debug!(radii);
-                let radii = self.core.window.sharp_corners;
-                debug!(radii);
-                self.core.window.sharp_corners = true;
+                // let radii =
+                //     self.core.sync_window_border_radii_to_theme();
+                // self.core.set_sync_window_border_radii_to_theme(true);
+                // debug!(radii);
+                // let radii = self.core.window.sharp_corners;
+                // debug!(radii);
+                // self.core.window.sharp_corners = true;
                 if self.cli_mode
                             || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
                                                         {
@@ -1340,10 +1341,38 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::AddServiceItem(index, item) => {
+                let task = if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_)
+                        | ServiceItemKind::Image(_)
+                ) {
+                    let path = item
+                        .slides
+                        .first()
+                        .map(|slide| slide.background.path.clone())
+                        .unwrap_or_default();
+
+                    Task::perform(load_images(path), move |res| {
+                        match res {
+                            Ok(handle) => cosmic::Action::App(
+                                Message::InsertBackgroundImage((
+                                    handle, index,
+                                )),
+                            ),
+                            Err(e) => {
+                                error!("Couldn't load image: {e:?}");
+                                cosmic::Action::None
+                            }
+                        }
+                    })
+                } else {
+                    Task::none()
+                };
+
                 Arc::make_mut(&mut self.service).insert(index, item);
                 self.presenter.update_items(self.service.clone());
                 self.hovered_dnd = None;
-                Task::none()
+                task
             }
             Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
@@ -1412,13 +1441,6 @@ impl cosmic::Application for App {
                         })
                         .collect();
                 }
-                item.slides = item
-                    .slides
-                    .into_par_iter()
-                    .map(|slide| {
-                        load_images(slide.clone()).unwrap_or(slide)
-                    })
-                    .collect();
                 self.update(Message::AddServiceItem(index, item))
             }
             Message::AddServiceItemsFiles(index, items) => {
@@ -1465,16 +1487,54 @@ impl cosmic::Application for App {
                         })
                         .collect();
                 }
-                item.slides = item
-                    .slides
-                    .into_par_iter()
-                    .map(|slide| {
-                        load_images(slide.clone()).unwrap_or(slide)
-                    })
-                    .collect();
 
+                let task = if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_)
+                        | ServiceItemKind::Image(_)
+                ) {
+                    let path = item
+                        .slides
+                        .first()
+                        .map(|slide| slide.background.path.clone())
+                        .unwrap_or_default();
+                    let item_index = self.service.len();
+                    Task::perform(load_images(path), move |res| {
+                        match res {
+                            Ok(handle) => cosmic::Action::App(
+                                Message::InsertBackgroundImage((
+                                    handle, item_index,
+                                )),
+                            ),
+                            Err(e) => {
+                                error!("Couldn't load image: {e:?}");
+                                cosmic::Action::None
+                            }
+                        }
+                    })
+                } else {
+                    Task::none()
+                };
                 Arc::make_mut(&mut self.service).push(item);
-                self.presenter.update_items(self.service.clone());
+                self.presenter
+                    .update_items(Arc::clone(&self.service));
+                task
+            }
+            Message::InsertBackgroundImage((handle, item_index)) => {
+                if let Some(item) = Arc::make_mut(&mut self.service)
+                    .get_mut(item_index)
+                {
+                    debug!(
+                        ?handle,
+                        item_index, "Inserting handle into item: "
+                    );
+                    for slide in &mut item.slides {
+                        slide.background.image_handle =
+                            Some(handle.clone());
+                    }
+                }
+                self.presenter
+                    .update_items(Arc::clone(&self.service));
                 Task::none()
             }
             Message::AppendServiceItemKind(item) => {

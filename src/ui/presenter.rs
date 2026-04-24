@@ -18,7 +18,6 @@ use cosmic::iced::{
 };
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
-use cosmic::widget::image::Handle;
 use cosmic::widget::{
     Container, Id, Row, Space, column, container, flex_row,
     image as cosmic_image, menu, mouse_area, popover, responsive,
@@ -27,7 +26,6 @@ use cosmic::widget::{
 use cosmic::{Task, theme};
 use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
-use image;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player};
@@ -41,12 +39,13 @@ use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::library::elide_text;
-// use crate::ui::widgets::loaded_image::loaded_image;
+use crate::ui::widgets::loaded_image::loaded_image;
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 
 // #[derive(Default, Clone, Debug)]
+#[allow(dead_code)]
 pub(crate) struct Presenter {
     pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
@@ -70,7 +69,7 @@ pub(crate) struct Presenter {
     context_menu_id: Option<(usize, usize)>,
     context_point: Point,
     obs_scenes: Option<Vec<Scene>>,
-    image_loader: ImageLoader,
+    pub image_loader: ImageLoader,
 }
 
 #[allow(dead_code)]
@@ -145,6 +144,7 @@ pub(crate) enum Message {
 // }
 
 impl Presenter {
+    #[allow(clippy::too_many_lines)]
     pub fn with_items(items: Arc<Vec<ServiceItem>>) -> Self {
         let preview_video = {
             items.first().and_then(|item| {
@@ -209,14 +209,11 @@ impl Presenter {
             items.first().and_then(|item| item.slides.first());
 
         let next_slide =
-            items.get(0).and_then(|item| item.slides.get(1));
+            items.first().and_then(|item| item.slides.get(1));
         let next_slide = if next_slide.is_none() {
-            items
-                .get(1)
-                .and_then(|item| item.slides.get(0))
-                .map(|slide| slide.clone())
+            items.get(1).and_then(|item| item.slides.first()).cloned()
         } else {
-            next_slide.map(|slide| slide.clone())
+            next_slide.cloned()
         };
 
         let audio = items
@@ -1032,6 +1029,7 @@ impl Presenter {
         Task::batch(tasks)
     }
 
+    #[allow(unused)]
     fn load_images(&mut self) {
         if matches!(
             self.current_slide.background.kind,
@@ -1039,7 +1037,7 @@ impl Presenter {
         ) {
             let path = &self.current_slide.background().path;
             self.current_slide.background.image_handle =
-                match self.image_loader.get_image(&path) {
+                match self.image_loader.get_image(path) {
                     Ok(image) => Some(image),
                     Err(e) => {
                         error!("Couldn't load image: {e:?}");
@@ -1055,8 +1053,7 @@ impl Presenter {
             )
         {
             let path = &slide.background().path;
-            let res_handle =
-                self.image_loader.load_image(path.clone());
+            let res_handle = self.image_loader.load_image(path);
             slide.background.image_handle = match res_handle {
                 Ok(image) => Some(image),
                 Err(e) => {
@@ -1102,7 +1099,7 @@ impl Presenter {
             .map_or_else(String::new, |font| font.get_name());
         let _ = self.update(Message::ChangeFont(font));
         debug!("changing video now...");
-        self.current_slide = slide.clone();
+        self.current_slide = slide;
         if !backgrounds_match {
             if let Some(video) = &mut self.preview_video {
                 video.set_paused(true);
@@ -1112,7 +1109,7 @@ impl Presenter {
             }
             self.reset_video();
         }
-        self.load_images();
+        // self.load_images();
 
         let mut target_item = 0;
 
@@ -1210,6 +1207,7 @@ async fn start_audio(player: Arc<rodio::Player>, audio: PathBuf) {
     debug!(empty, paused, "Finished running");
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
     video: Option<&'a Video>,
@@ -1230,29 +1228,38 @@ pub(crate) fn slide_view<'a>(
         match slide.background().kind {
             BackgroundKind::Image => {
                 stack = stack.push(
-                    if let Some(handle) =
-                        slide.background().image_handle.as_ref()
-                    {
-                        debug!("I am rendering a handle");
-                        Container::new(
-                            cosmic_image(handle)
-                                .content_fit(ContentFit::Contain)
-                                .width(width)
-                                .height(Length::Fill),
-                        )
-                        .center(Length::Fill)
-                        .clip(true)
-                    } else {
-                        debug!("Am a punk!");
-                        Container::new(
-                            cosmic_image(&slide.background().path)
-                                .content_fit(ContentFit::Contain)
-                                .width(width)
-                                .height(Length::Fill),
-                        )
-                        .center(Length::Fill)
-                        .clip(true)
-                    },
+                    slide
+                        .background()
+                        .image_handle
+                        .as_ref()
+                        .map_or_else(
+                            || {
+                                Container::new(
+                                    cosmic_image(
+                                        &slide.background().path,
+                                    )
+                                    .content_fit(ContentFit::Contain)
+                                    .width(width)
+                                    .height(Length::Fill),
+                                )
+                                .center(Length::Fill)
+                                .clip(true)
+                            },
+                            |handle| {
+                                Container::new(loaded_image(
+                                    handle.clone(),
+                                    cosmic_image(handle)
+                                        .content_fit(
+                                            ContentFit::Contain,
+                                        )
+                                        .width(width)
+                                        .height(Length::Fill)
+                                        .into(),
+                                ))
+                                .center(Length::Fill)
+                                .clip(true)
+                            },
+                        ),
                 );
             }
             BackgroundKind::Video => {
@@ -1286,10 +1293,12 @@ pub(crate) fn slide_view<'a>(
             BackgroundKind::Pdf => {
                 if let Some(pdf) = slide.pdf_page() {
                     stack = stack.push(
-                        Container::new(
+                        Container::new(loaded_image(
+                            pdf.clone(),
                             cosmic_image(pdf)
-                                .content_fit(ContentFit::Contain),
-                        )
+                                .content_fit(ContentFit::Contain)
+                                .into(),
+                        ))
                         .center(Length::Fill)
                         .clip(true),
                     );
@@ -1300,12 +1309,14 @@ pub(crate) fn slide_view<'a>(
         if let Some(text) = &slide.text_svg
             && let Some(handle) = &text.handle
         {
-            stack = stack.push(
+            stack = stack.push(loaded_image(
+                handle.clone(),
                 cosmic_image(handle)
                     .content_fit(ContentFit::Contain)
                     .width(Length::Fill)
-                    .height(Length::Fill),
-            );
+                    .height(Length::Fill)
+                    .into(),
+            ));
         }
         Container::new(stack).center(Length::Fill).into()
     })

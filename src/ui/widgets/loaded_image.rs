@@ -1,6 +1,4 @@
-use cosmic::iced::{
-    ContentFit, core as iced_core, widget as iced_widget,
-};
+use cosmic::iced::{core as iced_core, widget as iced_widget};
 use iced_core::event::Event;
 use iced_core::widget::{Operation, Tree};
 use iced_core::{
@@ -11,12 +9,15 @@ use iced_core::{
 pub fn loaded_image<'a, Message: 'static, Theme, Renderer>(
     handle: <cosmic::Renderer as iced_core::image::Renderer>::Handle,
     content: cosmic::iced::Element<'a, Message, Theme, Renderer>,
-) -> LoadedImage<'a, Message, Theme, cosmic::Renderer>
+) -> LoadedImage<'a, Message, Theme, Renderer>
 where
     Theme: iced_widget::container::Catalog,
     <Theme as iced_widget::container::Catalog>::Class<'a>:
         From<cosmic::theme::Container<'a>>,
-    Renderer: iced_core::Renderer + iced_core::image::Renderer,
+    Renderer: iced_core::Renderer
+        + iced_core::image::Renderer<
+            Handle = cosmic::widget::image::Handle,
+        >,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
     LoadedImage::new(handle, content)
@@ -50,7 +51,7 @@ where
         >,
     ) -> Self {
         LoadedImage {
-            handle: handle.clone(),
+            handle,
             content: content.into(),
         }
     }
@@ -231,6 +232,7 @@ where
     }
 }
 
+#[allow(clippy::use_self)]
 impl<'a, Message, Theme, Renderer>
     From<LoadedImage<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
