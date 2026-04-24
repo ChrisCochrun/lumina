@@ -19,9 +19,9 @@ use cosmic::iced::{
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
-    Container, Id, Row, Space, column, container, flex_row,
-    image as cosmic_image, menu, mouse_area, popover, responsive,
-    scrollable, space, text,
+    Container, Id, JustifyContent, Row, Space, column, container,
+    flex_row, image as cosmic_image, menu, mouse_area, popover,
+    responsive, scrollable, space, text,
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
@@ -69,6 +69,7 @@ pub(crate) struct Presenter {
     context_menu_id: Option<(usize, usize)>,
     context_point: Point,
     obs_scenes: Option<Vec<Scene>>,
+    preview_size: f32,
     pub image_loader: ImageLoader,
 }
 
@@ -107,6 +108,7 @@ pub(crate) enum Message {
     AssignSlideAction(slide_actions::Action),
     PlayPauseVideo,
     CloseContextMenu,
+    ChangePreviewSize(f64),
 }
 
 // #[allow(clippy::enum_variant_names)]
@@ -256,6 +258,7 @@ impl Presenter {
             context_point: Point::ORIGIN,
             obs_scenes: None,
             image_loader: ImageLoader::default(),
+            preview_size: 100.0,
         }
     }
 
@@ -423,6 +426,9 @@ impl Presenter {
                     map.insert(slide_id, vec![action]);
                     self.slide_action_map = Some(map);
                 }
+            }
+            Message::ChangePreviewSize(size) => {
+                self.preview_size = size as f32;
             }
             Message::ChangeFont(s) => {
                 let font_name = s.into_boxed_str();
@@ -639,8 +645,8 @@ impl Presenter {
                             };
                             style
                         })
-                        .center_x(100.0 * 16.0 / 9.0)
-                        .height(100)
+                        .center_x(self.preview_size * 16.0 / 9.0)
+                        .height(self.preview_size)
                         .padding(10),
                 )
                 .interaction(
@@ -697,6 +703,9 @@ impl Presenter {
         let scrollable = scrollable(
             container(
                 flex_row(items)
+                    .justify_content(Some(
+                        JustifyContent::SpaceEvenly,
+                    ))
                     .align_items(cosmic::iced::Alignment::Center)
                     .justify_items(cosmic::iced::Alignment::End)
                     .column_spacing(space_s)
@@ -707,10 +716,11 @@ impl Presenter {
                 style.border(Border::default().width(2))
             }),
         )
+        .auto_scroll(true)
         // .direction(Direction::Horizontal(Scrollbar::new()))
         .height(Length::Fill)
-        .width(Length::Fill)
-        .id(self.scroll_id.clone());
+        .width(Length::Fill);
+        // .id(self.scroll_id.clone());
         scrollable.into()
 
         // scrollable.into()
@@ -792,8 +802,10 @@ impl Presenter {
                                     };
                                     style
                                 })
-                                .center_x(100.0 * 16.0 / 9.0)
-                                .height(100)
+                                .center_x(
+                                    self.preview_size * 16.0 / 9.0,
+                                )
+                                .height(self.preview_size)
                                 .padding(10),
                         )
                         .interaction(
@@ -1179,6 +1191,10 @@ impl Presenter {
         let task_count = tasks.len();
         debug!(?task_count);
         Action::Task(Task::batch(tasks))
+    }
+
+    pub(crate) fn preview_size(&self) -> f64 {
+        self.preview_size.into()
     }
 }
 

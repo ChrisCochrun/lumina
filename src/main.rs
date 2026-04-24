@@ -1739,8 +1739,18 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::ViewModeSwitch(mode) => {
+                let grid_to_row = matches!(mode, ViewMode::Row);
+
                 self.view_mode = mode;
-                Task::none()
+                if grid_to_row
+                    && self.presenter.preview_size() > 150.0
+                {
+                    self.update(Message::Present(
+                        presenter::Message::ChangePreviewSize(150.0),
+                    ))
+                } else {
+                    Task::none()
+                }
             }
         }
     }
@@ -1885,7 +1895,7 @@ impl cosmic::Application for App {
                 )
                 .clip(true)
                 .width(Length::Fill)
-                .center_y(180)
+                .center_y(200)
             }
         } else {
             Container::new(horizontal())
@@ -1979,11 +1989,51 @@ impl cosmic::Application for App {
             } else {
                 theme::Button::HeaderBar
             });
-            row![grid_button, list_button, space::horizontal()]
-                .spacing(space_s)
-                .apply(container)
-                .class(theme::Container::Primary)
-                .padding(space_s)
+            let (preview_size_range, preview_breakpoints) =
+                match self.view_mode {
+                    ViewMode::Grid => (
+                        100.0..=300.0,
+                        &[100.0, 150.0, 200.0, 250.0, 300.0],
+                    ),
+                    ViewMode::Row => (
+                        100.0..=150.0,
+                        &[100.0, 110.0, 120.0, 130.0, 140.0],
+                    ),
+                    ViewMode::Detail => todo!(),
+                };
+            let preview_size_slider = row![
+                text::body("Preview Size"),
+                slider(
+                    preview_size_range,
+                    self.presenter.preview_size(),
+                    |size| {
+                        Message::Present(
+                            presenter::Message::ChangePreviewSize(
+                                size,
+                            ),
+                        )
+                    },
+                )
+                .height(space_l)
+                .name("Preview Size")
+                .step(10.0)
+                .breakpoints(preview_breakpoints)
+            ]
+            .align_y(Vertical::Center)
+            .spacing(space_s)
+            .apply(container)
+            .padding([space_none, space_none, space_none, space_s]);
+            row![
+                grid_button,
+                list_button,
+                space::horizontal(),
+                preview_size_slider
+            ]
+            .align_y(Vertical::Center)
+            .spacing(space_s)
+            .apply(container)
+            .class(theme::Container::Primary)
+            .padding(space_s)
         } else {
             horizontal().apply(container)
         };
