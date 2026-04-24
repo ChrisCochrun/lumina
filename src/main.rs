@@ -1331,14 +1331,15 @@ impl cosmic::Application for App {
                     && let Some(_slide) = item.slides.first()
                 {
                     self.current_item = (index, 0);
-                    self.presenter.update(
+                    self.update(Message::Present(
                         presenter::Message::ActivateSlide(
                             self.current_item.0,
                             self.current_item.1,
                         ),
-                    );
+                    ))
+                } else {
+                    Task::none()
                 }
-                Task::none()
             }
             Message::AddServiceItem(index, item) => {
                 let task = if matches!(
