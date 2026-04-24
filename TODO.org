@@ -5,7 +5,8 @@
 
 * TODO [#A] Deployment pipeline and get a MVP going
 
-* TODO [#A] Make sure that adding, deleting and editing items in each model is working correctly [2/2]
+* DONE [#A] Make sure that adding, deleting and editing items in each model is working correctly [0/0]
+CLOSED: [2026-04-24 Fri 13:17]
 
 Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
 
@@ -27,8 +28,10 @@ There seems to be some issue with fontdb not able to decipher all the versions o
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
+
 * TODO [#B] Saving and loading font awareness
 Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
+
 * TODO [#B] Video downloading system
 * TODO [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
 * TODO [#B] Songs should have a way of storing a lyric video or other videos so they can be helpful for the editor
