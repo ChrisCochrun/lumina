@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 
 use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
@@ -28,7 +29,7 @@ use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use obws::Client;
 use obws::responses::scenes::Scene;
-use rodio::{Decoder, MixerDeviceSink, Player};
+use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
@@ -58,6 +59,8 @@ pub(crate) struct Presenter {
     pub preview_video: Option<Video>,
     pub video_position: f32,
     pub audio: Option<PathBuf>,
+    audio_duration: Option<Duration>,
+    audio_position: Option<Duration>,
     sink: (Arc<MixerDeviceSink>, Arc<Player>),
     hovered_slide: Option<(usize, usize)>,
     hovered_point: Option<Point>,
@@ -91,8 +94,6 @@ pub(crate) enum Message {
     ActivateSlide(usize, usize),
     EndVideo,
     StartVideo,
-    // StartAudio,
-    EndAudio,
     VideoPos(f32),
     VideoFrame,
     MissingPlugin(gstreamer::Message),
@@ -237,6 +238,8 @@ impl Presenter {
             preview_video,
             presentation_video,
             audio,
+            audio_duration: None,
+            audio_position: None,
             service: items,
             video_position: 0.0,
             hovered_slide: None,
@@ -548,12 +551,6 @@ impl Presenter {
             Message::HoveredSlide(None) => {
                 self.hovered_slide = None;
                 self.hovered_point = None;
-            }
-            // Message::StartAudio => {
-            //     return Action::Task(self.start_audio());
-            // }
-            Message::EndAudio => {
-                self.sink.1.stop();
             }
             Message::None => debug!("Presenter Message::None"),
             Message::Error(error) => {
@@ -988,20 +985,6 @@ impl Presenter {
         }
     }
 
-    fn start_audio(&mut self) -> Task<Message> {
-        if let Some(audio) = &mut self.audio {
-            debug!(?audio, "This is where audio should be changing");
-            let audio = audio.clone();
-            Task::perform(
-                start_audio(Arc::clone(&self.sink.1), audio),
-                |()| Message::None,
-            )
-        } else {
-            debug!(?self.audio, "Apparently this doesn't exist");
-            Task::none()
-        }
-    }
-
     pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
         let total_slides: usize =
             items.iter().fold(0, |a, item| a + item.slides.len());
@@ -1083,27 +1066,6 @@ impl Presenter {
         debug!(?bg, "comparing background...");
         let backgrounds_match =
             self.current_slide.background() == slide.background();
-        // self.current_slide_index = slide;
-
-        // if matches!(
-        //     slide.background().kind,
-        //     BackgroundKind::Image
-        // ) {
-        //     if let Ok((width, height, pixels)) = image::open(
-        //         &slide.background().path,
-        //     )
-        //     .map(|image| {
-        //         (
-        //             image.width(),
-        //             image.height(),
-        //             image.to_rgba8().to_vec(),
-        //         )
-        //     }) {
-        //         let handle =
-        //             Handle::from_rgba(width, height, pixels);
-        //         slide.background.image_handle = Some(handle);
-        //     };
-        // }
 
         debug!("cloning slide...");
         let font = slide
@@ -1167,27 +1129,25 @@ impl Presenter {
             tasks.push(self.run_slide_actions());
         }
 
-        if let Some(mut new_audio) = self.current_slide.audio() {
-            if let Some(stripped_audio) = new_audio
-                .to_str()
-                .expect("Should be no problem")
-                .to_string()
-                .strip_prefix(r"file://")
-            {
-                new_audio = PathBuf::from(stripped_audio);
+        if self.current_slide.audio() != self.audio {
+            self.audio = self.current_slide.audio();
+            self.sink.1.stop();
+            self.sink.1.clear();
+            self.audio_duration = None;
+            if let Some(audio) = &self.audio {
+                let file = BufReader::new(
+                    File::open(audio)
+                        .expect("There should be an audio file here"),
+                );
+                let source = Decoder::new(file)
+                    .expect("There should be an audio decoder here");
+                self.audio_duration = source.total_duration();
+                self.sink.1.append(source);
+                self.sink.1.play();
+                self.audio_position = Some(self.sink.1.get_pos());
             }
-            debug!("{:?}", new_audio);
-            if new_audio.exists() {
-                self.audio = Some(new_audio);
-                tasks.push(self.start_audio());
-            } else {
-                self.audio = None;
-                self.update(Message::EndAudio);
-            }
-        } else {
-            self.audio = None;
-            self.update(Message::EndAudio);
         }
+
         let task_count = tasks.len();
         debug!(?task_count);
         Action::Task(Task::batch(tasks))
@@ -1196,31 +1156,6 @@ impl Presenter {
     pub(crate) fn preview_size(&self) -> f64 {
         self.preview_size.into()
     }
-}
-
-// #[allow(clippy::unused_async)]
-// async fn obs_scene_switch(client: Arc<Client>, scene: Scene) {
-//     match client.scenes().set_current_program_scene(&scene.id).await {
-//         Ok(()) => debug!("Set scene to: {:?}", scene),
-//         Err(e) => error!(?e),
-//     }
-// }
-
-// This needs to be async so that rodio's audio will work
-#[allow(clippy::unused_async)]
-async fn start_audio(player: Arc<rodio::Player>, audio: PathBuf) {
-    debug!(?audio);
-    let file = BufReader::new(
-        File::open(audio)
-            .expect("There should be an audio file here"),
-    );
-    debug!(?file);
-    let source = Decoder::new(file)
-        .expect("There should be an audio decoder here");
-    player.append(source);
-    let empty = player.empty();
-    let paused = player.is_paused();
-    debug!(empty, paused, "Finished running");
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1312,6 +1247,8 @@ pub(crate) fn slide_view<'a>(
                         Container::new(loaded_image(
                             pdf.clone(),
                             cosmic_image(pdf)
+                                .width(width)
+                                .height(Length::Fill)
                                 .content_fit(ContentFit::Contain)
                                 .into(),
                         ))
