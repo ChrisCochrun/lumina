@@ -39,6 +39,7 @@ use crate::core::service_items::ServiceItem;
 use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video;
+use crate::ui::image_loader::ImageLoader;
 use crate::ui::library::elide_text;
 // use crate::ui::widgets::loaded_image::loaded_image;
 
@@ -69,6 +70,7 @@ pub(crate) struct Presenter {
     context_menu_id: Option<(usize, usize)>,
     context_point: Point,
     obs_scenes: Option<Vec<Scene>>,
+    image_loader: ImageLoader,
 }
 
 #[allow(dead_code)]
@@ -86,9 +88,7 @@ pub(crate) enum Action {
 pub(crate) enum Message {
     NextSlide,
     PrevSlide,
-    SlideChange(Slide),
     ActivateSlide(usize, usize),
-    ClickSlide(usize, usize),
     EndVideo,
     StartVideo,
     // StartAudio,
@@ -258,6 +258,7 @@ impl Presenter {
             context_menu_id: None,
             context_point: Point::ORIGIN,
             obs_scenes: None,
+            image_loader: ImageLoader::default(),
         }
     }
 
@@ -307,9 +308,6 @@ impl Presenter {
                     target_slide,
                 ));
             }
-            Message::ClickSlide(item_index, slide_index) => {
-                return Action::ChangeSlide(item_index, slide_index);
-            }
             Message::ActivateSlide(item_index, slide_index) => {
                 debug!(slide_index, item_index);
                 if let Some(slide) = self
@@ -319,132 +317,8 @@ impl Presenter {
                 {
                     self.current_item = item_index;
                     self.current_slide_index = slide_index;
-                    return self
-                        .update(Message::SlideChange(slide.clone()));
+                    return self.change_slide(slide.clone());
                 }
-            }
-            Message::SlideChange(slide) => {
-                let slide_text = slide.text();
-                debug!(slide_text, "slide changed");
-                let bg = slide.background().clone();
-                debug!(?bg, "comparing background...");
-                let backgrounds_match =
-                    self.current_slide.background()
-                        == slide.background();
-                // self.current_slide_index = slide;
-
-                // if matches!(
-                //     slide.background().kind,
-                //     BackgroundKind::Image
-                // ) {
-                //     if let Ok((width, height, pixels)) = image::open(
-                //         &slide.background().path,
-                //     )
-                //     .map(|image| {
-                //         (
-                //             image.width(),
-                //             image.height(),
-                //             image.to_rgba8().to_vec(),
-                //         )
-                //     }) {
-                //         let handle =
-                //             Handle::from_rgba(width, height, pixels);
-                //         slide.background.image_handle = Some(handle);
-                //     };
-                // }
-
-                debug!("cloning slide...");
-                self.current_slide = slide.clone();
-                let font = slide
-                    .font()
-                    .map_or_else(String::new, |font| font.get_name());
-                let _ = self.update(Message::ChangeFont(font));
-                debug!("changing video now...");
-                if !backgrounds_match {
-                    if let Some(video) = &mut self.preview_video {
-                        let _ = video.restart_stream();
-                    }
-                    if let Some(video) = &mut self.presentation_video
-                    {
-                        let _ = video.restart_stream();
-                    }
-                    self.reset_video();
-                }
-
-                let mut target_item = 0;
-
-                self.service.iter().enumerate().try_for_each(
-                    |(index, item)| {
-                        item.slides.iter().enumerate().try_for_each(
-                            |(slide_index, _)| {
-                                target_item += 1;
-                                if (index, slide_index)
-                                    == (
-                                        self.current_item,
-                                        self.current_slide_index,
-                                    )
-                                {
-                                    None
-                                } else {
-                                    Some(())
-                                }
-                            },
-                        )
-                    },
-                );
-
-                debug!(target_item);
-
-                #[allow(clippy::cast_precision_loss)]
-                let offset = AbsoluteOffset {
-                    x: {
-                        if target_item > 2 {
-                            (target_item as f32)
-                                .mul_add(187.5, -187.5)
-                        } else {
-                            0.0
-                        }
-                    },
-                    y: 0.0,
-                };
-
-                let mut tasks = vec![];
-                tasks.push(scroll_to(
-                    self.scroll_id.clone(),
-                    offset.into(),
-                ));
-
-                if self.slide_action_map.is_some() {
-                    debug!("Found slide actions, running them");
-                    tasks.push(self.run_slide_actions());
-                }
-
-                if let Some(mut new_audio) =
-                    self.current_slide.audio()
-                {
-                    if let Some(stripped_audio) = new_audio
-                        .to_str()
-                        .expect("Should be no problem")
-                        .to_string()
-                        .strip_prefix(r"file://")
-                    {
-                        new_audio = PathBuf::from(stripped_audio);
-                    }
-                    debug!("{:?}", new_audio);
-                    if new_audio.exists() {
-                        self.audio = Some(new_audio);
-                        tasks.push(self.start_audio());
-                    } else {
-                        self.audio = None;
-                        self.update(Message::EndAudio);
-                    }
-                } else {
-                    self.audio = None;
-                    self.update(Message::EndAudio);
-                }
-                let task_count = tasks.len();
-                debug!(?task_count);
-                return Action::Task(Task::batch(tasks));
             }
             Message::AddObsClient(client) => {
                 self.obs_client = Some(client);
@@ -783,7 +657,7 @@ impl Presenter {
                     )))
                 })
                 .on_exit(Message::HoveredSlide(None))
-                .on_release(Message::ClickSlide(
+                .on_release(Message::ActivateSlide(
                     item_index,
                     slide_index,
                 ))
@@ -936,7 +810,7 @@ impl Presenter {
                             )))
                         })
                         .on_exit(Message::HoveredSlide(None))
-                        .on_release(Message::ClickSlide(
+                        .on_release(Message::ActivateSlide(
                             item_index,
                             slide_index,
                         ))
@@ -1156,6 +1030,158 @@ impl Presenter {
             }
         }
         Task::batch(tasks)
+    }
+
+    fn load_images(&mut self) {
+        if matches!(
+            self.current_slide.background.kind,
+            BackgroundKind::Image
+        ) {
+            let path = &self.current_slide.background().path;
+            self.current_slide.background.image_handle =
+                match self.image_loader.get_image(&path) {
+                    Ok(image) => Some(image),
+                    Err(e) => {
+                        error!("Couldn't load image: {e:?}");
+                        None
+                    }
+                }
+        }
+
+        if let Some(slide) = self.next_slide.as_mut()
+            && matches!(
+                slide.background().kind,
+                BackgroundKind::Image
+            )
+        {
+            let path = &slide.background().path;
+            let res_handle =
+                self.image_loader.load_image(path.clone());
+            slide.background.image_handle = match res_handle {
+                Ok(image) => Some(image),
+                Err(e) => {
+                    error!("Couldn't load image: {e:?}");
+                    None
+                }
+            }
+        }
+    }
+
+    fn change_slide(&mut self, slide: Slide) -> Action {
+        let slide_text = slide.text();
+        debug!(slide_text, "slide changed");
+        let bg = slide.background().clone();
+        debug!(?bg, "comparing background...");
+        let backgrounds_match =
+            self.current_slide.background() == slide.background();
+        // self.current_slide_index = slide;
+
+        // if matches!(
+        //     slide.background().kind,
+        //     BackgroundKind::Image
+        // ) {
+        //     if let Ok((width, height, pixels)) = image::open(
+        //         &slide.background().path,
+        //     )
+        //     .map(|image| {
+        //         (
+        //             image.width(),
+        //             image.height(),
+        //             image.to_rgba8().to_vec(),
+        //         )
+        //     }) {
+        //         let handle =
+        //             Handle::from_rgba(width, height, pixels);
+        //         slide.background.image_handle = Some(handle);
+        //     };
+        // }
+
+        debug!("cloning slide...");
+        let font = slide
+            .font()
+            .map_or_else(String::new, |font| font.get_name());
+        let _ = self.update(Message::ChangeFont(font));
+        debug!("changing video now...");
+        self.current_slide = slide.clone();
+        if !backgrounds_match {
+            if let Some(video) = &mut self.preview_video {
+                video.set_paused(true);
+            }
+            if let Some(video) = &mut self.presentation_video {
+                video.set_paused(true);
+            }
+            self.reset_video();
+        }
+        self.load_images();
+
+        let mut target_item = 0;
+
+        self.service.iter().enumerate().try_for_each(
+            |(index, item)| {
+                item.slides.iter().enumerate().try_for_each(
+                    |(slide_index, _)| {
+                        target_item += 1;
+                        if (index, slide_index)
+                            == (
+                                self.current_item,
+                                self.current_slide_index,
+                            )
+                        {
+                            None
+                        } else {
+                            Some(())
+                        }
+                    },
+                )
+            },
+        );
+
+        debug!(target_item);
+
+        #[allow(clippy::cast_precision_loss)]
+        let offset = AbsoluteOffset {
+            x: {
+                if target_item > 2 {
+                    (target_item as f32).mul_add(187.5, -187.5)
+                } else {
+                    0.0
+                }
+            },
+            y: 0.0,
+        };
+
+        let mut tasks = vec![];
+        tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+
+        if self.slide_action_map.is_some() {
+            debug!("Found slide actions, running them");
+            tasks.push(self.run_slide_actions());
+        }
+
+        if let Some(mut new_audio) = self.current_slide.audio() {
+            if let Some(stripped_audio) = new_audio
+                .to_str()
+                .expect("Should be no problem")
+                .to_string()
+                .strip_prefix(r"file://")
+            {
+                new_audio = PathBuf::from(stripped_audio);
+            }
+            debug!("{:?}", new_audio);
+            if new_audio.exists() {
+                self.audio = Some(new_audio);
+                tasks.push(self.start_audio());
+            } else {
+                self.audio = None;
+                self.update(Message::EndAudio);
+            }
+        } else {
+            self.audio = None;
+            self.update(Message::EndAudio);
+        }
+        let task_count = tasks.len();
+        debug!(?task_count);
+        Action::Task(Task::batch(tasks))
     }
 }
 
