@@ -86,6 +86,7 @@ mismatched_lifetime_syntaxes = "allow"
 unsafe_code = "deny"
 
 [lints.clippy]
+cast_possible_truncation = { level = "allow", priority = 1 }
 pedantic = "warn"
 nursery = "warn"
 unwrap_used = "warn"

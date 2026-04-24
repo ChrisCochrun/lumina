@@ -295,7 +295,6 @@ impl TextSvg {
     }
 
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::too_many_lines)]
     pub fn build(

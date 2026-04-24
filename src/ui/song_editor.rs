@@ -208,7 +208,6 @@ impl Display for Face {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
 impl SongEditor {
     pub fn new(
         font_db: Arc<fontdb::Database>,
@@ -2214,7 +2213,6 @@ impl SongEditor {
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::items_after_statements)]
-#[allow(clippy::cast_possible_truncation)]
 fn verse_chip(
     verse: VerseName,
     index: Option<usize>,

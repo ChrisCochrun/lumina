@@ -148,7 +148,6 @@ impl<'a> Library {
     }
 
     #[allow(clippy::cast_possible_wrap)]
-    #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::match_same_arms)]
     pub fn update(&mut self, message: Message) -> Action {
@@ -1379,7 +1378,6 @@ pub async fn add_db() -> Result<SqlitePool> {
 
 #[allow(clippy::cast_sign_loss)]
 #[allow(clippy::cast_precision_loss)]
-#[allow(clippy::cast_possible_truncation)]
 pub fn elide_text(text: impl AsRef<str>, width: f32) -> String {
     const CHAR_SIZE: f32 = 8.0;
     let text: String = text.as_ref().to_owned();
