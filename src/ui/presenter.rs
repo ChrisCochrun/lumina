@@ -1134,7 +1134,9 @@ impl Presenter {
             self.sink.1.stop();
             self.sink.1.clear();
             self.audio_duration = None;
-            if let Some(audio) = &self.audio {
+            if let Some(audio) = &self.audio
+                && audio.exists()
+            {
                 let file = BufReader::new(
                     File::open(audio)
                         .expect("There should be an audio file here"),
