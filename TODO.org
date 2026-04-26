@@ -21,10 +21,15 @@ Instead of testing the library itself, I think I'll just create a fake library i
 CLOSED: [2026-04-07 Tue 11:42]
 
 * TODO [#A] Add a title/info slide system for songs
-This can include title, author, and ccli info so that it will be compliant and helpful
+This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
+
+* TODO [#B] Build an Animation type that will hold all the info for what a slide animation is.
+The animation type that comes with Iced is basically a way to say how long animations take and at what easing to do them, but they do not at all tell you WHAT to animate, that is all in where you put the animation's interpolate function in the view.
+
+So what I think I'll do is either, build a custom widget for slides (might need to do this anyway eventually since we are doing a lot of custom stuff with slides) or build my own Animation type to hold all of the correct info and based on that Animation, place the Iced animation interpolate function where it needs to go.
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
