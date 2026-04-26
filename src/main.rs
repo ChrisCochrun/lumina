@@ -33,6 +33,7 @@ use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config,
     executor, theme,
 };
+use std::time::{Duration, Instant};
 // use crisp::types::Value;
 // use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};
@@ -198,6 +199,7 @@ enum Message {
     LibraryToggle,
     Quit,
     Key(Key, Modifiers),
+    Tick(Instant),
     None,
     EditorToggle(bool),
     ChangeServiceItem(usize),
@@ -666,11 +668,15 @@ impl cosmic::Application for App {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        event::listen_with(|event, status, id| {
-            // debug!(?event);
-            match status {
-                event::Status::Ignored => {
-                    match event {
+        let time_subscription =
+            cosmic::iced::time::every(Duration::from_millis(50))
+                .map(Message::Tick);
+        let event_subscription = event::listen_with(
+            |event, status, id| {
+                // debug!(?event);
+                match status {
+                    event::Status::Ignored => {
+                        match event {
                         iced::Event::Keyboard(event) => match event {
                             iced::keyboard::Event::KeyReleased {
                                 key,
@@ -720,10 +726,13 @@ impl cosmic::Application for App {
                         }
                         iced::Event::InputMethod(_event) => todo!(),
                     }
+                    }
+                    event::Status::Captured => None,
                 }
-                event::Status::Captured => None,
-            }
-        })
+            },
+        );
+
+        Subscription::batch([time_subscription, event_subscription])
     }
 
     fn context_drawer(
@@ -1129,6 +1138,9 @@ impl cosmic::Application for App {
                     }
                 }
             }
+            Message::Tick(instant) => self.update(Message::Present(
+                presenter::Message::Tick(instant),
+            )),
             Message::Library(message) => {
                 if let Some(library) = &mut self.library {
                     match library.update(message) {

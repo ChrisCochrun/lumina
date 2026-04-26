@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
@@ -14,8 +14,8 @@ use cosmic::iced::widget::scrollable::{
 };
 use cosmic::iced::widget::stack;
 use cosmic::iced::{
-    Background, Border, Color, ContentFit, Font, Length, Point,
-    Shadow, Vector,
+    Animation, Background, Border, Color, ContentFit, Font, Length,
+    Point, Shadow, Vector, animation,
 };
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
@@ -74,6 +74,8 @@ pub(crate) struct Presenter {
     obs_scenes: Option<Vec<Scene>>,
     preview_size: f32,
     pub image_loader: ImageLoader,
+    animation: Option<Animation<bool>>,
+    now: Instant,
 }
 
 #[allow(dead_code)]
@@ -110,41 +112,8 @@ pub(crate) enum Message {
     PlayPauseVideo,
     CloseContextMenu,
     ChangePreviewSize(f64),
+    Tick(Instant),
 }
-
-// #[allow(clippy::enum_variant_names)]
-// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// enum MenuAction {
-//     ObsSceneAssign(usize),
-//     ObsStartStream,
-//     ObsStopStream,
-//     // ObsStartRecord,
-//     // ObsStopRecord,
-// }
-
-// impl menu::Action for MenuAction {
-//     type Message = Message;
-
-//     fn message(&self) -> Self::Message {
-//         match self {
-//             Self::ObsSceneAssign(scene) => {
-//                 Message::AssignObsScene(*scene)
-//             }
-//             Self::ObsStartStream => Message::AssignSlideAction(
-//                 slide_actions::Action::Obs {
-//                     action: ObsAction::StartStream,
-//                 },
-//             ),
-//             Self::ObsStopStream => Message::AssignSlideAction(
-//                 slide_actions::Action::Obs {
-//                     action: ObsAction::StopStream,
-//                 },
-//             ),
-//             // Self::ObsStartRecord => todo!(),
-//             // Self::ObsStopRecord => todo!(),
-//         }
-//     }
-// }
 
 impl Presenter {
     #[allow(clippy::too_many_lines)]
@@ -262,6 +231,8 @@ impl Presenter {
             obs_scenes: None,
             image_loader: ImageLoader::default(),
             preview_size: 100.0,
+            animation: None,
+            now: Instant::now(),
         }
     }
 
@@ -322,6 +293,9 @@ impl Presenter {
                     self.current_slide_index = slide_index;
                     return self.change_slide(slide.clone());
                 }
+            }
+            Message::Tick(instant) => {
+                self.now = instant;
             }
             Message::AddObsClient(client) => {
                 self.obs_client = Some(client);
@@ -1149,6 +1123,23 @@ impl Presenter {
                 self.audio_position = Some(self.sink.1.get_pos());
             }
         }
+        if self.service.get(self.current_item).is_some_and(|item| {
+            matches!(
+                item.kind,
+                crate::core::kinds::ServiceItemKind::Song(..)
+            )
+        }) {
+            self.animation = Some(
+                Animation::new(false)
+                    .slow()
+                    .easing(animation::Easing::EaseInExpo),
+            );
+            if let Some(animation) = &mut self.animation {
+                animation.go_mut(true, self.now);
+            };
+        } else {
+            self.animation = None;
+        };
 
         let task_count = tasks.len();
         debug!(?task_count);
