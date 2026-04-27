@@ -1138,9 +1138,16 @@ impl cosmic::Application for App {
                     }
                 }
             }
-            Message::Tick(instant) => self.update(Message::Present(
-                presenter::Message::Tick(instant),
-            )),
+            Message::Tick(instant) => {
+                let present_task = self.update(Message::Present(
+                    presenter::Message::Tick(instant),
+                ));
+                let song_editor_task =
+                    self.update(Message::SongEditor(
+                        song_editor::Message::Tick(instant),
+                    ));
+                Task::batch([present_task, song_editor_task])
+            }
             Message::Library(message) => {
                 if let Some(library) = &mut self.library {
                     match library.update(message) {

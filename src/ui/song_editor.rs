@@ -1,9 +1,11 @@
 #![allow(clippy::similar_names)]
 #![allow(clippy::too_many_lines)]
 use std::fmt::Display;
-use std::io::{self};
+use std::fs::File;
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
@@ -26,8 +28,8 @@ use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     ColorPickerModel, Id, RcElementWrapper, button, combo_box,
     container, divider, dnd_destination, dnd_source, dropdown, icon,
-    indeterminate_circular, mouse_area, popover, scrollable, text,
-    text_editor, text_input, tooltip,
+    indeterminate_circular, mouse_area, popover, scrollable, slider,
+    text, text_editor, text_input, tooltip,
 };
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
@@ -35,6 +37,7 @@ use dirs::font_dir;
 use fontdb;
 use iced_video_player::Video;
 use itertools::Itertools;
+use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error};
 
 use crate::core::service_items::ServiceTrait;
@@ -51,7 +54,6 @@ use crate::{Background, BackgroundKind};
 // This should get refactored into holding a state machine
 // then each state of what is being edited can be caught by the compiler
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug)]
 pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
@@ -61,6 +63,10 @@ pub struct SongEditor {
     font: Option<Face>,
     author: String,
     audio: PathBuf,
+    _sink: Arc<MixerDeviceSink>,
+    player: Arc<Player>,
+    audio_duration: Option<Duration>,
+    audio_position: Option<Duration>,
     font_size: usize,
     verse_order: String,
     pub lyrics: text_editor::Content,
@@ -75,7 +81,6 @@ pub struct SongEditor {
     shadow_sizes: [String; 21],
     shadow_offset_sizes: [String; 21],
     stroke_size: u16,
-    #[debug(skip)]
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
     verses_scroll_id: Id,
@@ -83,7 +88,6 @@ pub struct SongEditor {
     hovered_dnd_verse_chip: Option<usize>,
     dragging_verse_chip: bool,
     update_slide_handle: Option<task::Handle>,
-    #[debug(skip)]
     shadow_color_model: ColorPickerModel,
     importing: bool,
     search_input: String,
@@ -150,6 +154,9 @@ pub enum Message {
     ToggleSongDialog,
     HoverSong(Option<usize>),
     AddSong(OnlineSong),
+    Tick(Instant),
+    PlayPauseAudio,
+    SeekAudio(f64),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -253,6 +260,12 @@ impl SongEditor {
             "160".to_string(),
             "170".to_string(),
         ];
+
+        let sink = rodio::DeviceSinkBuilder::open_default_sink()
+            .expect("Can't open default rodio stream");
+        let player =
+            Arc::new(rodio::Player::connect_new(sink.mixer()));
+
         Self {
             song: None,
             font_db,
@@ -266,6 +279,10 @@ impl SongEditor {
             editing: false,
             author: String::new(),
             audio: PathBuf::new(),
+            audio_duration: None,
+            audio_position: None,
+            _sink: Arc::new(sink),
+            player,
             background: None,
             video: None,
             ccli: String::new(),
@@ -424,8 +441,21 @@ impl SongEditor {
                     self.author = author;
                 }
                 if let Some(audio) = song.audio {
+                    self.player.stop();
+                    self.player.clear();
+                    let file =
+                        BufReader::new(File::open(&audio).expect(
+                            "There should be an audio file here",
+                        ));
+                    let source = Decoder::new(file).expect(
+                        "There should be an audio decoder here",
+                    );
                     self.audio = audio;
+                    self.audio_duration = source.total_duration();
+                    self.player.append(source);
+                    self.player.pause();
                 }
+
                 if let Some(ccli) = song.ccli {
                     self.ccli = ccli;
                 }
@@ -591,14 +621,37 @@ impl SongEditor {
                 ));
             }
             Message::ChangeAudio(Ok(path)) => {
+                self.player.stop();
+                self.player.clear();
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
+                    let file =
+                        BufReader::new(File::open(&path).expect(
+                            "There should be an audio file here",
+                        ));
+                    let source = Decoder::new(file).expect(
+                        "There should be an audio decoder here",
+                    );
                     song.audio = Some(path);
+                    self.audio_duration = source.total_duration();
+                    self.player.append(source);
+                    self.player.pause();
                     return Action::Task(self.update_song(&song));
                 }
             }
             Message::ChangeAudio(Err(error)) => {
+                self.player.stop();
+                self.player.clear();
+                self.audio_duration = None;
+                self.audio_position = None;
                 error!(?error);
+            }
+            Message::Tick(_instant) => {
+                if let Some(song) = &self.song
+                    && let Some(_audio) = &song.audio
+                {
+                    self.audio_position = Some(self.player.get_pos());
+                }
             }
             Message::ChangeBackground(Ok(path)) => {
                 debug!(?path);
@@ -1003,48 +1056,75 @@ impl SongEditor {
             Message::HoverSong(index) => {
                 self.hovered_online_song = index;
             }
+            Message::PlayPauseAudio => {
+                if self.player.is_paused() {
+                    debug!("Playing: {:?}", self.audio);
+                    self.player.play();
+                } else {
+                    debug!("Paused: {:?}", self.audio);
+                    self.player.pause();
+                }
+            }
+            Message::SeekAudio(seek) => {
+                if let Err(e) = self
+                    .player
+                    .try_seek(Duration::from_secs_f64(seek))
+                {
+                    error!("Couldn't seek: {e:?}");
+                }
+            }
             Message::None => (),
         }
         Action::None
     }
 
     pub fn view(&self) -> Element<Message> {
-        let video_elements: Element<Message> =
-            self.video.as_ref().map_or_else(
-                || horizontal().into(),
-                |video| {
-                    let play_button =
-                        button::icon(if video.paused() {
-                            icon::from_name("media-playback-start")
-                        } else {
-                            icon::from_name("media-playback-pause")
-                        })
-                        .on_press(Message::PauseVideo);
+        let audio_elements: Element<Message> = if self.audio.exists()
+        {
+            let play_button =
+                icon::from_name(if self.player.is_paused() {
+                    "media-playback-start"
+                } else {
+                    "media-playback-pause"
+                })
+                .apply(button::icon)
+                .on_press(Message::PlayPauseAudio);
 
-                    let video_track =
-                        cosmic::iced::widget::progress_bar(
-                            0.0..=video.duration().as_secs_f32(),
-                            video.position().as_secs_f32(),
-                        )
-                        .girth(cosmic::theme::spacing().space_s)
-                        .length(Length::Fill);
-
-                    container(
-                        row![play_button, video_track]
-                            .align_y(Vertical::Center)
-                            .spacing(
-                                cosmic::theme::spacing().space_m,
-                            ),
-                    )
-                    .padding(cosmic::theme::spacing().space_s)
-                    .center_x(Length::FillPortion(2))
-                    .into()
-                },
+            let audio_track = slider(
+                0.0..=self
+                    .audio_duration
+                    .map_or(0.0, |duration| duration.as_secs_f64()),
+                self.audio_position
+                    .map_or(0.0, |position| position.as_secs_f64()),
+                Message::SeekAudio,
             );
+            container(column![
+                text::body(format!(
+                    "Audio: {}",
+                    self.audio.to_string_lossy()
+                ))
+                .ellipsize(Ellipsize::Middle(
+                    EllipsizeHeightLimit::Lines(1)
+                )),
+                row![play_button, audio_track]
+                    .align_y(Vertical::Center)
+                    .spacing(theme::spacing().space_m)
+            ])
+            .padding(
+                Padding::ZERO
+                    .horizontal(theme::spacing().space_m)
+                    .bottom(theme::spacing().space_m),
+            )
+            .center_x(Length::FillPortion(2))
+            .into()
+        } else {
+            space::horizontal().into()
+        };
+
         let slide_preview = container(self.slide_preview())
             .width(Length::FillPortion(2));
 
-        let slide_section = column![video_elements, slide_preview]
+        let slide_section = column![audio_elements, slide_preview]
             .spacing(cosmic::theme::spacing().space_s);
         let column = column![
             self.toolbar(),
@@ -1063,32 +1143,74 @@ impl SongEditor {
         self.song_slides.as_ref().map_or_else(
             || space::horizontal().into(),
             |slides| {
-                let slides: Vec<Element<Message>> = slides
-                    .iter()
-                    .enumerate()
-                    .map(|(index, slide)| {
-                        container(
-                            slide_view(
-                                slide,
-                                if index == 0 {
-                                    self.video.as_ref()
-                                } else {
-                                    None
-                                },
-                                false,
-                                false,
-                            )
-                            .map(|_| Message::None),
+                let mut slide_column =
+                    column::with_capacity(slides.len());
+                let slide_height = 250.0;
+                for (index, slide) in slides.iter().enumerate() {
+                    let mut slide: Element<Message> = container(
+                        slide_view(
+                            slide,
+                            if index == 0 {
+                                self.video.as_ref()
+                            } else {
+                                None
+                            },
+                            false,
+                            false,
                         )
-                        .height(250) // need to find out how to do this differently
-                        .center_x(Length::Fill)
-                        .padding([0, 20])
-                        .clip(true)
-                        .into()
-                    })
-                    .collect();
+                        .map(|_| Message::None),
+                    )
+                    .height(slide_height) // need to find out how to do this differently
+                    .center_x(Length::Fill)
+                    .padding([0, 20])
+                    .clip(true).into();
+
+                    if index == 0 {
+                        let video_elements: Element<Message> =
+                            self.video.as_ref().map_or_else(
+                                || horizontal().into(),
+                                |video| {
+                                    let play_button =
+                                        icon::from_name(if video.paused() {
+                                            "media-playback-start"
+                                        } else {
+                                            "media-playback-pause"
+                                        })
+                                        .apply(button::icon)
+                                        .on_press(Message::PauseVideo);
+
+                                    let video_track =
+                                        cosmic::iced::widget::progress_bar(
+                                            0.0..=video
+                                                .duration()
+                                                .as_secs_f32(),
+                                            video.position().as_secs_f32(),
+                                        )
+                                        .girth(
+                                            cosmic::theme::spacing().space_s,
+                                        )
+                                        .length(Length::Fill);
+
+                                    container(
+                                        row![play_button, video_track]
+                                            .align_y(Vertical::Center)
+                                            .spacing(
+                                                cosmic::theme::spacing()
+                                                    .space_m,
+                                            ),
+                                    )
+                                        .center_x(slide_height * 16.0 / 9.0)
+                                        .into()
+                                },
+                            );
+                        slide = column![slide, video_elements].align_x(Horizontal::Center).spacing(theme::spacing().space_xxxs).into();
+
+                    }
+                        slide_column =
+                            slide_column.push(slide);
+                }
                 scrollable(
-                    cosmic::widget::column::with_children(slides)
+                    slide_column.align_x(Horizontal::Center)
                         .spacing(theme::active().cosmic().space_l()),
                 )
                 .height(Length::Fill)
