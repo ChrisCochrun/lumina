@@ -1103,7 +1103,7 @@ impl cosmic::Application for App {
                             .presenter
                             .update(presenter::Message::NextSlide);
                         self.current_item = (
-                            self.presenter.current_item,
+                            self.presenter.current_item_index,
                             self.presenter.current_slide_index,
                         );
                         if let presenter::Action::Task(task) = action
@@ -1122,7 +1122,7 @@ impl cosmic::Application for App {
                             .presenter
                             .update(presenter::Message::PrevSlide);
                         self.current_item = (
-                            self.presenter.current_item,
+                            self.presenter.current_item_index,
                             self.presenter.current_slide_index,
                         );
                         if let presenter::Action::Task(task) = action

@@ -50,9 +50,8 @@ static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 pub(crate) struct Presenter {
     pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
-    pub next_slide: Option<Slide>,
-    pub prev_slide: Option<Slide>,
-    pub current_item: usize,
+    pub activating_slide: Option<Slide>,
+    pub current_item_index: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
     pub presentation_video: Option<Video>,
@@ -180,14 +179,6 @@ impl Presenter {
         let slide =
             items.first().and_then(|item| item.slides.first());
 
-        let next_slide =
-            items.first().and_then(|item| item.slides.get(1));
-        let next_slide = if next_slide.is_none() {
-            items.get(1).and_then(|item| item.slides.first()).cloned()
-        } else {
-            next_slide.cloned()
-        };
-
         let audio = items
             .first()
             .and_then(|item| {
@@ -199,9 +190,8 @@ impl Presenter {
 
         Self {
             current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
-            next_slide,
-            prev_slide: None,
-            current_item: 0,
+            activating_slide: None,
+            current_item_index: 0,
             current_slide_index: 0,
             total_slides,
             preview_video,
@@ -240,47 +230,16 @@ impl Presenter {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::NextSlide => {
-                if self.service.get(self.current_item).is_some_and(
-                    |i| {
-                        i.slides.len() == self.current_slide_index + 1
-                    },
-                ) {
-                    return self.update(Message::ActivateSlide(
-                        self.current_item + 1,
-                        0,
-                    ));
-                } else if self
-                    .service
-                    .get(self.current_item)
-                    .is_some_and(|i| {
-                        i.slides.len() > self.current_slide_index + 1
-                    })
-                {
-                    return self.update(Message::ActivateSlide(
-                        self.current_item,
-                        self.current_slide_index + 1,
-                    ));
+                if let Some((item, slide)) = self.next_slide() {
+                    return self
+                        .update(Message::ActivateSlide(item, slide));
                 }
-                return Action::None;
             }
             Message::PrevSlide => {
-                if self.current_item == 0
-                    && self.current_slide_index == 0
-                {
-                    return Action::None;
-                } else if self.current_slide_index == 0 {
-                    let target_item = self.current_item - 1;
-                    let last_slide = self.service.get(target_item).map(|i| i.slides.len() - 1).expect("We have checked that this item should be here.");
-                    return self.update(Message::ActivateSlide(
-                        target_item,
-                        last_slide,
-                    ));
+                if let Some((item, slide)) = self.previous_slide() {
+                    return self
+                        .update(Message::ActivateSlide(item, slide));
                 }
-                let target_slide = self.current_slide_index - 1;
-                return self.update(Message::ActivateSlide(
-                    self.current_item,
-                    target_slide,
-                ));
             }
             Message::ActivateSlide(item_index, slide_index) => {
                 debug!(slide_index, item_index);
@@ -289,7 +248,7 @@ impl Presenter {
                     .get(item_index)
                     .and_then(|item| item.slides.get(slide_index))
                 {
-                    self.current_item = item_index;
+                    self.current_item_index = item_index;
                     self.current_slide_index = slide_index;
                     return self.change_slide(slide.clone());
                 }
@@ -569,7 +528,10 @@ impl Presenter {
             for (slide_index, slide) in item.slides.iter().enumerate()
             {
                 let is_current_slide = (item_index, slide_index)
-                    == (self.current_item, self.current_slide_index);
+                    == (
+                        self.current_item_index,
+                        self.current_slide_index,
+                    );
 
                 let slide = slide_view(
                     slide,
@@ -708,7 +670,7 @@ impl Presenter {
                         let is_current_slide =
                             (item_index, slide_index)
                                 == (
-                                    self.current_item,
+                                    self.current_item_index,
                                     self.current_slide_index,
                                 );
 
@@ -968,11 +930,12 @@ impl Presenter {
 
     pub fn run_slide_actions(&self) -> Task<Message> {
         let mut tasks = vec![];
-        let item_index = self.current_item;
-        let slide_index = self.current_slide_index;
 
         if let Some(map) = &self.slide_action_map
-            && let Some(actions) = map.get(&(item_index, slide_index))
+            && let Some(actions) = map.get(&(
+                self.current_item_index,
+                self.current_slide_index,
+            ))
         {
             for action in actions {
                 match action {
@@ -1015,7 +978,7 @@ impl Presenter {
                 }
         }
 
-        if let Some(slide) = self.next_slide.as_mut()
+        if let Some(slide) = self.activating_slide.as_mut()
             && matches!(
                 slide.background().kind,
                 BackgroundKind::Image
@@ -1068,7 +1031,7 @@ impl Presenter {
                         target_item += 1;
                         if (index, slide_index)
                             == (
-                                self.current_item,
+                                self.current_item_index,
                                 self.current_slide_index,
                             )
                         {
@@ -1123,12 +1086,14 @@ impl Presenter {
                 self.audio_position = Some(self.sink.1.get_pos());
             }
         }
-        if self.service.get(self.current_item).is_some_and(|item| {
-            matches!(
-                item.kind,
-                crate::core::kinds::ServiceItemKind::Song(..)
-            )
-        }) {
+        if self.service.get(self.current_item_index).is_some_and(
+            |item| {
+                matches!(
+                    item.kind,
+                    crate::core::kinds::ServiceItemKind::Song(..)
+                )
+            },
+        ) {
             self.animation = Some(
                 Animation::new(false)
                     .slow()
@@ -1136,10 +1101,10 @@ impl Presenter {
             );
             if let Some(animation) = &mut self.animation {
                 animation.go_mut(true, self.now);
-            };
+            }
         } else {
             self.animation = None;
-        };
+        }
 
         let task_count = tasks.len();
         debug!(?task_count);
@@ -1148,6 +1113,46 @@ impl Presenter {
 
     pub(crate) fn preview_size(&self) -> f64 {
         self.preview_size.into()
+    }
+
+    pub(crate) fn previous_slide(&self) -> Option<(usize, usize)> {
+        if self.current_item_index == 0
+            && self.current_slide_index == 0
+        {
+            return None;
+        } else if self.current_slide_index == 0 {
+            let target_item = self.current_item_index - 1;
+            let last_slide = self
+                .service
+                .get(target_item)
+                .map(|i| i.slides.len() - 1)
+                .expect(
+                    "We have checked that this item should be here.",
+                );
+            return Some((target_item, last_slide));
+        }
+        let target_slide = self.current_slide_index - 1;
+        Some((self.current_item_index, target_slide))
+    }
+
+    pub(crate) fn next_slide(&self) -> Option<(usize, usize)> {
+        if self.service.get(self.current_item_index).is_some_and(
+            |i| i.slides.len() == self.current_slide_index + 1,
+        ) {
+            return Some((self.current_item_index + 1, 0));
+        } else if self
+            .service
+            .get(self.current_item_index)
+            .is_some_and(|i| {
+                i.slides.len() > self.current_slide_index + 1
+            })
+        {
+            return Some((
+                self.current_item_index,
+                self.current_slide_index + 1,
+            ));
+        }
+        None
     }
 }
 
@@ -1284,22 +1289,22 @@ mod test {
         let mut presenter = Presenter::with_items(Arc::new(service));
         presenter.update(Message::NextSlide);
         dbg!(&presenter.service);
-        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_item_index, 1);
         assert_eq!(presenter.current_slide_index, 0);
         presenter.update(Message::NextSlide);
-        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_item_index, 1);
         assert_eq!(presenter.current_slide_index, 1);
         presenter.update(Message::NextSlide);
-        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_item_index, 1);
         assert_eq!(presenter.current_slide_index, 2);
         presenter.update(Message::PrevSlide);
-        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_item_index, 1);
         assert_eq!(presenter.current_slide_index, 1);
         presenter.update(Message::PrevSlide);
-        assert_eq!(presenter.current_item, 1);
+        assert_eq!(presenter.current_item_index, 1);
         assert_eq!(presenter.current_slide_index, 0);
         presenter.update(Message::PrevSlide);
-        assert_eq!(presenter.current_item, 0);
+        assert_eq!(presenter.current_item_index, 0);
         assert_eq!(presenter.current_slide_index, 0);
     }
 
