@@ -135,6 +135,7 @@ impl PresentationEditor {
             }
             Message::Update(presentation) => {
                 warn!(?presentation, "about to update");
+                self.presentation = Some(presentation.clone());
                 return Action::UpdatePresentation(presentation);
             }
             Message::PickPresentation => {
@@ -279,10 +280,23 @@ impl PresentationEditor {
                 self.current_slide_index = Some(previous_index);
             }
             Message::ChangeSlide(index) => {
+                let starting_index = if let Some(presentation) =
+                    self.presentation.as_ref()
+                    && let PresKind::Pdf { starting_index, .. } =
+                        presentation.kind
+                {
+                    starting_index
+                } else {
+                    0
+                };
+
                 self.current_slide =
                     self.document.as_ref().and_then(|doc| {
                         let page = doc
-                            .load_page(i32::try_from(index).ok()?)
+                            .load_page(
+                                i32::try_from(index).ok()?
+                                    + starting_index,
+                            )
                             .ok()?;
                         let matrix = Matrix::IDENTITY;
                         let colorspace = Colorspace::device_rgb();
