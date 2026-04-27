@@ -4,6 +4,7 @@ use std::ops::RangeBounds;
 use std::path::{Path, PathBuf};
 
 use crate::core::presentations::{PresKind, Presentation};
+use crate::ui::widgets::loaded_image::loaded_image;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::Vertical;
@@ -349,10 +350,12 @@ impl PresentationEditor {
         let presentation = self.current_slide.as_ref().map_or_else(
             || container(Space::new()),
             |slide| {
-                container(
+                container(loaded_image(
+                    slide.clone(),
                     widget::image(slide)
-                        .content_fit(ContentFit::ScaleDown),
-                )
+                        .content_fit(ContentFit::ScaleDown)
+                        .into(),
+                ))
                 .style(|_| {
                     container::background(Background::Color(
                         cosmic::iced::Color::WHITE,
@@ -368,11 +371,12 @@ impl PresentationEditor {
                         .iter()
                         .enumerate()
                         .map(|(index, page)| {
-                            let image = widget::image(page)
+                            let image = loaded_image(page.clone(), widget::image(page)
                                 .height(
                                     theme::spacing().space_xxxl * 3,
                                 )
-                                .content_fit(ContentFit::ScaleDown);
+                                .content_fit(ContentFit::ScaleDown).into());
+
                             let slide = container(image).style(|_| {
                                 container::background(Background::Color(
                                     cosmic::iced::Color::WHITE,
