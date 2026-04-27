@@ -66,6 +66,7 @@
           cargo-watch
           samply
           flatpak-builder
+          libcosmicAppHook
         ];
 
         buildInputs = with pkgs; [
@@ -77,16 +78,17 @@
           cmake
           clang
           libclang
-          makeWrapper
           vulkan-headers
           vulkan-loader
           vulkan-tools
           libGL
+          libinput
           cargo-flamegraph
           bacon
           openssl
-
+          freetype
           fontconfig
+          libglvnd
           glib
           alsa-lib
           gst_all_1.gst-libav
@@ -161,6 +163,9 @@
             };
         defaultPackage = lumina;
         packages = {
+          postInstall = ''
+            libcosmicAppWrapperArgs+=(--prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "$GST_PLUGIN_SYSTEM_PATH_1_0")
+          '';
           default = lumina;
         };
       }
