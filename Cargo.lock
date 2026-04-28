@@ -3620,7 +3620,7 @@ dependencies = [
  "iced_graphics",
  "kurbo 0.10.4",
  "log",
- "resvg 0.45.1",
+ "resvg",
  "rustc-hash 2.1.2",
  "softbuffer",
  "tiny-skia 0.11.4",
@@ -3662,7 +3662,7 @@ dependencies = [
  "log",
  "lyon",
  "raw-window-handle",
- "resvg 0.45.1",
+ "resvg",
  "rustc-hash 2.1.2",
  "rustix 0.38.44",
  "thiserror 2.0.18",
@@ -4501,7 +4501,7 @@ dependencies = [
  "rapidhash",
  "rayon",
  "reqwest",
- "resvg 0.47.0",
+ "resvg_exposed",
  "rodio",
  "ron 0.8.1",
  "scraper",
@@ -6394,15 +6394,15 @@ dependencies = [
  "rgb",
  "svgtypes 0.15.3",
  "tiny-skia 0.11.4",
- "usvg 0.45.1",
+ "usvg",
  "zune-jpeg 0.4.21",
 ]
 
 [[package]]
-name = "resvg"
+name = "resvg_exposed"
 version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9be183ad6a216aa96f33e4c8033b0988b8b3ea6fd2359d19af5bac4643fd8e81"
+checksum = "d8c277391f859a3b3b0f01389297832f37b4f6f632181cfea1c98ad41e7ba55e"
 dependencies = [
  "gif 0.14.2",
  "image-webp",
@@ -6411,7 +6411,7 @@ dependencies = [
  "rgb",
  "svgtypes 0.16.1",
  "tiny-skia 0.12.0",
- "usvg 0.47.0",
+ "usvg_exposed",
  "zune-jpeg 0.5.15",
 ]
 
@@ -8648,10 +8648,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "usvg"
+name = "usvg_exposed"
 version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d46cf96c5f498d36b7a9693bc6a7075c0bb9303189d61b2249b0dc3d309c07de"
+checksum = "71d0070e1df55a90910dc78ba35807c2f269e4806f8a85f20fb4b1973121ef2a"
 dependencies = [
  "base64 0.22.1",
  "data-url",
