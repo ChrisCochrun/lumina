@@ -12,3 +12,4 @@ pub mod song_search;
 pub mod songs;
 pub mod thumbnail;
 pub mod videos;
+pub mod ytdl;
