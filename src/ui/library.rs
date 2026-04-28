@@ -5,17 +5,19 @@ use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::clipboard::dnd::DndAction;
 use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
-use cosmic::iced::core::widget::tree::State;
+use cosmic::iced::core::widget::tree::State as TreeState;
 use cosmic::iced::keyboard::Modifiers;
 use cosmic::iced::widget::{column, row as rowm, text as textm};
 use cosmic::iced::{Background, Border, Color, Length};
 use cosmic::widget::menu::{self, Action as MenuAction};
+use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     Container, DndSource, Space, button, container, context_menu, divider,
-    dnd_destination, icon, mouse_area, row, scrollable, text, text_input,
+    dnd_destination, icon, indeterminate_circular, mouse_area, row, scrollable, text,
+    text_input,
 };
-use cosmic::{Element, Task, theme};
+use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
@@ -47,6 +49,14 @@ pub struct Library {
     menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
     context_menu: Option<i32>,
     modifiers_pressed: Option<Modifiers>,
+    state: State,
+    video_popup_input: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum State {
+    AddingVideo,
+    Idle,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -110,6 +120,8 @@ pub enum Message {
     ReaddPres(Vec<Presentation>),
     ToService((LibraryKind, i32)),
     AddSongFromEditor(Song),
+    PopupUpdate(String),
+    PopupSearch(String),
 }
 
 impl<'a> Library {
@@ -132,6 +144,8 @@ impl<'a> Library {
             menu_keys: HashMap::new(),
             context_menu: None,
             modifiers_pressed: None,
+            state: State::Idle,
+            video_popup_input: String::new(),
         }
     }
 
@@ -531,6 +545,8 @@ impl<'a> Library {
                 self.context_menu = Some(index);
             }
             Message::AddFiles(items) => return self.add_files(items),
+            Message::PopupUpdate(_) => todo!(),
+            Message::PopupSearch(_) => todo!(),
         }
         Action::None
     }
@@ -710,7 +726,7 @@ impl<'a> Library {
                         .drag_icon({
                             let model = model.kind;
                             move |i| {
-                                let state = State::None;
+                                let state = TreeState::None;
                                 let icon = match model {
                                     LibraryKind::Song => {
                                         icon::from_name("folder-music-symbolic")
@@ -849,6 +865,56 @@ impl<'a> Library {
                 .border(Border::default().rounded(t.cosmic().corner_radii.radius_m))
         })
         .padding([space_xxs, space_s])
+        .into()
+    }
+
+    pub fn add_video_popup(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_s,
+            space_m,
+            space_l,
+            space_xl,
+            space_xxl,
+            ..
+        } = theme::spacing();
+        let search_bar = cosmic::widget::search_input("", &self.video_popup_input)
+            .on_input(Message::PopupUpdate)
+            .on_submit(Message::PopupSearch)
+            .width(Length::Fill);
+        let submit_button = icon::from_name("document-send-symbolic")
+            .apply(button::icon)
+            .icon_size(space_xl)
+            .on_press(Message::PopupSearch(self.video_popup_input.clone()));
+
+        let search_results = if self.state == (State::AddingVideo) {
+            indeterminate_circular()
+                .apply(container)
+                .padding(space_l)
+                .center(Length::Fill)
+        } else {
+            todo!()
+        };
+
+        let search_row = row![search_bar, submit_button]
+            .spacing(space_s)
+            .align_y(Vertical::Center);
+
+        column![
+            column![
+                text::heading("Search for song")
+                    .apply(container)
+                    .padding([space_none, space_none, space_none, space_m]),
+                search_row
+            ]
+            .spacing(space_s),
+            search_results
+        ]
+        .spacing(space_xl)
+        .apply(container)
+        .style(nav_bar_style)
+        .max_width(600)
+        .padding(space_xxl)
         .into()
     }
 
@@ -1128,9 +1194,7 @@ impl<'a> Library {
                     self.video_library.items.clone(),
                     Arc::clone(&self.db),
                 ),
-                move |res| {
-                    res.map_or(Message::None, |videos| Message::ReaddVideos(videos))
-                },
+                move |res| res.map_or(Message::None, Message::ReaddVideos),
             ));
         }
 
@@ -1141,11 +1205,7 @@ impl<'a> Library {
                     self.presentation_library.items.clone(),
                     Arc::clone(&self.db),
                 ),
-                move |res| {
-                    res.map_or(Message::None, |presentations| {
-                        Message::ReaddPres(presentations)
-                    })
-                },
+                move |res| res.map_or(Message::None, Message::ReaddPres),
             ));
         }
 
@@ -1156,9 +1216,7 @@ impl<'a> Library {
                     self.image_library.items.clone(),
                     Arc::clone(&self.db),
                 ),
-                move |res| {
-                    res.map_or(Message::None, |images| Message::ReaddImages(images))
-                },
+                move |res| res.map_or(Message::None, Message::ReaddImages),
             ));
         }
 

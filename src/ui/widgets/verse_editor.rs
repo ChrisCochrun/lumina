@@ -124,13 +124,14 @@ impl VerseEditor {
                         .width(3)
                         .color(t.cosmic().accent.hover);
                     match s {
-                        text_editor::Status::Active => base_style,
                         text_editor::Status::Hovered
                         | text_editor::Status::Focused { .. } => {
                             base_style.border = hovered_border;
                             base_style
                         }
-                        text_editor::Status::Disabled => base_style,
+                        text_editor::Status::Active | text_editor::Status::Disabled => {
+                            base_style
+                        }
                     }
                 })))
                 .height(150)

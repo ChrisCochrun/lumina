@@ -89,7 +89,7 @@ mod test {
         match bg_from_video(video, &screenshot) {
             Ok(_o) => assert!(screenshot.exists()),
             Err(e) => {
-                debug_assert!(false, "There was an error in the runtime future. {e}",)
+                debug_assert!(false, "There was an error in the runtime future. {e}",);
             }
         }
     }

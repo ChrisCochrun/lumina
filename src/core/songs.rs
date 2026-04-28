@@ -411,7 +411,6 @@ impl FromRow<'_, SqliteRow> for Song {
                     ("left", "center") => TextAlignment::MiddleLeft,
                     ("left", "bottom") => TextAlignment::BottomLeft,
                     ("center", "top") => TextAlignment::TopCenter,
-                    ("center", "center") => TextAlignment::MiddleCenter,
                     ("center", "bottom") => TextAlignment::BottomCenter,
                     ("right", "top") => TextAlignment::TopRight,
                     ("right", "center") => TextAlignment::MiddleRight,

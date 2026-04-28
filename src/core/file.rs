@@ -368,33 +368,54 @@ mod test {
         }
     }
 
-    fn find_svgs(items: &[ServiceItem]) -> Result<(), String> {
+    fn test_size_and_cache(mut path: PathBuf) -> Result<(), String> {
         let cache_dir = cache_dir();
+
+        if path.metadata().expect("").len() < 15000 {
+            return Err(String::from(
+                "SVG text is too small, maybe the svg didn't generate properly",
+            ));
+        }
+        if path.pop() && path == cache_dir {
+            Ok(())
+        } else {
+            Err(String::from(
+                "The path of the TextSvg isn't in the load directory",
+            ))
+        }
+    }
+
+    fn find_svgs(items: &[ServiceItem]) -> Result<(), String> {
         items.iter().try_for_each(|item| {
             if let ServiceItemKind::Song(..) = item.kind {
                 item.slides.iter().try_for_each(|slide| {
-                    slide.text_svg.as_ref().map_or_else(|| Err(String::from("There is no TextSvg for this song")), |text_svg| {
-
-                        if text_svg.handle.is_none() {
-                            return Err(String::from("There is no handle in this song's TextSvg"));
-                        }
-
-                        text_svg.path.as_ref().map_or_else(|| Err(String::from("There is no path in this song's TextSvg")), |path| {
-                            if path.exists() {
-                                let mut path = path.clone();
-                                if path.metadata().expect("").len() < 15000 {
-                                    return Err(String::from("SVG text is too small, maybe the svg didn't generate properly"))
-                                }
-                                if path.pop() && path == cache_dir {
-                                    Ok(())
-                                } else {
-                                    Err(String::from("The path of the TextSvg isn't in the load directory"))
-                                }
-                            } else {
-                                Err(String::from("The path in this TextSvg doesn't exist"))
+                    slide.text_svg.as_ref().map_or_else(
+                        || Err(String::from("There is no TextSvg for this song")),
+                        |text_svg| {
+                            if text_svg.handle.is_none() {
+                                return Err(String::from(
+                                    "There is no handle in this song's TextSvg",
+                                ));
                             }
-                        })
-                    })
+
+                            text_svg.path.as_ref().map_or_else(
+                                || {
+                                    Err(String::from(
+                                        "There is no path in this song's TextSvg",
+                                    ))
+                                },
+                                |path| {
+                                    if path.exists() {
+                                        test_size_and_cache(path.clone())
+                                    } else {
+                                        Err(String::from(
+                                            "The path in this TextSvg doesn't exist",
+                                        ))
+                                    }
+                                },
+                            )
+                        },
+                    )
                 })
             } else {
                 Ok(())
