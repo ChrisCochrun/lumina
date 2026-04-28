@@ -330,7 +330,7 @@ impl TextSvg {
                     let position = half_lines.mul_add(
                         -text_and_line_spacing,
                         middle_position,
-                    );
+                    ) + text_and_line_spacing / 2.0;
                     ("start", position, "10")
                 }
                 TextAlignment::MiddleCenter => {
@@ -338,7 +338,7 @@ impl TextSvg {
                     let position = half_lines.mul_add(
                         -text_and_line_spacing,
                         middle_position,
-                    );
+                    ) + text_and_line_spacing / 2.0;
                     ("middle", position, center_y.as_str())
                 }
                 TextAlignment::MiddleRight => {
@@ -346,7 +346,7 @@ impl TextSvg {
                     let position = half_lines.mul_add(
                         -text_and_line_spacing,
                         middle_position,
-                    );
+                    ) + text_and_line_spacing / 2.0;
                     ("end", position, x_width_padded.as_str())
                 }
                 TextAlignment::BottomLeft => {
