@@ -50,6 +50,7 @@ serde_json = "1.0.149"
 nom = "8.0.0"
 tokio-stream = "0.1.18"
 fontdb = "0.23.0"
+youtube_dl = { version = "0.10.0", features = ["downloader-native-tls", "tokio"] }
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
 
@@ -60,7 +61,7 @@ features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libo
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 default-features = false
-features = ["debug", "winit", "desktop", "wayland", "tokio", "rfd", "dbus-config", "a11y", "wgpu", "multi-window", "process"]
+features = ["debug", "winit", "tokio", "rfd", "wgpu", "multi-window",]
 
 [dependencies.iced_video_player]
 git = "https://github.com/wash2/iced_video_player.git"
