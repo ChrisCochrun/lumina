@@ -8,9 +8,7 @@ use cosmic::iced::Length;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::widget::{column, row};
 use cosmic::widget::space::horizontal;
-use cosmic::widget::{
-    self, Space, button, container, icon, text, text_input,
-};
+use cosmic::widget::{self, Space, button, container, icon, text, text_input};
 use cosmic::{Apply, Element, Task, theme};
 use tracing::{debug, error, warn};
 
@@ -69,21 +67,14 @@ impl ImageEditor {
                 return Action::UpdateImage(image);
             }
             Message::PickImage => {
-                let image_id = self
-                    .image
-                    .as_ref()
-                    .map(|v| v.id)
-                    .unwrap_or_default();
-                let task = Task::perform(
-                    pick_image(),
-                    move |image_result| {
-                        image_result.map_or(Message::None, |image| {
-                            let mut image = Image::from(image);
-                            image.id = image_id;
-                            Message::Update(image)
-                        })
-                    },
-                );
+                let image_id = self.image.as_ref().map(|v| v.id).unwrap_or_default();
+                let task = Task::perform(pick_image(), move |image_result| {
+                    image_result.map_or(Message::None, |image| {
+                        let mut image = Image::from(image);
+                        image.id = image_id;
+                        Message::Update(image)
+                    })
+                });
                 return Action::Task(task);
             }
             Message::None => (),
@@ -97,25 +88,21 @@ impl ImageEditor {
             || Space::new().apply(container),
             |pic| widget::image(pic.path.clone()).apply(container),
         );
-        let column = column![
-            self.toolbar(),
-            container.center_x(Length::FillPortion(2))
-        ]
-        .spacing(theme::active().cosmic().space_l());
+        let column = column![self.toolbar(), container.center_x(Length::FillPortion(2))]
+            .spacing(theme::active().cosmic().space_l());
         column.into()
     }
 
     fn toolbar(&self) -> Element<Message> {
-        let title_box = text_input("Title...", &self.title)
-            .on_input(Message::ChangeTitle);
+        let title_box =
+            text_input("Title...", &self.title).on_input(Message::ChangeTitle);
 
-        let image_selector = button::icon(
-            icon::from_name("folder-images-symbolic").scale(2),
-        )
-        .label("Image")
-        .tooltip("Select a image")
-        .on_press(Message::PickImage)
-        .padding(10);
+        let image_selector =
+            button::icon(icon::from_name("folder-images-symbolic").scale(2))
+                .label("Image")
+                .tooltip("Select a image")
+                .on_press(Message::PickImage)
+                .padding(10);
 
         row![
             text::body("Title:"),
@@ -163,9 +150,7 @@ async fn pick_image() -> Result<PathBuf, ImageError> {
             error!(?e);
             ImageError::DialogClosed
         })
-        .map(|file| {
-            file.url().to_file_path().expect("Should be a file here")
-        })
+        .map(|file| file.url().to_file_path().expect("Should be a file here"))
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

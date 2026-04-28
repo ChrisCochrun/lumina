@@ -29,16 +29,14 @@ use cosmic::iced::advanced::{Clipboard, Shell, overlay, renderer};
 use cosmic::iced::alignment::{self, Alignment};
 use cosmic::iced::event::Event;
 use cosmic::iced::{
-    self, Background, Border, Color, Element, Length, Padding,
-    Pixels, Point, Rectangle, Size, Transformation, Vector, mouse,
+    self, Background, Border, Color, Element, Length, Padding, Pixels, Point, Rectangle,
+    Size, Transformation, Vector, mouse,
 };
 
 use super::{Action, DragEvent, DropPosition};
 
 pub fn row<'a, Message, Theme, Renderer>(
-    children: impl IntoIterator<
-        Item = Element<'a, Message, Theme, Renderer>,
-    >,
+    children: impl IntoIterator<Item = Element<'a, Message, Theme, Renderer>>,
 ) -> Row<'a, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
@@ -107,9 +105,7 @@ where
 
     /// Creates a [`Row`] with the given elements.
     pub fn with_children(
-        children: impl IntoIterator<
-            Item = Element<'a, Message, Theme, Renderer>,
-        >,
+        children: impl IntoIterator<Item = Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
         let iterator = children.into_iter();
 
@@ -124,9 +120,7 @@ where
     /// If any of the children have a [`Length::Fill`] strategy, you will need to
     /// call [`Row::width`] or [`Row::height`] accordingly.
     #[must_use]
-    pub fn from_vec(
-        children: Vec<Element<'a, Message, Theme, Renderer>>,
-    ) -> Self {
+    pub fn from_vec(children: Vec<Element<'a, Message, Theme, Renderer>>) -> Self {
         Self {
             spacing: 0.0,
             padding: Padding::ZERO,
@@ -170,10 +164,7 @@ where
     }
 
     /// Sets the vertical alignment of the contents of the [`Row`] .
-    pub fn align_y(
-        mut self,
-        align: impl Into<alignment::Vertical>,
-    ) -> Self {
+    pub fn align_y(mut self, align: impl Into<alignment::Vertical>) -> Self {
         self.align = Alignment::from(align.into());
         self
     }
@@ -209,9 +200,7 @@ where
     /// Adds an element to the [`Row`], if `Some`.
     pub fn push_maybe(
         self,
-        child: Option<
-            impl Into<Element<'a, Message, Theme, Renderer>>,
-        >,
+        child: Option<impl Into<Element<'a, Message, Theme, Renderer>>>,
     ) -> Self {
         if let Some(child) = child {
             self.push(child)
@@ -222,10 +211,7 @@ where
 
     /// Sets the style of the [`Row`].
     #[must_use]
-    pub fn style(
-        mut self,
-        style: impl Fn(&Theme) -> Style + 'a,
-    ) -> Self
+    pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
     where
         Theme::Class<'a>: From<StyleFn<'a, Theme>>,
     {
@@ -235,10 +221,7 @@ where
 
     /// Sets the style class of the [`Row`].
     #[must_use]
-    pub fn class(
-        mut self,
-        class: impl Into<Theme::Class<'a>>,
-    ) -> Self {
+    pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
         self
     }
@@ -246,9 +229,7 @@ where
     /// Extends the [`Row`] with the given children.
     pub fn extend(
         self,
-        children: impl IntoIterator<
-            Item = Element<'a, Message, Theme, Renderer>,
-        >,
+        children: impl IntoIterator<Item = Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
         children.into_iter().fold(self, Self::push)
     }
@@ -256,17 +237,12 @@ where
     /// Turns the [`Row`] into a [`Wrapping`] row.
     ///
     /// The original alignment of the [`Row`] is preserved per row wrapped.
-    pub const fn wrap(
-        self,
-    ) -> Wrapping<'a, Message, Theme, Renderer> {
+    pub const fn wrap(self) -> Wrapping<'a, Message, Theme, Renderer> {
         Wrapping { row: self }
     }
 
     /// The message produced by the [`Row`] when a child is dragged.
-    pub fn on_drag(
-        mut self,
-        on_reorder: impl Fn(DragEvent) -> Message + 'a,
-    ) -> Self {
+    pub fn on_drag(mut self, on_reorder: impl Fn(DragEvent) -> Message + 'a) -> Self {
         self.on_drag = Some(Box::new(on_reorder));
         self
     }
@@ -331,9 +307,7 @@ impl<'a, Message, Theme, Renderer: renderer::Renderer>
 where
     Theme: Catalog,
 {
-    fn from_iter<
-        T: IntoIterator<Item = Element<'a, Message, Theme, Renderer>>,
-    >(
+    fn from_iter<T: IntoIterator<Item = Element<'a, Message, Theme, Renderer>>>(
         iter: T,
     ) -> Self {
         Self::with_children(iter)
@@ -442,19 +416,10 @@ where
             });
 
         match event {
-            Event::Mouse(mouse::Event::ButtonPressed(
-                mouse::Button::Left,
-            )) => {
-                if let Some(cursor_position) =
-                    cursor.position_over(layout.bounds())
-                {
-                    for (index, child_layout) in
-                        layout.children().enumerate()
-                    {
-                        if child_layout
-                            .bounds()
-                            .contains(cursor_position)
-                        {
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                if let Some(cursor_position) = cursor.position_over(layout.bounds()) {
+                    for (index, child_layout) in layout.children().enumerate() {
+                        if child_layout.bounds().contains(cursor_position) {
                             *action = Action::Picking {
                                 index,
                                 origin: cursor_position,
@@ -468,10 +433,8 @@ where
             Event::Mouse(mouse::Event::CursorMoved { .. }) => {
                 match *action {
                     Action::Picking { index, origin } => {
-                        if let Some(cursor_position) =
-                            cursor.position()
-                            && cursor_position.distance(origin)
-                                > self.deadband_zone
+                        if let Some(cursor_position) = cursor.position()
+                            && cursor_position.distance(origin) > self.deadband_zone
                         {
                             // Start dragging
                             *action = Action::Dragging {
@@ -480,17 +443,13 @@ where
                                 last_cursor: cursor_position,
                             };
                             if let Some(on_reorder) = &self.on_drag {
-                                shell.publish(on_reorder(
-                                    DragEvent::Picked { index },
-                                ));
+                                shell.publish(on_reorder(DragEvent::Picked { index }));
                             }
                             shell.capture_event();
                         }
                     }
                     Action::Dragging { origin, index, .. } => {
-                        if let Some(cursor_position) =
-                            cursor.position()
-                        {
+                        if let Some(cursor_position) = cursor.position() {
                             *action = Action::Dragging {
                                 last_cursor: cursor_position,
                                 origin,
@@ -502,41 +461,25 @@ where
                     _ => {}
                 }
             }
-            Event::Mouse(mouse::Event::ButtonReleased(
-                mouse::Button::Left,
-            )) => {
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 match *action {
                     Action::Dragging { index, .. } => {
-                        if let Some(cursor_position) =
-                            cursor.position()
-                        {
+                        if let Some(cursor_position) = cursor.position() {
                             let bounds = layout.bounds();
                             if bounds.contains(cursor_position) {
-                                let (target_index, drop_position) =
-                                    self.compute_target_index(
-                                        cursor_position,
-                                        layout,
-                                        index,
-                                    );
+                                let (target_index, drop_position) = self
+                                    .compute_target_index(cursor_position, layout, index);
 
-                                if let Some(on_reorder) =
-                                    &self.on_drag
-                                {
-                                    shell.publish(on_reorder(
-                                        DragEvent::Dropped {
-                                            index,
-                                            target_index,
-                                            drop_position,
-                                        },
-                                    ));
+                                if let Some(on_reorder) = &self.on_drag {
+                                    shell.publish(on_reorder(DragEvent::Dropped {
+                                        index,
+                                        target_index,
+                                        drop_position,
+                                    }));
                                     shell.capture_event();
                                 }
-                            } else if let Some(on_reorder) =
-                                &self.on_drag
-                            {
-                                shell.publish(on_reorder(
-                                    DragEvent::Canceled { index },
-                                ));
+                            } else if let Some(on_reorder) = &self.on_drag {
+                                shell.publish(on_reorder(DragEvent::Canceled { index }));
                                 shell.capture_event();
                             }
                         }
@@ -572,9 +515,9 @@ where
             .zip(&tree.children)
             .zip(layout.children())
             .map(|((child, state), layout)| {
-                child.as_widget().mouse_interaction(
-                    state, layout, cursor, viewport, renderer,
-                )
+                child
+                    .as_widget()
+                    .mouse_interaction(state, layout, cursor, viewport, renderer)
             })
             .max()
             .unwrap_or_default()
@@ -604,20 +547,15 @@ where
 
                 // Determine the target index based on cursor position
                 let target_index = if cursor.position().is_some() {
-                    let (target_index, _) = self
-                        .compute_target_index(
-                            *last_cursor,
-                            layout,
-                            *index,
-                        );
+                    let (target_index, _) =
+                        self.compute_target_index(*last_cursor, layout, *index);
                     target_index.min(child_count - 1)
                 } else {
                     *index
                 };
 
                 // Store the width of the dragged item
-                let drag_bounds =
-                    layout.children().nth(*index).unwrap().bounds();
+                let drag_bounds = layout.children().nth(*index).unwrap().bounds();
                 let drag_width = drag_bounds.width + self.spacing;
 
                 // Draw all children except the one being dragged
@@ -625,118 +563,88 @@ where
                 for i in 0..child_count {
                     let child = &self.children[i];
                     let state = &tree.children[i];
-                    let child_layout =
-                        layout.children().nth(i).unwrap();
+                    let child_layout = layout.children().nth(i).unwrap();
 
                     // Draw the dragged item separately
                     // TODO: Draw a shadow below the picked item to enhance the
                     // floating effect
                     if i == *index {
-                        let scaling =
-                            Transformation::scale(style.scale);
-                        let translation =
-                            *last_cursor - *origin * scaling;
-                        renderer.with_translation(
-                            translation,
-                            |renderer| {
-                                renderer.with_transformation(
-                                    scaling,
-                                    |renderer| {
-                                        renderer.with_layer(
-                                            child_layout.bounds(),
-                                            |renderer| {
-                                                child
-                                                    .as_widget()
-                                                    .draw(
-                                                        state,
-                                                        renderer,
-                                                        theme,
-                                                        defaults,
-                                                        child_layout,
-                                                        cursor,
-                                                        viewport,
-                                                    );
-                                            },
-                                        );
-                                    },
-                                );
-                            },
-                        );
-                    } else {
-                        let offset: i32 =
-                            match target_index.cmp(index) {
-                                std::cmp::Ordering::Less
-                                    if i >= target_index
-                                        && i < *index =>
-                                {
-                                    1
-                                }
-                                std::cmp::Ordering::Greater
-                                    if i > *index
-                                        && i <= target_index =>
-                                {
-                                    -1
-                                }
-                                _ => 0,
-                            };
-
-                        let translation = Vector::new(
-                            offset as f32 * drag_width,
-                            0.0,
-                        );
-                        renderer.with_translation(
-                            translation,
-                            |renderer| {
-                                child.as_widget().draw(
-                                    state,
-                                    renderer,
-                                    theme,
-                                    defaults,
-                                    child_layout,
-                                    cursor,
-                                    viewport,
-                                );
-                                // Draw an overlay if this item is being moved
-                                // TODO: instead of drawing an overlay, it would be nicer to
-                                // draw the item with a reduced opacity, but that's not possible today
-                                if offset != 0 {
-                                    renderer.fill_quad(
-                                        renderer::Quad {
-                                            bounds: child_layout
-                                                .bounds(),
-                                            ..renderer::Quad::default(
-                                            )
-                                        },
-                                        style.moved_item_overlay,
+                        let scaling = Transformation::scale(style.scale);
+                        let translation = *last_cursor - *origin * scaling;
+                        renderer.with_translation(translation, |renderer| {
+                            renderer.with_transformation(scaling, |renderer| {
+                                renderer.with_layer(child_layout.bounds(), |renderer| {
+                                    child.as_widget().draw(
+                                        state,
+                                        renderer,
+                                        theme,
+                                        defaults,
+                                        child_layout,
+                                        cursor,
+                                        viewport,
                                     );
+                                });
+                            });
+                        });
+                    } else {
+                        let offset: i32 = match target_index.cmp(index) {
+                            std::cmp::Ordering::Less
+                                if i >= target_index && i < *index =>
+                            {
+                                1
+                            }
+                            std::cmp::Ordering::Greater
+                                if i > *index && i <= target_index =>
+                            {
+                                -1
+                            }
+                            _ => 0,
+                        };
 
-                                    // Keep track of the total translation so we can
-                                    // draw the "ghost" of the dragged item later
-                                    translations -=
-                                        (child_layout.bounds().width
-                                            + self.spacing)
-                                            * offset.signum() as f32;
-                                }
-                            },
-                        );
+                        let translation = Vector::new(offset as f32 * drag_width, 0.0);
+                        renderer.with_translation(translation, |renderer| {
+                            child.as_widget().draw(
+                                state,
+                                renderer,
+                                theme,
+                                defaults,
+                                child_layout,
+                                cursor,
+                                viewport,
+                            );
+                            // Draw an overlay if this item is being moved
+                            // TODO: instead of drawing an overlay, it would be nicer to
+                            // draw the item with a reduced opacity, but that's not possible today
+                            if offset != 0 {
+                                renderer.fill_quad(
+                                    renderer::Quad {
+                                        bounds: child_layout.bounds(),
+                                        ..renderer::Quad::default()
+                                    },
+                                    style.moved_item_overlay,
+                                );
+
+                                // Keep track of the total translation so we can
+                                // draw the "ghost" of the dragged item later
+                                translations -= (child_layout.bounds().width
+                                    + self.spacing)
+                                    * offset.signum() as f32;
+                            }
+                        });
                     }
                 }
                 // Draw a ghost of the dragged item in its would-be position
-                let ghost_translation =
-                    Vector::new(translations, 0.0);
-                renderer.with_translation(
-                    ghost_translation,
-                    |renderer| {
-                        renderer.fill_quad(
-                            renderer::Quad {
-                                bounds: drag_bounds,
-                                border: style.ghost_border,
-                                ..renderer::Quad::default()
-                            },
-                            style.ghost_background,
-                        );
-                    },
-                );
+                let ghost_translation = Vector::new(translations, 0.0);
+                renderer.with_translation(ghost_translation, |renderer| {
+                    renderer.fill_quad(
+                        renderer::Quad {
+                            bounds: drag_bounds,
+                            border: style.ghost_border,
+                            ..renderer::Quad::default()
+                        },
+                        style.ghost_background,
+                    );
+                });
             }
             _ => {
                 // Draw all children normally when not dragging
@@ -746,10 +654,9 @@ where
                     .zip(&tree.children)
                     .zip(layout.children())
                 {
-                    child.as_widget().draw(
-                        state, renderer, theme, defaults, layout,
-                        cursor, viewport,
-                    );
+                    child
+                        .as_widget()
+                        .draw(state, renderer, theme, defaults, layout, cursor, viewport);
                 }
             }
         }
@@ -774,8 +681,7 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer>
-    From<Row<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<Row<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
@@ -794,12 +700,8 @@ where
 ///
 /// The original alignment of the [`Row`] is preserved per row wrapped.
 #[allow(missing_debug_implementations)]
-pub struct Wrapping<
-    'a,
-    Message,
-    Theme = cosmic::Theme,
-    Renderer = iced::Renderer,
-> where
+pub struct Wrapping<'a, Message, Theme = cosmic::Theme, Renderer = iced::Renderer>
+where
     Theme: Catalog,
 {
     row: Row<'a, Message, Theme, Renderer>,
@@ -850,34 +752,31 @@ where
             Alignment::End => 1.0,
         };
 
-        let align =
-            |row_start: std::ops::Range<usize>,
-             row_height: f32,
-             children: &mut Vec<layout::Node>| {
-                if align_factor != 0.0 {
-                    for node in &mut children[row_start] {
-                        let height = node.size().height;
+        let align = |row_start: std::ops::Range<usize>,
+                     row_height: f32,
+                     children: &mut Vec<layout::Node>| {
+            if align_factor != 0.0 {
+                for node in &mut children[row_start] {
+                    let height = node.size().height;
 
-                        node.translate_mut(Vector::new(
-                            0.0,
-                            (row_height - height) / align_factor,
-                        ));
-                    }
+                    node.translate_mut(Vector::new(
+                        0.0,
+                        (row_height - height) / align_factor,
+                    ));
                 }
-            };
+            }
+        };
 
         for (i, child) in self.row.children.iter_mut().enumerate() {
-            let node = child.as_widget_mut().layout(
-                &mut tree.children[i],
-                renderer,
-                &limits,
-            );
+            let node =
+                child
+                    .as_widget_mut()
+                    .layout(&mut tree.children[i], renderer, &limits);
 
             let child_size = node.size();
 
             if x != 0.0 && x + child_size.width > max_width {
-                intrinsic_size.width =
-                    intrinsic_size.width.max(x - spacing);
+                intrinsic_size.width = intrinsic_size.width.max(x - spacing);
 
                 align(row_start..i, row_height, &mut children);
 
@@ -889,32 +788,23 @@ where
 
             row_height = row_height.max(child_size.height);
 
-            children.push(node.move_to((
-                x + self.row.padding.left,
-                y + self.row.padding.top,
-            )));
+            children.push(
+                node.move_to((x + self.row.padding.left, y + self.row.padding.top)),
+            );
 
             x += child_size.width + spacing;
         }
 
         if x != 0.0 {
-            intrinsic_size.width =
-                intrinsic_size.width.max(x - spacing);
+            intrinsic_size.width = intrinsic_size.width.max(x - spacing);
         }
 
         intrinsic_size.height = y + row_height;
         align(row_start..children.len(), row_height, &mut children);
 
-        let size = limits.resolve(
-            self.row.width,
-            self.row.height,
-            intrinsic_size,
-        );
+        let size = limits.resolve(self.row.width, self.row.height, intrinsic_size);
 
-        layout::Node::with_children(
-            size.expand(self.row.padding),
-            children,
-        )
+        layout::Node::with_children(size.expand(self.row.padding), children)
     }
 
     fn operate(
@@ -939,8 +829,7 @@ where
         viewport: &Rectangle,
     ) {
         self.row.update(
-            tree, event, layout, cursor, renderer, clipboard, shell,
-            viewport,
+            tree, event, layout, cursor, renderer, clipboard, shell, viewport,
         )
     }
 
@@ -952,9 +841,8 @@ where
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
-        self.row.mouse_interaction(
-            tree, layout, cursor, viewport, renderer,
-        )
+        self.row
+            .mouse_interaction(tree, layout, cursor, viewport, renderer)
     }
 
     fn draw(
@@ -967,9 +855,8 @@ where
         cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        self.row.draw(
-            tree, renderer, theme, style, layout, cursor, viewport,
-        );
+        self.row
+            .draw(tree, renderer, theme, style, layout, cursor, viewport);
     }
 
     fn overlay<'b>(
@@ -980,18 +867,12 @@ where
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-        self.row.overlay(
-            tree,
-            layout,
-            renderer,
-            viewport,
-            translation,
-        )
+        self.row
+            .overlay(tree, layout, renderer, viewport, translation)
     }
 }
 
-impl<'a, Message, Theme, Renderer>
-    From<Wrapping<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<Wrapping<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
@@ -1047,19 +928,15 @@ impl Catalog for cosmic::Theme {
 pub fn default(theme: &cosmic::Theme) -> Style {
     Style {
         scale: 1.05,
-        moved_item_overlay: Color::from(
-            theme.cosmic().primary.base.color,
-        )
-        .scale_alpha(0.2),
+        moved_item_overlay: Color::from(theme.cosmic().primary.base.color)
+            .scale_alpha(0.2),
         ghost_border: Border {
             width: 1.0,
             color: theme.cosmic().secondary.base.color.into(),
             radius: 0.0.into(),
         },
-        ghost_background: Color::from(
-            theme.cosmic().secondary.base.color,
-        )
-        .scale_alpha(0.2)
-        .into(),
+        ghost_background: Color::from(theme.cosmic().secondary.base.color)
+            .scale_alpha(0.2)
+            .into(),
     }
 }

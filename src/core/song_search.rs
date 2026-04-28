@@ -16,15 +16,7 @@ use std::fmt::Display;
 use tracing::error;
 
 #[derive(
-    Clone,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Serialize,
-    Deserialize,
+    Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
 )]
 pub struct OnlineSong {
     pub lyrics: String,
@@ -35,15 +27,7 @@ pub struct OnlineSong {
 }
 
 #[derive(
-    Debug,
-    Clone,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Serialize,
-    Deserialize,
+    Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
 )]
 pub enum Provider {
     Genius {
@@ -54,10 +38,7 @@ pub enum Provider {
 }
 
 impl Display for Provider {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Genius { .. } => f.write_str("Genius"),
             Self::LyricsCom => f.write_str("Lyrics.com"),
@@ -67,13 +48,8 @@ impl Display for Provider {
 
 impl From<OnlineSong> for Song {
     fn from(online_song: OnlineSong) -> Self {
-        let verse_map = if online_song.provider
-            == (Provider::Genius { parsable: true })
-        {
-            parse_genius_lyrics(
-                &online_song.lyrics.replace("\\n", "\n"),
-            )
-            .ok()
+        let verse_map = if online_song.provider == (Provider::Genius { parsable: true }) {
+            parse_genius_lyrics(&online_song.lyrics.replace("\\n", "\n")).ok()
         } else {
             let mut map = HashMap::new();
             map.entry(VerseName::Verse { number: 1 })
@@ -103,14 +79,11 @@ impl From<OnlineSong> for Song {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-fn parse_genius_lyrics(
-    lyrics: &str,
-) -> Result<HashMap<VerseName, String>> {
-    let (input, chunks) =
-        many1(pair(parse_verse_name, alt((take_until("["), rest))))
-            .parse(lyrics)
-            .map_err(|e| e.to_owned())
-            .into_diagnostic()?;
+fn parse_genius_lyrics(lyrics: &str) -> Result<HashMap<VerseName, String>> {
+    let (input, chunks) = many1(pair(parse_verse_name, alt((take_until("["), rest))))
+        .parse(lyrics)
+        .map_err(|e| e.to_owned())
+        .into_diagnostic()?;
 
     dbg!(input);
     dbg!(&chunks);
@@ -160,16 +133,12 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     Ok((input, verse_name))
 }
 
-pub async fn search_genius(
-    query: String,
-    auth_token: String,
-) -> Result<Vec<OnlineSong>> {
+pub async fn search_genius(query: String, auth_token: String) -> Result<Vec<OnlineSong>> {
     // let Some(auth_token) = option_env!("GENIUS_TOKEN") else {
     //     return Err(miette!("No Genius Token"));
     // };
 
-    let head_value = header::HeaderValue::from_str(&auth_token)
-        .into_diagnostic()?;
+    let head_value = header::HeaderValue::from_str(&auth_token).into_diagnostic()?;
     let mut headers = header::HeaderMap::new();
     headers.insert(header::AUTHORIZATION, head_value);
     let client = reqwest::Client::builder()
@@ -186,8 +155,7 @@ pub async fn search_genius(
         .text()
         .await
         .into_diagnostic()?;
-    let json: Value =
-        serde_json::from_str(&response).into_diagnostic()?;
+    let json: Value = serde_json::from_str(&response).into_diagnostic()?;
     let hits = json
         .get("response")
         .expect("respose")
@@ -196,52 +164,48 @@ pub async fn search_genius(
         .as_array()
         .expect("array");
     let songs: Vec<Option<OnlineSong>> =
-        cosmic::iced::futures::future::join_all(hits.iter().map(
-            |hit| async {
-                let result = hit.get("result").expect("result");
-                let title = result
-                    .get("title")
-                    .expect("title")
-                    .as_str()
-                    .expect("title")
-                    .to_string();
-                let title = title.replace("\u{a0}", " ");
-                let author = result
-                    .get("artist_names")
-                    .expect("artists")
-                    .as_str()
-                    .expect("artists")
-                    .to_string();
-                let link = result
-                    .get("url")
-                    .expect("url")
-                    .as_str()
-                    .expect("url")
-                    .to_string();
-                let song = OnlineSong {
-                    lyrics: String::new(),
-                    title,
-                    author,
-                    provider: Provider::Genius { parsable: false },
-                    link,
-                };
+        cosmic::iced::futures::future::join_all(hits.iter().map(|hit| async {
+            let result = hit.get("result").expect("result");
+            let title = result
+                .get("title")
+                .expect("title")
+                .as_str()
+                .expect("title")
+                .to_string();
+            let title = title.replace("\u{a0}", " ");
+            let author = result
+                .get("artist_names")
+                .expect("artists")
+                .as_str()
+                .expect("artists")
+                .to_string();
+            let link = result
+                .get("url")
+                .expect("url")
+                .as_str()
+                .expect("url")
+                .to_string();
+            let song = OnlineSong {
+                lyrics: String::new(),
+                title,
+                author,
+                provider: Provider::Genius { parsable: false },
+                link,
+            };
 
-                match get_genius_lyrics(song).await {
-                    Ok(song) => Some(song),
-                    Err(e) => {
-                        error!("Couldn't get lyrics: {e}");
-                        None
-                    }
+            match get_genius_lyrics(song).await {
+                Ok(song) => Some(song),
+                Err(e) => {
+                    error!("Couldn't get lyrics: {e}");
+                    None
                 }
-            },
-        ))
+            }
+        }))
         .await;
     Ok(songs.into_iter().flatten().collect())
 }
 
-pub async fn get_genius_lyrics(
-    mut song: OnlineSong,
-) -> Result<OnlineSong> {
+pub async fn get_genius_lyrics(mut song: OnlineSong) -> Result<OnlineSong> {
     let html = reqwest::get(&song.link)
         .await
         .into_diagnostic()?
@@ -251,17 +215,15 @@ pub async fn get_genius_lyrics(
         .await
         .into_diagnostic()?;
     let document = scraper::Html::parse_document(&html);
-    let Ok(lyrics_root_selector) = scraper::Selector::parse(
-        r#"div[data-lyrics-container="true"]"#,
-    ) else {
+    let Ok(lyrics_root_selector) =
+        scraper::Selector::parse(r#"div[data-lyrics-container="true"]"#)
+    else {
         return Err(miette!("error in finding lyrics_root"));
     };
 
     let lyrics = document
         .select(&lyrics_root_selector)
-        .filter(|element| {
-            element.attr("data-exclude-from-selection").is_none()
-        })
+        .filter(|element| element.attr("data-exclude-from-selection").is_none())
         .filter(|element| {
             !element.value().classes().any(|class| {
                 class.contains("Contrib")
@@ -278,11 +240,7 @@ pub async fn get_genius_lyrics(
             line_broken
                 .root_element()
                 .descendent_elements()
-                .filter(|element| {
-                    element
-                        .attr("data-exclude-from-selection")
-                        .is_none()
-                })
+                .filter(|element| element.attr("data-exclude-from-selection").is_none())
                 .filter(|element| {
                     let element_name = element.value().name();
                     element_name != "div" && element_name != "path"
@@ -307,9 +265,7 @@ pub async fn get_genius_lyrics(
         || {
             lyrics.find("</div></div></div>").map_or_else(
                 || lyrics.clone(),
-                |position| {
-                    lyrics.split_at(position + 18).1.to_string()
-                },
+                |position| lyrics.split_at(position + 18).1.to_string(),
             )
         },
         |position| lyrics.split_at(position).1.to_string(),
@@ -324,20 +280,17 @@ pub async fn get_genius_lyrics(
 pub async fn search_lyrics_com_links(
     query: impl AsRef<str> + std::fmt::Display,
 ) -> Result<Vec<String>> {
-    let html =
-        reqwest::get(format!("http://www.lyrics.com/lyrics/{query}"))
-            .await
-            .into_diagnostic()?
-            .error_for_status()
-            .into_diagnostic()?
-            .text()
-            .await
-            .into_diagnostic()?;
+    let html = reqwest::get(format!("http://www.lyrics.com/lyrics/{query}"))
+        .await
+        .into_diagnostic()?
+        .error_for_status()
+        .into_diagnostic()?
+        .text()
+        .await
+        .into_diagnostic()?;
 
     let document = scraper::Html::parse_document(&html);
-    let Ok(best_matches_selector) =
-        scraper::Selector::parse(".best-matches")
-    else {
+    let Ok(best_matches_selector) = scraper::Selector::parse(".best-matches") else {
         return Err(miette!("error in finding matches"));
     };
     let Ok(lyric_selector) = scraper::Selector::parse("a") else {
@@ -347,9 +300,7 @@ pub async fn search_lyrics_com_links(
     Ok(document
         .select(&best_matches_selector)
         .flat_map(|best_section| best_section.select(&lyric_selector))
-        .map(|a| {
-            a.value().attr("href").unwrap_or("").trim().to_string()
-        })
+        .map(|a| a.value().attr("href").unwrap_or("").trim().to_string())
         .filter(|a| a.contains("/lyric/"))
         .dedup()
         .map(|link| {
@@ -389,9 +340,7 @@ pub async fn lyrics_com_link_to_song(
             .into_diagnostic()?;
 
         let document = scraper::Html::parse_document(&html);
-        let Ok(lyric_selector) =
-            scraper::Selector::parse(".lyric-body")
-        else {
+        let Ok(lyric_selector) = scraper::Selector::parse(".lyric-body") else {
             return Err(miette!("error in finding lyric-body",));
         };
 
@@ -430,7 +379,8 @@ mod test {
             title: "Death Was Arrested".to_string(),
             author: "North Point Worship (Ft. Seth Condrey)".to_string(),
             provider: Provider::Genius { parsable: false },
-            link: "https://genius.com/North-point-worship-death-was-arrested-lyrics".to_string(),
+            link: "https://genius.com/North-point-worship-death-was-arrested-lyrics"
+                .to_string(),
         };
         let hits = search_genius(
             "Death was arrested".to_string(),
@@ -444,13 +394,10 @@ mod test {
             "There was no song that matched on Genius"
         );
 
-        let titles: Vec<String> =
-            hits.iter().map(|song| song.title.clone()).collect();
+        let titles: Vec<String> = hits.iter().map(|song| song.title.clone()).collect();
         dbg!(titles);
         for hit in hits {
-            let new_song = get_genius_lyrics(hit)
-                .await
-                .map_err(|e| e.to_string())?;
+            let new_song = get_genius_lyrics(hit).await.map_err(|e| e.to_string())?;
             dbg!(&new_song);
             dbg!(&new_song.provider);
             if new_song.lyrics.starts_with("[Verse 1]") {
@@ -467,13 +414,12 @@ mod test {
                 assert!(!map.is_empty());
                 // Need to leave commented until I work on more robust tests.
                 assert!(
-                    map.keys()
-                        .contains(&VerseName::Verse { number: 1 }) // && map.keys().contains(&VerseName::Verse {
-                                                                   //     number: 2
-                                                                   // })
-                                                                   // && map.keys().contains(&VerseName::Chorus {
-                                                                   //     number: 1
-                                                                   // })
+                    map.keys().contains(&VerseName::Verse { number: 1 }) // && map.keys().contains(&VerseName::Verse {
+                                                                         //     number: 2
+                                                                         // })
+                                                                         // && map.keys().contains(&VerseName::Chorus {
+                                                                         //     number: 1
+                                                                         // })
                 );
             } else {
                 assert!(
@@ -502,9 +448,10 @@ mod test {
         let songs = lyrics_com_link_to_song(links)
             .await
             .map_err(|e| format!("{e}"))?;
-        if let Some(first) = songs.iter().find_or_first(|song| {
-            song.author == "North Point InsideOut"
-        }) {
+        if let Some(first) = songs
+            .iter()
+            .find_or_first(|song| song.author == "North Point InsideOut")
+        {
             assert_eq!(&song, first);
             // online_song_to_song(song)?;
         }
@@ -516,14 +463,10 @@ mod test {
         let song = Song::from(song);
         if let Some(verse_map) = song.verse_map.as_ref() {
             if verse_map.is_empty() {
-                return Err(format!(
-                    "VerseMap wasn't built right likely: {song:?}",
-                ));
+                return Err(format!("VerseMap wasn't built right likely: {song:?}",));
             }
         } else {
-            return Err(String::from(
-                "There is no VerseMap in this song",
-            ));
+            return Err(String::from("There is no VerseMap in this song"));
         }
         Ok(())
     }

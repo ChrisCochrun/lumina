@@ -13,8 +13,8 @@ use cosmic::iced::{Background, ContentFit, Length};
 use cosmic::widget::image::Handle;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    self, Space, button, container, context_menu, icon, menu,
-    mouse_area, scrollable, text, text_input,
+    self, Space, button, container, context_menu, icon, menu, mouse_area, scrollable,
+    text, text_input,
 };
 use cosmic::{Element, Task, theme};
 use miette::{IntoDiagnostic, Result, miette};
@@ -126,8 +126,7 @@ impl PresentationEditor {
                 if let Some(presentation) = &self.presentation {
                     let mut presentation = presentation.clone();
                     presentation.title = title;
-                    return self
-                        .update(Message::Update(presentation));
+                    return self.update(Message::Update(presentation));
                 }
             }
             Message::Edit(edit) => {
@@ -140,27 +139,16 @@ impl PresentationEditor {
                 return Action::UpdatePresentation(presentation);
             }
             Message::PickPresentation => {
-                let presentation_id = self
-                    .presentation
-                    .as_ref()
-                    .map(|v| v.id)
-                    .unwrap_or_default();
-                let task = Task::perform(
-                    pick_presentation(),
-                    move |presentation_result| {
-                        presentation_result.map_or(
-                            Message::None,
-                            |presentation| {
-                                let mut presentation =
-                                    Presentation::from(presentation);
-                                presentation.id = presentation_id;
-                                Message::ChangePresentationFile(
-                                    presentation,
-                                )
-                            },
-                        )
-                    },
-                );
+                let presentation_id =
+                    self.presentation.as_ref().map(|v| v.id).unwrap_or_default();
+                let task =
+                    Task::perform(pick_presentation(), move |presentation_result| {
+                        presentation_result.map_or(Message::None, |presentation| {
+                            let mut presentation = Presentation::from(presentation);
+                            presentation.id = presentation_id;
+                            Message::ChangePresentationFile(presentation)
+                        })
+                    });
                 return Action::Task(task);
             }
             Message::ChangePresentationFile(presentation) => {
@@ -185,9 +173,7 @@ impl PresentationEditor {
                         );
                     }
 
-                    task = task.chain(Task::done(Message::Update(
-                        presentation.clone(),
-                    )));
+                    task = task.chain(Task::done(Message::Update(presentation.clone())));
                     return Action::Task(task);
                 }
             }
@@ -196,13 +182,10 @@ impl PresentationEditor {
             }
             Message::None => (),
             Message::NextPage => {
-                let next_index =
-                    self.current_slide_index.unwrap_or_default() + 1;
+                let next_index = self.current_slide_index.unwrap_or_default() + 1;
 
-                let last_index = if let Some(presentation) =
-                    self.presentation.as_ref()
-                    && let PresKind::Pdf { ending_index, .. } =
-                        presentation.kind
+                let last_index = if let Some(presentation) = self.presentation.as_ref()
+                    && let PresKind::Pdf { ending_index, .. } = presentation.kind
                 {
                     ending_index
                 } else {
@@ -212,42 +195,31 @@ impl PresentationEditor {
                 if next_index > last_index {
                     return Action::None;
                 }
-                self.current_slide =
-                    self.document.as_ref().and_then(|doc| {
-                        let page = doc.load_page(next_index).ok()?;
-                        let matrix = Matrix::IDENTITY;
-                        let colorspace = Colorspace::device_rgb();
-                        let Ok(pixmap) = page
-                            .to_pixmap(
-                                &matrix,
-                                &colorspace,
-                                true,
-                                true,
-                            )
-                            .into_diagnostic()
-                        else {
-                            error!(
-                                "Can't turn this page into pixmap"
-                            );
-                            return None;
-                        };
-                        debug!(?pixmap);
-                        Some(Handle::from_rgba(
-                            pixmap.width(),
-                            pixmap.height(),
-                            pixmap.samples().to_vec(),
-                        ))
-                    });
+                self.current_slide = self.document.as_ref().and_then(|doc| {
+                    let page = doc.load_page(next_index).ok()?;
+                    let matrix = Matrix::IDENTITY;
+                    let colorspace = Colorspace::device_rgb();
+                    let Ok(pixmap) = page
+                        .to_pixmap(&matrix, &colorspace, true, true)
+                        .into_diagnostic()
+                    else {
+                        error!("Can't turn this page into pixmap");
+                        return None;
+                    };
+                    debug!(?pixmap);
+                    Some(Handle::from_rgba(
+                        pixmap.width(),
+                        pixmap.height(),
+                        pixmap.samples().to_vec(),
+                    ))
+                });
                 self.current_slide_index = Some(next_index);
             }
             Message::PrevPage => {
-                let previous_index =
-                    self.current_slide_index.unwrap_or_default() - 1;
+                let previous_index = self.current_slide_index.unwrap_or_default() - 1;
 
-                let first_index = if let Some(presentation) =
-                    self.presentation.as_ref()
-                    && let PresKind::Pdf { starting_index, .. } =
-                        presentation.kind
+                let first_index = if let Some(presentation) = self.presentation.as_ref()
+                    && let PresKind::Pdf { starting_index, .. } = presentation.kind
                 {
                     starting_index
                 } else {
@@ -257,65 +229,44 @@ impl PresentationEditor {
                 if previous_index < first_index {
                     return Action::None;
                 }
-                self.current_slide =
-                    self.document.as_ref().and_then(|doc| {
-                        let page =
-                            doc.load_page(previous_index).ok()?;
-                        let matrix = Matrix::IDENTITY;
-                        let colorspace = Colorspace::device_rgb();
-                        let pixmap = page
-                            .to_pixmap(
-                                &matrix,
-                                &colorspace,
-                                true,
-                                true,
-                            )
-                            .ok()?;
+                self.current_slide = self.document.as_ref().and_then(|doc| {
+                    let page = doc.load_page(previous_index).ok()?;
+                    let matrix = Matrix::IDENTITY;
+                    let colorspace = Colorspace::device_rgb();
+                    let pixmap = page.to_pixmap(&matrix, &colorspace, true, true).ok()?;
 
-                        Some(Handle::from_rgba(
-                            pixmap.width(),
-                            pixmap.height(),
-                            pixmap.samples().to_vec(),
-                        ))
-                    });
+                    Some(Handle::from_rgba(
+                        pixmap.width(),
+                        pixmap.height(),
+                        pixmap.samples().to_vec(),
+                    ))
+                });
                 self.current_slide_index = Some(previous_index);
             }
             Message::ChangeSlide(index) => {
                 let starting_index = if let Some(presentation) =
                     self.presentation.as_ref()
-                    && let PresKind::Pdf { starting_index, .. } =
-                        presentation.kind
+                    && let PresKind::Pdf { starting_index, .. } = presentation.kind
                 {
                     starting_index
                 } else {
                     0
                 };
 
-                self.current_slide =
-                    self.document.as_ref().and_then(|doc| {
-                        let page = doc
-                            .load_page(
-                                i32::try_from(index).ok()?
-                                    + starting_index,
-                            )
-                            .ok()?;
-                        let matrix = Matrix::IDENTITY;
-                        let colorspace = Colorspace::device_rgb();
-                        let pixmap = page
-                            .to_pixmap(
-                                &matrix,
-                                &colorspace,
-                                true,
-                                true,
-                            )
-                            .ok()?;
+                self.current_slide = self.document.as_ref().and_then(|doc| {
+                    let page = doc
+                        .load_page(i32::try_from(index).ok()? + starting_index)
+                        .ok()?;
+                    let matrix = Matrix::IDENTITY;
+                    let colorspace = Colorspace::device_rgb();
+                    let pixmap = page.to_pixmap(&matrix, &colorspace, true, true).ok()?;
 
-                        Some(Handle::from_rgba(
-                            pixmap.width(),
-                            pixmap.height(),
-                            pixmap.samples().to_vec(),
-                        ))
-                    });
+                    Some(Handle::from_rgba(
+                        pixmap.width(),
+                        pixmap.height(),
+                        pixmap.samples().to_vec(),
+                    ))
+                });
                 self.current_slide_index = i32::try_from(index).ok();
             }
             Message::HoverSlide(slide) => {
@@ -328,18 +279,14 @@ impl PresentationEditor {
                 if let Ok((first, second)) = self.split_before() {
                     debug!(?first, ?second);
                     self.update_entire_presentation(&first);
-                    return Action::SplitAddPresentation((
-                        first, second,
-                    ));
+                    return Action::SplitAddPresentation((first, second));
                 }
             }
             Message::SplitAfter => {
                 if let Ok((first, second)) = self.split_after() {
                     debug!(?first, ?second);
                     self.update_entire_presentation(&first);
-                    return Action::SplitAddPresentation((
-                        first, second,
-                    ));
+                    return Action::SplitAddPresentation((first, second));
                 }
             }
         }
@@ -357,67 +304,56 @@ impl PresentationEditor {
                         .into(),
                 ))
                 .style(|_| {
-                    container::background(Background::Color(
-                        cosmic::iced::Color::WHITE,
-                    ))
+                    container::background(Background::Color(cosmic::iced::Color::WHITE))
                 })
             },
         );
-        let pdf_pages: Vec<Element<Message>> =
-            self.slides.as_ref().map_or_else(
-                || vec![horizontal().into()],
-                |pages| {
-                    pages
-                        .iter()
-                        .enumerate()
-                        .map(|(index, page)| {
-                            let image = loaded_image(page.clone(), widget::image(page)
-                                .height(
-                                    theme::spacing().space_xxxl * 3,
-                                )
-                                .content_fit(ContentFit::ScaleDown).into());
+        let pdf_pages: Vec<Element<Message>> = self.slides.as_ref().map_or_else(
+            || vec![horizontal().into()],
+            |pages| {
+                pages
+                    .iter()
+                    .enumerate()
+                    .map(|(index, page)| {
+                        let image = loaded_image(
+                            page.clone(),
+                            widget::image(page)
+                                .height(theme::spacing().space_xxxl * 3)
+                                .content_fit(ContentFit::ScaleDown)
+                                .into(),
+                        );
 
-                            let slide = container(image).style(|_| {
-                                container::background(Background::Color(
-                                    cosmic::iced::Color::WHITE,
-                                ))
-                            });
-                            let clickable_slide = container(
-                                mouse_area(slide)
-                                    .on_enter(Message::HoverSlide(
-                                        i32::try_from(index).ok(),
-                                    ))
-                                    .on_exit(Message::HoverSlide(
-                                        None,
-                                    ))
-                                    .on_right_press(
-                                        Message::ContextMenu(index),
-                                    )
-                                    .on_press(Message::ChangeSlide(
-                                        index,
-                                    )),
-                            )
-                                .padding(theme::spacing().space_m)
-                                .clip(true)
-                                .class(self.hovered_slide.map_or(
-                                    theme::Container::Card,
-                                    |hovered_index| {
-                                        if i32::try_from(index).is_ok_and(
-                                            |index| {
-                                                index == hovered_index
-                                            },
-                                        ) {
-                                            theme::Container::Primary
-                                        } else {
-                                            theme::Container::Card
-                                        }
-                                    },
-                                ));
-                            clickable_slide.into()
-                        })
-                        .collect()
-                },
-            );
+                        let slide = container(image).style(|_| {
+                            container::background(Background::Color(
+                                cosmic::iced::Color::WHITE,
+                            ))
+                        });
+                        let clickable_slide = container(
+                            mouse_area(slide)
+                                .on_enter(Message::HoverSlide(i32::try_from(index).ok()))
+                                .on_exit(Message::HoverSlide(None))
+                                .on_right_press(Message::ContextMenu(index))
+                                .on_press(Message::ChangeSlide(index)),
+                        )
+                        .padding(theme::spacing().space_m)
+                        .clip(true)
+                        .class(self.hovered_slide.map_or(
+                            theme::Container::Card,
+                            |hovered_index| {
+                                if i32::try_from(index)
+                                    .is_ok_and(|index| index == hovered_index)
+                                {
+                                    theme::Container::Primary
+                                } else {
+                                    theme::Container::Card
+                                }
+                            },
+                        ));
+                        clickable_slide.into()
+                    })
+                    .collect()
+            },
+        );
         let pages_column = container(
             self.context_menu(
                 scrollable(
@@ -435,14 +371,12 @@ impl PresentationEditor {
         ]
         .spacing(theme::spacing().space_xxl);
         let control_buttons = row![
-            button::standard("Previous Page")
-                .on_press(Message::PrevPage),
+            button::standard("Previous Page").on_press(Message::PrevPage),
             space::horizontal(),
             button::standard("Next Page").on_press(Message::NextPage),
         ];
-        let column =
-            column![self.toolbar(), main_row, control_buttons]
-                .spacing(theme::active().cosmic().space_l());
+        let column = column![self.toolbar(), main_row, control_buttons]
+            .spacing(theme::active().cosmic().space_l());
         column.into()
     }
 
@@ -455,13 +389,12 @@ impl PresentationEditor {
         )
         .on_input(Message::ChangeTitle);
 
-        let presentation_selector = button::icon(
-            icon::from_name("folder-presentations-symbolic").scale(2),
-        )
-        .label("Change Presentation")
-        .tooltip("Select a presentation")
-        .on_press(Message::PickPresentation)
-        .padding(10);
+        let presentation_selector =
+            button::icon(icon::from_name("folder-presentations-symbolic").scale(2))
+                .label("Change Presentation")
+                .tooltip("Select a presentation")
+                .on_press(Message::PickPresentation)
+                .padding(10);
 
         row![
             text::body("Title:"),
@@ -478,17 +411,12 @@ impl PresentationEditor {
         self.editing
     }
 
-    fn context_menu<'b>(
-        &self,
-        items: Element<'b, Message>,
-    ) -> Element<'b, Message> {
+    fn context_menu<'b>(&self, items: Element<'b, Message>) -> Element<'b, Message> {
         if self.context_menu_id.is_some() {
             let before_icon =
-                icon::from_path("./res/split-above.svg".into())
-                    .symbolic(true);
+                icon::from_path("./res/split-above.svg".into()).symbolic(true);
             let after_icon =
-                icon::from_path("./res/split-below.svg".into())
-                    .symbolic(true);
+                icon::from_path("./res/split-below.svg".into()).symbolic(true);
             let menu_items = vec![
                 menu::Item::Button(
                     "Spit Before",
@@ -505,9 +433,7 @@ impl PresentationEditor {
                 items,
                 self.context_menu_id.map_or_else(
                     || None,
-                    |_| {
-                        Some(menu::items(&HashMap::new(), menu_items))
-                    },
+                    |_| Some(menu::items(&HashMap::new(), menu_items)),
                 ),
             );
             Element::from(context_menu)
@@ -516,60 +442,44 @@ impl PresentationEditor {
         }
     }
 
-    fn update_entire_presentation(
-        &mut self,
-        presentation: &Presentation,
-    ) {
+    fn update_entire_presentation(&mut self, presentation: &Presentation) {
         self.presentation = Some(presentation.clone());
         self.title.clone_from(&presentation.title);
-        self.document =
-            Document::open(&presentation.path.as_path()).ok();
-        self.page_count = self
-            .document
-            .as_ref()
-            .and_then(|doc| doc.page_count().ok());
+        self.document = Document::open(&presentation.path.as_path()).ok();
+        self.page_count = self.document.as_ref().and_then(|doc| doc.page_count().ok());
         warn!("changing presentation");
         let pages = if let PresKind::Pdf {
             starting_index,
             ending_index,
         } = presentation.kind
         {
-            self.current_slide =
-                self.document.as_ref().and_then(|doc| {
-                    let page = doc.load_page(starting_index).ok()?;
-                    let matrix = Matrix::IDENTITY;
-                    let colorspace = Colorspace::device_rgb();
-                    let pixmap = page
-                        .to_pixmap(&matrix, &colorspace, true, true)
-                        .ok()?;
+            self.current_slide = self.document.as_ref().and_then(|doc| {
+                let page = doc.load_page(starting_index).ok()?;
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let pixmap = page.to_pixmap(&matrix, &colorspace, true, true).ok()?;
 
-                    Some(Handle::from_rgba(
-                        pixmap.width(),
-                        pixmap.height(),
-                        pixmap.samples().to_vec(),
-                    ))
-                });
+                Some(Handle::from_rgba(
+                    pixmap.width(),
+                    pixmap.height(),
+                    pixmap.samples().to_vec(),
+                ))
+            });
             self.current_slide_index = Some(starting_index);
-            get_pages(
-                starting_index..=ending_index,
-                presentation.path.clone(),
-            )
+            get_pages(starting_index..=ending_index, presentation.path.clone())
         } else {
-            self.current_slide =
-                self.document.as_ref().and_then(|doc| {
-                    let page = doc.load_page(0).ok()?;
-                    let matrix = Matrix::IDENTITY;
-                    let colorspace = Colorspace::device_rgb();
-                    let pixmap = page
-                        .to_pixmap(&matrix, &colorspace, true, true)
-                        .ok()?;
+            self.current_slide = self.document.as_ref().and_then(|doc| {
+                let page = doc.load_page(0).ok()?;
+                let matrix = Matrix::IDENTITY;
+                let colorspace = Colorspace::device_rgb();
+                let pixmap = page.to_pixmap(&matrix, &colorspace, true, true).ok()?;
 
-                    Some(Handle::from_rgba(
-                        pixmap.width(),
-                        pixmap.height(),
-                        pixmap.samples().to_vec(),
-                    ))
-                });
+                Some(Handle::from_rgba(
+                    pixmap.width(),
+                    pixmap.height(),
+                    pixmap.samples().to_vec(),
+                ))
+            });
             self.current_slide_index = Some(0);
             get_pages(.., presentation.path.clone())
         };
@@ -578,12 +488,8 @@ impl PresentationEditor {
 
     fn split_before(&self) -> Result<(Presentation, Presentation)> {
         if let Some(index) = self.context_menu_id {
-            let Some(current_presentation) =
-                self.presentation.as_ref()
-            else {
-                return Err(miette!(
-                    "There is no current presentation"
-                ));
+            let Some(current_presentation) = self.presentation.as_ref() else {
+                return Err(miette!("There is no current presentation"));
             };
             let first_presentation = Presentation {
                 id: current_presentation.id,
@@ -599,18 +505,13 @@ impl PresentationEditor {
             };
             let second_presentation = Presentation {
                 id: 0,
-                title: format!(
-                    "{} (2)",
-                    current_presentation.title.clone()
-                ),
+                title: format!("{} (2)", current_presentation.title.clone()),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {
-                    PresKind::Pdf { ending_index, .. } => {
-                        PresKind::Pdf {
-                            starting_index: index,
-                            ending_index,
-                        }
-                    }
+                    PresKind::Pdf { ending_index, .. } => PresKind::Pdf {
+                        starting_index: index,
+                        ending_index,
+                    },
                     _ => current_presentation.kind.clone(),
                 },
             };
@@ -625,12 +526,8 @@ impl PresentationEditor {
 
     fn split_after(&self) -> Result<(Presentation, Presentation)> {
         if let Some(index) = self.context_menu_id {
-            let Some(current_presentation) =
-                self.presentation.as_ref()
-            else {
-                return Err(miette!(
-                    "There is no current presentation"
-                ));
+            let Some(current_presentation) = self.presentation.as_ref() else {
+                return Err(miette!("There is no current presentation"));
             };
             let first_presentation = Presentation {
                 id: current_presentation.id,
@@ -646,18 +543,13 @@ impl PresentationEditor {
             };
             let second_presentation = Presentation {
                 id: 0,
-                title: format!(
-                    "{} (2)",
-                    current_presentation.title.clone()
-                ),
+                title: format!("{} (2)", current_presentation.title.clone()),
                 path: current_presentation.path.clone(),
                 kind: match current_presentation.kind {
-                    PresKind::Pdf { ending_index, .. } => {
-                        PresKind::Pdf {
-                            starting_index: index + 1,
-                            ending_index,
-                        }
-                    }
+                    PresKind::Pdf { ending_index, .. } => PresKind::Pdf {
+                        starting_index: index + 1,
+                        ending_index,
+                    },
                     _ => current_presentation.kind.clone(),
                 },
             };
@@ -687,17 +579,16 @@ fn get_pages(
         pages
             .enumerate()
             .filter_map(|(index, page)| {
-                if !range.contains(&i32::try_from(index).expect(
-                    "looking for a pdf index that is way too large",
-                )) {
+                if !range.contains(
+                    &i32::try_from(index)
+                        .expect("looking for a pdf index that is way too large"),
+                ) {
                     return None;
                 }
                 let page = page.ok()?;
                 let matrix = Matrix::IDENTITY;
                 let colorspace = Colorspace::device_rgb();
-                let pixmap = page
-                    .to_pixmap(&matrix, &colorspace, true, true)
-                    .ok()?;
+                let pixmap = page.to_pixmap(&matrix, &colorspace, true, true).ok()?;
 
                 Some(Handle::from_rgba(
                     pixmap.width(),
@@ -723,9 +614,7 @@ async fn pick_presentation() -> Result<PathBuf, PresentationError> {
             error!(?e);
             PresentationError::DialogClosed
         })
-        .map(|file| {
-            file.url().to_file_path().expect("Should be a file here")
-        })
+        .map(|file| file.url().to_file_path().expect("Should be a file here"))
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

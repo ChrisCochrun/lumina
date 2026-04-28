@@ -18,18 +18,17 @@ use cosmic::iced::widget::scrollable::{
 };
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::{
-    Background as ContainerBackground, Border, Color, Length,
-    Padding, Shadow, Vector, color, task,
+    Background as ContainerBackground, Border, Color, Length, Padding, Shadow, Vector,
+    color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::grid::{self};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    ColorPickerModel, Id, RcElementWrapper, button, combo_box,
-    container, divider, dnd_destination, dnd_source, dropdown, icon,
-    indeterminate_circular, mouse_area, popover, scrollable, slider,
-    text, text_editor, text_input, tooltip,
+    ColorPickerModel, Id, RcElementWrapper, button, combo_box, container, divider,
+    dnd_destination, dnd_source, dropdown, icon, indeterminate_circular, mouse_area,
+    popover, scrollable, slider, text, text_editor, text_input, tooltip,
 };
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
@@ -184,10 +183,7 @@ impl State {
 pub struct Face(fontdb::FaceInfo);
 
 impl Display for Face {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = self.0.families[0].0.clone().trim().to_string();
 
         // leaving this lint so we can make changes to what is "normal"
@@ -216,17 +212,12 @@ impl Display for Face {
 }
 
 impl SongEditor {
-    pub fn new(
-        font_db: Arc<fontdb::Database>,
-        genius_token: Option<String>,
-    ) -> Self {
+    pub fn new(font_db: Arc<fontdb::Database>, genius_token: Option<String>) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
         let fonts: Vec<Face> = font_db
             .faces()
-            .sorted_by(|a, b| {
-                Ord::cmp(&a.families[0].0, &b.families[0].0)
-            })
+            .sorted_by(|a, b| Ord::cmp(&a.families[0].0, &b.families[0].0))
             .map(|f| Face(f.clone()))
             .collect();
         let font_sizes = vec![
@@ -263,8 +254,7 @@ impl SongEditor {
 
         let sink = rodio::DeviceSinkBuilder::open_default_sink()
             .expect("Can't open default rodio stream");
-        let player =
-            Arc::new(rodio::Player::connect_new(sink.mixer()));
+        let player = Arc::new(rodio::Player::connect_new(sink.mixer()));
 
         Self {
             song: None,
@@ -408,14 +398,12 @@ impl SongEditor {
                     );
                 }
                 if let Some(font) = song.font {
-                    if let Some(id) =
-                        self.font_db.query(&fontdb::Query {
-                            families: &[fontdb::Family::Name(&font)],
-                            weight: fontdb::Weight::NORMAL,
-                            stretch: fontdb::Stretch::Normal,
-                            style: fontdb::Style::Normal,
-                        })
-                        && let Some(font) = self.font_db.face(id)
+                    if let Some(id) = self.font_db.query(&fontdb::Query {
+                        families: &[fontdb::Family::Name(&font)],
+                        weight: fontdb::Weight::NORMAL,
+                        stretch: fontdb::Stretch::Normal,
+                        style: fontdb::Style::Normal,
+                    }) && let Some(font) = self.font_db.face(id)
                     {
                         self.font = Some(Face(font.clone()));
                     } else {
@@ -424,9 +412,7 @@ impl SongEditor {
                 }
                 if let Some(font_size) = song.font_size {
                     self.font_size = usize::try_from(font_size)
-                        .expect(
-                            "There shouldn't be a negative font_size",
-                        );
+                        .expect("There shouldn't be a negative font_size");
                 }
                 if let Some(verse_order) = song.verse_order {
                     self.verse_order = verse_order
@@ -443,13 +429,11 @@ impl SongEditor {
                 if let Some(audio) = song.audio {
                     self.player.stop();
                     self.player.clear();
-                    let file =
-                        BufReader::new(File::open(&audio).expect(
-                            "There should be an audio file here",
-                        ));
-                    let source = Decoder::new(file).expect(
-                        "There should be an audio decoder here",
+                    let file = BufReader::new(
+                        File::open(&audio).expect("There should be an audio file here"),
                     );
+                    let source = Decoder::new(file)
+                        .expect("There should be an audio decoder here");
                     self.audio = audio;
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
@@ -460,8 +444,7 @@ impl SongEditor {
                     self.ccli = ccli;
                 }
                 if let Some(lyrics) = song.lyrics {
-                    self.lyrics =
-                        text_editor::Content::with_text(&lyrics);
+                    self.lyrics = text_editor::Content::with_text(&lyrics);
                 }
                 self.background_video(song.background.as_ref());
                 self.background = song.background.clone();
@@ -471,21 +454,17 @@ impl SongEditor {
 
                 let font_db = self.font_db.clone();
                 std::thread::spawn(move || {
-                    for (index, slide) in
-                        song_slides.into_iter().enumerate()
-                    {
-                        let slide = text_svg::text_svg_generator(
-                            slide.clone(),
-                            &font_db,
-                        )
-                        .unwrap_or(slide);
-                        let _ = tx.send(Message::UpdateSlide((
-                            index, slide,
-                        )));
+                    for (index, slide) in song_slides.into_iter().enumerate() {
+                        let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
+                            .unwrap_or(slide);
+                        let _ = tx.send(Message::UpdateSlide((index, slide)));
                     }
                 });
 
-                let (task, handle) = Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx)).abortable();
+                let (task, handle) = Task::stream(
+                    tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
+                )
+                .abortable();
 
                 // let (task, handle) = Task::perform(
                 //     async move {
@@ -510,9 +489,7 @@ impl SongEditor {
                 self.verses = song.verse_map.map(|map| {
                     map.into_iter()
                         .sorted()
-                        .map(|(verse_name, lyric)| {
-                            VerseEditor::new(verse_name, &lyric)
-                        })
+                        .map(|(verse_name, lyric)| VerseEditor::new(verse_name, &lyric))
                         .collect()
                 });
                 return Action::Task(Task::batch(tasks));
@@ -615,23 +592,18 @@ impl SongEditor {
                 }
             }
             Message::PickAudio => {
-                return Action::Task(Task::perform(
-                    pick_audio(),
-                    Message::ChangeAudio,
-                ));
+                return Action::Task(Task::perform(pick_audio(), Message::ChangeAudio));
             }
             Message::ChangeAudio(Ok(path)) => {
                 self.player.stop();
                 self.player.clear();
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
-                    let file =
-                        BufReader::new(File::open(&path).expect(
-                            "There should be an audio file here",
-                        ));
-                    let source = Decoder::new(file).expect(
-                        "There should be an audio decoder here",
+                    let file = BufReader::new(
+                        File::open(&path).expect("There should be an audio file here"),
                     );
+                    let source = Decoder::new(file)
+                        .expect("There should be an audio decoder here");
                     song.audio = Some(path);
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
@@ -678,12 +650,10 @@ impl SongEditor {
             }
             Message::UpdateStrokeSize(index) => {
                 if let Some(song) = &mut self.song
-                    && let Some(size_string) =
-                        self.stroke_sizes.get(index)
+                    && let Some(size_string) = self.stroke_sizes.get(index)
                     && let Ok(size) = size_string.parse::<u16>()
                 {
-                    song.stroke_size =
-                        if size == 0 { None } else { Some(size) };
+                    song.stroke_size = if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
                     return Action::Task(self.update_song(&song));
                 }
@@ -692,8 +662,7 @@ impl SongEditor {
                 let mut tasks = Vec::with_capacity(2);
                 tasks.push(self.stroke_color_model.update(update));
                 if let Some(mut song) = self.song.clone()
-                    && let Some(color) =
-                        self.stroke_color_model.get_applied_color()
+                    && let Some(color) = self.stroke_color_model.get_applied_color()
                 {
                     debug!(?color);
                     song.stroke_color = Some(color.into());
@@ -734,39 +703,24 @@ impl SongEditor {
                 {
                     match verse.update(message) {
                         verse_editor::Action::Task(task) => {
-                            return Action::Task(task.map(
-                                move |m| {
-                                    Message::VerseEditorMessage((
-                                        index, m,
-                                    ))
-                                },
-                            ));
-                        }
-                        verse_editor::Action::ScrollVerses(
-                            pixels,
-                        ) => {
                             return Action::Task(
-                                iced_scrollable::scroll_by(
-                                    self.verses_scroll_id.clone(),
-                                    AbsoluteOffset {
-                                        x: 0.0,
-                                        y: pixels,
-                                    },
-                                ),
+                                task.map(move |m| {
+                                    Message::VerseEditorMessage((index, m))
+                                }),
                             );
                         }
-                        verse_editor::Action::UpdateVerseName(
-                            verse_name,
-                        ) => {
-                            if let Some(mut song) = self.song.clone()
-                            {
+                        verse_editor::Action::ScrollVerses(pixels) => {
+                            return Action::Task(iced_scrollable::scroll_by(
+                                self.verses_scroll_id.clone(),
+                                AbsoluteOffset { x: 0.0, y: pixels },
+                            ));
+                        }
+                        verse_editor::Action::UpdateVerseName(verse_name) => {
+                            if let Some(mut song) = self.song.clone() {
                                 let old_verse_name = verse.verse_name;
 
-                                let verse_name = song
-                                    .verse_name_from_str(
-                                        &verse_name,
-                                        old_verse_name,
-                                    );
+                                let verse_name =
+                                    song.verse_name_from_str(&verse_name, old_verse_name);
 
                                 verse.verse_name = verse_name;
 
@@ -774,49 +728,32 @@ impl SongEditor {
                                     verse.lyric = String::new();
                                 }
 
-                                song.update_verse_name(
-                                    verse_name,
-                                    &old_verse_name,
-                                );
+                                song.update_verse_name(verse_name, &old_verse_name);
 
-                                return Action::Task(
-                                    self.update_song(&song),
-                                );
+                                return Action::Task(self.update_song(&song));
                             }
                         }
-                        verse_editor::Action::UpdateVerse((
-                            verse,
-                            lyric,
-                        )) => {
-                            if let Some(mut song) = self.song.clone()
-                            {
+                        verse_editor::Action::UpdateVerse((verse, lyric)) => {
+                            if let Some(mut song) = self.song.clone() {
                                 song.set_lyrics(&verse, lyric);
                                 // song.update_verse(
                                 //     index, verse, lyric,
                                 // );
-                                return Action::Task(
-                                    self.update_song(&song),
-                                );
+                                return Action::Task(self.update_song(&song));
                             }
                         }
                         verse_editor::Action::DeleteVerse(verse) => {
-                            if let Some(mut song) = self.song.clone()
-                            {
+                            if let Some(mut song) = self.song.clone() {
                                 song.delete_verse(verse);
-                                if let Some(verses) =
-                                    self.verses.as_mut()
-                                    && let Some(verse) = verses
-                                        .iter()
-                                        .position(|inner_verse| {
-                                            inner_verse.verse_name
-                                                == verse
+                                if let Some(verses) = self.verses.as_mut()
+                                    && let Some(verse) =
+                                        verses.iter().position(|inner_verse| {
+                                            inner_verse.verse_name == verse
                                         })
                                 {
                                     verses.remove(verse);
                                 }
-                                return Action::Task(
-                                    self.update_song(&song),
-                                );
+                                return Action::Task(self.update_song(&song));
                             }
                         }
                         verse_editor::Action::None => (),
@@ -872,13 +809,10 @@ impl SongEditor {
                 match VerseName::try_from((data, mime)) {
                     Ok(verse) => {
                         if let Some(song) = self.song.as_mut() {
-                            if let Some(verses) = song.verses.as_mut()
-                            {
+                            if let Some(verses) = song.verses.as_mut() {
                                 verses.insert(index, verse);
                                 let song = song.clone();
-                                return Action::Task(
-                                    self.update_song(&song),
-                                );
+                                return Action::Task(self.update_song(&song));
                             }
                             error!("No verses in this song?");
                         } else {
@@ -899,13 +833,9 @@ impl SongEditor {
                         {
                             verses.push(verse);
                             let song = song.clone();
-                            return Action::Task(
-                                self.update_song(&song),
-                            );
+                            return Action::Task(self.update_song(&song));
                         }
-                        error!(
-                            "No verses in this song or no song here"
-                        );
+                        error!("No verses in this song or no song here");
                     }
                     Err(e) => {
                         error!(?e, "Couldn't convert verse back");
@@ -947,25 +877,20 @@ impl SongEditor {
             }
             Message::UpdateShadowSize(index) => {
                 if let Some(song) = &mut self.song
-                    && let Some(size_string) =
-                        self.shadow_sizes.get(index)
+                    && let Some(size_string) = self.shadow_sizes.get(index)
                     && let Ok(size) = size_string.parse::<u16>()
                 {
-                    song.shadow_size =
-                        if size == 0 { None } else { Some(size) };
+                    song.shadow_size = if size == 0 { None } else { Some(size) };
                     let song = song.to_owned();
                     return Action::Task(self.update_song(&song));
                 }
             }
             Message::UpdateShadowOffsetX(index) => {
                 if let Some(mut song) = self.song.clone()
-                    && let Some(x_string) =
-                        self.shadow_offset_sizes.get(index)
+                    && let Some(x_string) = self.shadow_offset_sizes.get(index)
                     && let Ok(x) = x_string.parse::<i16>()
                 {
-                    if let Some((offset_x, _offset_y)) =
-                        song.shadow_offset.as_mut()
-                    {
+                    if let Some((offset_x, _offset_y)) = song.shadow_offset.as_mut() {
                         *offset_x = x;
                         debug!(offset = ?song.shadow_offset);
                     } else {
@@ -976,13 +901,10 @@ impl SongEditor {
             }
             Message::UpdateShadowOffsetY(index) => {
                 if let Some(mut song) = self.song.clone()
-                    && let Some(y_string) =
-                        self.shadow_offset_sizes.get(index)
+                    && let Some(y_string) = self.shadow_offset_sizes.get(index)
                     && let Ok(y) = y_string.parse::<i16>()
                 {
-                    if let Some((_offset_x, offset_y)) =
-                        song.shadow_offset.as_mut()
-                    {
+                    if let Some((_offset_x, offset_y)) = song.shadow_offset.as_mut() {
                         *offset_y = y;
                         debug!(offset = ?song.shadow_offset);
                     } else {
@@ -995,8 +917,7 @@ impl SongEditor {
                 let mut tasks = Vec::with_capacity(2);
                 tasks.push(self.shadow_color_model.update(update));
                 if let Some(mut song) = self.song.clone()
-                    && let Some(color) =
-                        self.shadow_color_model.get_applied_color()
+                    && let Some(color) = self.shadow_color_model.get_applied_color()
                 {
                     debug!(?color);
                     song.shadow_color = Some(color.into());
@@ -1022,11 +943,7 @@ impl SongEditor {
                         query,
                         self.genius_token.clone().unwrap_or_default(),
                     ),
-                    |res| {
-                        Message::UpdateSearchResults(
-                            res.map_err(|e| e.to_string()),
-                        )
-                    },
+                    |res| Message::UpdateSearchResults(res.map_err(|e| e.to_string())),
                 ));
             }
             Message::UpdateSearchResults(result) => match result {
@@ -1066,10 +983,7 @@ impl SongEditor {
                 }
             }
             Message::SeekAudio(seek) => {
-                if let Err(e) = self
-                    .player
-                    .try_seek(Duration::from_secs_f64(seek))
-                {
+                if let Err(e) = self.player.try_seek(Duration::from_secs_f64(seek)) {
                     error!("Couldn't seek: {e:?}");
                 }
             }
@@ -1079,16 +993,14 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let audio_elements: Element<Message> = if self.audio.exists()
-        {
-            let play_button =
-                icon::from_name(if self.player.is_paused() {
-                    "media-playback-start"
-                } else {
-                    "media-playback-pause"
-                })
-                .apply(button::icon)
-                .on_press(Message::PlayPauseAudio);
+        let audio_elements: Element<Message> = if self.audio.exists() {
+            let play_button = icon::from_name(if self.player.is_paused() {
+                "media-playback-start"
+            } else {
+                "media-playback-pause"
+            })
+            .apply(button::icon)
+            .on_press(Message::PlayPauseAudio);
 
             let audio_track = slider(
                 0.0..=self
@@ -1099,13 +1011,8 @@ impl SongEditor {
                 Message::SeekAudio,
             );
             container(column![
-                text::body(format!(
-                    "Audio: {}",
-                    self.audio.to_string_lossy()
-                ))
-                .ellipsize(Ellipsize::Middle(
-                    EllipsizeHeightLimit::Lines(1)
-                )),
+                text::body(format!("Audio: {}", self.audio.to_string_lossy()))
+                    .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
                 row![play_button, audio_track]
                     .align_y(Vertical::Center)
                     .spacing(theme::spacing().space_m)
@@ -1121,18 +1028,15 @@ impl SongEditor {
             space::horizontal().into()
         };
 
-        let slide_preview = container(self.slide_preview())
-            .width(Length::FillPortion(2));
+        let slide_preview = container(self.slide_preview()).width(Length::FillPortion(2));
 
         let slide_section = column![audio_elements, slide_preview]
             .spacing(cosmic::theme::spacing().space_s);
         let column = column![
             self.toolbar(),
             row![
-                container(self.left_column())
-                    .center_x(Length::FillPortion(2)),
-                container(slide_section)
-                    .center_x(Length::FillPortion(2))
+                container(self.left_column()).center_x(Length::FillPortion(2)),
+                container(slide_section).center_x(Length::FillPortion(2))
             ],
         ]
         .spacing(theme::active().cosmic().space_l());
@@ -1143,8 +1047,7 @@ impl SongEditor {
         self.song_slides.as_ref().map_or_else(
             || space::horizontal().into(),
             |slides| {
-                let mut slide_column =
-                    column::with_capacity(slides.len());
+                let mut slide_column = column::with_capacity(slides.len());
                 let slide_height = 250.0;
                 for (index, slide) in slides.iter().enumerate() {
                     let mut slide: Element<Message> = container(
@@ -1163,7 +1066,8 @@ impl SongEditor {
                     .height(slide_height) // need to find out how to do this differently
                     .center_x(Length::Fill)
                     .padding([0, 20])
-                    .clip(true).into();
+                    .clip(true)
+                    .into();
 
                     if index == 0 {
                         let video_elements: Element<Message> =
@@ -1179,38 +1083,32 @@ impl SongEditor {
                                         .apply(button::icon)
                                         .on_press(Message::PauseVideo);
 
-                                    let video_track =
-                                        cosmic::iced::widget::progress_bar(
-                                            0.0..=video
-                                                .duration()
-                                                .as_secs_f32(),
-                                            video.position().as_secs_f32(),
-                                        )
-                                        .girth(
-                                            cosmic::theme::spacing().space_s,
-                                        )
-                                        .length(Length::Fill);
+                                    let video_track = cosmic::iced::widget::progress_bar(
+                                        0.0..=video.duration().as_secs_f32(),
+                                        video.position().as_secs_f32(),
+                                    )
+                                    .girth(cosmic::theme::spacing().space_s)
+                                    .length(Length::Fill);
 
                                     container(
                                         row![play_button, video_track]
                                             .align_y(Vertical::Center)
-                                            .spacing(
-                                                cosmic::theme::spacing()
-                                                    .space_m,
-                                            ),
+                                            .spacing(cosmic::theme::spacing().space_m),
                                     )
-                                        .center_x(slide_height * 16.0 / 9.0)
-                                        .into()
+                                    .center_x(slide_height * 16.0 / 9.0)
+                                    .into()
                                 },
                             );
-                        slide = column![slide, video_elements].align_x(Horizontal::Center).spacing(theme::spacing().space_xxxs).into();
-
+                        slide = column![slide, video_elements]
+                            .align_x(Horizontal::Center)
+                            .spacing(theme::spacing().space_xxxs)
+                            .into();
                     }
-                        slide_column =
-                            slide_column.push(slide);
+                    slide_column = slide_column.push(slide);
                 }
                 scrollable(
-                    slide_column.align_x(Horizontal::Center)
+                    slide_column
+                        .align_x(Horizontal::Center)
                         .spacing(theme::active().cosmic().space_l()),
                 )
                 .height(Length::Fill)
@@ -1237,8 +1135,7 @@ impl SongEditor {
             .on_input(Message::ChangeAuthor)
             .label("Song Author");
 
-        let top_input_row =
-            row![title_input, author_input].spacing(space_m);
+        let top_input_row = row![title_input, author_input].spacing(space_m);
 
         //         let verse_input = text_input(
         //             "Verse
@@ -1250,81 +1147,55 @@ impl SongEditor {
 
         let verse_option_chips: Vec<Element<Message>> =
             self.song.as_ref().map_or_else(Vec::new, |song| {
-                song.verse_map.as_ref().map_or_else(
-                    Vec::new,
-                    |verse_map| {
-                        verse_map
-                            .keys()
-                            .sorted()
-                            .map(|verse| {
-                                let verse = *verse;
-                                let chip = verse_chip(verse, None);
-                                let verse_chip_wrapped =
-                                    RcElementWrapper::<Message>::new(
-                                        chip,
-                                    );
-                                Element::from(
-                                    dnd_source::<
-                                        Message,
-                                        Box<VerseName>,
-                                    >(
-                                        verse_chip_wrapped.clone()
-                                    )
-                                    .on_start(Some(
-                                        Message::DraggingChipStart,
-                                    ))
-                                    .on_finish(Some(
-                                        Message::DraggingChipStart,
-                                    ))
-                                    .on_cancel(Some(
-                                        Message::DraggingChipStart,
-                                    ))
-                                    .drag_content(move || {
-                                        Box::new(verse)
-                                    })
-                                    .drag_icon(move |_| {
-                                        let state: tree::State =
-                                            cosmic::widget::Widget::<
-                                                Message,
-                                                _,
-                                                _,
-                                            >::state(
-                                                &verse_chip_wrapped,
-                                            );
-                                        (
-                                            Element::from(
-                                                verse_chip_wrapped
-                                                    .clone(),
-                                            )
-                                            .map(|_| ()),
-                                            state,
-                                            Vector::new(-5.0, -15.0),
-                                        )
-                                    }),
+                song.verse_map.as_ref().map_or_else(Vec::new, |verse_map| {
+                    verse_map
+                        .keys()
+                        .sorted()
+                        .map(|verse| {
+                            let verse = *verse;
+                            let chip = verse_chip(verse, None);
+                            let verse_chip_wrapped =
+                                RcElementWrapper::<Message>::new(chip);
+                            Element::from(
+                                dnd_source::<Message, Box<VerseName>>(
+                                    verse_chip_wrapped.clone(),
                                 )
-                            })
-                            .collect()
-                    },
-                )
+                                .on_start(Some(Message::DraggingChipStart))
+                                .on_finish(Some(Message::DraggingChipStart))
+                                .on_cancel(Some(Message::DraggingChipStart))
+                                .drag_content(move || Box::new(verse))
+                                .drag_icon(move |_| {
+                                    let state: tree::State =
+                                        cosmic::widget::Widget::<Message, _, _>::state(
+                                            &verse_chip_wrapped,
+                                        );
+                                    (
+                                        Element::from(verse_chip_wrapped.clone())
+                                            .map(|_| ()),
+                                        state,
+                                        Vector::new(-5.0, -15.0),
+                                    )
+                                }),
+                            )
+                        })
+                        .collect()
+                })
             });
 
         let verse_options = container(
             scrollable(row(verse_option_chips).spacing(space_s))
-                .direction(Direction::Horizontal(
-                    Scrollbar::new().spacing(space_s),
-                )),
+                .direction(Direction::Horizontal(Scrollbar::new().spacing(space_s))),
         )
         .padding(space_s)
         .width(Length::Fill)
         .class(theme::Container::Primary);
 
-        let verse_chips_edit_toggle =
-            button::icon(if self.editing_verse_order {
-                icon::from_name("arrow-up")
-            } else {
-                icon::from_name("edit")
-            })
-            .on_press(Message::EditVerseOrder);
+        let verse_chips_edit_toggle = button::icon(if self.editing_verse_order {
+            icon::from_name("arrow-up")
+        } else {
+            icon::from_name("edit")
+        })
+        .on_press(Message::EditVerseOrder);
 
         let verse_order_items: Vec<Element<Message>> =
             self.song.as_ref().map_or_else(Vec::new, |song| {
@@ -1334,36 +1205,44 @@ impl SongEditor {
                         .enumerate()
                         .map(|(index, verse)| {
                             let verse = *verse;
-                            let hovered_chip = self.hovered_verse_chip.filter(|hovered_index| hovered_index == &index);
-                            let mut chip =
-                                verse_chip(verse, hovered_chip).apply(mouse_area)
+                            let hovered_chip = self
+                                .hovered_verse_chip
+                                .filter(|hovered_index| hovered_index == &index);
+                            let mut chip = verse_chip(verse, hovered_chip)
+                                .apply(mouse_area)
                                 .on_enter(Message::ChipHovered(Some(index)))
                                 .on_exit(Message::ChipHovered(None))
                                 .into();
-                            if let Some(hovered_chip) =
-                                self.hovered_dnd_verse_chip
-                                && index == hovered_chip {
-                                    let phantom_chip = space::horizontal().width(60).height(19)
-                                        .apply(container)
-                                        .padding(
-                                            Padding::new(space_xxs.into())
-                                                .right(space_s)
-                                                .left(space_s),
-                                        )
-                                        .class(theme::Container::Custom(Box::new(move |t| {
+                            if let Some(hovered_chip) = self.hovered_dnd_verse_chip
+                                && index == hovered_chip
+                            {
+                                let phantom_chip = space::horizontal()
+                                    .width(60)
+                                    .height(19)
+                                    .apply(container)
+                                    .padding(
+                                        Padding::new(space_xxs.into())
+                                            .right(space_s)
+                                            .left(space_s),
+                                    )
+                                    .class(theme::Container::Custom(Box::new(
+                                        move |t| {
                                             container::Style::default()
                                                 .background(ContainerBackground::Color(
-                                                    Color::from(t.cosmic().secondary.base).scale_alpha(0.5)
+                                                    Color::from(
+                                                        t.cosmic().secondary.base,
+                                                    )
+                                                    .scale_alpha(0.5),
                                                 ))
-                                                .border(Border::default().rounded(space_m as u8).width(2))
-                                        })));
-                                    chip = row![
-                                        phantom_chip,
-                                        chip
-                                    ]
-                                        .spacing(space_s)
-                                        .into();
-                                }
+                                                .border(
+                                                    Border::default()
+                                                        .rounded(space_m as u8)
+                                                        .width(2),
+                                                )
+                                        },
+                                    )));
+                                chip = row![phantom_chip, chip].spacing(space_s).into();
+                            }
                             let verse_chip_wrapped =
                                 RcElementWrapper::<Message>::new(chip);
                             Element::from(
@@ -1371,19 +1250,17 @@ impl SongEditor {
                                     verse_chip_wrapped,
                                     vec!["application/verse".into()],
                                 )
-                                    .on_enter(move |x, y, mimes| {
-                                        debug!(x, y, ?mimes);
-                                        Message::ChipDndHovered(Some(index))
-                                    })
-                                    .on_leave(move || {
-                                        Message::ChipDndHovered(None)
-                                    })
-                                    .on_finish(
-                                        move |mime, data, action, _x, _y| {
-                                            debug!(mime, ?data, ?action);
-                                            Message::ChipDropped((index, data, mime))
-                                        },
-                                    ),
+                                .on_enter(move |x, y, mimes| {
+                                    debug!(x, y, ?mimes);
+                                    Message::ChipDndHovered(Some(index))
+                                })
+                                .on_leave(move || Message::ChipDndHovered(None))
+                                .on_finish(
+                                    move |mime, data, action, _x, _y| {
+                                        debug!(mime, ?data, ?action);
+                                        Message::ChipDropped((index, data, mime))
+                                    },
+                                ),
                             )
                         })
                         .collect()
@@ -1410,16 +1287,12 @@ impl SongEditor {
                 Message::ChipDndHovered(None)
             })
             .on_leave(|| Message::ChipDndHovered(None))
-            .on_finish(
-                move |mime, data, _action, _x, _y| {
-                    Message::ChipDroppedEnd((data, mime))
-                },
-            );
+            .on_finish(move |mime, data, _action, _x, _y| {
+                Message::ChipDroppedEnd((data, mime))
+            });
             row![
                 scrollable(verse_order_items)
-                    .direction(
-                        Direction::Horizontal(Scrollbar::new())
-                    )
+                    .direction(Direction::Horizontal(Scrollbar::new()))
                     .spacing(space_s),
                 ending_dnd_dest
             ]
@@ -1427,16 +1300,13 @@ impl SongEditor {
         } else {
             row![
                 scrollable(verse_order_items)
-                    .direction(
-                        Direction::Horizontal(Scrollbar::new())
-                    )
+                    .direction(Direction::Horizontal(Scrollbar::new()))
                     .width(Length::Fill)
                     .spacing(space_s),
             ]
             .width(Length::Fill)
         };
-        verse_order_row =
-            verse_order_row.push(verse_chips_edit_toggle);
+        verse_order_row = verse_order_row.push(verse_chips_edit_toggle);
 
         let verse_order = container(verse_order_row)
             .padding(space_s)
@@ -1459,8 +1329,7 @@ impl SongEditor {
 
         let verse_label = text("Verse Order");
 
-        let verse_order =
-            column![verse_label, verse_order].spacing(space_s);
+        let verse_order = column![verse_label, verse_order].spacing(space_s);
 
         let lyric_title = text::heading("Lyrics");
         let _lyric_input = column![
@@ -1475,20 +1344,16 @@ impl SongEditor {
             || Element::from(space::horizontal()),
             |verse_list| {
                 Element::from(
-                    column(verse_list.iter().enumerate().map(
-                        |(index, v)| {
-                            column![
-                                v.view().map(move |message| {
-                                    Message::VerseEditorMessage((
-                                        index, message,
-                                    ))
-                                }),
-                                divider::horizontal::heavy()
-                            ]
-                            .spacing(space_m)
-                            .into()
-                        },
-                    ))
+                    column(verse_list.iter().enumerate().map(|(index, v)| {
+                        column![
+                            v.view().map(move |message| {
+                                Message::VerseEditorMessage((index, message))
+                            }),
+                            divider::horizontal::heavy()
+                        ]
+                        .spacing(space_m)
+                        .into()
+                    }))
                     .spacing(space_m),
                 )
             },
@@ -1504,26 +1369,16 @@ impl SongEditor {
 
         let verse_add_message = self.song.as_ref().map_or_else(
             || Message::None,
-            |song| {
-                Message::AddVerse((
-                    song.get_next_verse_name(),
-                    String::new(),
-                ))
-            },
+            |song| Message::AddVerse((song.get_next_verse_name(), String::new())),
         );
         let verse_toolbar = column![
             row![
                 text::heading("Verses").width(Length::Fill),
                 button::text("Import")
-                    .trailing_icon(
-                        icon::from_name("browser-download")
-                            .symbolic(true)
-                    )
+                    .trailing_icon(icon::from_name("browser-download").symbolic(true))
                     .on_press(Message::None),
                 button::text("Add Verse")
-                    .trailing_icon(
-                        icon::from_name("add").symbolic(true)
-                    )
+                    .trailing_icon(icon::from_name("add").symbolic(true))
                     .on_press(verse_add_message)
             ]
             .padding(space_m),
@@ -1585,13 +1440,9 @@ impl SongEditor {
                 container(if self.state == State::FontPickerOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(
-                        icon::from_name("arrow-down").size(space_m),
-                    )
+                    Element::from(icon::from_name("arrow-down").size(space_m))
                 })
-                .padding([
-                    space_none, space_xxs, space_none, space_none
-                ])
+                .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
                 .align_right(Length::Fill)
                 .align_y(Vertical::Center)
@@ -1601,10 +1452,10 @@ impl SongEditor {
         )
         .gap(10);
 
-        let selected_font_size =
-            self.song.as_ref().and_then(|song| {
-                song.font_size.map(|size| size.to_string())
-            });
+        let selected_font_size = self
+            .song
+            .as_ref()
+            .and_then(|song| song.font_size.map(|size| size.to_string()));
 
         let font_size = tooltip(
             stack![
@@ -1621,13 +1472,9 @@ impl SongEditor {
                 container(if self.state == State::FontSizeOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(
-                        icon::from_name("arrow-down").size(space_m),
-                    )
+                    Element::from(icon::from_name("arrow-down").size(space_m))
                 })
-                .padding([
-                    space_none, space_xxs, space_none, space_none
-                ])
+                .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
                 .align_right(Length::Fill)
                 .align_y(Vertical::Center)
@@ -1640,9 +1487,8 @@ impl SongEditor {
         let bold_button = tooltip(
             button::icon(icon::from_name("format-text-bold"))
                 .selected(self.song.as_ref().is_some_and(|song| {
-                    song.font_weight.is_some_and(|font_weight| {
-                        font_weight == Weight::Bold
-                    })
+                    song.font_weight
+                        .is_some_and(|font_weight| font_weight == Weight::Bold)
                 }))
                 .on_press(Message::ChangeFontWeight),
             "Bold",
@@ -1651,9 +1497,8 @@ impl SongEditor {
         let italic_button = tooltip(
             button::icon(icon::from_name("format-text-italic"))
                 .selected(self.song.as_ref().is_some_and(|song| {
-                    song.font_style.is_some_and(|font_style| {
-                        font_style == Style::Italic
-                    })
+                    song.font_style
+                        .is_some_and(|font_style| font_style == Style::Italic)
                 }))
                 .on_press(Message::ChangeFontStyle),
             "Italicize",
@@ -1668,12 +1513,9 @@ impl SongEditor {
         );
 
         let mut stroke_tools_button = popover(tooltip(
-            button::icon(
-                icon::from_path("./res/text-outline.svg".into())
-                    .symbolic(true),
-            )
-            .label("Text Stroke")
-            .on_press(Message::ToggleStrokeTools),
+            button::icon(icon::from_path("./res/text-outline.svg".into()).symbolic(true))
+                .label("Text Stroke")
+                .on_press(Message::ToggleStrokeTools),
             "Outline of the text",
             tooltip::Position::Bottom,
         ))
@@ -1697,14 +1539,10 @@ impl SongEditor {
                     self.song.as_ref().and_then(|song| {
                         song.stroke_size
                             .and_then(|size| {
-                                self.stroke_sizes.iter().position(
-                                    |size_string| {
-                                        size_string
-                                            .parse::<u16>()
-                                            .expect("these are fine")
-                                            == size
-                                    },
-                                )
+                                self.stroke_sizes.iter().position(|size_string| {
+                                    size_string.parse::<u16>().expect("these are fine")
+                                        == size
+                                })
                             })
                             .map_or(Some(0), Some)
                     }),
@@ -1725,29 +1563,22 @@ impl SongEditor {
                 .height(Length::Fixed(300.0))
                 .width(Length::Fixed(400.0))
                 .build("Recent Colors", "Copy", "Copied");
-            let stroke_tools =
-                column![stroke_size_row, stroke_color_picker]
-                    .spacing(space_s)
-                    .height(Length::Fill)
-                    .apply(container)
-                    .center_y(Length::Fixed(600.0))
-                    .center_x(Length::Fixed(400.0))
-                    .class(theme::Container::custom(
-                        floating_container_style,
-                    ));
+            let stroke_tools = column![stroke_size_row, stroke_color_picker]
+                .spacing(space_s)
+                .height(Length::Fill)
+                .apply(container)
+                .center_y(Length::Fixed(600.0))
+                .center_x(Length::Fixed(400.0))
+                .class(theme::Container::custom(floating_container_style));
 
-            stroke_tools_button =
-                stroke_tools_button.popup(stroke_tools);
+            stroke_tools_button = stroke_tools_button.popup(stroke_tools);
         }
 
         let mut shadow_tools_button = popover(tooltip(
-            button::icon(
-                icon::from_path("./res/shadow.svg".into())
-                    .symbolic(true),
-            )
-            .label("Text Shadow")
-            .padding(space_s)
-            .on_press(Message::ToggleShadowTools),
+            button::icon(icon::from_path("./res/shadow.svg".into()).symbolic(true))
+                .label("Text Shadow")
+                .padding(space_s)
+                .on_press(Message::ToggleShadowTools),
             "Set the shadow of the text",
             tooltip::Position::Bottom,
         ))
@@ -1768,14 +1599,10 @@ impl SongEditor {
                 self.song.as_ref().and_then(|song| {
                     song.shadow_size
                         .and_then(|size| {
-                            self.shadow_sizes.iter().position(
-                                |size_string| {
-                                    size_string
-                                        .parse::<u16>()
-                                        .expect("these are fine")
-                                        == size
-                                },
-                            )
+                            self.shadow_sizes.iter().position(|size_string| {
+                                size_string.parse::<u16>().expect("these are fine")
+                                    == size
+                            })
                         })
                         .map_or(Some(0), Some)
                 }),
@@ -1787,14 +1614,9 @@ impl SongEditor {
                 &self.shadow_offset_sizes,
                 self.song.as_ref().and_then(|song| {
                     song.shadow_offset.and_then(|(offset_x, _)| {
-                        self.shadow_offset_sizes.iter().position(
-                            |x_string| {
-                                x_string
-                                    .parse::<i16>()
-                                    .expect("these are fine")
-                                    == offset_x
-                            },
-                        )
+                        self.shadow_offset_sizes.iter().position(|x_string| {
+                            x_string.parse::<i16>().expect("these are fine") == offset_x
+                        })
                     })
                 }),
                 Message::UpdateShadowOffsetX,
@@ -1805,14 +1627,9 @@ impl SongEditor {
                 &self.shadow_offset_sizes,
                 self.song.as_ref().and_then(|song| {
                     song.shadow_offset.and_then(|(_, offset_y)| {
-                        self.shadow_offset_sizes.iter().position(
-                            |y_string| {
-                                y_string
-                                    .parse::<i16>()
-                                    .expect("these are fine")
-                                    == offset_y
-                            },
-                        )
+                        self.shadow_offset_sizes.iter().position(|y_string| {
+                            y_string.parse::<i16>().expect("these are fine") == offset_y
+                        })
                     })
                 }),
                 Message::UpdateShadowOffsetY,
@@ -1822,14 +1639,12 @@ impl SongEditor {
             let shadow_size = row!["Size:", shadow_size_dropdown]
                 .align_y(Vertical::Center)
                 .spacing(space_s);
-            let shadow_offset_x =
-                row!["Offset X:", shadow_offset_x_dropdown]
-                    .align_y(Vertical::Center)
-                    .spacing(space_s);
-            let shadow_offset_y =
-                row!["Offset Y:", shadow_offset_y_dropdown]
-                    .align_y(Vertical::Center)
-                    .spacing(space_s);
+            let shadow_offset_x = row!["Offset X:", shadow_offset_x_dropdown]
+                .align_y(Vertical::Center)
+                .spacing(space_s);
+            let shadow_offset_y = row!["Offset Y:", shadow_offset_y_dropdown]
+                .align_y(Vertical::Center)
+                .spacing(space_s);
 
             let shadow_tools = column![
                 row![shadow_size, shadow_offset_x, shadow_offset_y]
@@ -1848,20 +1663,15 @@ impl SongEditor {
                 .apply(container)
                 .center_y(Length::Fixed(600.0))
                 .center_x(Length::Fixed(400.0))
-                .class(theme::Container::custom(
-                    floating_container_style,
-                ));
+                .class(theme::Container::custom(floating_container_style));
 
-            shadow_tools_button =
-                shadow_tools_button.popup(shadow_tools);
+            shadow_tools_button = shadow_tools_button.popup(shadow_tools);
         }
         let text_alignment_popover = popover(tooltip(
-            button::icon(
-                icon::from_name("align-on-canvas").symbolic(true),
-            )
-            .label("Text Alignment")
-            .padding(space_s)
-            .on_press(Message::ToggleAlignmentTools),
+            button::icon(icon::from_name("align-on-canvas").symbolic(true))
+                .label("Text Alignment")
+                .padding(space_s)
+                .on_press(Message::ToggleAlignmentTools),
             "Set where text should be on slide",
             tooltip::Position::Bottom,
         ))
@@ -1869,157 +1679,110 @@ impl SongEditor {
         .position(popover::Position::Bottom)
         .on_close(Message::ToggleAlignmentTools);
 
-        let text_alignment_popup =
-            if self.state == State::AlignmentToolOpen {
-                text_alignment_popover.popup(
-                    grid::grid()
-                        .row_spacing(space_s)
-                        .column_spacing(space_s)
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_top_left",
-                            ))
+        let text_alignment_popup = if self.state == State::AlignmentToolOpen {
+            text_alignment_popover.popup(
+                grid::grid()
+                    .row_spacing(space_s)
+                    .column_spacing(space_s)
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_top_left"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::TopLeft,
-                                ),
-                            ),
-                            |a| a.column(0).row(0),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_top",
-                            ))
+                            .on_press(Message::SetTextAlignment(TextAlignment::TopLeft)),
+                        |a| a.column(0).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_top"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::TopCenter,
-                                ),
-                            ),
-                            |a| a.column(1).row(0),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_top_right",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::TopCenter,
+                            )),
+                        |a| a.column(1).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_top_right"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::TopRight,
-                                ),
-                            ),
-                            |a| a.column(2).row(0),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_left",
-                            ))
+                            .on_press(Message::SetTextAlignment(TextAlignment::TopRight)),
+                        |a| a.column(2).row(0),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_left"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::MiddleLeft,
-                                ),
-                            ),
-                            |a| a.column(0).row(1),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_center",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::MiddleLeft,
+                            )),
+                        |a| a.column(0).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_center"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::MiddleCenter,
-                                ),
-                            ),
-                            |a| a.column(1).row(1),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_right",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::MiddleCenter,
+                            )),
+                        |a| a.column(1).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_right"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::MiddleRight,
-                                ),
-                            ),
-                            |a| a.column(2).row(1),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_bottom_left",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::MiddleRight,
+                            )),
+                        |a| a.column(2).row(1),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_bottom_left"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::BottomLeft,
-                                ),
-                            ),
-                            |a| a.column(0).row(2),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_bottom",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::BottomLeft,
+                            )),
+                        |a| a.column(0).row(2),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_bottom"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::BottomCenter,
-                                ),
-                            ),
-                            |a| a.column(1).row(2),
-                        )
-                        .push_with(
-                            button::icon(icon::from_name(
-                                "boundingbox_bottom_right",
-                            ))
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::BottomCenter,
+                            )),
+                        |a| a.column(1).row(2),
+                    )
+                    .push_with(
+                        button::icon(icon::from_name("boundingbox_bottom_right"))
                             .class(theme::Button::Standard)
                             .padding(space_s)
-                            .on_press(
-                                Message::SetTextAlignment(
-                                    TextAlignment::BottomRight,
-                                ),
-                            ),
-                            |a| a.column(2).row(2),
-                        )
-                        .apply(container)
-                        .padding(space_s)
-                        .class(theme::Container::custom(
-                            floating_container_style,
-                        )),
-                )
-            } else {
-                text_alignment_popover
-            };
+                            .on_press(Message::SetTextAlignment(
+                                TextAlignment::BottomRight,
+                            )),
+                        |a| a.column(2).row(2),
+                    )
+                    .apply(container)
+                    .padding(space_s)
+                    .class(theme::Container::custom(floating_container_style)),
+            )
+        } else {
+            text_alignment_popover
+        };
 
         let background_selector = tooltip(
-            button::icon(
-                icon::from_name("folder-pictures-symbolic").scale(2),
-            )
-            .label("Background")
-            .on_press(Message::PickBackground)
-            .padding(space_s),
+            button::icon(icon::from_name("folder-pictures-symbolic").scale(2))
+                .label("Background")
+                .on_press(Message::PickBackground)
+                .padding(space_s),
             "Select an image or video background",
             tooltip::Position::Bottom,
         );
 
         let audio_selector = tooltip(
-            button::icon(
-                icon::from_name("audio-speakers-symbolic").scale(2),
-            )
-            .label("Audio")
-            .on_press(Message::PickAudio)
-            .padding(space_s),
+            button::icon(icon::from_name("audio-speakers-symbolic").scale(2))
+                .label("Audio")
+                .on_press(Message::PickAudio)
+                .padding(space_s),
             "Select an image or video audio",
             tooltip::Position::Bottom,
         );
@@ -2067,11 +1830,10 @@ impl SongEditor {
             space_xxl,
             ..
         } = theme::spacing();
-        let search_bar =
-            cosmic::widget::search_input("", &self.search_input)
-                .on_input(Message::SearchUpdate)
-                .on_submit(Message::SearchSong)
-                .width(Length::Fill);
+        let search_bar = cosmic::widget::search_input("", &self.search_input)
+            .on_input(Message::SearchUpdate)
+            .on_submit(Message::SearchSong)
+            .width(Length::Fill);
         let submit_button = icon::from_name("document-send-symbolic")
             .apply(button::icon)
             .icon_size(space_xl)
@@ -2093,19 +1855,17 @@ impl SongEditor {
                         .iter()
                         .enumerate()
                         .map(|(index, song)| {
-                            let title = text::heading(&song.title)
-                                .ellipsize(Ellipsize::End(
-                                    EllipsizeHeightLimit::Lines(1),
-                                ));
+                            let title = text::heading(&song.title).ellipsize(
+                                Ellipsize::End(EllipsizeHeightLimit::Lines(1)),
+                            );
                             let author = text::heading(&song.author)
                                 .class(theme::Text::Accent)
-                                .ellipsize(Ellipsize::End(
-                                    EllipsizeHeightLimit::Lines(1),
-                                ));
-                            let _link = text::body(&song.link)
-                                .ellipsize(Ellipsize::End(
-                                    EllipsizeHeightLimit::Lines(1),
-                                ));
+                                .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(
+                                    1,
+                                )));
+                            let _link = text::body(&song.link).ellipsize(Ellipsize::End(
+                                EllipsizeHeightLimit::Lines(1),
+                            ));
                             let lyrics = song
                                 .lyrics
                                 .lines()
@@ -2113,34 +1873,24 @@ impl SongEditor {
                                 .filter(|(i, _)| *i < 7)
                                 .map(|(_, s)| s)
                                 .collect::<Vec<&str>>();
-                            let lyrics =
-                                text::body(lyrics.join("\n"))
-                                    .ellipsize(Ellipsize::End(
-                                        EllipsizeHeightLimit::Lines(
-                                            7,
-                                        ),
-                                    ));
+                            let lyrics = text::body(lyrics.join("\n")).ellipsize(
+                                Ellipsize::End(EllipsizeHeightLimit::Lines(7)),
+                            );
 
-                            let provider =
-                                text::body(song.provider.to_string())
-                                    .apply(container)
-                                    .style(|t| {
-                                        container::Style::default()
-                                    .background(
-                                        ContainerBackground::Color(
-                                            GENIUS_COLOR
-                                        ),
-                                    )
-                                    .color(
-                                        Color::BLACK,
-                                    )
-                                    .border(
-                                        Border::default().rounded(
-                                            t.cosmic().radius_s(),
-                                        ),
-                                    )
-                                    })
-                                    .padding(space_s);
+                            let provider = text::body(song.provider.to_string())
+                                .apply(container)
+                                .style(|t| {
+                                    container::Style::default()
+                                        .background(ContainerBackground::Color(
+                                            GENIUS_COLOR,
+                                        ))
+                                        .color(Color::BLACK)
+                                        .border(
+                                            Border::default()
+                                                .rounded(t.cosmic().radius_s()),
+                                        )
+                                })
+                                .padding(space_s);
                             row![
                                 column![
                                     title,
@@ -2157,61 +1907,47 @@ impl SongEditor {
                             .padding(space_m)
                             .style(move |theme| {
                                 container::Style::default()
-                                    .background(
-                                        ContainerBackground::Color({
-                                            if self
-                                                .hovered_online_song
-                                                .is_some_and(
-                                                    |hovered| {
-                                                        index
-                                                            == hovered
-                                                    },
-                                                )
-                                            {
-                                                theme
-                                                    .cosmic()
-                                                    .background
-                                                    .component
-                                                    .base
-                                                    .into()
-                                            } else {
-                                                theme
-                                                    .cosmic()
-                                                    .background
-                                                    .component
-                                                    .hover
-                                                    .into()
-                                            }
-                                        }),
-                                    )
+                                    .background(ContainerBackground::Color({
+                                        if self
+                                            .hovered_online_song
+                                            .is_some_and(|hovered| index == hovered)
+                                        {
+                                            theme
+                                                .cosmic()
+                                                .background
+                                                .component
+                                                .base
+                                                .into()
+                                        } else {
+                                            theme
+                                                .cosmic()
+                                                .background
+                                                .component
+                                                .hover
+                                                .into()
+                                        }
+                                    }))
                                     .shadow(Shadow {
                                         color: Color::BLACK,
-                                        offset: Vector {
-                                            x: 0.0,
-                                            y: 0.0,
-                                        },
+                                        offset: Vector { x: 0.0, y: 0.0 },
                                         blur_radius: if self
                                             .hovered_online_song
-                                            .is_some_and(|hovered| {
-                                                hovered == index
-                                            }) {
+                                            .is_some_and(|hovered| hovered == index)
+                                        {
                                             5.0
                                         } else {
                                             0.0
                                         },
                                     })
                                     .border(
-                                        Border::default().rounded(
-                                            theme.cosmic().radius_m(),
-                                        ),
+                                        Border::default()
+                                            .rounded(theme.cosmic().radius_m()),
                                     )
                             })
                             .apply(mouse_area)
                             .on_enter(Message::HoverSong(Some(index)))
                             .on_exit(Message::HoverSong(None))
-                            .on_release(Message::AddSong(
-                                song.clone(),
-                            ))
+                            .on_release(Message::AddSong(song.clone()))
                             .into()
                         })
                         .collect();
@@ -2234,9 +1970,7 @@ impl SongEditor {
             column![
                 text::heading("Search for song")
                     .apply(container)
-                    .padding([
-                        space_none, space_none, space_none, space_m
-                    ]),
+                    .padding([space_none, space_none, space_none, space_m]),
                 search_row
             ]
             .spacing(space_s),
@@ -2273,22 +2007,15 @@ impl SongEditor {
 
             std::thread::spawn(move || {
                 for (index, slide) in slides.into_iter().enumerate() {
-                    let slide = text_svg::text_svg_generator(
-                        slide.clone(),
-                        &font_db,
-                    )
-                    .unwrap_or(slide);
-                    let _ =
-                        tx.send(Message::UpdateSlide((index, slide)));
+                    let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
+                        .unwrap_or(slide);
+                    let _ = tx.send(Message::UpdateSlide((index, slide)));
                 }
             });
 
-            let (task, handle) = Task::stream(
-                tokio_stream::wrappers::UnboundedReceiverStream::new(
-                    rx,
-                ),
-            )
-            .abortable();
+            let (task, handle) =
+                Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
+                    .abortable();
 
             // let (task, handle) = Task::perform(
             //     async move {
@@ -2319,12 +2046,11 @@ impl SongEditor {
         if let Some(background) = background
             && background.kind == BackgroundKind::Video
         {
-            let video =
-                Video::try_from(background).ok().map(|mut v| {
-                    v.set_looping(true);
-                    v.set_paused(true);
-                    v
-                });
+            let video = Video::try_from(background).ok().map(|mut v| {
+                v.set_looping(true);
+                v.set_paused(true);
+                v
+            });
             // debug!(?video);
             self.video = video;
         } else {
@@ -2335,10 +2061,7 @@ impl SongEditor {
 
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::items_after_statements)]
-fn verse_chip(
-    verse: VerseName,
-    index: Option<usize>,
-) -> Element<'static, Message> {
+fn verse_chip(verse: VerseName, index: Option<usize>) -> Element<'static, Message> {
     let cosmic::cosmic_theme::Spacing {
         space_none,
         space_s,
@@ -2360,9 +2083,7 @@ fn verse_chip(
     #[allow(clippy::match_same_arms)]
     let (background_color, text_color) = match verse {
         VerseName::Verse { .. } => (VERSE_COLOR, light_text),
-        VerseName::PreChorus { .. } => {
-            (INSTRUMENTAL_COLOR, light_text)
-        }
+        VerseName::PreChorus { .. } => (INSTRUMENTAL_COLOR, light_text),
         VerseName::Chorus { .. } => (CHORUS_COLOR, light_text),
         VerseName::PostChorus { .. } => {
             todo!()
@@ -2380,22 +2101,12 @@ fn verse_chip(
     if let Some(index) = index {
         let text = text(name)
             .apply(container)
-            .padding(
-                Padding::new(space_xxs.into())
-                    .right(space_s)
-                    .left(space_s),
-            )
+            .padding(Padding::new(space_xxs.into()).right(space_s).left(space_s))
             .class(theme::Container::Custom(Box::new(move |_t| {
                 container::Style::default()
-                    .background(ContainerBackground::Color(
-                        background_color,
-                    ))
+                    .background(ContainerBackground::Color(background_color))
                     .color(text_color)
-                    .border(
-                        Border::default()
-                            .rounded(space_m as u8)
-                            .width(2),
-                    )
+                    .border(Border::default().rounded(space_m as u8).width(2))
             })));
         let button = button::icon(icon::from_name("view-close"))
             .icon_size(19)
@@ -2414,22 +2125,12 @@ fn verse_chip(
     } else {
         text(name)
             .apply(container)
-            .padding(
-                Padding::new(space_xxs.into())
-                    .right(space_s)
-                    .left(space_s),
-            )
+            .padding(Padding::new(space_xxs.into()).right(space_s).left(space_s))
             .class(theme::Container::Custom(Box::new(move |_t| {
                 container::Style::default()
-                    .background(ContainerBackground::Color(
-                        background_color,
-                    ))
+                    .background(ContainerBackground::Color(background_color))
                     .color(text_color)
-                    .border(
-                        Border::default()
-                            .rounded(space_m as u8)
-                            .width(2),
-                    )
+                    .border(Border::default().rounded(space_m as u8).width(2))
             })))
             .into()
     }
@@ -2459,9 +2160,7 @@ async fn pick_audio() -> Result<PathBuf, SongError> {
             error!(?e);
             SongError::AudioDialogClosed
         })
-        .map(|file| {
-            file.url().to_file_path().expect("Should be a file here")
-        })
+        .map(|file| file.url().to_file_path().expect("Should be a file here"))
 }
 
 async fn pick_background() -> Result<PathBuf, SongError> {
@@ -2482,9 +2181,7 @@ async fn pick_background() -> Result<PathBuf, SongError> {
             error!(?e);
             SongError::BackgroundDialogClosed
         })
-        .map(|file| {
-            file.url().to_file_path().expect("Should be a file here")
-        })
+        .map(|file| file.url().to_file_path().expect("Should be a file here"))
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

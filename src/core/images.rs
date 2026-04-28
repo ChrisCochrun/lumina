@@ -14,9 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::error;
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Image {
     pub id: i32,
     pub title: String,
@@ -91,22 +89,19 @@ impl From<&Value> for Image {
     fn from(value: &Value) -> Self {
         match value {
             Value::List(list) => {
-                let path = if let Some(path_pos) =
-                    list.iter().position(|v| {
-                        v == &Value::Keyword(Keyword::from("source"))
-                    }) {
+                let path = if let Some(path_pos) = list
+                    .iter()
+                    .position(|v| v == &Value::Keyword(Keyword::from("source")))
+                {
                     let pos = path_pos + 1;
-                    list.get(pos)
-                        .map(|p| PathBuf::from(String::from(p)))
+                    list.get(pos).map(|p| PathBuf::from(String::from(p)))
                 } else {
                     None
                 };
 
                 let title = path.clone().map(|p| {
-                    let path =
-                        p.to_str().unwrap_or_default().to_string();
-                    let title =
-                        path.rsplit_once('/').unwrap_or_default().1;
+                    let path = p.to_str().unwrap_or_default().to_string();
+                    let title = path.rsplit_once('/').unwrap_or_default().1;
                     title.to_string()
                 });
                 Self {
@@ -131,10 +126,7 @@ impl ServiceTrait for Image {
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
         let slide = SlideBuilder::new()
-            .background(
-                Background::try_from(self.path.clone())
-                    .into_diagnostic()?,
-            )
+            .background(Background::try_from(self.path.clone()).into_diagnostic()?)
             .text("")
             .audio("")
             .font("")
@@ -180,9 +172,7 @@ impl Model<Image> {
                 }
             }
             Err(e) => {
-                error!(
-                    "There was an error in converting images: {e}"
-                );
+                error!("There was an error in converting images: {e}");
             }
         }
     }
@@ -241,13 +231,13 @@ pub async fn add_image(
             .unwrap_or_default();
 
         query!(
-        r#"INSERT INTO images (title, file_path) VALUES ($1, $2)"#,
-        image.title,
-        path,
-    )
-    .execute(&*db)
-    .await
-    .into_diagnostic()?;
+            r#"INSERT INTO images (title, file_path) VALUES ($1, $2)"#,
+            image.title,
+            path,
+        )
+        .execute(&*db)
+        .await
+        .into_diagnostic()?;
 
         current_images.push(image);
     }
@@ -271,8 +261,9 @@ pub async fn update_image(
         image.title,
         path,
     )
-        .execute(&*db)
-        .await.into_diagnostic()?;
+    .execute(&*db)
+    .await
+    .into_diagnostic()?;
 
     let current_image = images
         .iter()
@@ -288,10 +279,7 @@ pub async fn update_image(
     Ok(images)
 }
 
-pub async fn get_from_db(
-    database_id: i32,
-    db: &mut SqliteConnection,
-) -> Result<Image> {
+pub async fn get_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Image> {
     query_as!(Image, r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
@@ -303,9 +291,7 @@ mod test {
     fn test_image(title: String) -> Image {
         Image {
             title,
-            path: PathBuf::from(
-                "/home/chris/pics/memes/no-i-dont-think.gif",
-            ),
+            path: PathBuf::from("/home/chris/pics/memes/no-i-dont-think.gif"),
             ..Default::default()
         }
     }
@@ -342,14 +328,8 @@ mod test {
         let new_image = test_image("A newer image".into());
         match result {
             Ok(()) => {
-                assert_eq!(
-                    &image,
-                    image_model.find(|i| i.id == 0).expect("")
-                );
-                assert_ne!(
-                    &new_image,
-                    image_model.find(|i| i.id == 0).expect("")
-                );
+                assert_eq!(&image, image_model.find(|i| i.id == 0).expect(""));
+                assert_ne!(&new_image, image_model.find(|i| i.id == 0).expect(""));
             }
             Err(e) => {
                 panic!("There was an error adding the image: {e:?}",)

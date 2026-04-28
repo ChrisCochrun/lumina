@@ -1,9 +1,7 @@
 use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::{Background, Border};
-use cosmic::widget::{
-    button, combo_box, container, icon, space, text_editor,
-};
+use cosmic::widget::{button, combo_box, container, icon, space, text_editor};
 use cosmic::{Element, Task, theme};
 
 use crate::core::songs::VerseName;
@@ -44,9 +42,7 @@ impl VerseEditor {
             lyric: lyric.to_string(),
             content: text_editor::Content::with_text(lyric),
             editing_verse_name: false,
-            verse_name_combo: combo_box::State::new(
-                VerseName::all_names(),
-            ),
+            verse_name_combo: combo_box::State::new(VerseName::all_names()),
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -72,9 +68,7 @@ impl VerseEditor {
                     Action::None
                 }
             },
-            Message::UpdateVerseName(verse_name) => {
-                Action::UpdateVerseName(verse_name)
-            }
+            Message::UpdateVerseName(verse_name) => Action::UpdateVerseName(verse_name),
             Message::EditVerseName => {
                 self.editing_verse_name = !self.editing_verse_name;
                 Action::None
@@ -93,9 +87,7 @@ impl VerseEditor {
         } = theme::spacing();
 
         let delete_button = button::text("Delete")
-            .trailing_icon(
-                icon::from_name("view-close").symbolic(true),
-            )
+            .trailing_icon(icon::from_name("view-close").symbolic(true))
             .class(theme::Button::Destructive)
             .on_press(Message::DeleteVerse(self.verse_name));
         let combo = combo_box(
@@ -105,59 +97,42 @@ impl VerseEditor {
             Message::UpdateVerseName,
         );
 
-        let verse_title =
-            row![combo, space::horizontal(), delete_button];
+        let verse_title = row![combo, space::horizontal(), delete_button];
 
-        let lyric: Element<Message> = if self.verse_name
-            == VerseName::Blank
-        {
+        let lyric: Element<Message> = if self.verse_name == VerseName::Blank {
             space::horizontal().into()
         } else {
             text_editor(&self.content)
                 .on_action(Message::UpdateLyric)
                 .padding(space_m)
-                .class(theme::iced::TextEditor::Custom(Box::new(
-                    move |t, s| {
-                        let neutral = t.cosmic().palette.neutral_9;
-                        let mut base_style = text_editor::Style {
-                            background: Background::Color(
-                                t.cosmic()
-                                    .background
-                                    .small_widget
-                                    .with_alpha(0.25)
-                                    .into(),
-                            ),
-                            border: Border::default()
-                                .rounded(space_s as u8)
-                                .width(2)
-                                .color(
-                                    t.cosmic().bg_component_divider(),
-                                ),
-                            placeholder: neutral
-                                .with_alpha(0.7)
-                                .into(),
-                            value: neutral.into(),
-                            selection: t.cosmic().accent.base.into(),
-                        };
-                        let hovered_border = Border::default()
+                .class(theme::iced::TextEditor::Custom(Box::new(move |t, s| {
+                    let neutral = t.cosmic().palette.neutral_9;
+                    let mut base_style = text_editor::Style {
+                        background: Background::Color(
+                            t.cosmic().background.small_widget.with_alpha(0.25).into(),
+                        ),
+                        border: Border::default()
                             .rounded(space_s as u8)
-                            .width(3)
-                            .color(t.cosmic().accent.hover);
-                        match s {
-                            text_editor::Status::Active => base_style,
-                            text_editor::Status::Hovered
-                            | text_editor::Status::Focused {
-                                ..
-                            } => {
-                                base_style.border = hovered_border;
-                                base_style
-                            }
-                            text_editor::Status::Disabled => {
-                                base_style
-                            }
+                            .width(2)
+                            .color(t.cosmic().bg_component_divider()),
+                        placeholder: neutral.with_alpha(0.7).into(),
+                        value: neutral.into(),
+                        selection: t.cosmic().accent.base.into(),
+                    };
+                    let hovered_border = Border::default()
+                        .rounded(space_s as u8)
+                        .width(3)
+                        .color(t.cosmic().accent.hover);
+                    match s {
+                        text_editor::Status::Active => base_style,
+                        text_editor::Status::Hovered
+                        | text_editor::Status::Focused { .. } => {
+                            base_style.border = hovered_border;
+                            base_style
                         }
-                    },
-                )))
+                        text_editor::Status::Disabled => base_style,
+                    }
+                })))
                 .height(150)
                 .into()
         };

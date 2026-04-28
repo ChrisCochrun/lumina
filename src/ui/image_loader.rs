@@ -10,11 +10,8 @@ type Result<T> = std::result::Result<T, Error>;
 pub async fn load_images(path: PathBuf) -> Result<Handle> {
     tokio::task::spawn_blocking(move || {
         let image = image::open(&path).map_err(Error::ImageError)?;
-        let (width, height, pixels) = (
-            image.width(),
-            image.height(),
-            image.to_rgba8().to_vec(),
-        );
+        let (width, height, pixels) =
+            (image.width(), image.height(), image.to_rgba8().to_vec());
         Ok(Handle::from_rgba(width, height, pixels))
     })
     .await
@@ -38,8 +35,7 @@ impl ImageLoader {
                 .cloned()
         } else {
             self.decoding_images.insert(path.clone());
-            let image =
-                image::open(path).map_err(Error::ImageError)?;
+            let image = image::open(path).map_err(Error::ImageError)?;
             let (width, height, pixels) =
                 (image.width(), image.height(), image.into_bytes());
             self.decoding_images.remove(path);

@@ -29,18 +29,10 @@ impl TryFrom<PathBuf> for ServiceItemKind {
         let ext = path
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or_else(|| {
-                miette::miette!(
-                    "There isn't an extension on this file"
-                )
-            })?;
+            .ok_or_else(|| miette::miette!("There isn't an extension on this file"))?;
         match ext {
-            "png" | "jpg" | "jpeg" => {
-                Ok(Self::Image(Image::from(path)))
-            }
-            "mp4" | "mkv" | "webm" => {
-                Ok(Self::Video(Video::from(path)))
-            }
+            "png" | "jpg" | "jpeg" => Ok(Self::Image(Image::from(path))),
+            "mp4" | "mkv" | "webm" => Ok(Self::Video(Video::from(path))),
             "pdf" => Ok(Self::Presentation(Presentation::from(path))),
             _ => Err(miette::miette!("Unknown item")),
         }
@@ -53,9 +45,7 @@ impl ServiceItemKind {
             Self::Song(song) => song.title.clone(),
             Self::Video(video) => video.title.clone(),
             Self::Image(image) => image.title.clone(),
-            Self::Presentation(presentation) => {
-                presentation.title.clone()
-            }
+            Self::Presentation(presentation) => presentation.title.clone(),
             Self::Content(_slide) => todo!(),
         }
     }
@@ -65,9 +55,7 @@ impl ServiceItemKind {
             Self::Song(song) => song.to_service_item(),
             Self::Video(video) => video.to_service_item(),
             Self::Image(image) => image.to_service_item(),
-            Self::Presentation(presentation) => {
-                presentation.to_service_item()
-            }
+            Self::Presentation(presentation) => presentation.to_service_item(),
             Self::Content(_slide) => {
                 todo!()
             }
@@ -112,9 +100,7 @@ impl From<ServiceItemKind> for String {
             ServiceItemKind::Song(_) => "song".to_owned(),
             ServiceItemKind::Video(_) => "video".to_owned(),
             ServiceItemKind::Image(_) => "image".to_owned(),
-            ServiceItemKind::Presentation(_) => {
-                "presentation".to_owned()
-            }
+            ServiceItemKind::Presentation(_) => "presentation".to_owned(),
             ServiceItemKind::Content(_) => "content".to_owned(),
         }
     }
@@ -128,10 +114,7 @@ pub enum ParseError {
 impl Error for ParseError {}
 
 impl Display for ParseError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
             Self::UnknownType => {
                 "The type does not exist. It needs to be one of 'song', 'video', 'image', 'presentation', or 'content'"

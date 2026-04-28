@@ -15,9 +15,7 @@ pub struct Model<T> {
     pub kind: LibraryKind,
 }
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize)]
 pub enum LibraryKind {
     Song,
     Video,
@@ -25,9 +23,7 @@ pub enum LibraryKind {
     Presentation,
 }
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct KindWrapper(pub (LibraryKind, i32));
 
 impl From<PathBuf> for LibraryKind {
@@ -39,14 +35,10 @@ impl From<PathBuf> for LibraryKind {
 impl TryFrom<(Vec<u8>, String)> for KindWrapper {
     type Error = miette::Error;
 
-    fn try_from(
-        value: (Vec<u8>, String),
-    ) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: (Vec<u8>, String)) -> std::result::Result<Self, Self::Error> {
         let (data, mime) = value;
         match mime.as_str() {
-            "application/service-item" => {
-                ron::de::from_bytes(&data).into_diagnostic()
-            }
+            "application/service-item" => ron::de::from_bytes(&data).into_diagnostic(),
             _ => Err(miette!("Wrong mime type: {mime}")),
         }
     }
@@ -64,10 +56,7 @@ impl AsMimeTypes for KindWrapper {
         Cow::from(vec!["application/service-item".to_string()])
     }
 
-    fn as_bytes(
-        &self,
-        mime_type: &str,
-    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+    fn as_bytes(&self, mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
         debug!(?self);
         debug!(mime_type);
         let ron = ron::ser::to_string(self).ok()?;
@@ -86,11 +75,7 @@ impl<T> Model<T> {
         todo!()
     }
 
-    pub fn update_item<P>(
-        &mut self,
-        item: T,
-        predicate: P,
-    ) -> Result<()>
+    pub fn update_item<P>(&mut self, item: T, predicate: P) -> Result<()>
     where
         P: Fn(&T) -> bool,
     {
@@ -98,7 +83,11 @@ impl<T> Model<T> {
             .iter()
             .position(predicate)
             .ok_or_else(|| miette!("Item cannot be found"))
-            .map(|index| self.items.get_mut(index).expect("Since we found position this should always exist"))
+            .map(|index| {
+                self.items
+                    .get_mut(index)
+                    .expect("Since we found position this should always exist")
+            })
             .map(|current_item| {
                 let _old_item = replace(current_item, item);
             })
@@ -119,9 +108,8 @@ impl<T> Model<T> {
 
     #[must_use]
     pub fn get_item(&self, index: i32) -> Option<&T> {
-        self.items.get(
-            usize::try_from(index).expect("shouldn't be negative"),
-        )
+        self.items
+            .get(usize::try_from(index).expect("shouldn't be negative"))
     }
 
     pub fn find<P>(&self, f: P) -> Option<&T>
@@ -131,11 +119,7 @@ impl<T> Model<T> {
         self.items.iter().find(f)
     }
 
-    pub fn insert_item(
-        &mut self,
-        item: T,
-        index: usize,
-    ) -> Result<()> {
+    pub fn insert_item(&mut self, item: T, index: usize) -> Result<()> {
         self.items.insert(index, item);
         Ok(())
     }
@@ -153,8 +137,7 @@ impl<T> Model<T> {
 // }
 
 pub async fn get_db() -> SqliteConnection {
-    let mut data = dirs::data_local_dir()
-        .expect("Should be able to find a data dir");
+    let mut data = dirs::data_local_dir().expect("Should be able to find a data dir");
     data.push("lumina");
     let _ = fs::create_dir_all(&data);
     data.push("library-db.sqlite3");

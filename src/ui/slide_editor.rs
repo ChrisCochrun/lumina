@@ -55,10 +55,7 @@ struct EditorProgram {
 }
 
 impl SlideEditor {
-    pub fn view(
-        &self,
-        _font: Font,
-    ) -> cosmic::Element<'_, SlideWidget> {
+    pub fn view(&self, _font: Font) -> cosmic::Element<'_, SlideWidget> {
         container(
             widget::canvas(&self.program)
                 .height(Length::Fill)
@@ -71,9 +68,7 @@ impl SlideEditor {
 /// Ensure to use the `cosmic::Theme and cosmic::Renderer` here
 /// or else it will not compile
 #[allow(clippy::extra_unused_lifetimes)]
-impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
-    for EditorProgram
-{
+impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer> for EditorProgram {
     type State = ();
 
     fn draw(
@@ -99,15 +94,11 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
         frame.fill(&circle, Color::BLACK);
         frame.stroke(
             &circle,
-            Stroke::default()
-                .with_width(5.0)
-                .with_color(Color::BLACK),
+            Stroke::default().with_width(5.0).with_color(Color::BLACK),
         );
         frame.stroke(
             &border,
-            Stroke::default()
-                .with_width(5.0)
-                .with_color(Color::BLACK),
+            Stroke::default().with_width(5.0).with_color(Color::BLACK),
         );
 
         // Then, we produce the geometry
@@ -129,9 +120,7 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                 cosmic::iced::mouse::Event::CursorLeft => {
                     debug!("cursor left");
                 }
-                cosmic::iced::mouse::Event::CursorMoved {
-                    position,
-                } => {
+                cosmic::iced::mouse::Event::CursorMoved { position } => {
                     if bounds.x < position.x
                         && bounds.y < position.y
                         && (bounds.width + bounds.x) > position.x
@@ -144,12 +133,12 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer>
                     // self.mouse_button_pressed = Some(button);
                     debug!(?button, "mouse button pressed");
                 }
-                cosmic::iced::mouse::Event::ButtonReleased(
-                    button,
-                ) => debug!(?button, "mouse button released"),
-                cosmic::iced::mouse::Event::WheelScrolled {
-                    delta,
-                } => debug!(?delta, "scroll wheel"),
+                cosmic::iced::mouse::Event::ButtonReleased(button) => {
+                    debug!(?button, "mouse button released")
+                }
+                cosmic::iced::mouse::Event::WheelScrolled { delta } => {
+                    debug!(?delta, "scroll wheel")
+                }
             },
             canvas::Event::Touch(_event) => debug!("test"),
             canvas::Event::Keyboard(_event) => debug!("test"),

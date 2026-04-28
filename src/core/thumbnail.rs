@@ -6,10 +6,7 @@ use std::process::Command;
 use std::{fs, str};
 use tracing::debug;
 
-pub fn bg_from_video(
-    video: &Path,
-    screenshot: &Path,
-) -> Result<(), Box<dyn Error>> {
+pub fn bg_from_video(video: &Path, screenshot: &Path) -> Result<(), Box<dyn Error>> {
     if screenshot.exists() {
         debug!("Screenshot already exists");
     } else {
@@ -39,10 +36,8 @@ pub fn bg_from_video(
                 }
             }
             let hours: i32 = hours.parse().unwrap_or_default();
-            let mut minutes: i32 =
-                minutes.parse().unwrap_or_default();
-            let mut seconds: i32 =
-                seconds.parse().unwrap_or_default();
+            let mut minutes: i32 = minutes.parse().unwrap_or_default();
+            let mut seconds: i32 = seconds.parse().unwrap_or_default();
             minutes += hours * 60;
             seconds += minutes * 60;
             at_second = seconds / 5;
@@ -70,18 +65,15 @@ pub fn bg_from_video(
 pub fn bg_path_from_video(video: &Path) -> PathBuf {
     let video = PathBuf::from(video);
     debug!(?video);
-    let mut data_dir =
-        dirs::cache_dir().expect("Can't find cache dir");
+    let mut data_dir = dirs::cache_dir().expect("Can't find cache dir");
     data_dir.push("lumina");
     data_dir.push("thumbnails");
     let _ = fs::create_dir_all(&data_dir);
     if !data_dir.exists() {
-        fs::create_dir(&data_dir)
-            .expect("Could not create thumbnails dir");
+        fs::create_dir(&data_dir).expect("Could not create thumbnails dir");
     }
     let mut screenshot = data_dir.clone();
-    screenshot
-        .push(video.file_name().expect("Should have file name"));
+    screenshot.push(video.file_name().expect("Should have file name"));
     screenshot.set_extension("png");
     screenshot
 }
@@ -96,10 +88,9 @@ mod test {
         let screenshot = bg_path_from_video(video);
         match bg_from_video(video, &screenshot) {
             Ok(_o) => assert!(screenshot.exists()),
-            Err(e) => debug_assert!(
-                false,
-                "There was an error in the runtime future. {e}",
-            ),
+            Err(e) => {
+                debug_assert!(false, "There was an error in the runtime future. {e}",)
+            }
         }
     }
 }

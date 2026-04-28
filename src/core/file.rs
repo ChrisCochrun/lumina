@@ -24,8 +24,7 @@ pub fn save(
     }
     let save_file = File::create(path).into_diagnostic()?;
     let ron_pretty = ron::ser::PrettyConfig::default();
-    let ron = ron::ser::to_string_pretty(&list, ron_pretty)
-        .into_diagnostic()?;
+    let ron = ron::ser::to_string_pretty(&list, ron_pretty).into_diagnostic()?;
 
     let encoder = Encoder::new(save_file, 3)
         .expect("file encoder shouldn't fail")
@@ -35,8 +34,7 @@ pub fn save(
         "there should be a data directory, ~/.local/share/ for linux, but couldn't find it",
     );
     temp_dir.push("lumina");
-    let mut s: String =
-        iter::repeat_with(fastrand::alphanumeric).take(5).collect();
+    let mut s: String = iter::repeat_with(fastrand::alphanumeric).take(5).collect();
     s.insert_str(0, "temp_");
     temp_dir.push(s);
     fs::create_dir_all(&temp_dir).into_diagnostic()?;
@@ -60,9 +58,7 @@ pub fn save(
             }
             match tar.append_file("serviceitems.ron", &mut f) {
                 Ok(()) => {
-                    debug!(
-                        "should have added serviceitems.ron to the file"
-                    );
+                    debug!("should have added serviceitems.ron to the file");
                 }
                 Err(e) => {
                     error!(?e);
@@ -92,23 +88,18 @@ pub fn save(
                 audio = song.audio.clone();
             }
             ServiceItemKind::Image(image) => {
-                background = Some(
-                    Background::try_from(image.path.clone())
-                        .into_diagnostic()?,
-                );
+                background =
+                    Some(Background::try_from(image.path.clone()).into_diagnostic()?);
                 audio = None;
             }
             ServiceItemKind::Video(video) => {
-                background = Some(
-                    Background::try_from(video.path.clone())
-                        .into_diagnostic()?,
-                );
+                background =
+                    Some(Background::try_from(video.path.clone()).into_diagnostic()?);
                 audio = None;
             }
             ServiceItemKind::Presentation(presentation) => {
                 background = Some(
-                    Background::try_from(presentation.path.clone())
-                        .into_diagnostic()?,
+                    Background::try_from(presentation.path.clone()).into_diagnostic()?,
                 );
                 audio = None;
             }
@@ -151,12 +142,10 @@ pub fn save(
 #[allow(clippy::too_many_lines)]
 pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
     let decoder =
-        Decoder::new(fs::File::open(&path).into_diagnostic()?)
-            .into_diagnostic()?;
+        Decoder::new(fs::File::open(&path).into_diagnostic()?).into_diagnostic()?;
     let mut tar = Archive::new(decoder);
 
-    let mut cache_dir =
-        dirs::cache_dir().expect("Should be a cache dir");
+    let mut cache_dir = dirs::cache_dir().expect("Should be a cache dir");
     cache_dir.push("lumina");
     cache_dir.push("cached_save_files");
 
@@ -173,8 +162,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         .to_os_string()
         .into_string()
         .expect("Should be fine");
-    let save_name = save_name_string
-        .trim_end_matches(&format!(".{save_name_ext}"));
+    let save_name = save_name_string.trim_end_matches(&format!(".{save_name_ext}"));
     cache_dir.push(save_name);
 
     if let Err(e) = fs::remove_dir_all(&cache_dir) {
@@ -190,9 +178,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
     let mut dir = fs::read_dir(&cache_dir).into_diagnostic()?;
     let ron_file = dir
         .find_map(|file| {
-            if file.as_ref().ok()?.path().extension()?.to_str()?
-                == "ron"
-            {
+            if file.as_ref().ok()?.path().extension()?.to_str()? == "ron" {
                 Some(file.ok()?.path())
             } else {
                 None
@@ -200,12 +186,10 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         })
         .expect("Should have a ron file");
 
-    let ron_string =
-        fs::read_to_string(ron_file).into_diagnostic()?;
+    let ron_string = fs::read_to_string(ron_file).into_diagnostic()?;
 
     let mut items =
-        ron::de::from_str::<Vec<ServiceItem>>(&ron_string)
-            .into_diagnostic()?;
+        ron::de::from_str::<Vec<ServiceItem>>(&ron_string).into_diagnostic()?;
 
     for item in &mut items {
         let dir = fs::read_dir(&cache_dir).into_diagnostic()?;
@@ -213,33 +197,20 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
             for slide in &mut item.slides {
                 if let Ok(file) = file.as_ref() {
                     let file_name = file.file_name();
-                    let audio_path =
-                        slide.audio().clone().unwrap_or_default();
-                    let text_path = slide
-                        .text_svg
-                        .as_ref()
-                        .and_then(|svg| svg.path.clone());
-                    if Some(file_name.as_os_str())
-                        == slide.background.path.file_name()
-                    {
+                    let audio_path = slide.audio().clone().unwrap_or_default();
+                    let text_path =
+                        slide.text_svg.as_ref().and_then(|svg| svg.path.clone());
+                    if Some(file_name.as_os_str()) == slide.background.path.file_name() {
                         slide.background.path = file.path();
-                    } else if Some(file_name.as_os_str())
-                        == audio_path.file_name()
-                    {
-                        let new_slide = slide
-                            .clone()
-                            .set_audio(Some(file.path()));
+                    } else if Some(file_name.as_os_str()) == audio_path.file_name() {
+                        let new_slide = slide.clone().set_audio(Some(file.path()));
                         *slide = new_slide;
                     } else if Some(file_name.as_os_str())
-                        == text_path
-                            .clone()
-                            .unwrap_or_default()
-                            .file_name()
+                        == text_path.clone().unwrap_or_default().file_name()
                         && let Some(svg) = slide.text_svg.as_mut()
                     {
                         svg.path = Some(file.path());
-                        svg.handle =
-                            Some(Handle::from_path(file.path()));
+                        svg.handle = Some(Handle::from_path(file.path()));
                     }
                 }
             }
@@ -248,8 +219,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                 ServiceItemKind::Song(song) => {
                     if let Ok(file) = file.as_ref() {
                         let file_name = file.file_name();
-                        let audio_path =
-                            song.audio.clone().unwrap_or_default();
+                        let audio_path = song.audio.clone().unwrap_or_default();
                         if Some(file_name.as_os_str())
                             == song
                                 .background
@@ -259,14 +229,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                                 .file_name()
                         {
                             let background = song.background.clone();
-                            song.background =
-                                background.map(|mut background| {
-                                    background.path = file.path();
-                                    background
-                                });
-                        } else if Some(file_name.as_os_str())
-                            == audio_path.file_name()
-                        {
+                            song.background = background.map(|mut background| {
+                                background.path = file.path();
+                                background
+                            });
+                        } else if Some(file_name.as_os_str()) == audio_path.file_name() {
                             song.audio = Some(file.path());
                         }
                     }
@@ -274,9 +241,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                 ServiceItemKind::Video(video) => {
                     if let Ok(file) = file.as_ref() {
                         let file_name = file.file_name();
-                        if Some(file_name.as_os_str())
-                            == video.path.file_name()
-                        {
+                        if Some(file_name.as_os_str()) == video.path.file_name() {
                             video.path = file.path();
                         }
                     }
@@ -284,9 +249,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                 ServiceItemKind::Image(image) => {
                     if let Ok(file) = file.as_ref() {
                         let file_name = file.file_name();
-                        if Some(file_name.as_os_str())
-                            == image.path.file_name()
-                        {
+                        if Some(file_name.as_os_str()) == image.path.file_name() {
                             image.path = file.path();
                         }
                     }
@@ -294,9 +257,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                 ServiceItemKind::Presentation(presentation) => {
                     if let Ok(file) = file.as_ref() {
                         let file_name = file.file_name();
-                        if Some(file_name.as_os_str())
-                            == presentation.path.file_name()
-                        {
+                        if Some(file_name.as_os_str()) == presentation.path.file_name() {
                             presentation.path = file.path();
                         }
                     }
@@ -361,10 +322,9 @@ mod test {
             .expect("")
             .into_par_iter()
             .map(|slide| {
-                text_svg_generator(slide, &Arc::clone(&fontdb))
-                    .unwrap_or_else(|e| {
-                        panic!("Couldn't create svg: {e}");
-                    })
+                text_svg_generator(slide, &Arc::clone(&fontdb)).unwrap_or_else(|e| {
+                    panic!("Couldn't create svg: {e}");
+                })
             })
             .collect::<Vec<Slide>>();
         let items = vec![
@@ -404,9 +364,7 @@ mod test {
                 find_svgs(&items)?;
                 Ok(())
             }
-            Err(e) => {
-                Err(format!("Error in the loading process: {e}"))
-            }
+            Err(e) => Err(format!("Error in the loading process: {e}")),
         }
     }
 
@@ -511,8 +469,7 @@ mod test {
                 let Ok(file) = fs::File::open(path) else {
                     panic!("couldn't open file");
                 };
-                let Ok(size) = file.metadata().map(|data| data.len())
-                else {
+                let Ok(size) = file.metadata().map(|data| data.len()) else {
                     panic!("couldn't get file metadata");
                 };
                 assert!(size > 0);

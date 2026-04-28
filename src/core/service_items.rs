@@ -45,9 +45,7 @@ impl Ord for ServiceItem {
 impl TryFrom<(Vec<u8>, String)> for ServiceItem {
     type Error = miette::Error;
 
-    fn try_from(
-        value: (Vec<u8>, String),
-    ) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: (Vec<u8>, String)) -> std::result::Result<Self, Self::Error> {
         let (data, mime) = value;
         debug!(?mime);
         ron::de::from_bytes(&data).into_diagnostic()
@@ -70,10 +68,7 @@ impl AsMimeTypes for ServiceItem {
         Cow::from(vec!["application/service-item".to_string()])
     }
 
-    fn as_bytes(
-        &self,
-        mime_type: &str,
-    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+    fn as_bytes(&self, mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
         debug!(?self);
         debug!(mime_type);
         let ron = ron::ser::to_string(self).ok()?;
@@ -89,18 +84,10 @@ impl TryFrom<PathBuf> for ServiceItem {
         let ext = path
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or_else(|| {
-                miette::miette!(
-                    "There isn't an extension on this file"
-                )
-            })?;
+            .ok_or_else(|| miette::miette!("There isn't an extension on this file"))?;
         match ext {
-            "png" | "jpg" | "jpeg" => {
-                Ok(Self::from(&Image::from(path)))
-            }
-            "mp4" | "mkv" | "webm" => {
-                Ok(Self::from(&Video::from(path)))
-            }
+            "png" | "jpg" | "jpeg" => Ok(Self::from(&Image::from(path))),
+            "mp4" | "mkv" | "webm" => Ok(Self::from(&Video::from(path))),
             _ => Err(miette!("Unkown service item")),
         }
     }
@@ -112,9 +99,7 @@ impl From<&ServiceItem> for Value {
             ServiceItemKind::Song(song) => Self::from(song),
             ServiceItemKind::Video(video) => Self::from(video),
             ServiceItemKind::Image(image) => Self::from(image),
-            ServiceItemKind::Presentation(presentation) => {
-                Self::from(presentation)
-            }
+            ServiceItemKind::Presentation(presentation) => Self::from(presentation),
             ServiceItemKind::Content(slide) => Self::from(slide),
         }
     }
@@ -130,12 +115,8 @@ impl ServiceItem {
             ServiceItemKind::Song(song) => song.to_slides(),
             ServiceItemKind::Video(video) => video.to_slides(),
             ServiceItemKind::Image(image) => image.to_slides(),
-            ServiceItemKind::Presentation(presentation) => {
-                presentation.to_slides()
-            }
-            ServiceItemKind::Content(slide) => {
-                Ok(vec![slide.clone()])
-            }
+            ServiceItemKind::Presentation(presentation) => presentation.to_slides(),
+            ServiceItemKind::Content(slide) => Ok(vec![slide.clone()]),
         }
     }
 }
@@ -177,70 +158,44 @@ impl From<&Value> for ServiceItem {
                             _ => false,
                         })
                         .map_or_else(|| 1, |pos| pos + 1);
-                    if let Some(_content) =
-                        list.iter().position(|v| match v {
-                            Value::List(list)
-                                if list.iter().next()
-                                    == Some(&Value::Symbol(
-                                        Symbol("text".into()),
-                                    )) =>
-                            {
-                                list.iter().next().is_some()
-                            }
-                            _ => false,
-                        })
-                    {
+                    if let Some(_content) = list.iter().position(|v| match v {
+                        Value::List(list)
+                            if list.iter().next()
+                                == Some(&Value::Symbol(Symbol("text".into()))) =>
+                        {
+                            list.iter().next().is_some()
+                        }
+                        _ => false,
+                    }) {
                         let slide = Slide::from(value);
                         let title = slide.text();
                         Self {
                             id: 0,
                             title,
                             database_id: 0,
-                            kind: ServiceItemKind::Content(
-                                slide.clone(),
-                            ),
+                            kind: ServiceItemKind::Content(slide.clone()),
                             slides: vec![slide],
                         }
-                    } else if let Some(background) =
-                        list.get(background_pos)
-                    {
+                    } else if let Some(background) = list.get(background_pos) {
                         if let Value::List(item) = background {
                             match &item[0] {
-                                Value::Symbol(Symbol(s))
-                                    if s == "image" =>
-                                {
-                                    Self::from(&Image::from(
-                                        background,
-                                    ))
+                                Value::Symbol(Symbol(s)) if s == "image" => {
+                                    Self::from(&Image::from(background))
                                 }
-                                Value::Symbol(Symbol(s))
-                                    if s == "video" =>
-                                {
-                                    Self::from(&Video::from(
-                                        background,
-                                    ))
+                                Value::Symbol(Symbol(s)) if s == "video" => {
+                                    Self::from(&Video::from(background))
                                 }
-                                Value::Symbol(Symbol(s))
-                                    if s == "presentation" =>
-                                {
-                                    Self::from(&Presentation::from(
-                                        background,
-                                    ))
+                                Value::Symbol(Symbol(s)) if s == "presentation" => {
+                                    Self::from(&Presentation::from(background))
                                 }
                                 _ => todo!(),
                             }
                         } else {
-                            error!(
-                                "There is no background here: {:?}",
-                                background
-                            );
+                            error!("There is no background here: {:?}", background);
                             Self::default()
                         }
                     } else {
-                        error!(
-                            "There is no background here: {:?}",
-                            background_pos
-                        );
+                        error!("There is no background here: {:?}", background_pos);
                         Self::default()
                     }
                 }
@@ -346,9 +301,7 @@ impl From<&Presentation> for ServiceItem {
     fn from(presentation: &Presentation) -> Self {
         match presentation.to_slides() {
             Ok(slides) => Self {
-                kind: ServiceItemKind::Presentation(
-                    presentation.clone(),
-                ),
+                kind: ServiceItemKind::Presentation(presentation.clone()),
                 database_id: presentation.id,
                 title: presentation.title.clone(),
                 slides,
@@ -357,9 +310,7 @@ impl From<&Presentation> for ServiceItem {
             Err(e) => {
                 error!(?e);
                 Self {
-                    kind: ServiceItemKind::Presentation(
-                        presentation.clone(),
-                    ),
+                    kind: ServiceItemKind::Presentation(presentation.clone()),
                     database_id: presentation.id,
                     title: presentation.title.clone(),
                     ..Default::default()
@@ -410,10 +361,7 @@ impl Clone for Box<dyn ServiceTrait> {
 }
 
 impl std::fmt::Debug for Box<dyn ServiceTrait> {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}: {}", self.id(), self.title())
     }
 }
@@ -453,14 +401,8 @@ mod test {
         let pres_item = ServiceItem::from(&pres);
         let mut service_model = Service::default();
         service_model.add_item(&song);
-        assert_eq!(
-            ServiceItemKind::Song(song),
-            service_model.items[0].kind
-        );
-        assert_eq!(
-            ServiceItemKind::Presentation(pres),
-            pres_item.kind
-        );
+        assert_eq!(ServiceItemKind::Song(song), service_model.items[0].kind);
+        assert_eq!(ServiceItemKind::Presentation(pres), pres_item.kind);
         assert_eq!(service_item, service_model.items[0]);
     }
 }

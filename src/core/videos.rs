@@ -15,9 +15,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::error;
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Video {
     pub id: i32,
     pub title: String,
@@ -95,30 +93,21 @@ impl From<&Value> for Video {
             Value::List(list) => {
                 let path = list
                     .iter()
-                    .position(|v| {
-                        v == &Value::Keyword(Keyword::from("source"))
-                    })
+                    .position(|v| v == &Value::Keyword(Keyword::from("source")))
                     .and_then(|path_pos| {
                         let pos = path_pos + 1;
-                        list.get(pos)
-                            .map(|p| PathBuf::from(String::from(p)))
+                        list.get(pos).map(|p| PathBuf::from(String::from(p)))
                     });
 
                 let title = path.clone().map(|p| {
-                    let path =
-                        p.to_str().unwrap_or_default().to_string();
-                    let title =
-                        path.rsplit_once('/').unwrap_or_default().1;
+                    let path = p.to_str().unwrap_or_default().to_string();
+                    let title = path.rsplit_once('/').unwrap_or_default().1;
                     title.to_string()
                 });
 
                 let start_time = list
                     .iter()
-                    .position(|v| {
-                        v == &Value::Keyword(Keyword::from(
-                            "start-time",
-                        ))
-                    })
+                    .position(|v| v == &Value::Keyword(Keyword::from("start-time")))
                     .and_then(|start_pos| {
                         let pos = start_pos + 1;
                         list.get(pos).map(|p| i32::from(p) as f32)
@@ -126,11 +115,7 @@ impl From<&Value> for Video {
 
                 let end_time = list
                     .iter()
-                    .position(|v| {
-                        v == &Value::Keyword(Keyword::from(
-                            "end-time",
-                        ))
-                    })
+                    .position(|v| v == &Value::Keyword(Keyword::from("end-time")))
                     .and_then(|end_pos| {
                         let pos = end_pos + 1;
                         list.get(pos).map(|p| i32::from(p) as f32)
@@ -138,14 +123,10 @@ impl From<&Value> for Video {
 
                 let looping = list
                     .iter()
-                    .position(|v| {
-                        v == &Value::Keyword(Keyword::from("loop"))
-                    })
+                    .position(|v| v == &Value::Keyword(Keyword::from("loop")))
                     .is_some_and(|loop_pos| {
                         let pos = loop_pos + 1;
-                        list.get(pos).is_some_and(|l| {
-                            String::from(l) == *"true"
-                        })
+                        list.get(pos).is_some_and(|l| String::from(l) == *"true")
                     });
 
                 Self {
@@ -173,10 +154,7 @@ impl ServiceTrait for Video {
 
     fn to_slides(&self) -> Result<Vec<Slide>> {
         let slide = SlideBuilder::new()
-            .background(
-                Background::try_from(self.path.clone())
-                    .into_diagnostic()?,
-            )
+            .background(Background::try_from(self.path.clone()).into_diagnostic()?)
             .text("")
             .audio("")
             .font("")
@@ -214,9 +192,7 @@ impl Model<Video> {
                 }
             }
             Err(e) => {
-                error!(
-                    "There was an error in converting videos: {e}"
-                );
+                error!("There was an error in converting videos: {e}");
             }
         }
     }
@@ -329,10 +305,7 @@ pub async fn update_video(
     Ok(videos)
 }
 
-pub async fn get_from_db(
-    database_id: i32,
-    db: &mut SqliteConnection,
-) -> Result<Video> {
+pub async fn get_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Video> {
     query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
@@ -378,14 +351,8 @@ mod test {
         let new_video = test_video("A newer video".into());
         match result {
             Ok(()) => {
-                assert_eq!(
-                    &video,
-                    video_model.find(|v| v.id == 0).expect("")
-                );
-                assert_ne!(
-                    &new_video,
-                    video_model.find(|v| v.id == 0).expect("")
-                );
+                assert_eq!(&video, video_model.find(|v| v.id == 0).expect(""));
+                assert_ne!(&new_video, video_model.find(|v| v.id == 0).expect(""));
             }
             Err(e) => {
                 panic!("There was an error adding the video: {e}",)

@@ -63,9 +63,7 @@ impl Hash for TextSvg {
     }
 }
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Font {
     name: String,
     weight: Weight,
@@ -73,9 +71,7 @@ pub struct Font {
     size: u8,
 }
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Shadow {
     pub offset_x: i16,
     pub offset_y: i16,
@@ -83,9 +79,7 @@ pub struct Shadow {
     pub color: Color,
 }
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Stroke {
     size: u16,
     color: Color,
@@ -102,9 +96,7 @@ impl From<cosmic::font::Font> for Font {
     fn from(value: cosmic::font::Font) -> Self {
         Self {
             name: match value.family {
-                cosmic::iced::font::Family::Name(name) => {
-                    name.to_string()
-                }
+                cosmic::iced::font::Family::Name(name) => name.to_string(),
                 _ => "Quicksand Bold".into(),
             },
             size: 20,
@@ -230,10 +222,7 @@ impl Default for Color {
 }
 
 impl Display for Color {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_css_hex_string())
     }
 }
@@ -286,10 +275,7 @@ impl TextSvg {
     }
 
     #[must_use]
-    pub const fn alignment(
-        mut self,
-        alignment: TextAlignment,
-    ) -> Self {
+    pub const fn alignment(mut self, alignment: TextAlignment) -> Self {
         self.alignment = alignment;
         self
     }
@@ -297,11 +283,7 @@ impl TextSvg {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::too_many_lines)]
-    pub fn build(
-        mut self,
-        size: Size,
-        mut cache: Option<PathBuf>,
-    ) -> Self {
+    pub fn build(mut self, size: Size, mut cache: Option<PathBuf>) -> Self {
         // debug!("starting...");
 
         let mut final_svg = String::with_capacity(1024);
@@ -316,55 +298,47 @@ impl TextSvg {
         let center_y = (size.width / 2.0).to_string();
         let x_width_padded = (size.width - 10.0).to_string();
 
-        let (text_anchor, starting_y_position, text_x_position) =
-            match self.alignment {
-                TextAlignment::TopLeft => ("start", font_size, "10"),
-                TextAlignment::TopCenter => {
-                    ("middle", font_size, center_y.as_str())
-                }
-                TextAlignment::TopRight => {
-                    ("end", font_size, x_width_padded.as_str())
-                }
-                TextAlignment::MiddleLeft => {
-                    let middle_position = size.height / 2.0;
-                    let position = half_lines.mul_add(
-                        -text_and_line_spacing,
-                        middle_position,
-                    ) + text_and_line_spacing / 2.0;
-                    ("start", position, "10")
-                }
-                TextAlignment::MiddleCenter => {
-                    let middle_position = size.height / 2.0;
-                    let position = half_lines.mul_add(
-                        -text_and_line_spacing,
-                        middle_position,
-                    ) + text_and_line_spacing / 2.0;
-                    ("middle", position, center_y.as_str())
-                }
-                TextAlignment::MiddleRight => {
-                    let middle_position = size.height / 2.0;
-                    let position = half_lines.mul_add(
-                        -text_and_line_spacing,
-                        middle_position,
-                    ) + text_and_line_spacing / 2.0;
-                    ("end", position, x_width_padded.as_str())
-                }
-                TextAlignment::BottomLeft => {
-                    let position = (total_lines as f32)
-                        .mul_add(-text_and_line_spacing, size.height);
-                    ("start", position, "10")
-                }
-                TextAlignment::BottomCenter => {
-                    let position = (total_lines as f32)
-                        .mul_add(-text_and_line_spacing, size.height);
-                    ("middle", position, center_y.as_str())
-                }
-                TextAlignment::BottomRight => {
-                    let position = (total_lines as f32)
-                        .mul_add(-text_and_line_spacing, size.height);
-                    ("end", position, x_width_padded.as_str())
-                }
-            };
+        let (text_anchor, starting_y_position, text_x_position) = match self.alignment {
+            TextAlignment::TopLeft => ("start", font_size, "10"),
+            TextAlignment::TopCenter => ("middle", font_size, center_y.as_str()),
+            TextAlignment::TopRight => ("end", font_size, x_width_padded.as_str()),
+            TextAlignment::MiddleLeft => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position)
+                    + text_and_line_spacing / 2.0;
+                ("start", position, "10")
+            }
+            TextAlignment::MiddleCenter => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position)
+                    + text_and_line_spacing / 2.0;
+                ("middle", position, center_y.as_str())
+            }
+            TextAlignment::MiddleRight => {
+                let middle_position = size.height / 2.0;
+                let position = half_lines
+                    .mul_add(-text_and_line_spacing, middle_position)
+                    + text_and_line_spacing / 2.0;
+                ("end", position, x_width_padded.as_str())
+            }
+            TextAlignment::BottomLeft => {
+                let position =
+                    (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                ("start", position, "10")
+            }
+            TextAlignment::BottomCenter => {
+                let position =
+                    (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                ("middle", position, center_y.as_str())
+            }
+            TextAlignment::BottomRight => {
+                let position =
+                    (total_lines as f32).mul_add(-text_and_line_spacing, size.height);
+                ("end", position, x_width_padded.as_str())
+            }
+        };
 
         let font_style = match self.font.style {
             Style::Normal => "normal",
@@ -373,9 +347,7 @@ impl TextSvg {
         };
 
         let font_weight = match self.font.weight {
-            Weight::Thin | Weight::ExtraLight | Weight::Light => {
-                "lighter"
-            }
+            Weight::Thin | Weight::ExtraLight | Weight::Light => "lighter",
             Weight::Normal | Weight::Medium => "normal",
             Weight::Semibold | Weight::Bold => "bold",
             Weight::ExtraBold | Weight::Black => "bolder",
@@ -391,10 +363,7 @@ impl TextSvg {
             let _ = write!(
                 final_svg,
                 "<filter id=\"shadow\"><feDropShadow dx=\"{}\" dy=\"{}\" stdDeviation=\"{}\" flood-color=\"{}\"/></filter>",
-                shadow.offset_x,
-                shadow.offset_y,
-                shadow.spread,
-                shadow.color
+                shadow.offset_x, shadow.offset_y, shadow.spread, shadow.color
             );
         }
         final_svg.push_str("</defs>");
@@ -433,10 +402,7 @@ impl TextSvg {
             let _ = write!(
                 final_svg,
                 "<tspan x=\"0\" y=\"{}\">{}</tspan>",
-                (index as f32).mul_add(
-                    text_and_line_spacing,
-                    starting_y_position
-                ),
+                (index as f32).mul_add(text_and_line_spacing, starting_y_position),
                 text
             );
         }
@@ -483,11 +449,9 @@ impl TextSvg {
         let transform = tiny_skia::Transform::default();
 
         #[allow(clippy::cast_sign_loss)]
-        let (size_width, size_height) =
-            (size.width as u32, size.height as u32);
+        let (size_width, size_height) = (size.width as u32, size.height as u32);
 
-        let Some(mut pixmap) = Pixmap::new(size_width, size_height)
-        else {
+        let Some(mut pixmap) = Pixmap::new(size_width, size_height) else {
             error!("Couldn't create a new pixmap from size");
             return self;
         };
@@ -503,8 +467,7 @@ impl TextSvg {
 
         // debug!("saved");
         // let handle = Handle::from_path(path);
-        let handle =
-            Handle::from_rgba(size_width, size_height, pixmap.take());
+        let handle = Handle::from_rgba(size_width, size_height, pixmap.take());
         self.handle = Some(handle);
         // debug!("stored");
         self
@@ -512,13 +475,7 @@ impl TextSvg {
 
     pub fn view<'a>(&self) -> Element<'a, Message> {
         self.handle.clone().map_or_else(
-            || {
-                Element::from(
-                    Space::new()
-                        .height(Length::Fill)
-                        .width(Length::Fill),
-                )
-            },
+            || Element::from(Space::new().height(Length::Fill).width(Length::Fill)),
             |handle| {
                 Image::new(handle)
                     .content_fit(ContentFit::Cover)
@@ -581,9 +538,7 @@ pub fn text_svg_generator_with_cache(
         let font = slide.font().unwrap_or_default();
         let text_svg = TextSvg::new(slide.text())
             .alignment(slide.text_alignment())
-            .fill(
-                slide.text_color().unwrap_or_else(|| "#fff".into()),
-            );
+            .fill(slide.text_color().unwrap_or_else(|| "#fff".into()));
         let text_svg = if let Some(stroke) = slide.stroke() {
             text_svg.stroke(stroke)
         } else {
@@ -596,8 +551,7 @@ pub fn text_svg_generator_with_cache(
         };
         let text_svg = text_svg.font(font).fontdb(Arc::clone(fontdb));
         // debug!(fill = ?text_svg.fill, font = ?text_svg.font, stroke = ?text_svg.stroke, shadow = ?text_svg.shadow, text = ?text_svg.text);
-        let text_svg =
-            text_svg.build(Size::new(1280.0, 720.0), cache);
+        let text_svg = text_svg.build(Size::new(1280.0, 720.0), cache);
         slide.text_svg = Some(text_svg);
         Ok(slide)
     }

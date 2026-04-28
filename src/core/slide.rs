@@ -12,13 +12,12 @@ use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use tracing::error;
 
+use crate::ui::gst_video;
 use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};
 
 use super::songs::Song;
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Slide {
     id: i32,
     pub(crate) background: Background,
@@ -39,9 +38,7 @@ pub struct Slide {
     pdf_page: Option<Handle>,
 }
 
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundKind {
     #[default]
     Image,
@@ -50,17 +47,7 @@ pub enum BackgroundKind {
     Html,
 }
 
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    Serialize,
-    Deserialize,
-    Hash,
-)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum TextAlignment {
     TopLeft,
     TopCenter,
@@ -90,9 +77,7 @@ impl From<&Value> for TextAlignment {
     }
 }
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Background {
     pub path: PathBuf,
     pub kind: BackgroundKind,
@@ -103,9 +88,7 @@ pub struct Background {
 impl TryFrom<&Background> for Video {
     type Error = ParseError;
 
-    fn try_from(
-        value: &Background,
-    ) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &Background) -> std::result::Result<Self, Self::Error> {
         Self::new(
             &url::Url::from_file_path(value.path.clone())
                 .map_err(|()| ParseError::BackgroundNotVideo)?,
@@ -117,14 +100,16 @@ impl TryFrom<&Background> for Video {
 impl TryFrom<Background> for Video {
     type Error = ParseError;
 
-    fn try_from(
-        value: Background,
-    ) -> std::result::Result<Self, Self::Error> {
-        Self::new(
-            &url::Url::from_file_path(value.path)
-                .map_err(|()| ParseError::BackgroundNotVideo)?,
-        )
-        .map_err(|_| ParseError::BackgroundNotVideo)
+    fn try_from(value: Background) -> std::result::Result<Self, Self::Error> {
+        let url = &url::Url::from_file_path(value.path)
+            .map_err(|()| ParseError::BackgroundNotVideo)?;
+
+        let settings = gst_video::VideoSettings {
+            mute: true,
+            framerate: 30,
+        };
+        gst_video::create_video(url, &settings)
+            .map_err(|_| ParseError::BackgroundNotVideo)
     }
 }
 
@@ -139,10 +124,7 @@ impl TryFrom<PathBuf> for Background {
     type Error = ParseError;
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let path = if path.starts_with("~") {
-            let path = path
-                .to_str()
-                .expect("Should have a string")
-                .to_string();
+            let path = path.to_str().expect("Should have a string").to_string();
             let path = path.trim_start_matches("file://");
             let home = dirs::home_dir()
                 .expect("We should have a home directory")
@@ -237,21 +219,12 @@ pub enum ParseError {
 impl std::error::Error for ParseError {}
 
 impl Display for ParseError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
-            Self::NonBackgroundFile => {
-                "The file is not a recognized image or video type"
-            }
+            Self::NonBackgroundFile => "The file is not a recognized image or video type",
             Self::DoesNotExist => "This file doesn't exist",
-            Self::CannotCanonicalize => {
-                "Could not canonicalize this file"
-            }
-            Self::BackgroundNotVideo => {
-                "This background isn't a video"
-            }
+            Self::CannotCanonicalize => "Could not canonicalize this file",
+            Self::BackgroundNotVideo => "This background isn't a video",
         };
         write!(f, "Error: {message}")
     }
@@ -398,9 +371,7 @@ impl Slide {
                     .background(song.background.unwrap_or_default())
                     .font(song.font.unwrap_or_default())
                     .font_size(song.font_size.unwrap_or_default())
-                    .text_alignment(
-                        song.text_alignment.unwrap_or_default(),
-                    )
+                    .text_alignment(song.text_alignment.unwrap_or_default())
                     .audio(song.audio.unwrap_or_default())
                     .video_loop(true)
                     .video_start_time(0.0)
@@ -444,10 +415,10 @@ fn lisp_to_slide(lisp: &[Value]) -> Slide {
     const DEFAULT_TEXT_LOCATION: usize = 0;
 
     let mut slide = SlideBuilder::new();
-    let background_position = if let Some(background) =
-        lisp.iter().position(|v| {
-            v == &Value::Keyword(Keyword::from("background"))
-        }) {
+    let background_position = if let Some(background) = lisp
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("background")))
+    {
         background + 1
     } else {
         DEFAULT_BACKGROUND_LOCATION
@@ -461,8 +432,7 @@ fn lisp_to_slide(lisp: &[Value]) -> Slide {
 
     let text_position = lisp.iter().position(|v| match v {
         Value::List(vec) => {
-            vec[DEFAULT_TEXT_LOCATION]
-                == Value::Symbol(Symbol::from("text"))
+            vec[DEFAULT_TEXT_LOCATION] == Value::Symbol(Symbol::from("text"))
         }
         _ => false,
     });
@@ -507,14 +477,11 @@ fn lisp_to_slide(lisp: &[Value]) -> Slide {
 fn lisp_to_font_size(lisp: &Value) -> i32 {
     match lisp {
         Value::List(list) => {
-            if let Some(font_size_position) =
-                list.iter().position(|v| {
-                    v == &Value::Keyword(Keyword::from("font-size"))
-                })
+            if let Some(font_size_position) = list
+                .iter()
+                .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
             {
-                if let Some(font_size_value) =
-                    list.get(font_size_position + 1)
-                {
+                if let Some(font_size_value) = list.get(font_size_position + 1) {
                     font_size_value.into()
                 } else {
                     50
@@ -541,9 +508,10 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
     match lisp {
         Value::List(list) => {
             let _kind = list[0].clone();
-            if let Some(source) = list.iter().position(|v| {
-                v == &Value::Keyword(Keyword::from("source"))
-            }) {
+            if let Some(source) = list
+                .iter()
+                .position(|v| v == &Value::Keyword(Keyword::from("source")))
+            {
                 let source = &list[source + 1];
                 match source {
                     Value::String(s) => {
@@ -561,9 +529,7 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
                             match Background::try_from(s.as_str()) {
                                 Ok(background) => background,
                                 Err(e) => {
-                                    error!(
-                                        "Couldn't load background: {e}"
-                                    );
+                                    error!("Couldn't load background: {e}");
                                     Background::default()
                                 }
                             }
@@ -571,9 +537,7 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
                             match Background::try_from(s.as_str()) {
                                 Ok(background) => background,
                                 Err(e) => {
-                                    error!(
-                                        "Couldn't load background: {e}"
-                                    );
+                                    error!("Couldn't load background: {e}");
                                     Background::default()
                                 }
                             }
@@ -589,9 +553,7 @@ pub fn lisp_to_background(lisp: &Value) -> Background {
     }
 }
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SlideBuilder {
     background: Option<Background>,
     text: Option<String>,
@@ -626,10 +588,7 @@ impl SlideBuilder {
         Ok(self)
     }
 
-    pub(crate) fn background(
-        mut self,
-        background: Background,
-    ) -> Self {
+    pub(crate) fn background(mut self, background: Background) -> Self {
         let _ = self.background.insert(background);
         self
     }
@@ -639,10 +598,7 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn text_color(
-        mut self,
-        text_color: impl Into<Color>,
-    ) -> Self {
+    pub(crate) fn text_color(mut self, text_color: impl Into<Color>) -> Self {
         let _ = self.text_color.insert(text_color.into());
         self
     }
@@ -667,26 +623,17 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn stroke(
-        mut self,
-        stroke: impl Into<Stroke>,
-    ) -> Self {
+    pub(crate) fn stroke(mut self, stroke: impl Into<Stroke>) -> Self {
         let _ = self.stroke.insert(stroke.into());
         self
     }
 
-    pub(crate) fn shadow(
-        mut self,
-        shadow: impl Into<Shadow>,
-    ) -> Self {
+    pub(crate) fn shadow(mut self, shadow: impl Into<Shadow>) -> Self {
         let _ = self.shadow.insert(shadow.into());
         self
     }
 
-    pub(crate) fn text_alignment(
-        mut self,
-        text_alignment: TextAlignment,
-    ) -> Self {
+    pub(crate) fn text_alignment(mut self, text_alignment: TextAlignment) -> Self {
         let _ = self.text_alignment.insert(text_alignment);
         self
     }
@@ -696,26 +643,17 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn video_start_time(
-        mut self,
-        video_start_time: f32,
-    ) -> Self {
+    pub(crate) fn video_start_time(mut self, video_start_time: f32) -> Self {
         let _ = self.video_start_time.insert(video_start_time);
         self
     }
 
-    pub(crate) fn video_end_time(
-        mut self,
-        video_end_time: f32,
-    ) -> Self {
+    pub(crate) fn video_end_time(mut self, video_end_time: f32) -> Self {
         let _ = self.video_end_time.insert(video_end_time);
         self
     }
 
-    pub(crate) fn text_svg(
-        mut self,
-        text_svg: impl Into<TextSvg>,
-    ) -> Self {
+    pub(crate) fn text_svg(mut self, text_svg: impl Into<TextSvg>) -> Self {
         let _ = self.text_svg.insert(text_svg.into());
         self
     }
@@ -725,10 +663,7 @@ impl SlideBuilder {
         self
     }
 
-    pub(crate) fn pdf_index(
-        mut self,
-        pdf_index: impl Into<u32>,
-    ) -> Self {
+    pub(crate) fn pdf_index(mut self, pdf_index: impl Into<u32>) -> Self {
         let _ = self.pdf_index.insert(pdf_index.into());
         self
     }
@@ -786,8 +721,7 @@ mod test {
     fn test_slide() -> Slide {
         Slide {
             text: "This is frodo".to_string(),
-            background: Background::try_from("~/pics/frodo.jpg")
-                .expect(""),
+            background: Background::try_from("~/pics/frodo.jpg").expect(""),
             font: Some("Quicksand".to_string().into()),
             font_size: 140,
             ..Default::default()
@@ -797,10 +731,7 @@ mod test {
     fn test_second_slide() -> Slide {
         Slide {
             text: String::new(),
-            background: Background::try_from(
-                "~/vids/test/camprules2024.mp4",
-            )
-            .expect(""),
+            background: Background::try_from("~/vids/test/camprules2024.mp4").expect(""),
             font: Some("Quicksand".to_string().into()),
             ..Default::default()
         }
@@ -808,8 +739,8 @@ mod test {
 
     #[test]
     fn test_ron_deserialize() {
-        let slide = read_to_string("./test_presentation.ron")
-            .expect("Problem getting file read");
+        let slide =
+            read_to_string("./test_presentation.ron").expect("Problem getting file read");
         if let Err(e) = ron::from_str::<Vec<Slide>>(&slide) {
             panic!("{e:?}")
         }

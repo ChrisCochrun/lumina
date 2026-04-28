@@ -24,9 +24,7 @@ use crate::core::slide::{self, Background, TextAlignment};
 use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
 use crate::{Slide, SlideBuilder};
 
-#[derive(
-    Clone, Debug, Default, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Song {
     pub id: i32,
     pub title: String,
@@ -54,16 +52,7 @@ pub struct Song {
 }
 
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Serialize,
-    Deserialize,
-    Hash,
-    PartialOrd,
-    Ord,
+    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord,
 )]
 pub enum VerseName {
     Verse { number: usize },
@@ -115,33 +104,15 @@ impl VerseName {
     #[must_use]
     pub fn next(&self) -> Self {
         match self {
-            Self::Verse { number } => {
-                Self::Verse { number: number + 1 }
-            }
-            Self::PreChorus { number } => {
-                Self::PreChorus { number: number + 1 }
-            }
-            Self::Chorus { number } => {
-                Self::Chorus { number: number + 1 }
-            }
-            Self::PostChorus { number } => {
-                Self::PostChorus { number: number + 1 }
-            }
-            Self::Bridge { number } => {
-                Self::Bridge { number: number + 1 }
-            }
-            Self::Intro { number } => {
-                Self::Intro { number: number + 1 }
-            }
-            Self::Outro { number } => {
-                Self::Outro { number: number + 1 }
-            }
-            Self::Instrumental { number } => {
-                Self::Instrumental { number: number + 1 }
-            }
-            Self::Other { number } => {
-                Self::Other { number: number + 1 }
-            }
+            Self::Verse { number } => Self::Verse { number: number + 1 },
+            Self::PreChorus { number } => Self::PreChorus { number: number + 1 },
+            Self::Chorus { number } => Self::Chorus { number: number + 1 },
+            Self::PostChorus { number } => Self::PostChorus { number: number + 1 },
+            Self::Bridge { number } => Self::Bridge { number: number + 1 },
+            Self::Intro { number } => Self::Intro { number: number + 1 },
+            Self::Outro { number } => Self::Outro { number: number + 1 },
+            Self::Instrumental { number } => Self::Instrumental { number: number + 1 },
+            Self::Other { number } => Self::Other { number: number + 1 },
             Self::Blank => Self::Blank,
         }
     }
@@ -202,9 +173,7 @@ impl VerseName {
 impl TryFrom<(Vec<u8>, String)> for VerseName {
     type Error = miette::Error;
 
-    fn try_from(
-        value: (Vec<u8>, String),
-    ) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: (Vec<u8>, String)) -> std::result::Result<Self, Self::Error> {
         let (data, mime) = value;
         debug!(?mime);
         ron::de::from_bytes(&data).into_diagnostic()
@@ -216,10 +185,7 @@ impl AsMimeTypes for VerseName {
         Cow::from(vec!["application/verse".to_string()])
     }
 
-    fn as_bytes(
-        &self,
-        _mime_type: &str,
-    ) -> Option<std::borrow::Cow<'static, [u8]>> {
+    fn as_bytes(&self, _mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
         let ron = ron::ser::to_string(self).ok()?;
         Some(Cow::from(ron.into_bytes()))
     }
@@ -275,9 +241,7 @@ impl ServiceTrait for Song {
         let lyrics: Vec<String> = self
             .verses
             .as_ref()
-            .ok_or_else(|| {
-                miette!("There are no verses assigned yet.")
-            })?
+            .ok_or_else(|| miette!("There are no verses assigned yet."))?
             .iter()
             .filter_map(|verse| self.get_lyric(verse))
             .flat_map(|lyric| {
@@ -293,34 +257,21 @@ impl ServiceTrait for Song {
             .iter()
             .filter_map(|l| {
                 let font = Font::default()
-                    .name(
-                        self.font
-                            .clone()
-                            .unwrap_or_else(|| "Calibri".into()),
-                    )
+                    .name(self.font.clone().unwrap_or_else(|| "Calibri".into()))
                     .style(self.font_style.unwrap_or_default())
                     .weight(self.font_weight.unwrap_or_default())
-                    .size(
-                        u8::try_from(self.font_size.unwrap_or(100))
-                            .unwrap_or(100),
-                    );
-                let stroke_size =
-                    self.stroke_size.unwrap_or_default();
+                    .size(u8::try_from(self.font_size.unwrap_or(100)).unwrap_or(100));
+                let stroke_size = self.stroke_size.unwrap_or_default();
                 let stroke: Stroke = stroke(
                     stroke_size,
-                    self.stroke_color
-                        .map(Color::from)
-                        .unwrap_or_default(),
+                    self.stroke_color.map(Color::from).unwrap_or_default(),
                 );
-                let shadow_size =
-                    self.shadow_size.unwrap_or_default();
+                let shadow_size = self.shadow_size.unwrap_or_default();
                 let shadow = shadow(
                     self.shadow_offset.unwrap_or_default().0,
                     self.shadow_offset.unwrap_or_default().1,
                     shadow_size,
-                    self.shadow_color
-                        .map(Color::from)
-                        .unwrap_or_default(),
+                    self.shadow_color.map(Color::from).unwrap_or_default(),
                 );
                 let builder = SlideBuilder::new();
                 let builder = if shadow_size > 0 {
@@ -334,18 +285,12 @@ impl ServiceTrait for Song {
                     builder
                 };
                 builder
-                    .background(
-                        self.background.clone().unwrap_or_default(),
-                    )
+                    .background(self.background.clone().unwrap_or_default())
                     .font(font)
                     .font_size(self.font_size.unwrap_or_default())
-                    .text_alignment(
-                        self.text_alignment.unwrap_or_default(),
-                    )
+                    .text_alignment(self.text_alignment.unwrap_or_default())
                     .text_color(
-                        self.text_color.unwrap_or_else(|| {
-                            Srgb::new(1.0, 1.0, 1.0)
-                        }),
+                        self.text_color.unwrap_or_else(|| Srgb::new(1.0, 1.0, 1.0)),
                     )
                     .audio(self.audio.clone().unwrap_or_default())
                     .video_loop(true)
@@ -370,27 +315,19 @@ impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let lyrics: &str = row.try_get("lyrics")?;
 
-        let Ok(verse_map) = ron::de::from_str::<
-            Option<HashMap<VerseName, String>>,
-        >(lyrics) else {
+        let Ok(verse_map) =
+            ron::de::from_str::<Option<HashMap<VerseName, String>>>(lyrics)
+        else {
             return Err(sqlx::Error::ColumnDecode {
                 index: "8".into(),
-                source: miette!(
-                    "Couldn't decode the song into verses"
-                )
-                .into(),
+                source: miette!("Couldn't decode the song into verses").into(),
             });
         };
         let verse_order: &str = row.try_get("verse_order")?;
-        let Ok(verses) =
-            ron::de::from_str::<Option<Vec<VerseName>>>(verse_order)
-        else {
+        let Ok(verses) = ron::de::from_str::<Option<Vec<VerseName>>>(verse_order) else {
             return Err(sqlx::Error::ColumnDecode {
                 index: "0".into(),
-                source: miette!(
-                    "Couldn't decode the song into verses"
-                )
-                .into(),
+                source: miette!("Couldn't decode the song into verses").into(),
             });
         };
 
@@ -411,17 +348,13 @@ impl FromRow<'_, SqliteRow> for Song {
         let stroke_color = row
             .try_get("stroke_color")
             .ok()
-            .and_then(|color: String| {
-                ron::de::from_str::<Option<Srgb>>(&color).ok()
-            })
+            .and_then(|color: String| ron::de::from_str::<Option<Srgb>>(&color).ok())
             .flatten();
         let shadow_size = row.try_get("shadow_size").ok();
         let shadow_color = row
             .try_get("shadow_color")
             .ok()
-            .and_then(|color: String| {
-                ron::de::from_str::<Option<Srgb>>(&color).ok()
-            })
+            .and_then(|color: String| ron::de::from_str::<Option<Srgb>>(&color).ok())
             .flatten();
         let shadow_offset = match (
             row.try_get("shadow_offset_x").ok(),
@@ -432,16 +365,14 @@ impl FromRow<'_, SqliteRow> for Song {
         };
 
         let style_string: String = row.try_get("style")?;
-        let font_style =
-            ron::de::from_str::<Option<Style>>(&style_string)
-                .ok()
-                .flatten();
+        let font_style = ron::de::from_str::<Option<Style>>(&style_string)
+            .ok()
+            .flatten();
 
         let weight_string: String = row.try_get("weight")?;
-        let font_weight =
-            ron::de::from_str::<Option<Weight>>(&weight_string)
-                .ok()
-                .flatten();
+        let font_weight = ron::de::from_str::<Option<Weight>>(&weight_string)
+            .ok()
+            .flatten();
 
         let lyric_video = row
             .try_get::<String, &str>("lyric_video")
@@ -480,12 +411,8 @@ impl FromRow<'_, SqliteRow> for Song {
                     ("left", "center") => TextAlignment::MiddleLeft,
                     ("left", "bottom") => TextAlignment::BottomLeft,
                     ("center", "top") => TextAlignment::TopCenter,
-                    ("center", "center") => {
-                        TextAlignment::MiddleCenter
-                    }
-                    ("center", "bottom") => {
-                        TextAlignment::BottomCenter
-                    }
+                    ("center", "center") => TextAlignment::MiddleCenter,
+                    ("center", "bottom") => TextAlignment::BottomCenter,
                     ("right", "top") => TextAlignment::TopRight,
                     ("right", "center") => TextAlignment::MiddleRight,
                     ("right", "bottom") => TextAlignment::BottomRight,
@@ -536,10 +463,10 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         DEFAULT_SONG_ID
     };
 
-    let background = if let Some(key_pos) =
-        list.iter().position(|v| {
-            v == &Value::Keyword(Keyword::from("background"))
-        }) {
+    let background = if let Some(key_pos) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("background")))
+    {
         let pos = key_pos + 1;
         list.get(pos).map(slide::lisp_to_background)
     } else {
@@ -586,9 +513,10 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         None
     };
 
-    let font_size = if let Some(key_pos) = list.iter().position(|v| {
-        v == &Value::Keyword(Keyword::from("font-size"))
-    }) {
+    let font_size = if let Some(key_pos) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
+    {
         let pos = key_pos + 1;
         list.get(pos).map(i32::from)
     } else {
@@ -606,20 +534,20 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         String::from("song")
     };
 
-    let text_alignment = if let Some(key_pos) =
-        list.iter().position(|v| {
-            v == &Value::Keyword(Keyword::from("text-alignment"))
-        }) {
+    let text_alignment = if let Some(key_pos) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("text-alignment")))
+    {
         let pos = key_pos + 1;
         list.get(pos).map(TextAlignment::from)
     } else {
         None
     };
 
-    let verse_order = if let Some(key_pos) =
-        list.iter().position(|v| {
-            v == &Value::Keyword(Keyword::from("verse-order"))
-        }) {
+    let verse_order = if let Some(key_pos) = list
+        .iter()
+        .position(|v| v == &Value::Keyword(Keyword::from("verse-order")))
+    {
         let pos = key_pos + 1;
         list.get(pos).map(|v| match v {
             Value::List(vals) => vals
@@ -693,8 +621,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
         lyrics.push(lyric);
     }
 
-    let lyrics: String =
-        lyrics.iter().flat_map(|s| s.chars()).collect();
+    let lyrics: String = lyrics.iter().flat_map(|s| s.chars()).collect();
     let lyrics = lyrics.trim_start().to_string();
 
     Song {
@@ -713,10 +640,7 @@ pub fn lisp_to_song(list: Vec<Value>) -> Song {
     }
 }
 
-pub async fn get_song_from_db(
-    id: i32,
-    db: Arc<SqlitePool>,
-) -> Result<Song> {
+pub async fn get_song_from_db(id: i32, db: Arc<SqlitePool>) -> Result<Song> {
     let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, style, weight, id from songs where id = $1").bind(id).fetch_one(&*db).await.into_diagnostic()?;
     Song::from_row(&row).into_diagnostic()
 }
@@ -786,9 +710,7 @@ pub async fn remove_song(
     mut songs: Vec<Song>,
     id: i32,
 ) -> Result<Vec<Song>> {
-    if let Some(index) =
-        songs.iter().position(|current_song| current_song.id == id)
-    {
+    if let Some(index) = songs.iter().position(|current_song| current_song.id == id) {
         songs.remove(index);
         query!("DELETE FROM songs WHERE id = $1", id)
             .execute(&*db)
@@ -853,17 +775,13 @@ pub async fn insert_song(
     .execute(&*db)
     .await
     .into_diagnostic()?;
-    song.id = i32::try_from(res.last_insert_rowid()).expect(
-        "Fairly confident that this number won't get that high",
-    );
+    song.id = i32::try_from(res.last_insert_rowid())
+        .expect("Fairly confident that this number won't get that high");
     songs.push(song);
     Ok(songs)
 }
 
-pub async fn add_song(
-    songs: Vec<Song>,
-    db: Arc<SqlitePool>,
-) -> Result<Vec<Song>> {
+pub async fn add_song(songs: Vec<Song>, db: Arc<SqlitePool>) -> Result<Vec<Song>> {
     let song = Song::default();
     insert_song(song, songs, db).await
 }
@@ -876,8 +794,7 @@ pub async fn update_song(
     // self.update_item(item.clone(), index)?;
 
     // debug!(?item);
-    let verse_order =
-        ron::ser::to_string(&song.verses).into_diagnostic()?;
+    let verse_order = ron::ser::to_string(&song.verses).into_diagnostic()?;
 
     let audio = song
         .audio
@@ -909,36 +826,30 @@ pub async fn update_song(
     });
     let lyrics = ron::ser::to_string(&lyrics).into_diagnostic()?;
 
-    let (vertical_alignment, horizontal_alignment) =
-        song.text_alignment.map_or_else(
-            || ("center", "center"),
-            |ta| match ta {
-                TextAlignment::TopLeft => ("top", "left"),
-                TextAlignment::TopCenter => ("top", "center"),
-                TextAlignment::TopRight => ("top", "right"),
-                TextAlignment::MiddleLeft => ("center", "left"),
-                TextAlignment::MiddleCenter => ("center", "center"),
-                TextAlignment::MiddleRight => ("center", "right"),
-                TextAlignment::BottomLeft => ("bottom", "left"),
-                TextAlignment::BottomCenter => ("bottom", "center"),
-                TextAlignment::BottomRight => ("bottom", "right"),
-            },
-        );
+    let (vertical_alignment, horizontal_alignment) = song.text_alignment.map_or_else(
+        || ("center", "center"),
+        |ta| match ta {
+            TextAlignment::TopLeft => ("top", "left"),
+            TextAlignment::TopCenter => ("top", "center"),
+            TextAlignment::TopRight => ("top", "right"),
+            TextAlignment::MiddleLeft => ("center", "left"),
+            TextAlignment::MiddleCenter => ("center", "center"),
+            TextAlignment::MiddleRight => ("center", "right"),
+            TextAlignment::BottomLeft => ("bottom", "left"),
+            TextAlignment::BottomCenter => ("bottom", "center"),
+            TextAlignment::BottomRight => ("bottom", "right"),
+        },
+    );
 
     let stroke_size = song.stroke_size.unwrap_or_default();
     let shadow_size = song.shadow_size.unwrap_or_default();
-    let (shadow_offset_x, shadow_offset_y) =
-        song.shadow_offset.unwrap_or_default();
+    let (shadow_offset_x, shadow_offset_y) = song.shadow_offset.unwrap_or_default();
 
-    let stroke_color =
-        ron::ser::to_string(&song.stroke_color).into_diagnostic()?;
-    let shadow_color =
-        ron::ser::to_string(&song.shadow_color).into_diagnostic()?;
+    let stroke_color = ron::ser::to_string(&song.stroke_color).into_diagnostic()?;
+    let shadow_color = ron::ser::to_string(&song.shadow_color).into_diagnostic()?;
 
-    let style =
-        ron::ser::to_string(&song.font_style).into_diagnostic()?;
-    let weight =
-        ron::ser::to_string(&song.font_weight).into_diagnostic()?;
+    let style = ron::ser::to_string(&song.font_style).into_diagnostic()?;
+    let weight = ron::ser::to_string(&song.font_weight).into_diagnostic()?;
 
     // debug!(
     //     ?stroke_size,
@@ -997,17 +908,14 @@ impl Song {
     #[must_use]
     pub fn get_lyric(&self, verse: &VerseName) -> Option<String> {
         self.verse_map.as_ref().and_then(|verse_map| {
-            verse_map.get(verse).cloned().map(|lyric| {
-                lyric.trim().trim_end_matches('\n').to_string()
-            })
+            verse_map
+                .get(verse)
+                .cloned()
+                .map(|lyric| lyric.trim().trim_end_matches('\n').to_string())
         })
     }
 
-    pub fn set_lyrics<T: Into<String>>(
-        &mut self,
-        verse: &VerseName,
-        lyrics: T,
-    ) {
+    pub fn set_lyrics<T: Into<String>>(&mut self, verse: &VerseName, lyrics: T) {
         let lyric_copy = lyrics.into().trim().to_string();
         if let Some(verse_map) = self.verse_map.as_mut() {
             // debug!(?verse_map, "should update");
@@ -1044,11 +952,7 @@ impl Song {
         Err(miette!("No verses in this song yet"))
     }
 
-    pub fn update_verse_name(
-        &mut self,
-        verse: VerseName,
-        old_verse: &VerseName,
-    ) {
+    pub fn update_verse_name(&mut self, verse: VerseName, old_verse: &VerseName) {
         if let Some(verse_map) = self.verse_map.as_mut()
             && let Some(lyric) = verse_map.remove(old_verse)
         {
@@ -1073,12 +977,7 @@ impl Song {
     // the song can be sent to the db and it's lyrics will actually change. Or we
     // could have the update_song_in_db function recreate the lyrics from the new
     // verse layout. But I do feel like it belongs here more.
-    pub fn update_verse(
-        &mut self,
-        index: usize,
-        verse: VerseName,
-        lyric: String,
-    ) {
+    pub fn update_verse(&mut self, index: usize, verse: VerseName, lyric: String) {
         debug!(index, ?verse, lyric);
         self.set_lyrics(&verse, lyric);
         if let Some(verses) = self.verses.as_mut()
@@ -1148,25 +1047,21 @@ impl Song {
         if let Some(verse_names) = &self.verses {
             let verses = verse_names
                 .iter()
-                .filter(|verse| {
-                    matches!(verse, VerseName::Verse { .. })
-                })
+                .filter(|verse| matches!(verse, VerseName::Verse { .. }))
                 .sorted();
-            let mut choruses = verse_names.iter().filter(|verse| {
-                matches!(verse, VerseName::Chorus { .. })
-            });
-            let mut bridges = verse_names.iter().filter(|verse| {
-                matches!(verse, VerseName::Bridge { .. })
-            });
+            let mut choruses = verse_names
+                .iter()
+                .filter(|verse| matches!(verse, VerseName::Chorus { .. }));
+            let mut bridges = verse_names
+                .iter()
+                .filter(|verse| matches!(verse, VerseName::Bridge { .. }));
             if verses.len() == 0 {
                 VerseName::Verse { number: 1 }
             } else if choruses.next().is_none() {
                 VerseName::Chorus { number: 1 }
             } else if verses.len() == 1 {
                 let verse_number =
-                    if let Some(VerseName::Verse { number }) =
-                        verses.last()
-                    {
+                    if let Some(VerseName::Verse { number }) = verses.last() {
                         *number
                     } else {
                         0
@@ -1190,11 +1085,7 @@ impl Song {
         }
     }
 
-    pub fn add_verse(
-        &mut self,
-        verse: VerseName,
-        lyric: impl Into<String>,
-    ) {
+    pub fn add_verse(&mut self, verse: VerseName, lyric: impl Into<String>) {
         let lyric: String = lyric.into();
         self.set_lyrics(&verse, lyric);
         if let Some(verses) = self.verses.as_mut() {
@@ -1348,11 +1239,10 @@ You saved my soul"
             VerseName::Outro { number: 1 },
             VerseName::Blank,
         ]);
-        song.verse_order =
-            "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
-                .split(' ')
-                .map(|s| Some(s.to_string()))
-                .collect();
+        song.verse_order = "O1 V1 C1 C2 O2 V2 C3 C2 O2 B1 C2 C2 E1 O2"
+            .split(' ')
+            .map(|s| Some(s.to_string()))
+            .collect();
         let lyrics = song.get_lyrics();
         match lyrics {
             Ok(lyrics) => {
@@ -1394,8 +1284,7 @@ You saved my soul"
 
     pub async fn add_db() -> Result<SqlitePool> {
         let db_url = String::from("sqlite::memory:");
-        let pool =
-            SqlitePool::connect(&db_url).await.into_diagnostic()?;
+        let pool = SqlitePool::connect(&db_url).await.into_diagnostic()?;
         migrate!()
             .run(&pool)
             .await
@@ -1426,8 +1315,7 @@ You saved my soul"
         let song_model = Model::new_song_model(Arc::clone(&db)).await;
         let length = song_model.items.len();
         assert!(song_model.items.len() == 20, "Length is {length}");
-        let ids: Vec<i32> =
-            song_model.items.iter().map(|s| s.id).collect();
+        let ids: Vec<i32> = song_model.items.iter().map(|s| s.id).collect();
         if let Some(song) = song_model.find(|s| s.id == 7) {
             let test_song = test_song();
             if let Ok(song_lyrics) = song.get_lyrics()
@@ -1439,9 +1327,7 @@ You saved my soul"
             }
         } else {
             dbg!(song_model);
-            panic!(
-                "Failed to find song in model: Id's of all songs are {ids:?}"
-            );
+            panic!("Failed to find song in model: Id's of all songs are {ids:?}");
         }
     }
 
@@ -1490,9 +1376,7 @@ You saved my soul"
         assert_ne!(test_song, Some(&cloned_song));
 
         let songs = song_model.items.clone();
-        match update_song(cloned_song.clone(), songs, Arc::clone(&db))
-            .await
-        {
+        match update_song(cloned_song.clone(), songs, Arc::clone(&db)).await {
             Ok(_) => {
                 let db_song = get_song_from_db(7, db)
                     .await
@@ -1501,10 +1385,7 @@ You saved my soul"
                 // lyrics will be in the wrong order since serialization
                 // can sometimes change the order of the verse_map
                 assert_eq!(db_song.id, cloned_song.id);
-                assert_eq!(
-                    db_song.verse_order,
-                    cloned_song.verse_order
-                );
+                assert_eq!(db_song.verse_order, cloned_song.verse_order);
                 assert_eq!(db_song.verse_map, cloned_song.verse_map);
             }
             Err(e) => panic!("{e}"),
@@ -1515,8 +1396,7 @@ You saved my soul"
     pub fn test_song() -> Song {
         let lyrics = "Some({Verse(number:4):\"Our Savior displayed\\nOn a criminal\\'s cross\\n\\nDarkness rejoiced as though\\nHeaven had lost\\n\\nBut then Jesus arose\\nWith our freedom in hand\\n\\nThat\\'s when death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Intro(number:1):\"Death Was Arrested\\nNorth Point Worship\",Verse(number:3):\"Released from my chains,\\nI\\'m a prisoner no more\\n\\nMy shame was a ransom\\nHe faithfully bore\\n\\nHe cancelled my debt and\\nHe called me His friend\\n\\nWhen death was arrested\\nAnd my life began\",Bridge(number:1):\"Oh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\\n\\nOh, we\\'re free, free,\\nForever we\\'re free\\n\\nCome join the song\\nOf all the redeemed\\n\\nYes, we\\'re free, free,\\nForever amen\\n\\nWhen death was arrested\\nAnd my life began\",Other(number:99):\"When death was arrested\\nAnd my life began\\n\\nThat\\'s when death was arrested\\nAnd my life began\",Verse(number:2):\"Ash was redeemed\\nOnly beauty remains\\n\\nMy orphan heart\\nWas given a name\\n\\nMy mourning grew quiet,\\nMy feet rose to dance\\n\\nWhen death was arrested\\nAnd my life began\",Verse(number:1):\"Alone in my sorrow\\nAnd dead in my sin\\n\\nLost without hope\\nWith no place to begin\\n\\nYour love made a way\\nTo let mercy come in\\n\\nWhen death was arrested\\nAnd my life began\",Chorus(number:1):\"Oh, Your grace so free,\\nWashes over me\\n\\nYou have made me new,\\nNow life begins with You\\n\\nIt\\'s Your endless love,\\nPouring down on us\\n\\nYou have made us new,\\nNow life begins with You\"})".to_string();
         let verse_map: Option<HashMap<VerseName, String>> =
-            ron::from_str(&lyrics)
-                .expect("Error creating lyrics object from string");
+            ron::from_str(&lyrics).expect("Error creating lyrics object from string");
         Song {
             id: 7,
             title: "Death Was Arrested".to_string(),
@@ -1604,19 +1484,14 @@ You saved my soul"
             .collect();
         let fontdb = Arc::new(fontdb::Database::new());
         songs.into_par_iter().for_each(|song| {
-            let slides = song
-                .to_slides()
-                .expect("Error in making slides from song");
+            let slides = song.to_slides().expect("Error in making slides from song");
             slides.into_par_iter().for_each(|slide| {
-                text_svg_generator_with_cache(slide, &fontdb, None)
-                    .map_or_else(
-                        |e| panic!("{e}"),
-                        |slide| {
-                            assert!(slide.text_svg.is_some_and(
-                                |svg| svg.handle.is_some()
-                            ));
-                        },
-                    );
+                text_svg_generator_with_cache(slide, &fontdb, None).map_or_else(
+                    |e| panic!("{e}"),
+                    |slide| {
+                        assert!(slide.text_svg.is_some_and(|svg| svg.handle.is_some()));
+                    },
+                );
             });
         });
     }

@@ -19,9 +19,7 @@ use super::kinds::ServiceItemKind;
 use super::model::{LibraryKind, Model};
 use super::service_items::ServiceTrait;
 
-#[derive(
-    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PresKind {
     Html,
     Pdf {
@@ -147,20 +145,19 @@ impl From<&Value> for Presentation {
     fn from(value: &Value) -> Self {
         match value {
             Value::List(list) => {
-                let path = if let Some(path_pos) =
-                    list.iter().position(|v| {
-                        v == &Value::Keyword(Keyword::from("source"))
-                    }) {
+                let path = if let Some(path_pos) = list
+                    .iter()
+                    .position(|v| v == &Value::Keyword(Keyword::from("source")))
+                {
                     let pos = path_pos + 1;
-                    list.get(pos)
-                        .map(|p| PathBuf::from(String::from(p)))
+                    list.get(pos).map(|p| PathBuf::from(String::from(p)))
                 } else {
                     None
                 };
 
-                let title = path.clone().map(|p| {
-                    p.to_str().unwrap_or_default().to_string()
-                });
+                let title = path
+                    .clone()
+                    .map(|p| p.to_str().unwrap_or_default().to_string());
                 Self {
                     title: title.unwrap_or_default(),
                     path: path.unwrap_or_default(),
@@ -188,23 +185,18 @@ impl ServiceTrait for Presentation {
             ending_index,
         } = self.kind
         else {
-            return Err(miette::miette!(
-                "This is not a pdf presentation"
-            ));
+            return Err(miette::miette!("This is not a pdf presentation"));
         };
-        let background = Background::try_from(self.path.clone())
-            .into_diagnostic()?;
+        let background = Background::try_from(self.path.clone()).into_diagnostic()?;
         debug!(?background);
-        let document = Document::open(background.path.as_path())
-            .into_diagnostic()?;
+        let document = Document::open(background.path.as_path()).into_diagnostic()?;
         debug!(?document);
         let pages = document.pages().into_diagnostic()?;
         debug!(?pages);
         let pages: Vec<Handle> = pages
             .enumerate()
             .filter_map(|(index, page)| {
-                let index = i32::try_from(index)
-                    .expect("Shouldn't be that high");
+                let index = i32::try_from(index).expect("Shouldn't be that high");
 
                 if index < starting_index || index > ending_index {
                     return None;
@@ -232,10 +224,7 @@ impl ServiceTrait for Presentation {
         let mut slides: Vec<Slide> = vec![];
         for (index, page) in pages.into_iter().enumerate() {
             let slide = SlideBuilder::new()
-                .background(
-                    Background::try_from(self.path.clone())
-                        .into_diagnostic()?,
-                )
+                .background(Background::try_from(self.path.clone()).into_diagnostic()?)
                 .text("")
                 .audio("")
                 .font("")
@@ -244,10 +233,7 @@ impl ServiceTrait for Presentation {
                 .video_loop(false)
                 .video_start_time(0.0)
                 .video_end_time(0.0)
-                .pdf_index(
-                    u32::try_from(index)
-                        .expect("Shouldn't get that high"),
-                )
+                .pdf_index(u32::try_from(index).expect("Shouldn't get that high"))
                 .pdf_page(page)
                 .build()?;
             slides.push(slide);
@@ -323,26 +309,17 @@ impl Model<Presentation> {
                         path: presentation.path.clone().into(),
                         kind: if presentation.html {
                             PresKind::Html
-                        } else if let (
-                            Some(starting_index),
-                            Some(ending_index),
-                        ) = (
-                            presentation.starting_index,
-                            presentation.ending_index,
-                        ) {
+                        } else if let (Some(starting_index), Some(ending_index)) =
+                            (presentation.starting_index, presentation.ending_index)
+                        {
                             PresKind::Pdf {
-                                starting_index: i32::try_from(
-                                    starting_index,
-                                )
-                                .expect("Shouldn't get that high"),
-                                ending_index: i32::try_from(
-                                    ending_index,
-                                )
-                                .expect("Shouldn't get that high"),
+                                starting_index: i32::try_from(starting_index)
+                                    .expect("Shouldn't get that high"),
+                                ending_index: i32::try_from(ending_index)
+                                    .expect("Shouldn't get that high"),
                             }
                         } else {
-                            let path =
-                                PathBuf::from(presentation.path);
+                            let path = PathBuf::from(presentation.path);
 
                             Document::open(path.as_path()).map_or(
                                 PresKind::Generic,
@@ -353,8 +330,7 @@ impl Model<Presentation> {
                                             ending_index: 0,
                                         },
                                         |count| {
-                                            let ending_index =
-                                                count - 1;
+                                            let ending_index = count - 1;
                                             PresKind::Pdf {
                                                 starting_index: 0,
                                                 ending_index,
@@ -367,9 +343,7 @@ impl Model<Presentation> {
                     });
                 }
             }
-            Err(e) => error!(
-                "There was an error in converting presentations: {e}"
-            ),
+            Err(e) => error!("There was an error in converting presentations: {e}"),
         }
     }
 }
@@ -381,9 +355,7 @@ pub async fn remove_presentations(
 ) -> Result<Vec<Presentation>> {
     let presentations = presentations
         .into_iter()
-        .filter(|current_presentation| {
-            !ids.contains(&current_presentation.id)
-        })
+        .filter(|current_presentation| !ids.contains(&current_presentation.id))
         .collect();
 
     let delete = format!(
@@ -411,12 +383,8 @@ pub async fn remove_presentation(
 
     let index = presentations
         .iter()
-        .position(|current_presentation| {
-            current_presentation.id == id
-        })
-        .ok_or_else(|| {
-            miette!("Could not find presentation in model")
-        })?;
+        .position(|current_presentation| current_presentation.id == id)
+        .ok_or_else(|| miette!("Could not find presentation in model"))?;
     presentations.remove(index);
     Ok(presentations)
 }
@@ -473,8 +441,7 @@ pub async fn update_presentation(
     let (starting_index, ending_index) = if let PresKind::Pdf {
         starting_index: s_index,
         ending_index: e_index,
-    } =
-        presentation.get_kind()
+    } = presentation.get_kind()
     {
         (*s_index, *e_index)
     } else {
@@ -496,12 +463,8 @@ pub async fn update_presentation(
 
     let current_presentation = presentations
         .iter()
-        .position(|current_presentation| {
-            current_presentation.id == presentation.id
-        })
-        .ok_or_else(|| {
-            miette!("Could not find presentation in model")
-        })
+        .position(|current_presentation| current_presentation.id == presentation.id)
+        .ok_or_else(|| miette!("Could not find presentation in model"))
         .map(|index| {
             presentations
                 .get_mut(index)
@@ -556,9 +519,7 @@ mod test {
         };
         let db = Arc::new(add_db().await.expect("Getting db error"));
         presentation_model.load_from_db(db).await;
-        if let Some(presentation) =
-            presentation_model.find(|p| p.id == 4)
-        {
+        if let Some(presentation) = presentation_model.find(|p| p.id == 4) {
             let test_presentation = test_presentation();
             assert_eq!(&test_presentation, presentation);
         } else {

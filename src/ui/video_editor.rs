@@ -7,9 +7,7 @@ use cosmic::iced::Length;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::widget::{column, row};
 use cosmic::widget::space::{self, horizontal};
-use cosmic::widget::{
-    Space, button, container, icon, slider, text, text_input,
-};
+use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
 use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
 use tracing::{debug, error, warn};
@@ -89,9 +87,8 @@ impl VideoEditor {
                 if let Some(video) = self.video.as_mut() {
                     let pausing = video.paused();
                     video.set_paused(true);
-                    let position = Position::Time(
-                        std::time::Duration::from_secs_f64(position),
-                    );
+                    let position =
+                        Position::Time(std::time::Duration::from_secs_f64(position));
                     if let Err(e) = video.seek(position, false) {
                         error!(?e);
                     }
@@ -99,22 +96,14 @@ impl VideoEditor {
                 }
             }
             Message::PickVideo => {
-                let video_id = self
-                    .core_video
-                    .as_ref()
-                    .map(|v| v.id)
-                    .unwrap_or_default();
-                let task = Task::perform(
-                    pick_video(),
-                    move |video_result| {
-                        video_result.map_or(Message::None, |video| {
-                            let mut video =
-                                videos::Video::from(video);
-                            video.id = video_id;
-                            Message::UpdateVideoFile(video)
-                        })
-                    },
-                );
+                let video_id = self.core_video.as_ref().map(|v| v.id).unwrap_or_default();
+                let task = Task::perform(pick_video(), move |video_result| {
+                    video_result.map_or(Message::None, |video| {
+                        let mut video = videos::Video::from(video);
+                        video.id = video_id;
+                        Message::UpdateVideoFile(video)
+                    })
+                });
                 return Action::Task(task);
             }
             Message::UpdateVideoFile(video) => {
@@ -165,10 +154,7 @@ impl VideoEditor {
         let video_player = self.video.as_ref().map_or_else(
             || Element::from(Space::new()),
             |video| {
-                Element::from(
-                    VideoPlayer::new(video)
-                        .on_new_frame(Message::NewFrame),
-                )
+                Element::from(VideoPlayer::new(video).on_new_frame(Message::NewFrame))
             },
         );
 
@@ -183,16 +169,15 @@ impl VideoEditor {
     }
 
     fn toolbar(&self) -> Element<Message> {
-        let title_box = text_input("Title...", &self.title)
-            .on_input(Message::ChangeTitle);
+        let title_box =
+            text_input("Title...", &self.title).on_input(Message::ChangeTitle);
 
-        let video_selector = button::icon(
-            icon::from_name("folder-videos-symbolic").scale(2),
-        )
-        .label("Video")
-        .tooltip("Select a video")
-        .on_press(Message::PickVideo)
-        .padding(10);
+        let video_selector =
+            button::icon(icon::from_name("folder-videos-symbolic").scale(2))
+                .label("Video")
+                .tooltip("Select a video")
+                .on_press(Message::PickVideo)
+                .padding(10);
 
         row![
             text::body("Title:"),
@@ -217,17 +202,19 @@ impl VideoEditor {
             self.core_video = Some(video.clone());
             return;
         };
-        let Ok(mut player_video) = gst_video::create_video(&url, 60)
-        else {
+
+        let settings = gst_video::VideoSettings {
+            mute: false,
+            framerate: 60,
+        };
+
+        let Ok(mut player_video) = gst_video::create_video(&url, &settings) else {
             self.video = None;
-            self.title = format!(
-                "{}: {}",
-                String::from("Video Missing"),
-                &video.title
-            );
+            self.title = format!("{}: {}", String::from("Video Missing"), &video.title);
             self.core_video = Some(video.clone());
             return;
         };
+
         player_video.set_paused(true);
         self.video = Some(player_video);
         self.title.clone_from(&video.title);
@@ -256,9 +243,7 @@ async fn pick_video() -> Result<PathBuf, VideoError> {
             error!(?e);
             VideoError::DialogClosed
         })
-        .map(|file| {
-            file.url().to_file_path().expect("Should be a file here")
-        })
+        .map(|file| file.url().to_file_path().expect("Should be a file here"))
     // rfd::AsyncFileDialog::new()
     //     .set_title("Choose a background...")
     //     .add_filter(

@@ -2,8 +2,8 @@ use cosmic::iced::{core as iced_core, widget as iced_widget};
 use iced_core::event::Event;
 use iced_core::widget::{Operation, Tree};
 use iced_core::{
-    Clipboard, Element, Layout, Length, Rectangle, Shell, Vector,
-    Widget, layout, mouse, overlay, renderer,
+    Clipboard, Element, Layout, Length, Rectangle, Shell, Vector, Widget, layout, mouse,
+    overlay, renderer,
 };
 
 pub fn loaded_image<'a, Message: 'static, Theme, Renderer>(
@@ -15,9 +15,7 @@ where
     <Theme as iced_widget::container::Catalog>::Class<'a>:
         From<cosmic::theme::Container<'a>>,
     Renderer: iced_core::Renderer
-        + iced_core::image::Renderer<
-            Handle = cosmic::widget::image::Handle,
-        >,
+        + iced_core::image::Renderer<Handle = cosmic::widget::image::Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
     LoadedImage::new(handle, content)
@@ -37,8 +35,7 @@ where
     content: cosmic::iced::Element<'a, Message, Theme, Renderer>,
 }
 
-impl<'a, Message, Theme, Renderer>
-    LoadedImage<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> LoadedImage<'a, Message, Theme, Renderer>
 where
     Renderer: iced_core::Renderer + iced_core::image::Renderer,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
@@ -46,9 +43,7 @@ where
     /// Creates an empty [`LoadedImage`].
     pub(crate) fn new(
         handle: <Renderer as iced_core::image::Renderer>::Handle,
-        content: impl Into<
-            cosmic::iced::Element<'a, Message, Theme, Renderer>,
-        >,
+        content: impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>,
     ) -> Self {
         LoadedImage {
             handle,
@@ -80,11 +75,10 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let node = self.content.as_widget_mut().layout(
-            &mut tree.children[0],
-            renderer,
-            limits,
-        );
+        let node =
+            self.content
+                .as_widget_mut()
+                .layout(&mut tree.children[0], renderer, limits);
         let size = node.size();
         layout::Node::with_children(size, vec![node])
     }
@@ -153,8 +147,7 @@ where
 
         self.content.as_widget().mouse_interaction(
             &tree.children[0],
-            content_layout
-                .with_virtual_offset(layout.virtual_offset()),
+            content_layout.with_virtual_offset(layout.virtual_offset()),
             cursor_position,
             viewport,
             renderer,
@@ -183,8 +176,7 @@ where
             renderer,
             theme,
             renderer_style,
-            content_layout
-                .with_virtual_offset(layout.virtual_offset()),
+            content_layout.with_virtual_offset(layout.virtual_offset()),
             cursor_position,
             viewport,
         );
@@ -224,8 +216,7 @@ where
             .expect("There should always be a child");
         self.content.as_widget().drag_destinations(
             &state.children[0],
-            content_layout
-                .with_virtual_offset(layout.virtual_offset()),
+            content_layout.with_virtual_offset(layout.virtual_offset()),
             renderer,
             dnd_rectangles,
         );
@@ -233,8 +224,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<'a, Message, Theme, Renderer>
-    From<LoadedImage<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<LoadedImage<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,

@@ -1,4 +1,4 @@
-max_width = 70
+max_width = 90
 style_edition = "2024"
 # version = "Two"
 imports_granularity = "Module"

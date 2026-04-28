@@ -9,9 +9,7 @@ use std::path::PathBuf;
 
 pub const SETTINGS_VERSION: u64 = 1;
 
-#[derive(
-    Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize,
-)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum AppTheme {
     Dark,
     Light,
@@ -28,15 +26,7 @@ impl AppTheme {
     }
 }
 
-#[derive(
-    Clone,
-    CosmicConfigEntry,
-    Debug,
-    Deserialize,
-    Eq,
-    PartialEq,
-    Serialize,
-)]
+#[derive(Clone, CosmicConfigEntry, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Settings {
     pub app_theme: AppTheme,
@@ -55,14 +45,7 @@ impl Default for Settings {
 }
 
 #[derive(
-    Clone,
-    CosmicConfigEntry,
-    Debug,
-    Deserialize,
-    Eq,
-    PartialEq,
-    Serialize,
-    Default,
+    Clone, CosmicConfigEntry, Debug, Deserialize, Eq, PartialEq, Serialize, Default,
 )]
 pub struct PersistentState {
     pub recent_files: VecDeque<PathBuf>,
