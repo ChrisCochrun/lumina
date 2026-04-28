@@ -105,7 +105,7 @@ impl PresentationEditor {
                     if let PresKind::Pdf {
                         starting_index,
                         ending_index,
-                    } = presentation.kind.clone()
+                    } = presentation.kind
                     {
                         let range = starting_index..=ending_index;
                         task = Task::perform(
