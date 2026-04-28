@@ -134,17 +134,17 @@ impl<'a> Program<SlideWidget, cosmic::Theme, cosmic::Renderer> for EditorProgram
                     debug!(?button, "mouse button pressed");
                 }
                 cosmic::iced::mouse::Event::ButtonReleased(button) => {
-                    debug!(?button, "mouse button released")
+                    debug!(?button, "mouse button released");
                 }
                 cosmic::iced::mouse::Event::WheelScrolled { delta } => {
-                    debug!(?delta, "scroll wheel")
+                    debug!(?delta, "scroll wheel");
                 }
             },
             canvas::Event::Touch(_event) => debug!("test"),
             canvas::Event::Keyboard(_event) => debug!("test"),
             canvas::Event::Window(_event) => todo!(),
             canvas::Event::InputMethod(_event) => todo!(),
-            canvas::Event::A11y(_id, _action_request) => todo!(),
+            // canvas::Event::A11y(_id, _action_request) => todo!(),
             canvas::Event::Dnd(_dnd_event) => todo!(),
             canvas::Event::PlatformSpecific(_platform_specific) => {
                 todo!()

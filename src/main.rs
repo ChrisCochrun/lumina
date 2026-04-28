@@ -642,7 +642,7 @@ impl cosmic::Application for App {
                             _ => None,
                         },
                         iced::Event::Touch(_touch) => None,
-                        iced::Event::A11y(_id, _action_request) => None,
+                        // iced::Event::A11y(_id, _action_request) => None,
                         iced::Event::Dnd(_dnd_event) => {
                             // debug!(?dnd_event);
                             None
@@ -1760,7 +1760,7 @@ impl cosmic::Application for App {
                     Message::Present(presenter::Message::ChangePreviewSize(size))
                 },)
                 .height(space_l)
-                .name("Preview Size")
+                // .name("Preview Size")
                 .step(10.0)
                 .breakpoints(preview_breakpoints)
             ]
@@ -1933,10 +1933,7 @@ where
                 ServiceItemKind::Song(_) => icon::from_name("folder-music-symbolic"),
                 ServiceItemKind::Video(_) => icon::from_name("folder-videos-symbolic"),
                 ServiceItemKind::Image(_) => icon::from_name("folder-pictures-symbolic"),
-                ServiceItemKind::Presentation(_) => {
-                    icon::from_name("x-office-presentation-symbolic")
-                }
-                ServiceItemKind::Content(_) => {
+                ServiceItemKind::Presentation(_) | ServiceItemKind::Content(_) => {
                     icon::from_name("x-office-presentation-symbolic")
                 }
             };
