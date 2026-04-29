@@ -94,7 +94,7 @@ pub(crate) enum Message {
     StartVideo,
     VideoPos(f32),
     VideoFrame,
-    MissingPlugin(gstreamer::Message),
+    MissingPlugin(iced_video_player::gst::Message),
     HoveredSlide(Option<(usize, usize, Point)>),
     ChangeFont(String),
     Error(String),
@@ -428,7 +428,7 @@ impl Presenter {
                                     info!("plugin install status: {}", status);
                                     info!(
                                         "gstreamer registry update: {:?}",
-                                        gstreamer::Registry::update()
+                                        iced_video_player::gst::Registry::update()
                                     );
                                 }
                                 Err(err) => {

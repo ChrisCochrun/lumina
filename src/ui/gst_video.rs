@@ -4,7 +4,9 @@ use std::path::Path;
 use std::time::Duration;
 
 use cosmic::widget::image::Handle;
-use iced_video_player::{Position, Video};
+use iced_video_player::gst_app::prelude::*;
+use iced_video_player::gst_app::{self};
+use iced_video_player::{Position, Video, gst};
 use image::{DynamicImage, ImageFormat, RgbaImage};
 use url::Url;
 
@@ -20,8 +22,6 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     // Based on `iced_video_player::Video::new`,
     // but without a text sink so that the built-in subtitle functionality triggers.
     // and with some better gstreamer tweaks
-    use gstreamer_app::prelude::*;
-    use {gstreamer as gst, gstreamer_app as gst_app};
 
     gst::init().map_err(VideoError::GlibError)?;
 
@@ -120,7 +120,7 @@ pub fn thumbnail(input: &Url, output: &Path) -> Result<Handle> {
 pub enum VideoError {
     ThumbnailError(String),
     IcedVideoError(iced_video_player::Error),
-    GlibError(gstreamer::glib::Error),
+    GlibError(gst::glib::Error),
     ThumbnailImageError(image::ImageError),
 }
 
@@ -136,7 +136,7 @@ impl Display for VideoError {
                 write!(f, "IcedVideoError: {error}")
             }
             Self::GlibError(error) => {
-                write!(f, "GlipError: {error}")
+                write!(f, "GlibError: {error}")
             }
             Self::ThumbnailImageError(error) => {
                 write!(f, "ImageError: {error}")
