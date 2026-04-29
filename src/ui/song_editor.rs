@@ -426,9 +426,12 @@ impl SongEditor {
                 if let Some(author) = song.author {
                     self.author = author;
                 }
-                if let Some(audio) = song.audio {
-                    self.player.stop();
-                    self.player.clear();
+
+                self.player.stop();
+                self.player.clear();
+                if let Some(audio) = song.audio
+                    && audio.exists()
+                {
                     let file = BufReader::new(
                         File::open(&audio).expect("There should be an audio file here"),
                     );
@@ -438,6 +441,7 @@ impl SongEditor {
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
                     self.player.pause();
+                } else {
                 }
 
                 if let Some(ccli) = song.ccli {
