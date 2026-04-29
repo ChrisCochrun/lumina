@@ -7,8 +7,8 @@ use iced_core::{
 };
 
 pub fn loaded_image<'a, Message: 'static, Theme, Renderer>(
-    handle: <cosmic::Renderer as iced_core::image::Renderer>::Handle,
-    content: cosmic::iced::Element<'a, Message, Theme, Renderer>,
+    handle: impl Into<<cosmic::Renderer as iced_core::image::Renderer>::Handle>,
+    content: impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>,
 ) -> LoadedImage<'a, Message, Theme, Renderer>
 where
     Theme: iced_widget::container::Catalog,
@@ -18,7 +18,7 @@ where
         + iced_core::image::Renderer<Handle = cosmic::widget::image::Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
-    LoadedImage::new(handle, content)
+    LoadedImage::new(handle.into(), content.into())
 }
 
 /// Forces the wrapped image to be loaded before drawing.

@@ -63,7 +63,7 @@ impl From<PathBuf> for Presentation {
             .to_str()
             .unwrap_or_default()
         {
-            "pdf" => Document::open(&value.as_os_str()).map_or(
+            "pdf" => Document::open(&value.as_path()).map_or(
                 PresKind::Pdf {
                     starting_index: 0,
                     ending_index: 0,
@@ -189,7 +189,7 @@ impl ServiceTrait for Presentation {
         };
         let background = Background::try_from(self.path.clone()).into_diagnostic()?;
         debug!(?background);
-        let document = Document::open(background.path.as_os_str()).into_diagnostic()?;
+        let document = Document::open(background.path.as_path()).into_diagnostic()?;
         debug!(?document);
         let pages = document.pages().into_diagnostic()?;
         debug!(?pages);
@@ -321,7 +321,7 @@ impl Model<Presentation> {
                         } else {
                             let path = PathBuf::from(presentation.path);
 
-                            Document::open(path.as_os_str()).map_or(
+                            Document::open(path.as_path()).map_or(
                                 PresKind::Generic,
                                 |document| {
                                     document.page_count().map_or(

@@ -51,7 +51,6 @@ use crate::core::file;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::KindWrapper;
 use crate::ui::image_editor::{self, ImageEditor};
-use crate::ui::image_loader::load_images;
 use crate::ui::presentation_editor::{self, PresentationEditor};
 use crate::ui::text_svg::{self};
 use crate::ui::video_editor::{self, VideoEditor};
@@ -229,7 +228,7 @@ enum Message {
     ViewModeSwitch(ViewMode),
     ShowGeniusToken,
     SetGeniusToken(String),
-    InsertBackgroundImage((iced::core::image::Handle, usize)),
+    InsertBackgroundImage((iced::core::image::Allocation, usize)),
 }
 
 #[allow(dead_code)]
@@ -1213,13 +1212,15 @@ impl cosmic::Application for App {
                         .map(|slide| slide.background.path.clone())
                         .unwrap_or_default();
 
-                    Task::perform(load_images(path), move |res| match res {
-                        Ok(handle) => cosmic::Action::App(
-                            Message::InsertBackgroundImage((handle, index)),
-                        ),
-                        Err(e) => {
-                            error!("Couldn't load image: {e:?}");
-                            cosmic::Action::None
+                    cosmic::iced::runtime::image::allocate(path).map(move |allocation| {
+                        match allocation {
+                            Ok(allocation) => cosmic::Action::App(
+                                Message::InsertBackgroundImage((allocation, index)),
+                            ),
+                            Err(e) => {
+                                error!("{e}");
+                                cosmic::Action::App(Message::None)
+                            }
                         }
                     })
                 } else {
@@ -1333,15 +1334,26 @@ impl cosmic::Application for App {
                         .map(|slide| slide.background.path.clone())
                         .unwrap_or_default();
                     let item_index = self.service.len();
-                    Task::perform(load_images(path), move |res| match res {
-                        Ok(handle) => cosmic::Action::App(
-                            Message::InsertBackgroundImage((handle, item_index)),
-                        ),
-                        Err(e) => {
-                            error!("Couldn't load image: {e:?}");
-                            cosmic::Action::None
+                    cosmic::iced::runtime::image::allocate(path).map(move |allocation| {
+                        match allocation {
+                            Ok(allocation) => cosmic::Action::App(
+                                Message::InsertBackgroundImage((allocation, item_index)),
+                            ),
+                            Err(e) => {
+                                error!("{e}");
+                                cosmic::Action::App(Message::None)
+                            }
                         }
                     })
+                    // Task::perform(load_images(path), move |res| match res {
+                    //     Ok(handle) => cosmic::Action::App(
+                    //         Message::InsertBackgroundImage((handle, item_index)),
+                    //     ),
+                    //     Err(e) => {
+                    //         error!("Couldn't load image: {e:?}");
+                    //         cosmic::Action::None
+                    //     }
+                    // })
                 } else {
                     Task::none()
                 };
@@ -1349,11 +1361,11 @@ impl cosmic::Application for App {
                 self.presenter.update_items(Arc::clone(&self.service));
                 task
             }
-            Message::InsertBackgroundImage((handle, item_index)) => {
+            Message::InsertBackgroundImage((allocation, item_index)) => {
                 if let Some(item) = Arc::make_mut(&mut self.service).get_mut(item_index) {
-                    debug!(?handle, item_index, "Inserting handle into item: ");
+                    debug!(?allocation, item_index, "Inserting handle into item: ");
                     for slide in &mut item.slides {
-                        slide.background.image_handle = Some(handle.clone());
+                        slide.background.image_allocation = Some(allocation.clone());
                     }
                 }
                 self.presenter.update_items(Arc::clone(&self.service));

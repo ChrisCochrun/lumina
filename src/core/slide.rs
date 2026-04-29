@@ -1,6 +1,6 @@
 #![allow(clippy::similar_names, unused)]
 use cosmic::iced::Size;
-use cosmic::iced::core::image::{Allocation, allocate};
+use cosmic::iced::core::image::Allocation;
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
@@ -83,6 +83,8 @@ pub struct Background {
     pub kind: BackgroundKind,
     #[serde(skip)]
     pub image_handle: Option<Handle>,
+    #[serde(skip)]
+    pub image_allocation: Option<Allocation>,
 }
 
 impl TryFrom<&Background> for Video {
@@ -146,24 +148,28 @@ impl TryFrom<PathBuf> for Background {
                     .unwrap_or_default();
                 match extension {
                     "jpeg" | "jpg" | "png" | "webp" => Ok(Self {
-                        path: value,
+                        path: value.clone(),
                         kind: BackgroundKind::Image,
-                        image_handle: None,
+                        image_handle: Some(value.into()),
+                        image_allocation: None,
                     }),
                     "mp4" | "mkv" | "webm" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Video,
                         image_handle: None,
+                        image_allocation: None,
                     }),
                     "pdf" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Pdf,
                         image_handle: None,
+                        image_allocation: None,
                     }),
                     "html" => Ok(Self {
                         path: value,
                         kind: BackgroundKind::Html,
                         image_handle: None,
+                        image_allocation: None,
                     }),
                     _ => Err(ParseError::NonBackgroundFile),
                 }

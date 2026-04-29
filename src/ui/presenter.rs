@@ -1036,30 +1036,31 @@ pub(crate) fn slide_view<'a>(
 
         match slide.background().kind {
             BackgroundKind::Image => {
-                stack = stack.push(slide.background().image_handle.as_ref().map_or_else(
-                    || {
-                        Container::new(
-                            cosmic_image(&slide.background().path)
-                                .content_fit(ContentFit::Contain)
-                                .width(width)
-                                .height(Length::Fill),
-                        )
-                        .center(Length::Fill)
-                        .clip(true)
-                    },
-                    |handle| {
-                        Container::new(loaded_image(
-                            handle.clone(),
-                            cosmic_image(handle)
-                                .content_fit(ContentFit::Contain)
-                                .width(width)
-                                .height(Length::Fill)
-                                .into(),
-                        ))
-                        .center(Length::Fill)
-                        .clip(true)
-                    },
-                ));
+                stack =
+                    stack.push(slide.background().image_allocation.as_ref().map_or_else(
+                        || {
+                            Container::new(
+                                cosmic_image(&slide.background().path)
+                                    .content_fit(ContentFit::Contain)
+                                    .width(width)
+                                    .height(Length::Fill),
+                            )
+                            .center(Length::Fill)
+                            .clip(true)
+                        },
+                        |allocation| {
+                            loaded_image(
+                                allocation.handle(),
+                                cosmic_image(allocation.handle())
+                                    .content_fit(ContentFit::Contain)
+                                    .width(width)
+                                    .height(Length::Fill),
+                            )
+                            .apply(container)
+                            .center(Length::Fill)
+                            .clip(true)
+                        },
+                    ));
             }
             BackgroundKind::Video => {
                 if let Some(video) = &video
@@ -1087,12 +1088,11 @@ pub(crate) fn slide_view<'a>(
                 if let Some(pdf) = slide.pdf_page() {
                     stack = stack.push(
                         Container::new(loaded_image(
-                            pdf.clone(),
-                            cosmic_image(pdf)
+                            &pdf,
+                            cosmic_image(&pdf)
                                 .width(width)
                                 .height(Length::Fill)
-                                .content_fit(ContentFit::Contain)
-                                .into(),
+                                .content_fit(ContentFit::Contain),
                         ))
                         .center(Length::Fill)
                         .clip(true),
@@ -1105,12 +1105,11 @@ pub(crate) fn slide_view<'a>(
             && let Some(handle) = &text.handle
         {
             stack = stack.push(loaded_image(
-                handle.clone(),
+                handle,
                 cosmic_image(handle)
                     .content_fit(ContentFit::Contain)
                     .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into(),
+                    .height(Length::Fill),
             ));
         }
         Container::new(stack).center(Length::Fill).into()
