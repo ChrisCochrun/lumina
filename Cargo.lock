@@ -4689,6 +4689,7 @@ dependencies = [
  "mupdf-sys",
  "once_cell",
  "percent-encoding",
+ "serde",
  "zerocopy",
 ]
 

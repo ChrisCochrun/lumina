@@ -35,7 +35,7 @@ rapidfuzz = "0.5.0"
 # femtovg = { version = "0.16.0", features = ["wgpu"] }
 # wgpu = "26.0.1"
 # mupdf = "0.5.0"
-mupdf = { version = "0.6.0", git = "https://github.com/messense/mupdf-rs" }
+mupdf = { version = "0.6.0", git = "https://github.com/messense/mupdf-rs", features = ["serde"] }
 tar = "0.4.44"
 zstd = "0.13.3"
 fastrand = "2.3.0"

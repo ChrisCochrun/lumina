@@ -445,7 +445,7 @@ impl PresentationEditor {
     fn update_entire_presentation(&mut self, presentation: &Presentation) {
         self.presentation = Some(presentation.clone());
         self.title.clone_from(&presentation.title);
-        self.document = Document::open(&presentation.path.as_path()).ok();
+        self.document = Document::open(&presentation.path.as_os_str()).ok();
         self.page_count = self.document.as_ref().and_then(|doc| doc.page_count().ok());
         warn!("changing presentation");
         let pages = if let PresKind::Pdf {
@@ -573,7 +573,7 @@ fn get_pages(
     range: impl RangeBounds<i32>,
     presentation_path: impl AsRef<Path>,
 ) -> Option<Vec<Handle>> {
-    let document = Document::open(presentation_path.as_ref()).ok()?;
+    let document = Document::open(presentation_path.as_ref().as_os_str()).ok()?;
     let pages = document.pages().ok()?;
     Some(
         pages
