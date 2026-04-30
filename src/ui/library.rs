@@ -1271,7 +1271,7 @@ pub async fn add_db() -> Result<SqlitePool> {
     db_url.push_str(data.to_str().expect("Should always be a file here"));
     let opts = SqliteConnectOptions::from_str(&db_url)
         .into_diagnostic()
-        .wrap_err(format!("DB Url: {db_url}"))?
+        .context(format!("DB Url: {db_url}"))?
         .create_if_missing(true);
     SqlitePool::connect_with(opts).await.into_diagnostic()
 }
