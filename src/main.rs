@@ -1631,17 +1631,28 @@ impl cosmic::Application for App {
             space_xl,
             ..
         } = cosmic::theme::spacing();
-        let icon_left = icon::from_name("arrow-left").fallback(Some(
+        let icon_left_named = icon::from_name("arrow-left").fallback(Some(
             icon::IconFallback::Names(vec![
                 "go-previous-symbolic".into(),
                 "go-previous".into(),
                 "previous".into(),
             ]),
         ));
-        let icon_right =
+        let icon_left = if icon_left_named.clone().path().is_none() {
+            icon::from_path("./res/caret-left.svg".into())
+        } else {
+            icon_left_named.handle()
+        };
+        let icon_right_named =
             icon::from_name("arrow-right").fallback(Some(icon::IconFallback::Names(
                 vec!["go-next-symbolic".into(), "go-next".into(), "next".into()],
             )));
+
+        let icon_right = if icon_right_named.clone().path().is_none() {
+            icon::from_path("./res/caret-right.svg".into())
+        } else {
+            icon_right_named.handle()
+        };
 
         let video_range = self
             .presenter
