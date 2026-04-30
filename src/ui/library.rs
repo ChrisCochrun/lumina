@@ -20,7 +20,7 @@ use cosmic::widget::{
 };
 use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
-use miette::{IntoDiagnostic, Result};
+use miette::{Context, IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{SqlitePool, migrate};
@@ -1270,7 +1270,8 @@ pub async fn add_db() -> Result<SqlitePool> {
     let mut db_url = String::from("sqlite://");
     db_url.push_str(data.to_str().expect("Should always be a file here"));
     let opts = SqliteConnectOptions::from_str(&db_url)
-        .into_diagnostic()?
+        .into_diagnostic()
+        .wrap_err(format!("DB Url: {db_url}"))?
         .create_if_missing(true);
     SqlitePool::connect_with(opts).await.into_diagnostic()
 }
