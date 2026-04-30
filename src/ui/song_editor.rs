@@ -2089,15 +2089,11 @@ fn verse_chip(verse: VerseName, index: Option<usize>) -> Element<'static, Messag
         VerseName::Verse { .. } => (VERSE_COLOR, light_text),
         VerseName::PreChorus { .. } => (INSTRUMENTAL_COLOR, light_text),
         VerseName::Chorus { .. } => (CHORUS_COLOR, light_text),
-        VerseName::PostChorus { .. } => {
-            todo!()
-        }
+        VerseName::PostChorus { .. } => (INSTRUMENTAL_COLOR, light_text),
         VerseName::Bridge { .. } => (BRIDGE_COLOR, dark_text),
         VerseName::Intro { .. } => (OTHER_COLOR, dark_text),
         VerseName::Outro { .. } => (OTHER_COLOR, dark_text),
-        VerseName::Instrumental { .. } => {
-            todo!()
-        }
+        VerseName::Instrumental { .. } => (INSTRUMENTAL_COLOR, light_text),
         VerseName::Other { .. } => (OTHER_COLOR, dark_text),
         VerseName::Blank => (OTHER_COLOR, dark_text),
     };
