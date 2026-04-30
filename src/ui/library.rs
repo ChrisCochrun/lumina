@@ -1266,6 +1266,7 @@ async fn add_presentations() -> Option<Vec<Presentation>> {
 pub async fn add_db() -> Result<SqlitePool> {
     let mut data = dirs::data_local_dir().expect("Should always find a data dir");
     data.push("lumina");
+    std::fs::create_dir_all(&data).into_diagnostic()?;
     data.push("library-db.sqlite3");
     let mut db_url = String::from("sqlite://");
     db_url.push_str(data.to_str().expect("Should always be a file here"));
