@@ -2222,9 +2222,16 @@ where
 
 fn add_library() -> Task<Message> {
     cosmic::Task::future(library::add_db()).then(|res| {
-        Task::perform(Library::new(Arc::new(res.expect("probs"))), |x| {
-            cosmic::Action::App(Message::AddLibrary(x))
-        })
+        Task::perform(
+            Library::new(Arc::new(match res {
+                Ok(db) => db,
+                Err(e) => {
+                    error!("{e}");
+                    panic!("{e}")
+                }
+            })),
+            |x| cosmic::Action::App(Message::AddLibrary(x)),
+        )
     })
 }
 
