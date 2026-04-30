@@ -2226,7 +2226,7 @@ fn add_library() -> Task<Message> {
             Library::new(Arc::new(match res {
                 Ok(db) => db,
                 Err(e) => {
-                    error!("{e}");
+                    error!("{e}: {}", e.root_cause());
                     panic!("{e}")
                 }
             })),
