@@ -1631,28 +1631,35 @@ impl cosmic::Application for App {
             space_xl,
             ..
         } = cosmic::theme::spacing();
-        let icon_left_named = icon::from_name("arrow-left").fallback(Some(
-            icon::IconFallback::Names(vec![
-                "go-previous-symbolic".into(),
-                "go-previous".into(),
-                "previous".into(),
-            ]),
-        ));
-        let icon_left = if icon_left_named.clone().path().is_none() {
-            icon::from_path("./res/caret-left.svg".into()).symbolic(true)
+        let icon_size = if self.view_mode == ViewMode::Row {
+            128
         } else {
-            icon_left_named.handle()
+            64
         };
-        let icon_right_named =
-            icon::from_name("arrow-right").fallback(Some(icon::IconFallback::Names(
-                vec!["go-next-symbolic".into(), "go-next".into(), "next".into()],
-            )));
 
-        let icon_right = if icon_right_named.clone().path().is_none() {
-            icon::from_path("./res/caret-right.svg".into()).symbolic(true)
-        } else {
-            icon_right_named.handle()
-        };
+        let icon_left = icon::from_path("./res/caret-left.svg".into())
+            .symbolic(true)
+            .icon()
+            .size(icon_size)
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }));
+
+        let icon_right = icon::from_path("./res/caret-right.svg".into())
+            .symbolic(true)
+            .icon()
+            .size(icon_size)
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }));
 
         let video_range = self
             .presenter
@@ -1766,27 +1773,33 @@ impl cosmic::Application for App {
         };
 
         let presenter_controls = row![
-            button::icon(icon_left)
-                .icon_size(icon_size)
-                .tooltip("Previous Slide")
-                .width(icon_size)
-                .on_press(Message::Present(presenter::Message::PrevSlide))
-                .class(theme::style::Button::Transparent)
-                .apply(container)
-                .center_y(Length::Fill)
-                .align_right(Length::FillPortion(1)),
+            tooltip(
+                button::custom(icon_left)
+                    .width(icon_size)
+                    .height(icon_size)
+                    .on_press(Message::Present(presenter::Message::PrevSlide))
+                    .class(theme::style::Button::Transparent),
+                text::body("Previous Slide"),
+                TPosition::FollowCursor
+            )
+            .apply(container)
+            .center_y(Length::Fill)
+            .align_right(Length::FillPortion(1)),
             Container::new(slide_preview)
                 .center_y(Length::Fill)
                 .width(Length::FillPortion(3)),
-            button::icon(icon_right)
-                .icon_size(icon_size)
-                .tooltip("Next Slide")
-                .width(icon_size)
-                .on_press(Message::Present(presenter::Message::NextSlide))
-                .class(theme::style::Button::Transparent)
-                .apply(container)
-                .center_y(Length::Fill)
-                .align_left(Length::FillPortion(1)),
+            tooltip(
+                button::custom(icon_right)
+                    .width(icon_size)
+                    .height(icon_size)
+                    .on_press(Message::Present(presenter::Message::NextSlide))
+                    .class(theme::style::Button::Transparent),
+                text::body("Next Slide"),
+                TPosition::FollowCursor
+            )
+            .apply(container)
+            .center_y(Length::Fill)
+            .align_left(Length::FillPortion(1))
         ]
         .width(Length::Fill)
         .height(Length::Fill)
