@@ -14,6 +14,7 @@ use url::Url;
 pub struct VideoSettings {
     pub mute: bool,
     pub framerate: u16,
+    pub appsink_name: String,
 }
 
 type Result<T> = std::result::Result<T, VideoError>;
@@ -26,10 +27,11 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     gst::init().map_err(VideoError::GlibError)?;
 
     let pipeline = format!(
-        r#"playbin uri="{0}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name=lumina_video drop=true caps=video/x-raw,format=NV12,framerate={1}/1,pixel-aspect-ratio=1/1{2}""#,
+        r#"playbin uri="{0}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name={1} drop=true caps=video/x-raw,format=NV12,framerate={2}/1,pixel-aspect-ratio=1/1{3}""#,
         url.as_str(),
+        settings.appsink_name,
         settings.framerate,
-        if settings.mute { " mute=true" } else { "" },
+        if settings.mute { ",mute=true" } else { "" },
     );
 
     let pipeline =
@@ -52,9 +54,10 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
         })?
         .downcast::<gst::Bin>()
         .map_err(|_| VideoError::IcedVideoError(iced_video_player::Error::Cast))?;
-    let video_sink = bin.by_name("lumina_video").ok_or_else(|| {
-        VideoError::IcedVideoError(iced_video_player::Error::AppSink(String::from(
-            "Can't find element lumina_video",
+    let video_sink = bin.by_name(&settings.appsink_name).ok_or_else(|| {
+        VideoError::IcedVideoError(iced_video_player::Error::AppSink(format!(
+            "Can't find element {}",
+            settings.appsink_name
         )))
     })?;
     let video_sink = video_sink

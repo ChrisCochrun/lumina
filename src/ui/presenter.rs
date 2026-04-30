@@ -126,7 +126,11 @@ impl Presenter {
                         "There should be a video file here",
                     );
 
-                    let video_settings = VideoSettings { mute: true, framerate: 15 };
+                    let video_settings = VideoSettings {
+                        mute: true,
+                        framerate: 15,
+                        appsink_name: "lumina_preview".to_string(),
+                    };
                     let result = gst_video::create_video(&url, &video_settings);
                     match result {
                         Ok(mut v) => {
@@ -155,7 +159,13 @@ impl Presenter {
                         "There should be a video file here",
                     );
 
-                    let video_settings = VideoSettings { mute: false, framerate: 60 };
+                    let video_settings = VideoSettings {
+                        mute: false,
+                        framerate: 60,
+                        appsink_name: "lumina_video".to_string(),
+
+                    };
+
                     let result = gst_video::create_video(&url, &video_settings);
                     match result {
                         Ok(mut v) => {
@@ -373,6 +383,7 @@ impl Presenter {
                 if let Some(video) = &mut self.preview_video {
                     video.set_paused(false);
                     video.set_looping(self.current_slide.video_loop());
+                    debug!(?video);
                 }
                 if let Some(video) = &mut self.presentation_video {
                     video.set_paused(false);
@@ -769,12 +780,14 @@ impl Presenter {
 
             let video_settings = VideoSettings {
                 mute: true,
-                framerate: 15,
+                framerate: 30,
+                appsink_name: "lumina_preview".to_string(),
             };
             match gst_video::create_video(&url, &video_settings) {
                 Ok(mut v) => {
                     v.set_looping(self.current_slide.video_loop());
                     v.set_muted(true);
+                    debug!(?v);
                     self.preview_video = Some(v);
                 }
                 Err(e) => {
@@ -785,6 +798,7 @@ impl Presenter {
             let video_settings = VideoSettings {
                 mute: false,
                 framerate: 60,
+                appsink_name: "lumina_video".to_string(),
             };
             match gst_video::create_video(&url, &video_settings) {
                 Ok(mut v) => {
