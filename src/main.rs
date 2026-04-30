@@ -16,6 +16,7 @@ use cosmic::iced::{
     window,
 };
 use cosmic::widget::dnd_destination::dnd_destination;
+use cosmic::widget::image::Handle;
 use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
@@ -50,6 +51,7 @@ use crate::core::content::Content;
 use crate::core::file;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::KindWrapper;
+use crate::ui::gst_video;
 use crate::ui::image_editor::{self, ImageEditor};
 use crate::ui::presentation_editor::{self, PresentationEditor};
 use crate::ui::text_svg::{self};
@@ -229,6 +231,7 @@ enum Message {
     ShowGeniusToken,
     SetGeniusToken(String),
     InsertBackgroundImage((iced::core::image::Allocation, usize)),
+    InsertThumbnail((iced::core::image::Allocation, usize)),
 }
 
 #[allow(dead_code)]
@@ -1323,43 +1326,97 @@ impl cosmic::Application for App {
                         })
                         .collect();
                 }
+                let mut tasks = Vec::new();
 
-                let task = if matches!(
+                if matches!(
                     item.kind,
                     ServiceItemKind::Song(_) | ServiceItemKind::Image(_)
                 ) {
-                    let path = item
+                    if let Some(path) = item
                         .slides
                         .first()
+                        .filter(|slide| slide.background.kind == BackgroundKind::Image)
                         .map(|slide| slide.background.path.clone())
-                        .unwrap_or_default();
-                    let item_index = self.service.len();
-                    cosmic::iced::runtime::image::allocate(path).map(move |allocation| {
-                        match allocation {
+                    {
+                        let item_index = self.service.len();
+                        tasks.push(cosmic::iced::runtime::image::allocate(path).map(
+                            move |allocation| match allocation {
+                                Ok(allocation) => {
+                                    cosmic::Action::App(Message::InsertBackgroundImage((
+                                        allocation, item_index,
+                                    )))
+                                }
+                                Err(e) => {
+                                    error!("{e}");
+                                    cosmic::Action::App(Message::None)
+                                }
+                            },
+                        ))
+                    }
+                };
+                if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_) | ServiceItemKind::Video(_)
+                ) {
+                    if let Some(path) = item
+                        .slides
+                        .first()
+                        .filter(|slide| slide.background.kind == BackgroundKind::Video)
+                        .map(|slide| slide.background.path.clone())
+                    {
+                        let item_index = self.service.len();
+                        let task = cosmic::Task::future(async move {
+                            let url =
+                                url::Url::from_file_path(&path).expect("Should be here");
+
+                            let file_name =
+                                path.file_name().expect("hope").to_string_lossy();
+                            let mut output =
+                                dirs::cache_dir().expect("Should have on every platform");
+                            output.push("lumina");
+                            output.push("video_thumbnails");
+                            if !output.exists() {
+                                if let Err(e) = std::fs::create_dir_all(&output) {
+                                    error!("{e}");
+                                }
+                            }
+                            output.push(file_name.to_string());
+                            debug!(?output);
+
+                            match gst_video::thumbnail(&url, &mut output) {
+                                Ok(handle) => handle,
+                                Err(e) => {
+                                    error!("{e}");
+                                    Handle::from_path(path)
+                                }
+                            }
+                        })
+                        .then(cosmic::iced::runtime::image::allocate)
+                        .map(move |allocation| match allocation {
                             Ok(allocation) => cosmic::Action::App(
-                                Message::InsertBackgroundImage((allocation, item_index)),
+                                Message::InsertThumbnail((allocation, item_index)),
                             ),
                             Err(e) => {
                                 error!("{e}");
                                 cosmic::Action::App(Message::None)
                             }
-                        }
-                    })
-                    // Task::perform(load_images(path), move |res| match res {
-                    //     Ok(handle) => cosmic::Action::App(
-                    //         Message::InsertBackgroundImage((handle, item_index)),
-                    //     ),
-                    //     Err(e) => {
-                    //         error!("Couldn't load image: {e:?}");
-                    //         cosmic::Action::None
-                    //     }
-                    // })
-                } else {
-                    Task::none()
-                };
+                        });
+                        tasks.push(task)
+                    }
+                }
                 Arc::make_mut(&mut self.service).push(item);
                 self.presenter.update_items(Arc::clone(&self.service));
-                task
+                Task::batch(tasks)
+            }
+            Message::InsertThumbnail((allocation, item_index)) => {
+                if let Some(item) = Arc::make_mut(&mut self.service).get_mut(item_index) {
+                    debug!(?allocation, item_index, "Inserting handle into item: ");
+                    for slide in &mut item.slides {
+                        slide.thumbnail = Some(allocation.clone());
+                    }
+                }
+                self.presenter.update_items(Arc::clone(&self.service));
+                Task::none()
             }
             Message::InsertBackgroundImage((allocation, item_index)) => {
                 if let Some(item) = Arc::make_mut(&mut self.service).get_mut(item_index) {

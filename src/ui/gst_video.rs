@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::num::NonZero;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use cosmic::widget::image::Handle;
@@ -8,13 +8,24 @@ use iced_video_player::gst_app::prelude::*;
 use iced_video_player::gst_app::{self};
 use iced_video_player::{Position, Video, gst};
 use image::{DynamicImage, ImageFormat, RgbaImage};
+use tracing::debug;
 use url::Url;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct VideoSettings {
     pub mute: bool,
     pub framerate: u16,
     pub appsink_name: String,
+}
+
+impl Default for VideoSettings {
+    fn default() -> Self {
+        Self {
+            mute: true,
+            framerate: 60,
+            appsink_name: String::from("lumina_video"),
+        }
+    }
 }
 
 type Result<T> = std::result::Result<T, VideoError>;
@@ -67,15 +78,18 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
         .map_err(VideoError::IcedVideoError)
 }
 
-pub fn thumbnail(input: &Url, output: &Path) -> Result<Handle> {
+pub fn thumbnail(input: &Url, output: &mut PathBuf) -> Result<Handle> {
+    output.set_extension("png");
+    if output.exists() {
+        let image = image::open(&output).map_err(VideoError::ThumbnailImageError)?;
+        let (width, height, pixels) =
+            (image.width(), image.height(), image.to_rgba8().to_vec());
+        return Ok(Handle::from_rgba(width, height, pixels));
+    }
+    debug!(?output);
+
     let thumbnails = {
-        let mut video = create_video(
-            input,
-            &VideoSettings {
-                mute: true,
-                ..Default::default()
-            },
-        )?;
+        let mut video = create_video(input, &VideoSettings::default())?;
 
         let duration = video.duration();
         //TODO: how best to decide time?
@@ -104,6 +118,11 @@ pub fn thumbnail(input: &Url, output: &Path) -> Result<Handle> {
                 VideoError::ThumbnailError(String::from("Cannot convert handle to image"))
             })?;
 
+        if !output.exists() {
+            output.set_extension("png");
+            debug!(?output);
+        }
+
         image
             .save_with_format(output, ImageFormat::Png)
             .map_err(VideoError::ThumbnailImageError)?;
@@ -125,6 +144,7 @@ pub enum VideoError {
     IcedVideoError(iced_video_player::Error),
     GlibError(gst::glib::Error),
     ThumbnailImageError(image::ImageError),
+    IOError(std::io::Error),
 }
 
 impl std::error::Error for VideoError {}
@@ -143,6 +163,9 @@ impl Display for VideoError {
             }
             Self::ThumbnailImageError(error) => {
                 write!(f, "ImageError: {error}")
+            }
+            Self::IOError(error) => {
+                write!(f, "IOError: {error}")
             }
         }
     }

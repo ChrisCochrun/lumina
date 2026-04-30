@@ -21,6 +21,8 @@ use super::songs::Song;
 pub struct Slide {
     id: i32,
     pub(crate) background: Background,
+    #[serde(skip)]
+    pub(crate) thumbnail: Option<Allocation>,
     text: String,
     font: Option<Font>,
     font_size: i32,

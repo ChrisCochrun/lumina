@@ -1096,6 +1096,26 @@ pub(crate) fn slide_view<'a>(
                         .center(Length::Fill)
                         .clip(true),
                     );
+                } else if delegate {
+                    stack = stack.push(slide.thumbnail.as_ref().map_or_else(
+                        || {
+                            Container::new(space::horizontal())
+                                .center(Length::Fill)
+                                .clip(true)
+                        },
+                        |allocation| {
+                            loaded_image(
+                                allocation.handle(),
+                                cosmic_image(allocation.handle())
+                                    .content_fit(ContentFit::Contain)
+                                    .width(width)
+                                    .height(Length::Fill),
+                            )
+                            .apply(container)
+                            .center(Length::Fill)
+                            .clip(true)
+                        },
+                    ));
                 }
             }
             BackgroundKind::Pdf => {
