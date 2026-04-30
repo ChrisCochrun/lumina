@@ -30,6 +30,7 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
+use std::borrow::Cow;
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
 // use lisp::parse_lisp;
@@ -1630,8 +1631,17 @@ impl cosmic::Application for App {
             space_xl,
             ..
         } = cosmic::theme::spacing();
-        let icon_left = icon::from_name("arrow-left");
-        let icon_right = icon::from_name("arrow-right");
+        let icon_left =
+            icon::from_name("arrow-left").fallback(Some(icon::IconFallback::Names(
+                vec!["go-next".into(), "next".into(), "go-next-symbolic".into()],
+            )));
+        let icon_right = icon::from_name("arrow-right").fallback(Some(
+            icon::IconFallback::Names(vec![
+                "go-previous".into(),
+                "previous".into(),
+                "go-previous-symbolic".into(),
+            ]),
+        ));
 
         let video_range = self
             .presenter
