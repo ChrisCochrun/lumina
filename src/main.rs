@@ -1639,7 +1639,7 @@ impl cosmic::Application for App {
             ]),
         ));
         let icon_left = if icon_left_named.clone().path().is_none() {
-            icon::from_path("./res/caret-left.svg".into())
+            icon::from_path("./res/caret-left.svg".into()).symbolic(true)
         } else {
             icon_left_named.handle()
         };
@@ -1649,7 +1649,7 @@ impl cosmic::Application for App {
             )));
 
         let icon_right = if icon_right_named.clone().path().is_none() {
-            icon::from_path("./res/caret-right.svg".into())
+            icon::from_path("./res/caret-right.svg".into()).symbolic(true)
         } else {
             icon_right_named.handle()
         };
