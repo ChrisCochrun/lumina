@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use cosmic::dialog::file_chooser::open::Dialog;
@@ -21,6 +22,7 @@ use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
+use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{SqlitePool, migrate};
 use tracing::{debug, error, warn};
 
@@ -1267,7 +1269,10 @@ pub async fn add_db() -> Result<SqlitePool> {
     data.push("library-db.sqlite3");
     let mut db_url = String::from("sqlite://");
     db_url.push_str(data.to_str().expect("Should always be a file here"));
-    SqlitePool::connect(&db_url).await.into_diagnostic()
+    let opts = SqliteConnectOptions::from_str(&db_url)
+        .into_diagnostic()?
+        .create_if_missing(true);
+    SqlitePool::connect_with(opts).await.into_diagnostic()
 }
 
 #[allow(clippy::cast_sign_loss)]
