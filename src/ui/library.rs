@@ -759,8 +759,10 @@ impl<'a> Library {
 
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
-                button::icon(icon::from_name("add")).on_press(Message::AddItem)
-            );
+                button::icon(icon::from_path("./res/plus.svg".into()).symbolic(true))
+                    .on_press(Message::AddItem)
+            )
+            .align_y(Vertical::Center);
             let context_menu = self.context_menu(items.into());
             let library_column = column![library_toolbar, context_menu].spacing(3);
             Container::new(library_column).padding(5)
@@ -822,12 +824,13 @@ impl<'a> Library {
 
         let texts = column([text.into(), subtext.into()]);
 
-        let add_button = button::icon(icon::from_name("arrow-right"))
-            .on_press(Message::ToService((
-                model.kind,
-                index.try_into().expect("Shouldn't have issues"),
-            )))
-            .tooltip("Add to service");
+        let add_button =
+            button::icon(icon::from_path("./res/caret-right.svg".into()).symbolic(true))
+                .on_press(Message::ToService((
+                    model.kind,
+                    index.try_into().expect("Shouldn't have issues"),
+                )))
+                .tooltip("Add to service");
 
         Container::new(
             rowm![horizontal().width(0), texts, add_button]

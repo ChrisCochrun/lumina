@@ -693,7 +693,7 @@ impl cosmic::Application for App {
                             column![title, subtitle].spacing(space_xxs),
                             horizontal(),
                             tooltip(
-                                icon::from_name("add")
+                                icon::from_path("./res/plus.svg".into())
                                     .symbolic(true)
                                     .apply(button::icon)
                                     .icon_size(space_l)
@@ -1826,7 +1826,9 @@ impl cosmic::Application for App {
         let presenter_tool_bar = if self.editor_mode.is_none() {
             let grid_button = button::standard("Grid")
                 .on_press(Message::ViewModeSwitch(ViewMode::Grid))
-                .leading_icon(icon::from_name("show-grid").symbolic(true).size(space_xl))
+                .leading_icon(
+                    icon::from_path("./res/layout-grid.svg".into()).symbolic(true),
+                )
                 .height(space_xl)
                 .class(if self.view_mode == ViewMode::Grid {
                     theme::Button::Standard
