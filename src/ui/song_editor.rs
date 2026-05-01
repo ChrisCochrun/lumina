@@ -2183,6 +2183,8 @@ async fn pick_background() -> Result<PathBuf, SongError> {
     let bg_filter = FileFilter::new("Videos and Images")
         .extension("png")
         .extension("jpg")
+        .extension("webp")
+        .extension("avif")
         .extension("mp4")
         .extension("webm")
         .extension("mkv")

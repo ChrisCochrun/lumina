@@ -685,7 +685,7 @@ impl cosmic::Application for App {
                             // debug!(?platform_specific);
                             None
                         }
-                        iced::Event::InputMethod(_event) => todo!(),
+                        iced::Event::InputMethod(_event) => None,
                     }
                 }
                 event::Status::Captured => None,
