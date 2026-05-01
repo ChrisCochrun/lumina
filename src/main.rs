@@ -535,9 +535,15 @@ impl cosmic::Application for App {
             tooltip(
                 button::custom(
                     row!(
-                        Container::new(
-                            icon::from_name("document-edit-symbolic").scale(3)
-                        )
+                        Container::new(if self.editor_mode.is_some() {
+                            icon::from_path("./res/presentation-analytics.svg".into())
+                                .symbolic(true)
+                                .apply(icon::icon)
+                        } else {
+                            icon::from_path("./res/edit.svg".into())
+                                .symbolic(true)
+                                .apply(icon::icon)
+                        })
                         .center_y(Length::Fill),
                         text::body(if self.editor_mode.is_some() {
                             "Present Mode"
@@ -556,14 +562,23 @@ impl cosmic::Application for App {
             tooltip(
                 button::custom(
                     row!(
-                        Container::new(
+                        Container::new(if cfg!(target_os = "linux") {
                             icon::from_name(if self.presentation_open {
                                 "window-close-symbolic"
                             } else {
                                 "view-presentation-symbolic"
                             })
                             .scale(3)
-                        )
+                            .icon()
+                        } else {
+                            if self.presentation_open {
+                                icon::from_name("window-close-symbolic").scale(3).icon()
+                            } else {
+                                icon::from_path("./res/presentation-analytics.svg".into())
+                                    .symbolic(true)
+                                    .apply(icon::icon)
+                            }
+                        })
                         .center_y(Length::Fill),
                         text
                     )
