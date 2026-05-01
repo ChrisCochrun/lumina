@@ -490,7 +490,7 @@ impl cosmic::Application for App {
                 &self.menu_keys,
                 vec![menu::Item::Button(
                     "Open Settings",
-                    Some(icon::from_name("settings").symbolic(true).into()),
+                    Some(icon::from_name("preferences-system-symbolic").into()),
                     MenuAction::OpenSettings,
                 )],
             ),
@@ -591,8 +591,8 @@ impl cosmic::Application for App {
                         } else if self.presentation_open {
                             icon::from_name("window-close-symbolic").scale(3).icon()
                         } else {
-                            icon::from_path("./res/presentation-analytics.svg".into())
-                                .symbolic(true)
+                            icon::from_name("x-office-presentation-symbolic")
+                                .scale(3)
                                 .icon()
                         })
                         .center_y(Length::Fill),
@@ -724,8 +724,7 @@ impl cosmic::Application for App {
                             column![title, subtitle].spacing(space_xxs),
                             horizontal(),
                             tooltip(
-                                icon::from_path("./res/plus.svg".into())
-                                    .symbolic(true)
+                                icon::from_name("list-add-symbolic")
                                     .apply(button::icon)
                                     .icon_size(space_l)
                                     .on_press(Message::AppendServiceItemKind(
@@ -735,8 +734,7 @@ impl cosmic::Application for App {
                                 tooltip::Position::FollowCursor
                             ),
                             tooltip(
-                                icon::from_name("edit")
-                                    .symbolic(true)
+                                icon::from_name("edit-symbolic")
                                     .apply(button::icon)
                                     .icon_size(space_l)
                                     .on_press(Message::OpenEditorKind(item.clone())),
@@ -806,9 +804,7 @@ impl cosmic::Application for App {
                 .select_on_focus(true)
                 .on_input(Message::SetGeniusToken),
             );
-            let close_button = icon::from_name("dialog-close")
-                .symbolic(true)
-                .prefer_svg(true)
+            let close_button = icon::from_name("window-close-symbolic")
                 .apply(button::icon)
                 .class(theme::Button::Icon)
                 .icon_size(space_xl)

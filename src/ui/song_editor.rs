@@ -1489,7 +1489,7 @@ impl SongEditor {
         .gap(10);
 
         let bold_button = tooltip(
-            button::icon(icon::from_name("format-text-bold"))
+            button::icon(icon::from_name("format-text-bold-symbolic"))
                 .selected(self.song.as_ref().is_some_and(|song| {
                     song.font_weight
                         .is_some_and(|font_weight| font_weight == Weight::Bold)
@@ -1499,7 +1499,7 @@ impl SongEditor {
             tooltip::Position::Bottom,
         );
         let italic_button = tooltip(
-            button::icon(icon::from_name("format-text-italic"))
+            button::icon(icon::from_name("format-text-italic-symbolic"))
                 .selected(self.song.as_ref().is_some_and(|song| {
                     song.font_style
                         .is_some_and(|font_style| font_style == Style::Italic)
@@ -1510,7 +1510,7 @@ impl SongEditor {
         );
 
         let underline_button = tooltip(
-            button::icon(icon::from_name("format-text-underline"))
+            button::icon(icon::from_name("format-text-underline-symbolic"))
                 .on_press(Message::None),
             "Underline",
             tooltip::Position::Bottom,
@@ -1672,10 +1672,12 @@ impl SongEditor {
             shadow_tools_button = shadow_tools_button.popup(shadow_tools);
         }
         let text_alignment_popover = popover(tooltip(
-            button::icon(icon::from_name("align-on-canvas").symbolic(true))
-                .label("Text Alignment")
-                .padding(space_s)
-                .on_press(Message::ToggleAlignmentTools),
+            button::icon(
+                icon::from_path("./res/align-on-canvas.svg".into()).symbolic(true),
+            )
+            .label("Text Alignment")
+            .padding(space_s)
+            .on_press(Message::ToggleAlignmentTools),
             "Set where text should be on slide",
             tooltip::Position::Bottom,
         ))
@@ -1689,80 +1691,93 @@ impl SongEditor {
                     .row_spacing(space_s)
                     .column_spacing(space_s)
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_top_left"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(TextAlignment::TopLeft)),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_top_left.svg".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::TopLeft)),
                         |a| a.column(0).row(0),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_top"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::TopCenter,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_top.svg".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::TopCenter)),
                         |a| a.column(1).row(0),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_top_right"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(TextAlignment::TopRight)),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_top_right".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::TopRight)),
                         |a| a.column(2).row(0),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_left"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::MiddleLeft,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_left".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::MiddleLeft)),
                         |a| a.column(0).row(1),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_center"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::MiddleCenter,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_center".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::MiddleCenter)),
                         |a| a.column(1).row(1),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_right"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::MiddleRight,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_right".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::MiddleRight)),
                         |a| a.column(2).row(1),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_bottom_left"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::BottomLeft,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_bottom_left".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::BottomLeft)),
                         |a| a.column(0).row(2),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_bottom"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::BottomCenter,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_bottom".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::BottomCenter)),
                         |a| a.column(1).row(2),
                     )
                     .push_with(
-                        button::icon(icon::from_name("boundingbox_bottom_right"))
-                            .class(theme::Button::Standard)
-                            .padding(space_s)
-                            .on_press(Message::SetTextAlignment(
-                                TextAlignment::BottomRight,
-                            )),
+                        button::icon(
+                            icon::from_path("./res/boundingbox_bottom_right".into())
+                                .symbolic(true),
+                        )
+                        .class(theme::Button::Standard)
+                        .padding(space_s)
+                        .on_press(Message::SetTextAlignment(TextAlignment::BottomRight)),
                         |a| a.column(2).row(2),
                     )
                     .apply(container)

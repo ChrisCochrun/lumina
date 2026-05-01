@@ -759,7 +759,8 @@ impl<'a> Library {
 
             let library_toolbar = rowm!(
                 text_input("Search...", ""),
-                button::icon(icon::from_path("./res/plus.svg".into()).symbolic(true))
+                button::icon(icon::from_name("list-add-symbolic"))
+                    .icon_size(theme::spacing().space_l)
                     .on_press(Message::AddItem)
             )
             .align_y(Vertical::Center);
