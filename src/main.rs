@@ -1844,7 +1844,6 @@ impl cosmic::Application for App {
                 .leading_icon(
                     icon::from_path("./res/layout-grid.svg".into()).symbolic(true),
                 )
-                .height(space_xl)
                 .class(if self.view_mode == ViewMode::Grid {
                     theme::Button::Standard
                 } else {
@@ -1853,7 +1852,6 @@ impl cosmic::Application for App {
             let list_button = button::standard("Preview")
                 .leading_icon(icon::from_path("./res/carousel.svg".into()).symbolic(true))
                 .on_press(Message::ViewModeSwitch(ViewMode::Row))
-                .height(space_xl)
                 .class(if self.view_mode == ViewMode::Row {
                     theme::Button::Standard
                 } else {
