@@ -787,7 +787,6 @@ impl Presenter {
                 Ok(mut v) => {
                     v.set_looping(self.current_slide.video_loop());
                     v.set_muted(true);
-                    debug!(?v);
                     self.preview_video = Some(v);
                 }
                 Err(e) => {
