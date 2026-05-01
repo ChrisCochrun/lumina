@@ -447,7 +447,13 @@ impl cosmic::Application for App {
                 vec![
                     menu::Item::Button(
                         "New",
-                        Some(icon::from_name("document-new").symbolic(true).into()),
+                        Some(if cfg!(target_os = "linux") {
+                            icon::from_name("document-new").symbolic(true).into()
+                        } else {
+                            icon::from_path("./res/circle-plus.svg".into())
+                                .symbolic(true)
+                                .into()
+                        }),
                         MenuAction::New,
                     ),
                     menu::Item::Button(
@@ -520,8 +526,12 @@ impl cosmic::Application for App {
             tooltip(
                 button::custom(
                     row!(
-                        Container::new(icon::from_name("search").scale(5).symbolic(true))
-                            .center_y(Length::Fill),
+                        Container::new(
+                            icon::from_path("./res/search.svg".into())
+                                .symbolic(true)
+                                .icon()
+                        )
+                        .center_y(Length::Fill),
                         text::body("Search")
                     )
                     .spacing(5),
@@ -538,11 +548,11 @@ impl cosmic::Application for App {
                         Container::new(if self.editor_mode.is_some() {
                             icon::from_path("./res/presentation-analytics.svg".into())
                                 .symbolic(true)
-                                .apply(icon::icon)
+                                .icon()
                         } else {
                             icon::from_path("./res/edit.svg".into())
                                 .symbolic(true)
-                                .apply(icon::icon)
+                                .icon()
                         })
                         .center_y(Length::Fill),
                         text::body(if self.editor_mode.is_some() {
