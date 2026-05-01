@@ -1850,25 +1850,15 @@ impl cosmic::Application for App {
                 } else {
                     theme::Button::HeaderBar
                 });
-            let list_button = button::custom(
-                row![
-                    icon::from_path("./res/carousel.svg".into())
-                        .symbolic(true)
-                        .icon()
-                        .size(space_l)
-                        .apply(container)
-                        .center(Length::Shrink),
-                    "Preview"
-                ]
-                .align_y(Vertical::Center),
-            )
-            .on_press(Message::ViewModeSwitch(ViewMode::Row))
-            .height(space_xl)
-            .class(if self.view_mode == ViewMode::Row {
-                theme::Button::Standard
-            } else {
-                theme::Button::HeaderBar
-            });
+            let list_button = button::standard("Preview")
+                .leading_icon(icon::from_path("./res/carousel.svg".into()).symbolic(true))
+                .on_press(Message::ViewModeSwitch(ViewMode::Row))
+                .height(space_xl)
+                .class(if self.view_mode == ViewMode::Row {
+                    theme::Button::Standard
+                } else {
+                    theme::Button::HeaderBar
+                });
             let (preview_size_range, preview_breakpoints) = match self.view_mode {
                 ViewMode::Grid => (100.0..=300.0, &[100.0, 150.0, 200.0, 250.0, 300.0]),
                 ViewMode::Row => (100.0..=150.0, &[100.0, 110.0, 120.0, 130.0, 140.0]),
