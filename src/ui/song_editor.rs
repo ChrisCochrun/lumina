@@ -999,9 +999,9 @@ impl SongEditor {
     pub fn view(&self) -> Element<Message> {
         let audio_elements: Element<Message> = if self.audio.exists() {
             let play_button = icon::from_name(if self.player.is_paused() {
-                "media-playback-start"
+                "media-playback-start-symbolic"
             } else {
-                "media-playback-pause"
+                "media-playback-pause-symbolic"
             })
             .apply(button::icon)
             .on_press(Message::PlayPauseAudio);
@@ -1080,9 +1080,9 @@ impl SongEditor {
                                 |video| {
                                     let play_button =
                                         icon::from_name(if video.paused() {
-                                            "media-playback-start"
+                                            "media-playback-start-symbolic"
                                         } else {
-                                            "media-playback-pause"
+                                            "media-playback-pause-symbolic"
                                         })
                                         .apply(button::icon)
                                         .on_press(Message::PauseVideo);

@@ -128,9 +128,9 @@ impl VideoEditor {
             || container(horizontal()),
             |video| {
                 let play_button = button::icon(if video.paused() {
-                    icon::from_name("media-playback-start")
+                    icon::from_name("media-playback-start-symbolic")
                 } else {
-                    icon::from_name("media-playback-pause")
+                    icon::from_name("media-playback-pause-symbolic")
                 })
                 .on_press(Message::PauseVideo);
                 let video_track = slider(

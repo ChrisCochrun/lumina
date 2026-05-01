@@ -21,7 +21,6 @@ use cosmic::widget::menu::key_bind::Modifier;
 use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
-use cosmic::widget::tooltip::Position as TPosition;
 use cosmic::widget::{
     Container, Space, button, container, context_menu, divider, icon, menu, mouse_area,
     nav_bar, nav_bar_toggle, responsive, scrollable, search_input, settings, slider,
@@ -30,7 +29,6 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
-use std::borrow::Cow;
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
 // use lisp::parse_lisp;
@@ -447,28 +445,38 @@ impl cosmic::Application for App {
                 vec![
                     menu::Item::Button(
                         "New",
-                        Some(if cfg!(target_os = "linux") {
-                            icon::from_name("document-new").symbolic(true).into()
-                        } else {
-                            icon::from_path("./res/circle-plus.svg".into())
+                        Some(
+                            icon::from_name("document-new-symbolic")
                                 .symbolic(true)
-                                .into()
-                        }),
+                                .into(),
+                        ),
                         MenuAction::New,
                     ),
                     menu::Item::Button(
                         "Open",
-                        Some(icon::from_name("document-open").symbolic(true).into()),
+                        Some(
+                            icon::from_name("document-open-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::Open,
                     ),
                     menu::Item::Button(
                         "Save",
-                        Some(icon::from_name("document-save").symbolic(true).into()),
+                        Some(
+                            icon::from_name("document-save-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::Save,
                     ),
                     menu::Item::Button(
                         "Save As",
-                        Some(icon::from_name("document-save-as").symbolic(true).into()),
+                        Some(
+                            icon::from_name("document-save-as-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
                         MenuAction::SaveAs,
                     ),
                 ],
@@ -498,7 +506,7 @@ impl cosmic::Application for App {
             } else {
                 "Show library"
             },
-            TPosition::Bottom,
+            tooltip::Position::Bottom,
         )
         .gap(cosmic::theme::spacing().space_xs);
         vec![library_button.into(), menu_bar.into()]
@@ -539,7 +547,7 @@ impl cosmic::Application for App {
                 .class(cosmic::theme::style::Button::HeaderBar)
                 .on_press(Message::SearchFocus),
                 "Search Library",
-                TPosition::Bottom,
+                tooltip::Position::Bottom,
             )
             .gap(cosmic::theme::spacing().space_xs),
             tooltip(
@@ -566,7 +574,7 @@ impl cosmic::Application for App {
                 .class(cosmic::theme::style::Button::HeaderBar)
                 .on_press(Message::EditorToggle(self.editor_mode.is_none(),)),
                 "Enter Edit Mode",
-                TPosition::Bottom,
+                tooltip::Position::Bottom,
             )
             .gap(cosmic::theme::spacing().space_xs),
             tooltip(
@@ -580,14 +588,12 @@ impl cosmic::Application for App {
                             })
                             .scale(3)
                             .icon()
+                        } else if self.presentation_open {
+                            icon::from_name("window-close-symbolic").scale(3).icon()
                         } else {
-                            if self.presentation_open {
-                                icon::from_name("window-close-symbolic").scale(3).icon()
-                            } else {
-                                icon::from_path("./res/presentation-analytics.svg".into())
-                                    .symbolic(true)
-                                    .apply(icon::icon)
-                            }
+                            icon::from_path("./res/presentation-analytics.svg".into())
+                                .symbolic(true)
+                                .icon()
                         })
                         .center_y(Length::Fill),
                         text
@@ -603,7 +609,7 @@ impl cosmic::Application for App {
                     }
                 }),
                 "Start Presentation",
-                TPosition::Bottom,
+                tooltip::Position::Bottom,
             )
             .gap(cosmic::theme::spacing().space_xs),
         ]
@@ -726,7 +732,7 @@ impl cosmic::Application for App {
                                         item.clone()
                                     )),
                                 "Add to service",
-                                TPosition::FollowCursor
+                                tooltip::Position::FollowCursor
                             ),
                             tooltip(
                                 icon::from_name("edit")
@@ -735,7 +741,7 @@ impl cosmic::Application for App {
                                     .icon_size(space_l)
                                     .on_press(Message::OpenEditorKind(item.clone())),
                                 "Edit Item",
-                                TPosition::FollowCursor
+                                tooltip::Position::FollowCursor
                             ),
                         ]
                         .align_y(Vertical::Center)
@@ -1357,78 +1363,71 @@ impl cosmic::Application for App {
                 if matches!(
                     item.kind,
                     ServiceItemKind::Song(_) | ServiceItemKind::Image(_)
-                ) {
-                    if let Some(path) = item
-                        .slides
-                        .first()
-                        .filter(|slide| slide.background.kind == BackgroundKind::Image)
-                        .map(|slide| slide.background.path.clone())
-                    {
-                        let item_index = self.service.len();
-                        tasks.push(cosmic::iced::runtime::image::allocate(path).map(
-                            move |allocation| match allocation {
-                                Ok(allocation) => {
-                                    cosmic::Action::App(Message::InsertBackgroundImage((
-                                        allocation, item_index,
-                                    )))
-                                }
-                                Err(e) => {
-                                    error!("{e}");
-                                    cosmic::Action::App(Message::None)
-                                }
-                            },
-                        ))
-                    }
-                };
-                if matches!(
-                    item.kind,
-                    ServiceItemKind::Song(_) | ServiceItemKind::Video(_)
-                ) {
-                    if let Some(path) = item
-                        .slides
-                        .first()
-                        .filter(|slide| slide.background.kind == BackgroundKind::Video)
-                        .map(|slide| slide.background.path.clone())
-                    {
-                        let item_index = self.service.len();
-                        let task = cosmic::Task::future(async move {
-                            let url =
-                                url::Url::from_file_path(&path).expect("Should be here");
-
-                            let file_name =
-                                path.file_name().expect("hope").to_string_lossy();
-                            let mut output =
-                                dirs::cache_dir().expect("Should have on every platform");
-                            output.push("lumina");
-                            output.push("video_thumbnails");
-                            if !output.exists() {
-                                if let Err(e) = std::fs::create_dir_all(&output) {
-                                    error!("{e}");
-                                }
-                            }
-                            output.push(file_name.to_string());
-                            debug!(?output);
-
-                            match gst_video::thumbnail(&url, &mut output) {
-                                Ok(handle) => handle,
-                                Err(e) => {
-                                    error!("{e}");
-                                    Handle::from_path(path)
-                                }
-                            }
-                        })
-                        .then(cosmic::iced::runtime::image::allocate)
-                        .map(move |allocation| match allocation {
+                ) && let Some(path) = item
+                    .slides
+                    .first()
+                    .filter(|slide| slide.background.kind == BackgroundKind::Image)
+                    .map(|slide| slide.background.path.clone())
+                {
+                    let item_index = self.service.len();
+                    tasks.push(cosmic::iced::runtime::image::allocate(path).map(
+                        move |allocation| match allocation {
                             Ok(allocation) => cosmic::Action::App(
-                                Message::InsertThumbnail((allocation, item_index)),
+                                Message::InsertBackgroundImage((allocation, item_index)),
                             ),
                             Err(e) => {
                                 error!("{e}");
                                 cosmic::Action::App(Message::None)
                             }
-                        });
-                        tasks.push(task)
-                    }
+                        },
+                    ));
+                }
+                if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_) | ServiceItemKind::Video(_)
+                ) && let Some(path) = item
+                    .slides
+                    .first()
+                    .filter(|slide| slide.background.kind == BackgroundKind::Video)
+                    .map(|slide| slide.background.path.clone())
+                {
+                    let item_index = self.service.len();
+                    let task = cosmic::Task::future(async move {
+                        let url =
+                            url::Url::from_file_path(&path).expect("Should be here");
+
+                        let file_name = path.file_name().expect("hope").to_string_lossy();
+                        let mut output =
+                            dirs::cache_dir().expect("Should have on every platform");
+                        output.push("lumina");
+                        output.push("video_thumbnails");
+                        if !output.exists()
+                            && let Err(e) = std::fs::create_dir_all(&output)
+                        {
+                            error!("{e}");
+                        }
+                        output.push(file_name.to_string());
+                        debug!(?output);
+
+                        match gst_video::thumbnail(&url, &mut output) {
+                            Ok(handle) => handle,
+                            Err(e) => {
+                                error!("{e}");
+                                Handle::from_path(path)
+                            }
+                        }
+                    })
+                    .then(cosmic::iced::runtime::image::allocate)
+                    .map(move |allocation| match allocation {
+                        Ok(allocation) => cosmic::Action::App(Message::InsertThumbnail(
+                            (allocation, item_index),
+                        )),
+                        Err(e) => {
+                            error!("{e}");
+                            cosmic::Action::App(Message::None)
+                        }
+                    });
+                    tasks.push(task);
                 }
                 Arc::make_mut(&mut self.service).push(item);
                 self.presenter.update_items(Arc::clone(&self.service));
@@ -1694,15 +1693,15 @@ impl cosmic::Application for App {
 
         let video_button_icon = self.presenter.preview_video.as_ref().map_or_else(
             || {
-                button::icon(icon::from_name("media-play"))
+                button::icon(icon::from_name("media-playback-start-symbolic"))
                     .tooltip("Play")
                     .on_press(Message::Present(presenter::Message::PlayPauseVideo))
             },
             |video| {
                 let (icon_name, tooltip) = if video.paused() {
-                    ("media-play", "Play")
+                    ("media-playback-start-symbolic", "Play")
                 } else {
-                    ("media-pause", "Pause")
+                    ("media-playback-pause-symbolic", "Pause")
                 };
                 button::icon(icon::from_name(icon_name))
                     .tooltip(tooltip)
@@ -1805,7 +1804,7 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(presenter::Message::PrevSlide))
                     .class(theme::style::Button::Transparent),
                 text::body("Previous Slide"),
-                TPosition::FollowCursor
+                tooltip::Position::FollowCursor
             )
             .apply(container)
             .center_y(Length::Fill)
@@ -1820,7 +1819,7 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(presenter::Message::NextSlide))
                     .class(theme::style::Button::Transparent),
                 text::body("Next Slide"),
-                TPosition::FollowCursor
+                tooltip::Position::FollowCursor
             )
             .apply(container)
             .center_y(Length::Fill)
@@ -2140,7 +2139,7 @@ where
             let tooltip = tooltip(
                 single_item,
                 text::body(item.kind.to_string()),
-                TPosition::Right,
+                tooltip::Position::Right,
             )
             .gap(cosmic::theme::spacing().space_xs);
             dnd_destination(
