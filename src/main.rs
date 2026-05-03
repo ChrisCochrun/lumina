@@ -535,7 +535,7 @@ impl cosmic::Application for App {
                 button::custom(
                     row!(
                         Container::new(
-                            icon::from_path("./res/search.svg".into())
+                            icon::from_path("./res/icons/search.svg".into())
                                 .symbolic(true)
                                 .icon()
                         )
@@ -554,11 +554,11 @@ impl cosmic::Application for App {
                 button::custom(
                     row!(
                         Container::new(if self.editor_mode.is_some() {
-                            icon::from_path("./res/presentation-analytics.svg".into())
+                            icon::from_path("./res/icons/presentation-analytics.svg".into())
                                 .symbolic(true)
                                 .icon()
                         } else {
-                            icon::from_path("./res/edit.svg".into())
+                            icon::from_path("./res/icons/edit.svg".into())
                                 .symbolic(true)
                                 .icon()
                         })
@@ -1657,7 +1657,7 @@ impl cosmic::Application for App {
             64
         };
 
-        let icon_left = icon::from_path("./res/caret-left.svg".into())
+        let icon_left = icon::from_path("./res/icons/caret-left.svg".into())
             .symbolic(true)
             .icon()
             .size(icon_size)
@@ -1669,7 +1669,7 @@ impl cosmic::Application for App {
                 }),
             }));
 
-        let icon_right = icon::from_path("./res/caret-right.svg".into())
+        let icon_right = icon::from_path("./res/icons/caret-right.svg".into())
             .symbolic(true)
             .icon()
             .size(icon_size)
@@ -1847,7 +1847,7 @@ impl cosmic::Application for App {
             let grid_button = button::standard("Grid")
                 .on_press(Message::ViewModeSwitch(ViewMode::Grid))
                 .leading_icon(
-                    icon::from_path("./res/layout-grid.svg".into()).symbolic(true),
+                    icon::from_path("./res/icons/layout-grid.svg".into()).symbolic(true),
                 )
                 .class(if self.view_mode == ViewMode::Grid {
                     theme::Button::Standard
@@ -1855,7 +1855,7 @@ impl cosmic::Application for App {
                     theme::Button::HeaderBar
                 });
             let list_button = button::standard("Preview")
-                .leading_icon(icon::from_path("./res/carousel.svg".into()).symbolic(true))
+                .leading_icon(icon::from_path("./res/icons/carousel.svg".into()).symbolic(true))
                 .on_press(Message::ViewModeSwitch(ViewMode::Row))
                 .class(if self.view_mode == ViewMode::Row {
                     theme::Button::Standard

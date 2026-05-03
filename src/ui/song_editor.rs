@@ -1530,7 +1530,7 @@ impl SongEditor {
         );
 
         let mut stroke_tools_button = popover(tooltip(
-            button::icon(icon::from_path("./res/text-outline.svg".into()).symbolic(true))
+            button::icon(icon::from_path("./res/icons/text-outline.svg".into()).symbolic(true))
                 .label("Text Stroke")
                 .on_press(Message::ToggleStrokeTools),
             "Outline of the text",
@@ -1592,7 +1592,7 @@ impl SongEditor {
         }
 
         let mut shadow_tools_button = popover(tooltip(
-            button::icon(icon::from_path("./res/shadow.svg".into()).symbolic(true))
+            button::icon(icon::from_path("./res/icons/shadow.svg".into()).symbolic(true))
                 .label("Text Shadow")
                 .padding(space_s)
                 .on_press(Message::ToggleShadowTools),
@@ -1686,7 +1686,7 @@ impl SongEditor {
         }
         let text_alignment_popover = popover(tooltip(
             button::icon(
-                icon::from_path("./res/align-on-canvas.svg".into()).symbolic(true),
+                icon::from_path("./res/icons/align-on-canvas.svg".into()).symbolic(true),
             )
             .label("Text Alignment")
             .padding(space_s)
@@ -1705,7 +1705,7 @@ impl SongEditor {
                     .column_spacing(space_s)
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_top_left.svg".into())
+                            icon::from_path("./res/icons/boundingbox_top_left.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1715,7 +1715,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_top.svg".into())
+                            icon::from_path("./res/icons/boundingbox_top.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1725,7 +1725,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_top_right.svg".into())
+                            icon::from_path("./res/icons/boundingbox_top_right.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1735,7 +1735,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_left.svg".into())
+                            icon::from_path("./res/icons/boundingbox_left.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1745,7 +1745,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_center.svg".into())
+                            icon::from_path("./res/icons/boundingbox_center.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1755,7 +1755,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_right.svg".into())
+                            icon::from_path("./res/icons/boundingbox_right.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1765,7 +1765,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_bottom_left.svg".into())
+                            icon::from_path("./res/icons/boundingbox_bottom_left.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1775,7 +1775,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_bottom.svg".into())
+                            icon::from_path("./res/icons/boundingbox_bottom.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)
@@ -1785,7 +1785,7 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/boundingbox_bottom_right.svg".into())
+                            icon::from_path("./res/icons/boundingbox_bottom_right.svg".into())
                                 .symbolic(true),
                         )
                         .class(theme::Button::Standard)

@@ -411,9 +411,9 @@ impl PresentationEditor {
     fn context_menu<'b>(&self, items: Element<'b, Message>) -> Element<'b, Message> {
         if self.context_menu_id.is_some() {
             let before_icon =
-                icon::from_path("./res/split-above.svg".into()).symbolic(true);
+                icon::from_path("./res/icons/split-above.svg".into()).symbolic(true);
             let after_icon =
-                icon::from_path("./res/split-below.svg".into()).symbolic(true);
+                icon::from_path("./res/icons/split-below.svg".into()).symbolic(true);
             let menu_items = vec![
                 menu::Item::Button(
                     "Spit Before",
