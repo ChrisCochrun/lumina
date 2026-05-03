@@ -1,8 +1,10 @@
 use cosmic::iced::Point;
 
 pub use self::column::column;
+pub use self::flex_row::flex_row;
 pub use self::row::row;
 pub mod column;
+pub mod flex_row;
 pub mod row;
 
 #[derive(Debug, Clone)]

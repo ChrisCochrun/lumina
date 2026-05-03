@@ -22,13 +22,15 @@ use cosmic::iced::{
     color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
+use cosmic::widget::dnd_destination::dnd_destination_for_data;
 use cosmic::widget::grid::{self};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    ColorPickerModel, Id, RcElementWrapper, button, combo_box, container, divider,
-    dnd_destination, dnd_source, dropdown, icon, indeterminate_circular, mouse_area,
-    popover, scrollable, slider, text, text_editor, text_input, tooltip,
+    ColorPickerModel, Id, JustifyContent, RcElementWrapper, Widget, button, combo_box,
+    container, divider, dnd_destination, dnd_source, dropdown, flex_row, icon,
+    indeterminate_circular, mouse_area, popover, scrollable, slider, text, text_editor,
+    text_input, tooltip,
 };
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
@@ -133,8 +135,8 @@ pub enum Message {
     ToggleStrokeTools,
     ChipHovered(Option<usize>),
     ChipDndHovered(Option<usize>),
-    ChipDropped((usize, Vec<u8>, String)),
-    ChipReorder(draggable::DragEvent),
+    ChipDropped((usize, Option<VerseName>)),
+    ChipReorder(Vec<usize>),
     DraggingChipStart,
     ChipDroppedEnd((Vec<u8>, String)),
     AddVerse((VerseName, String)),
@@ -808,24 +810,21 @@ impl SongEditor {
             Message::ChipDndHovered(index) => {
                 self.hovered_dnd_verse_chip = index;
             }
-            Message::ChipDropped((index, data, mime)) => {
+            Message::ChipDropped((index, verse)) => {
                 self.hovered_dnd_verse_chip = None;
-                match VerseName::try_from((data, mime)) {
-                    Ok(verse) => {
-                        if let Some(song) = self.song.as_mut() {
-                            if let Some(verses) = song.verses.as_mut() {
-                                verses.insert(index, verse);
-                                let song = song.clone();
-                                return Action::Task(self.update_song(&song));
-                            }
-                            error!("No verses in this song?");
-                        } else {
-                            error!("No song here?");
-                        }
+                if let Some(verse) = verse {
+                    if let Some(song) = self.song.as_mut()
+                        && let Some(verses) = song.verses.as_mut()
+                    {
+                        verses.insert(index, verse);
+                        debug!(?verses, "Adding verse");
+                        let song = song.clone();
+                        return Action::Task(self.update_song(&song));
+                    } else {
+                        error!("No song here?");
                     }
-                    Err(e) => {
-                        error!(?e, "Couldn't convert verse back");
-                    }
+                } else {
+                    error!("Couldn't find verse back");
                 }
             }
             Message::ChipDroppedEnd((data, mime)) => {
@@ -846,24 +845,40 @@ impl SongEditor {
                     }
                 }
             }
-            Message::ChipReorder(event) => match event {
-                draggable::DragEvent::Dropped {
-                    index,
-                    target_index,
-                    drop_position: _,
-                } => {
-                    if let Some(mut song) = self.song.clone()
-                        && let Some(verses) = song.verses.as_mut()
-                    {
-                        let verse = verses.remove(index);
-                        verses.insert(target_index, verse);
-                        debug!(?verses);
-                        return Action::Task(self.update_song(&song));
-                    }
-                }
-                draggable::DragEvent::Picked { .. }
-                | draggable::DragEvent::Canceled { .. } => (),
-            },
+            Message::ChipReorder(event) => {
+                debug!(?event, "Let's reorder");
+                let Some(mut song) = self.song.clone() else {
+                    return Action::None;
+                };
+
+                let Some(old_order) = &song.verses else {
+                    return Action::None;
+                };
+
+                let reordered: Vec<VerseName> = event.iter().map(|id| {
+                    old_order.get(*id).expect("These are reorders not removals, this item should always be here").clone()
+                }).collect();
+                debug!(?reordered);
+                song.verses = Some(reordered);
+                return Action::Task(self.update_song(&song));
+
+                // draggable::DragEvent::Dropped {
+                //     index,
+                //     target_index,
+                //     drop_position: _,
+                // } => {
+                //     if let Some(mut song) = self.song.clone()
+                //         && let Some(verses) = song.verses.as_mut()
+                //     {
+                //         let verse = verses.remove(index);
+                //         verses.insert(target_index, verse);
+                //         debug!(?verses);
+                //         return Action::Task(self.update_song(&song));
+                //     }
+                // }
+                // draggable::DragEvent::Picked { .. }
+                // | draggable::DragEvent::Canceled { .. } => (),
+            }
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
             }
@@ -1168,7 +1183,7 @@ impl SongEditor {
                                 .on_finish(Some(Message::DraggingChipStart))
                                 .on_cancel(Some(Message::DraggingChipStart))
                                 .drag_content(move || Box::new(verse))
-                                .drag_icon(move |_| {
+                                .drag_icon(move |v| {
                                     let state: tree::State =
                                         cosmic::widget::Widget::<Message, _, _>::state(
                                             &verse_chip_wrapped,
@@ -1177,7 +1192,7 @@ impl SongEditor {
                                         Element::from(verse_chip_wrapped.clone())
                                             .map(|_| ()),
                                         state,
-                                        Vector::new(-5.0, -15.0),
+                                        Vector::new(-15.0, -15.0),
                                     )
                                 }),
                             )
@@ -1186,13 +1201,14 @@ impl SongEditor {
                 })
             });
 
-        let verse_options = container(
-            scrollable(row(verse_option_chips).spacing(space_s))
-                .direction(Direction::Horizontal(Scrollbar::new().spacing(space_s))),
-        )
-        .padding(space_s)
-        .width(Length::Fill)
-        .class(theme::Container::Primary);
+        let verse_options = flex_row(verse_option_chips)
+            .justify_content(Some(JustifyContent::Start))
+            .align_items(cosmic::iced::Alignment::Start)
+            .spacing(space_s)
+            .apply(container)
+            .padding(space_s)
+            .width(Length::Fill)
+            .class(theme::Container::Primary);
 
         let verse_chips_edit_toggle = button::icon(if self.editing_verse_order {
             icon::from_name("arrow-up")
@@ -1201,7 +1217,7 @@ impl SongEditor {
         })
         .on_press(Message::EditVerseOrder);
 
-        let verse_order_items: Vec<Element<Message>> =
+        let mut verse_order_items: Vec<Element<Message>> =
             self.song.as_ref().map_or_else(Vec::new, |song| {
                 song.verses.as_ref().map_or_else(Vec::new, |verses| {
                     verses
@@ -1212,11 +1228,12 @@ impl SongEditor {
                             let hovered_chip = self
                                 .hovered_verse_chip
                                 .filter(|hovered_index| hovered_index == &index);
-                            let mut chip = verse_chip(verse, hovered_chip)
-                                .apply(mouse_area)
-                                .on_enter(Message::ChipHovered(Some(index)))
-                                .on_exit(Message::ChipHovered(None))
-                                .into();
+                            let mut chip: Element<Message> =
+                                verse_chip(verse, hovered_chip)
+                                    .apply(mouse_area)
+                                    .on_enter(Message::ChipHovered(Some(index)))
+                                    .on_exit(Message::ChipHovered(None))
+                                    .into();
                             if let Some(hovered_chip) = self.hovered_dnd_verse_chip
                                 && index == hovered_chip
                             {
@@ -1247,41 +1264,35 @@ impl SongEditor {
                                     )));
                                 chip = row![phantom_chip, chip].spacing(space_s).into();
                             }
-                            let verse_chip_wrapped =
-                                RcElementWrapper::<Message>::new(chip);
+
                             Element::from(
-                                dnd_destination(
-                                    verse_chip_wrapped,
-                                    vec!["application/verse".into()],
+                                dnd_destination_for_data::<VerseName, Message>(
+                                    chip,
+                                    move |data, _| {
+                                        debug!(?data);
+                                        Message::ChipDropped((index, data))
+                                    },
                                 )
                                 .on_enter(move |x, y, mimes| {
                                     debug!(x, y, ?mimes);
                                     Message::ChipDndHovered(Some(index))
                                 })
-                                .on_leave(move || Message::ChipDndHovered(None))
-                                .on_finish(
-                                    move |mime, data, action, _x, _y| {
-                                        debug!(mime, ?data, ?action);
-                                        Message::ChipDropped((index, data, mime))
-                                    },
-                                ),
+                                .on_leave(|| {
+                                    debug!("Leaving");
+                                    Message::ChipDndHovered(None)
+                                })
+                                .on_drop(|x, y| {
+                                    debug!(x, y);
+                                    Message::None
+                                }),
                             )
                         })
                         .collect()
                 })
             });
 
-        let verse_order_items = if self.dragging_verse_chip {
-            Element::from(row(verse_order_items).spacing(space_s))
-        } else {
-            Element::from(
-                draggable::row(verse_order_items)
-                    .on_drag(Message::ChipReorder)
-                    .spacing(space_s),
-            )
-        };
-
-        let mut verse_order_row = if self.dragging_verse_chip {
+        let verse_order_length = verse_order_items.len();
+        let verse_order_items: Element<Message> = if self.dragging_verse_chip {
             let ending_dnd_dest = dnd_destination(
                 space::horizontal().height(19),
                 vec!["application/verse".into()],
@@ -1294,28 +1305,30 @@ impl SongEditor {
             .on_finish(move |mime, data, _action, _x, _y| {
                 Message::ChipDroppedEnd((data, mime))
             });
-            row![
-                scrollable(verse_order_items)
-                    .direction(Direction::Horizontal(Scrollbar::new()))
-                    .spacing(space_s),
-                ending_dnd_dest
-            ]
-            .width(Length::Fill)
+            verse_order_items.push(ending_dnd_dest.into());
+            flex_row(verse_order_items)
+                .justify_content(Some(JustifyContent::Start))
+                .align_items(cosmic::iced::Alignment::Start)
+                .spacing(space_s)
+                .into()
         } else {
-            row![
-                scrollable(verse_order_items)
-                    .direction(Direction::Horizontal(Scrollbar::new()))
-                    .width(Length::Fill)
-                    .spacing(space_s),
-            ]
-            .width(Length::Fill)
+            draggable::flex_row(Message::ChipReorder)
+                .extend(verse_order_items.into_iter().enumerate())
+                .width(Length::Fill)
+                .spacing(space_s)
+                .into()
         };
-        verse_order_row = verse_order_row.push(verse_chips_edit_toggle);
 
-        let verse_order = container(verse_order_row)
-            .padding(space_s)
-            .width(Length::Fill)
-            .class(theme::Container::Primary);
+        let verse_order = container(row![
+            verse_order_items,
+            verse_chips_edit_toggle
+                .apply(container)
+                .align_right(Length::Shrink)
+                .align_bottom(Length::Shrink)
+        ])
+        .padding(space_s)
+        .width(Length::Fill)
+        .class(theme::Container::Primary);
 
         let verse_order = container(
             column![

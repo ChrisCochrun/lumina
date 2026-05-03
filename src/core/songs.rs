@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use cosmic::cosmic_theme::palette::Srgb;
-use cosmic::iced::clipboard::mime::AsMimeTypes;
+use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use cosmic::iced::font::{Style, Weight};
 use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
@@ -177,6 +177,12 @@ impl TryFrom<(Vec<u8>, String)> for VerseName {
         let (data, mime) = value;
         debug!(?mime);
         ron::de::from_bytes(&data).into_diagnostic()
+    }
+}
+
+impl AllowedMimeTypes for VerseName {
+    fn allowed() -> Cow<'static, [String]> {
+        Cow::from(vec!["application/verse".to_string()])
     }
 }
 
