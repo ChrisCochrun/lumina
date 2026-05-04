@@ -1,6 +1,7 @@
 ui := "-i"
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
+sdk-version := "25.08"
 
 export RUSTC_WRAPPER := "sccache"
 # export RUST_LOG := "debug"
@@ -39,3 +40,21 @@ alias br := build-release
 alias rr := run-release
 alias rf := run-file
 alias c := clean
+
+
+flatpak-setup: flatpak-install-sdk
+    git -C "cosmic-flatpak-runtime" pull || git clone https://github.com/pop-os/cosmic-flatpak-runtime.git "cosmic-flatpak-runtime"
+    cd cosmic-flatpak-runtime
+    flatpak-builder --install --user --force-clean build-dir cosmic-flatpak-runtime/com.system76.Cosmic.Sdk.json
+    flatpak-builder --install --user --force-clean build-dir cosmic-flatpak-runtime/com.system76.Cosmic.BaseApp.json
+
+flatpak-install-sdk:
+    flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+    flatpak install --noninteractive --user flathub \
+        org.freedesktop.Platform//{{ sdk-version }} \
+        org.freedesktop.Sdk//{{ sdk-version }} \
+        org.freedesktop.Sdk.Locale//{{ sdk-version }} \
+        org.freedesktop.Sdk.Docs//{{ sdk-version }} \
+        org.freedesktop.Sdk.Debug//{{ sdk-version }} \
+        org.freedesktop.Sdk.Extension.rust-stable//{{ sdk-version }} \
+        org.freedesktop.Sdk.Extension.llvm22//{{ sdk-version }}
