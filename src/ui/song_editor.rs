@@ -1530,9 +1530,11 @@ impl SongEditor {
         );
 
         let mut stroke_tools_button = popover(tooltip(
-            button::icon(icon::from_path("./res/icons/text-outline.svg".into()).symbolic(true))
-                .label("Text Stroke")
-                .on_press(Message::ToggleStrokeTools),
+            button::icon(
+                icon::from_path("./res/icons/text-outline.svg".into()).symbolic(true),
+            )
+            .label("Text Stroke")
+            .on_press(Message::ToggleStrokeTools),
             "Outline of the text",
             tooltip::Position::Bottom,
         ))
@@ -1705,8 +1707,10 @@ impl SongEditor {
                     .column_spacing(space_s)
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/icons/boundingbox_top_left.svg".into())
-                                .symbolic(true),
+                            icon::from_path(
+                                "./res/icons/boundingbox_top_left.svg".into(),
+                            )
+                            .symbolic(true),
                         )
                         .class(theme::Button::Standard)
                         .padding(space_s)
@@ -1725,8 +1729,10 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/icons/boundingbox_top_right.svg".into())
-                                .symbolic(true),
+                            icon::from_path(
+                                "./res/icons/boundingbox_top_right.svg".into(),
+                            )
+                            .symbolic(true),
                         )
                         .class(theme::Button::Standard)
                         .padding(space_s)
@@ -1765,8 +1771,10 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/icons/boundingbox_bottom_left.svg".into())
-                                .symbolic(true),
+                            icon::from_path(
+                                "./res/icons/boundingbox_bottom_left.svg".into(),
+                            )
+                            .symbolic(true),
                         )
                         .class(theme::Button::Standard)
                         .padding(space_s)
@@ -1785,8 +1793,10 @@ impl SongEditor {
                     )
                     .push_with(
                         button::icon(
-                            icon::from_path("./res/icons/boundingbox_bottom_right.svg".into())
-                                .symbolic(true),
+                            icon::from_path(
+                                "./res/icons/boundingbox_bottom_right.svg".into(),
+                            )
+                            .symbolic(true),
                         )
                         .class(theme::Button::Standard)
                         .padding(space_s)

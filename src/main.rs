@@ -533,7 +533,7 @@ impl cosmic::Application for App {
         let row = row![
             tooltip(
                 button::custom(
-                    row!(
+                    row![
                         Container::new(
                             icon::from_path("./res/icons/search.svg".into())
                                 .symbolic(true)
@@ -541,7 +541,7 @@ impl cosmic::Application for App {
                         )
                         .center_y(Length::Fill),
                         text::body("Search")
-                    )
+                    ]
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -552,9 +552,9 @@ impl cosmic::Application for App {
             .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
-                    row!(
+                    row![
                         Container::new(if self.editor_mode.is_some() {
-                            icon::from_path("./res/icons/presentation-analytics.svg".into())
+                            icon::from_path("./res/icons/preview.svg".into())
                                 .symbolic(true)
                                 .icon()
                         } else {
@@ -568,7 +568,7 @@ impl cosmic::Application for App {
                         } else {
                             "Edit Mode"
                         })
-                    )
+                    ]
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -579,7 +579,7 @@ impl cosmic::Application for App {
             .gap(cosmic::theme::spacing().space_xs),
             tooltip(
                 button::custom(
-                    row!(
+                    row![
                         Container::new(if cfg!(target_os = "linux") {
                             icon::from_name(if self.presentation_open {
                                 "window-close-symbolic"
@@ -591,13 +591,13 @@ impl cosmic::Application for App {
                         } else if self.presentation_open {
                             icon::from_name("window-close-symbolic").scale(3).icon()
                         } else {
-                            icon::from_name("x-office-presentation-symbolic")
-                                .scale(3)
+                            icon::from_path("./res/icons/presenting.svg".into())
+                                .symbolic(true)
                                 .icon()
                         })
                         .center_y(Length::Fill),
                         text
-                    )
+                    ]
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -1855,7 +1855,9 @@ impl cosmic::Application for App {
                     theme::Button::HeaderBar
                 });
             let list_button = button::standard("Preview")
-                .leading_icon(icon::from_path("./res/icons/carousel.svg".into()).symbolic(true))
+                .leading_icon(
+                    icon::from_path("./res/icons/carousel.svg".into()).symbolic(true),
+                )
                 .on_press(Message::ViewModeSwitch(ViewMode::Row))
                 .class(if self.view_mode == ViewMode::Row {
                     theme::Button::Standard
