@@ -2148,7 +2148,7 @@ fn verse_chip(verse: VerseName, index: Option<usize>) -> Element<'static, Messag
                     .color(text_color)
                     .border(Border::default().rounded(space_m as u8).width(2))
             })));
-        let button = button::icon(icon::from_name("view-close-symbolic"))
+        let button = button::icon(icon::from_name("window-close-symbolic"))
             .icon_size(19)
             .padding(space_none)
             .on_press(Message::RemoveVerse(index))

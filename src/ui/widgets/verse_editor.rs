@@ -87,7 +87,7 @@ impl VerseEditor {
         } = theme::spacing();
 
         let delete_button = button::text("Delete")
-            .trailing_icon(icon::from_path("./res/icons/x.svg".into()).symbolic(true))
+            .trailing_icon(icon::from_name("window-close-symbolic"))
             .class(theme::Button::Destructive)
             .on_press(Message::DeleteVerse(self.verse_name));
         let combo = combo_box(
