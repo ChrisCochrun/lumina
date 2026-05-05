@@ -1211,7 +1211,7 @@ impl SongEditor {
             .class(theme::Container::Primary);
 
         let verse_chips_edit_toggle = button::icon(if self.editing_verse_order {
-            icon::from_name("go-up-symbolic")
+            icon::from_name("pan-up-symbolic")
         } else {
             icon::from_name("edit-symbolic")
         })
@@ -1392,7 +1392,9 @@ impl SongEditor {
             row![
                 text::heading("Verses").width(Length::Fill),
                 button::text("Import")
-                    .trailing_icon(icon::from_name("browser-download").symbolic(true))
+                    .trailing_icon(
+                        icon::from_name("folder-download-symbolic").symbolic(true)
+                    )
                     .on_press(Message::None),
                 button::text("Add Verse")
                     .trailing_icon(icon::from_name("list-add-symbolic").symbolic(true))
@@ -1457,7 +1459,7 @@ impl SongEditor {
                 container(if self.state == State::FontPickerOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(icon::from_name("go-down-symbolic").size(space_m))
+                    Element::from(icon::from_name("pan-down-symbolic").size(space_m))
                 })
                 .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
@@ -1489,7 +1491,7 @@ impl SongEditor {
                 container(if self.state == State::FontSizeOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(icon::from_name("go-down-symbolic").size(space_m))
+                    Element::from(icon::from_name("pan-down-symbolic").size(space_m))
                 })
                 .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
