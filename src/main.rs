@@ -558,9 +558,7 @@ impl cosmic::Application for App {
                                 .symbolic(true)
                                 .icon()
                         } else {
-                            icon::from_path("./res/icons/edit.svg".into())
-                                .symbolic(true)
-                                .icon()
+                            icon::from_name("edit-symbolic").icon()
                         })
                         .center_y(Length::Fill),
                         text::body(if self.editor_mode.is_some() {

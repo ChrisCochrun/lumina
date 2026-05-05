@@ -661,9 +661,9 @@ impl<'a> Library {
         row = row.push(
             icon::from_name({
                 if self.library_open == Some(model.kind) {
-                    "arrow-up"
+                    "pan-up-symbolic"
                 } else {
-                    "arrow-down"
+                    "pan-down-symbolic"
                 }
             })
             .size(20),
