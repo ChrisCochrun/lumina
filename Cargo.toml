@@ -69,6 +69,19 @@ features = ["wgpu"]
 # [profile.dev]
 # opt-level = 3
 
+[package.metadata.packager]
+version = "0.1.0"
+identifier = "xyz.cochrun.lumina"
+icons = ["res/icons/app.ico"]
+resources = ["res"]
+category = "Video"
+
+[package.metadata.packager.windows]
+allow_downgrades = true
+
+[package.metadata.packager.nsis]
+installer_icon = "res/icons/app.ico"
+
 [profile.release]
 opt-level = 3
 debug = true

@@ -43,6 +43,11 @@ alias rr := run-release
 alias rf := run-file
 alias c := clean
 
+##### Sets up and builds the exe installer with nsis
+windows-packager:
+    cargo install cargo-packager --locked
+    cargo build --release
+    cargo packager --release -f nsis
 
 ##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
 flatpak-setup: flatpak-install-sdk install-flatpak-builder-tools
