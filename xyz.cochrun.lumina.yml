@@ -3,7 +3,8 @@ runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.rust-nightly
+  - org.freedesktop.Sdk.Extension.llvm22
 base: com.system76.Cosmic.BaseApp
 command: lumina -i
 finish-args:
@@ -21,16 +22,15 @@ modules:
       append-path: /usr/lib/sdk/rust-stable/bin
       env:
         CARGO_HOME: /run/build/lumina/cargo
-        CARGO_NET_OFFLINE: 'true'
+        # CARGO_NET_OFFLINE: 'true'
     build-commands:
-      - cargo --offline fetch --manifest-path Cargo.toml
-      - cargo build --offline --release
+      - just build-offline
       # - cargo build --release
 
       - install -Dm0755 target/release/lumina /app/bin/lumina
       - install -Dm0644 res/xyz.cochrun.lumina.desktop /app/share/applications/xyz.cochrun.lumina.desktop
       - install -Dm0644 res/xyz.cochrun.lumina.metainfo.xml /app/share/appdata/xyz.cochrun.lumina.metainfo.xml
-      - install -Dm0644 res/icons/lumina.svg /app/share/icons/hicolor/scalable/apps/xyz.cochrun.lumina.svg
+      - install -Dm0644 res/icons/app.svg /app/share/icons/hicolor/scalable/apps/lumina.svg
 
     sources:
       # - type: git
@@ -40,4 +40,4 @@ modules:
       - type: dir
         path: .
 
-      # - cargo-sources.json
+      - cargo-sources.json

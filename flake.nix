@@ -66,6 +66,10 @@
           cargo-watch
           samply
           flatpak-builder
+          python3
+          python313Packages.aiohttp
+          python313Packages.tomlkit
+          python313Packages.pip
           libcosmicAppHook
         ];
 

@@ -3,7 +3,7 @@ verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
 
-export RUSTC_WRAPPER := "sccache"
+# export RUSTC_WRAPPER := "sccache"
 # export RUST_LOG := "debug"
 
 default:
@@ -12,6 +12,8 @@ build:
     cargo build
 build-release:
     cargo build --release
+build-offline:
+    cargo build --release --offline
 run:
     cargo run -- {{verbose}} {{ui}}
 run-release:
@@ -42,7 +44,8 @@ alias rf := run-file
 alias c := clean
 
 
-flatpak-setup: flatpak-install-sdk
+##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
+flatpak-setup: flatpak-install-sdk install-flatpak-builder-tools
     git -C "cosmic-flatpak-runtime" pull || git clone https://github.com/pop-os/cosmic-flatpak-runtime.git "cosmic-flatpak-runtime"
     cd cosmic-flatpak-runtime
     flatpak-builder --install --user --force-clean build-dir cosmic-flatpak-runtime/com.system76.Cosmic.Sdk.json
@@ -52,9 +55,24 @@ flatpak-install-sdk:
     flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
     flatpak install --noninteractive --user flathub \
         org.freedesktop.Platform//{{ sdk-version }} \
+        org.freedesktop.Platform.Locale//{{ sdk-version }} \
         org.freedesktop.Sdk//{{ sdk-version }} \
         org.freedesktop.Sdk.Locale//{{ sdk-version }} \
         org.freedesktop.Sdk.Docs//{{ sdk-version }} \
         org.freedesktop.Sdk.Debug//{{ sdk-version }} \
-        org.freedesktop.Sdk.Extension.rust-stable//{{ sdk-version }} \
+        org.freedesktop.Sdk.Extension.rust-nightly//{{ sdk-version }} \
         org.freedesktop.Sdk.Extension.llvm22//{{ sdk-version }}
+
+install-flatpak-builder-tools:
+    rm -rf flatpak-builder-tools
+    git clone https://github.com/flatpak/flatpak-builder-tools --branch master --depth 1
+    # pip install aiohttp tomlkit # Would be needed without nix
+
+flatpak-gen-manifest: install-flatpak-builder-tools
+    python3 flatpak-builder-tools/cargo/flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
+
+flatpak-build:
+    flatpak-builder --install --user --force-clean build-dir xyz.cochrun.lumina.yml
+
+alias fb := flatpak-build
+alias fs := flatpak-setup

@@ -20,3 +20,4 @@ flatpak-cargo-generator.py
 .flatpak-builder/
 flatpak-out/
 cosmic-flatpak-runtime/
+flatpak-builder-tools/
