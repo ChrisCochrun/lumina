@@ -237,6 +237,7 @@ where
     clip: bool,
     drag_lift: f32,
     animation_duration: Duration,
+    mouse_interaction: mouse::Interaction,
     on_reorder: Box<dyn Fn(Vec<Key>) -> Message + 'a>,
     keys: Vec<Key>,
     locked: Vec<bool>,
@@ -257,6 +258,7 @@ where
             clip: false,
             drag_lift: DEFAULT_DRAG_LIFT,
             animation_duration: DEFAULT_ANIMATION_DURATION,
+            mouse_interaction: mouse::Interaction::None,
             on_reorder: Box::new(on_reorder),
             keys: Vec::new(),
             locked: Vec::new(),
@@ -297,6 +299,11 @@ where
 
     pub fn align_y(mut self, align: impl Into<alignment::Vertical>) -> Self {
         self.align = Alignment::from(align.into());
+        self
+    }
+
+    pub fn mouse(mut self, mouse_interaction: mouse::Interaction) -> Self {
+        self.mouse_interaction = mouse_interaction;
         self
     }
 
@@ -809,19 +816,8 @@ where
             return mouse::Interaction::Grabbing;
         }
 
-        if let Some(cursor_pos) = cursor.position()
-            && self
-                .locked
-                .iter()
-                .zip(layout.children())
-                .any(|(locked, child_layout)| {
-                    !*locked && child_layout.bounds().contains(cursor_pos)
-                })
-        {
-            return mouse::Interaction::Grab;
-        }
-
-        self.children
+        let Some(interaction) = self
+            .children
             .iter()
             .zip(&tree.children)
             .zip(layout.children())
@@ -835,7 +831,19 @@ where
                 )
             })
             .max()
-            .unwrap_or_default()
+        else {
+            if let Some(cursor_pos) = cursor.position()
+                && self.locked.iter().zip(layout.children()).any(
+                    |(locked, child_layout)| {
+                        !*locked && child_layout.bounds().contains(cursor_pos)
+                    },
+                )
+            {
+                return self.mouse_interaction;
+            }
+            return mouse::Interaction::None;
+        };
+        interaction
     }
 
     fn draw(
