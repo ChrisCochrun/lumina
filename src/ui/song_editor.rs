@@ -1211,9 +1211,9 @@ impl SongEditor {
             .class(theme::Container::Primary);
 
         let verse_chips_edit_toggle = button::icon(if self.editing_verse_order {
-            icon::from_name("arrow-up")
+            icon::from_name("go-up-symbolic")
         } else {
-            icon::from_name("edit")
+            icon::from_name("edit-symbolic")
         })
         .on_press(Message::EditVerseOrder);
 
@@ -1395,7 +1395,7 @@ impl SongEditor {
                     .trailing_icon(icon::from_name("browser-download").symbolic(true))
                     .on_press(Message::None),
                 button::text("Add Verse")
-                    .trailing_icon(icon::from_name("add").symbolic(true))
+                    .trailing_icon(icon::from_name("list-add-symbolic").symbolic(true))
                     .on_press(verse_add_message)
             ]
             .padding(space_m),
@@ -1457,7 +1457,7 @@ impl SongEditor {
                 container(if self.state == State::FontPickerOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(icon::from_name("arrow-down").size(space_m))
+                    Element::from(icon::from_name("go-down-symbolic").size(space_m))
                 })
                 .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
@@ -1489,7 +1489,7 @@ impl SongEditor {
                 container(if self.state == State::FontSizeOpen {
                     Element::from(space::horizontal())
                 } else {
-                    Element::from(icon::from_name("arrow-down").size(space_m))
+                    Element::from(icon::from_name("go-down-symbolic").size(space_m))
                 })
                 .padding([space_none, space_xxs, space_none, space_none])
                 .height(Length::Fill)
@@ -2146,7 +2146,7 @@ fn verse_chip(verse: VerseName, index: Option<usize>) -> Element<'static, Messag
                     .color(text_color)
                     .border(Border::default().rounded(space_m as u8).width(2))
             })));
-        let button = button::icon(icon::from_name("view-close"))
+        let button = button::icon(icon::from_name("view-close-symbolic"))
             .icon_size(19)
             .padding(space_none)
             .on_press(Message::RemoveVerse(index))
