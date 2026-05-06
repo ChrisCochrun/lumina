@@ -70,6 +70,7 @@
           python313Packages.aiohttp
           python313Packages.tomlkit
           python313Packages.pip
+          unzip
           libcosmicAppHook
         ];
 
