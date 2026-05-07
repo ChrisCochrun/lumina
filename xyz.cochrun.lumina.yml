@@ -3,7 +3,7 @@ runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-nightly
+  - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.llvm22
 base: com.system76.Cosmic.BaseApp
 command: lumina -i
@@ -15,7 +15,32 @@ finish-args:
   - --share=network
   - --filesystem=xdg-documents
   - --filesystem=xdg-config/cosmic:rw
+  - --filesystem=xdg-data/lumina:rw
+  - --filesystem=xdg-cache/lumina:rw
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm22/bin
+  # append-path: /usr/lib/sdk/llvm22/bin
+  prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+  env:
+    CARGO_HOME: /run/build/lumina/cargo
+    LIBCLANG_PATH: /usr/lib/sdk/llvm22/lib
+    BINDGEN_EXTRA_CLANG_ARGS: -I/usr/lib/sdk/llvm22/lib/clang/22/include
+    PKG_CONFIG_PATH: /app/lib64/pkgconfig:/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+    DATABASE_URL: sqlite://./test.db
+    # CC: gcc
+    # CXX: g++
+    # CARGO_NET_OFFLINE: 'true'
 modules:
+  # - name: mupdf-rs
+  #   buildsystem: simple
+  #   build-commands:
+  #     - cargo build --offline --release
+  #   sources:
+  #     - type: git
+  #       url: https://github.com/messense/mupdf-rs.git
+  #       commit: 902d44bf7becfc84f8349c524cb8acfb18a6f3d4
+  #     - mupdf-cargo-sources.json
+
   - name: lumina
     buildsystem: simple
     build-options:

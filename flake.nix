@@ -71,6 +71,7 @@
           python313Packages.tomlkit
           python313Packages.pip
           unzip
+          appstream
           libcosmicAppHook
         ];
 
