@@ -14,7 +14,13 @@
       A church presentation app that is built to be simple to use.
     </p>
   </description>
+
+  <developer id="xyz.cochrun">
+    <name>Chris Cochrun</name>
+  </developer>
+
   <launchable type="desktop-id">xyz.cochrun.lumina.desktop</launchable>
+
   <screenshots>
     <screenshot type="default">
       <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-05-03_08-16-59.png</image>

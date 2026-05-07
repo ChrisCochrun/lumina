@@ -3,7 +3,7 @@ runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.rust-nightly
   - org.freedesktop.Sdk.Extension.llvm22
 base: com.system76.Cosmic.BaseApp
 command: lumina -i
@@ -23,7 +23,7 @@ finish-args:
   - --filesystem=xdg-data/lumina:rw
   - --filesystem=xdg-cache/lumina:rw
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm22/bin
+  append-path: /usr/lib/sdk/rust-nightly/bin:/usr/lib/sdk/llvm22/bin
   # append-path: /usr/lib/sdk/llvm22/bin
   prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
   env:
@@ -31,7 +31,6 @@ build-options:
     LIBCLANG_PATH: /usr/lib/sdk/llvm22/lib
     BINDGEN_EXTRA_CLANG_ARGS: -I/usr/lib/sdk/llvm22/lib/clang/22/include
     PKG_CONFIG_PATH: /app/lib64/pkgconfig:/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
-    DATABASE_URL: sqlite://./test.db
     # CC: gcc
     # CXX: g++
     # CARGO_NET_OFFLINE: 'true'
@@ -49,18 +48,18 @@ modules:
   - name: lumina
     buildsystem: simple
     build-options:
-      append-path: /usr/lib/sdk/rust-stable/bin
       env:
         CARGO_HOME: /run/build/lumina/cargo
+        DATABASE_URL: sqlite://./test.db
         # CARGO_NET_OFFLINE: 'true'
     build-commands:
       - just build-offline
       # - cargo build --release
 
       - install -Dm755 target/release/lumina -t /app/bin/lumina
-      - install -Dm644 res/xyz.cochrun.lumina.desktop -t /app/share/applications/xyz.cochrun.lumina.desktop
-      - install -Dm644 res/xyz.cochrun.lumina.metainfo.xml -t /app/share/appdata/xyz.cochrun.lumina.metainfo.xml
       - install -Dm644 res/icons/app.svg -t /app/share/icons/hicolor/scalable/apps/lumina.svg
+      - install -Dm644 res/xyz.cochrun.lumina.desktop -t /app/share/applications/xyz.cochrun.lumina.desktop
+      - install -Dm644 res/xyz.cochrun.lumina.metainfo.xml -t /app/share/metainfo/xyz.cochrun.lumina.metainfo.xml
 
     sources:
       # - type: git
