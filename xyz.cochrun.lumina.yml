@@ -44,7 +44,7 @@ modules:
   - name: lumina
     buildsystem: simple
     build-options:
-      append-path: /usr/lib/sdk/rust-nightly/bin
+      append-path: /usr/lib/sdk/rust-stable/bin
       env:
         CARGO_HOME: /run/build/lumina/cargo
         # CARGO_NET_OFFLINE: 'true'
