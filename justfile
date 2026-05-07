@@ -75,10 +75,9 @@ install-flatpak-builder-tools:
 
 flatpak-gen-manifest: install-flatpak-builder-tools
     python3 flatpak-builder-tools/cargo/flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
-    python3 flatpak-builder-tools/cargo/flatpak-cargo-generator.py mupdf/Cargo.lock -o mupdf-cargo-sources.json
 
 flatpak-build:
-    flatpak-builder --install --user --force-clean build-dir xyz.cochrun.lumina.yml
+    flatpak-builder --install --user --force-clean --disable-rofiles-fuse build-dir xyz.cochrun.lumina.yml
 
 flatpak-shell:
     flatpak-builder --run build-dir xyz.cochrun.lumina.yml sh

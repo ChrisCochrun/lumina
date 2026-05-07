@@ -13,7 +13,12 @@ finish-args:
   - --socket=wayland
   - --device=dri
   - --share=network
+  - --talk-name=com.system76.CosmicSettingsDaemon
+  - --talk-name=com.system76.CosmicSettingsDaemon.*
   - --filesystem=xdg-documents
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-dowloads
   - --filesystem=xdg-config/cosmic:rw
   - --filesystem=xdg-data/lumina:rw
   - --filesystem=xdg-cache/lumina:rw
@@ -52,10 +57,10 @@ modules:
       - just build-offline
       # - cargo build --release
 
-      - install -Dm0755 target/release/lumina /app/bin/lumina
-      - install -Dm0644 res/xyz.cochrun.lumina.desktop /app/share/applications/xyz.cochrun.lumina.desktop
-      - install -Dm0644 res/xyz.cochrun.lumina.metainfo.xml /app/share/appdata/xyz.cochrun.lumina.metainfo.xml
-      - install -Dm0644 res/icons/app.svg /app/share/icons/hicolor/scalable/apps/lumina.svg
+      - install -Dm755 target/release/lumina -t /app/bin/lumina
+      - install -Dm644 res/xyz.cochrun.lumina.desktop -t /app/share/applications/xyz.cochrun.lumina.desktop
+      - install -Dm644 res/xyz.cochrun.lumina.metainfo.xml -t /app/share/appdata/xyz.cochrun.lumina.metainfo.xml
+      - install -Dm644 res/icons/app.svg -t /app/share/icons/hicolor/scalable/apps/lumina.svg
 
     sources:
       # - type: git

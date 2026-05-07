@@ -4,6 +4,7 @@
   
   <name>Lumina</name>
   <summary>A church presentation app that is built to be simple to use.</summary>
+  <url type="homepage">https://git.tfcconnection.org/chris/lumina/</url>
   
   <metadata_license>FSFAP</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
@@ -13,7 +14,6 @@
       A church presentation app that is built to be simple to use.
     </p>
   </description>
-  
   <launchable type="desktop-id">xyz.cochrun.lumina.desktop</launchable>
   <screenshots>
     <screenshot type="default">
@@ -26,4 +26,18 @@
       <image>https://git.tfcconnection.org/chris/lumina/raw/branch/master/res/images/screenshot_2026-05-03_08-23-23.png</image>
     </screenshot>
   </screenshots>
+  <categories>
+    <category>Graphics</category>
+  </categories>
+  <keywords>
+    <keyword>presentation</keyword>
+    <keyword>photo</keyword>
+    <keyword>video</keyword>
+    <keyword>cosmic</keyword>
+  </keywords>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
 </component>
