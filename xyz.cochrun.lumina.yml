@@ -53,10 +53,10 @@ modules:
       - just build-offline
       # - cargo build --release
 
-      - install -Dm755 target/release/lumina /${FLATPAK_DEST}/bin/lumina
-      - install -Dm644 res/icons/app.svg /${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/lumina.svg
-      - install -Dm644 res/${FLATPAK_ID}.desktop /${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
-      - install -Dm644 res/${FLATPAK_ID}.metainfo.xml /${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm755 target/release/lumina -t /app/bin
+      - install -Dm644 res/icons/lumina.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 res/${FLATPAK_ID}.desktop -t /app/share/applications
+      - install -Dm644 res/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
 
     sources:
       # - type: git
