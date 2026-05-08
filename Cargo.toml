@@ -72,7 +72,7 @@ features = ["wgpu"]
 [package.metadata.packager]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"
-icons = ["res/icons/app.ico"]
+icons = ["res/icons/app.ico" "res/icons/app.icns" "res/icons/app.svg"]
 resources = ["res"]
 category = "Video"
 
@@ -81,6 +81,37 @@ allow_downgrades = true
 
 [package.metadata.packager.nsis]
 installer_icon = "res/icons/app.ico"
+preinstall_section = """
+Section PreInstall
+  ; Check if GStreamer is already installed and skip this section
+  ReadRegStr $4 HKLM "SOFTWARE\\GStreamer1.0\\x86_64" "pv"
+
+  StrCmp $4 "" 0 gstreamer_done
+
+  Delete "$TEMP\\gstreamer1.0.exe"
+  DetailPrint "Downloading GStreamer"
+  nsis_tauri_utils::download "https://gstreamer.freedesktop.org/data/pkg/windows/1.28.2/msvc/gstreamer-1.0-msvc-x86_64-1.28.2.exe" "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
+  Pop $0
+  ${If} $0 == 0
+      DetailPrint "Successfully downloaded GStreamer"
+  ${Else}
+      DetailPrint "Error downloading GStreamer"
+      Abort "Canceling GStreamer install due to download error"
+  ${EndIf}
+  StrCpy $6 "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
+
+  DetailPrint "Installing GStreamer"
+  ; $6 holds the path to the gstreamer installer
+  ExecWait "$6" $1
+  ${If} $1 == 0
+    DetailPrint "GStreamer successfully installed"
+  ${Else}
+    DetailPrint "Error installing GStreamer"
+    Abort "Cancelling GStreamer install due to installation error"
+  ${EndIf}
+  gstreamer_done:
+SectionEnd
+"""
 
 [profile.release]
 opt-level = 3

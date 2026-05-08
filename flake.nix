@@ -72,6 +72,7 @@
           python313Packages.pip
           unzip
           appstream
+          appstream-glib
           libcosmicAppHook
         ];
 
