@@ -66,6 +66,7 @@
           cargo-watch
           samply
           flatpak-builder
+          flatpak-xdg-utils
           python3
           python313Packages.aiohttp
           python313Packages.tomlkit
