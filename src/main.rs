@@ -77,6 +77,7 @@ enum Commands {
 }
 
 #[derive(Args, Debug, Clone)]
+#[command(about = "Run headless from the cli", long_about = None)]
 struct CliCommand {
     #[arg(short, long)]
     watch: bool,
