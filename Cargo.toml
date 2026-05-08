@@ -81,6 +81,7 @@ allow_downgrades = true
 
 [package.metadata.packager.nsis]
 installer_icon = "res/icons/app.ico"
+install_mode = "perMachine"
 preinstall_section = """
 Section PreInstall
   ; Check if GStreamer is already installed and skip this section
