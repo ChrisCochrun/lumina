@@ -7,5 +7,5 @@ Comment=A church presentation app that is built to be simple to use.
 Categories=Graphics;
 
 Icon=lumina
-Exec=lumina -i
+Exec=lumina
 Terminal=false
