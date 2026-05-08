@@ -72,7 +72,7 @@ features = ["wgpu"]
 [package.metadata.packager]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"
-icons = ["res/icons/app.ico" "res/icons/app.icns" "res/icons/app.svg"]
+icons = ["res/icons/app.ico", "res/icons/app.icns", "res/icons/app.svg"]
 resources = ["res"]
 category = "Video"
 
