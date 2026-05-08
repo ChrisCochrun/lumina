@@ -1,4 +1,3 @@
-ui := "-i"
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
@@ -15,11 +14,11 @@ build-release:
 build-offline:
     cargo build --release --offline
 run:
-    cargo run -- {{verbose}} {{ui}}
+    cargo run -- {{verbose}}
 run-release:
-    cargo run --release -- {{verbose}} {{ui}}
+    cargo run --release -- {{verbose}}
 run-file:
-    cargo run -- {{verbose}} {{ui}} {{file}}
+    cargo run -- {{verbose}} cli {{file}}
 fix:
     cargo clippy --fix --bin "lumina" -p lumina -- -W clippy::pedantic -W clippy::perf -W clippy::nursery -W clippy::unwrap_used
 clean:
@@ -34,7 +33,7 @@ bench:
     export NEXTEST_EXPERIMENTAL_BENCHMARKS=1
     cargo nextest bench
 profile:
-    samply record cargo run --release -- {{verbose}} {{ui}}
+    samply record cargo run --release -- {{verbose}}
 
 alias b := build
 alias r := run

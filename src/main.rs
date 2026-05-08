@@ -1,6 +1,6 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
@@ -62,15 +62,25 @@ pub mod core;
 pub mod ui;
 
 #[derive(Debug, Parser)]
-#[command(name = "lumina", version, about)]
+#[command(name = "lumina", version, about = "A church presentation app")]
 struct Cli {
-    #[arg(short, long)]
-    watch: bool,
-    #[arg(short = 'i', long)]
-    ui: bool,
-    file: Option<PathBuf>,
+    #[command(subcommand)]
+    command: Option<Commands>,
     #[arg(short = 'v', long)]
     verbose: bool,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+#[command(version, about, long_about = None)]
+enum Commands {
+    Cli(CliCommand),
+}
+
+#[derive(Args, Debug, Clone)]
+struct CliCommand {
+    #[arg(short, long)]
+    watch: bool,
+    file: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
@@ -116,18 +126,20 @@ fn main() -> Result<()> {
             }
         };
 
-    let settings = if args.ui {
-        debug!(target: "lumina", "main view");
-        Settings::default().debug(false).is_daemon(true)
-    } else {
+    let settings = if args.command.is_some_and(|command| match command {
+        Commands::Cli(_) => true,
+    }) {
         debug!("window view");
         Settings::default()
             .debug(false)
             .no_main_window(true)
             .is_daemon(true)
+    } else {
+        debug!(target: "lumina", "main view");
+        Settings::default().debug(false).is_daemon(true)
     };
 
-    cosmic::app::run::<App>(settings, (args, config_handler, config))
+    cosmic::app::run::<App>(settings, (Cli::parse(), config_handler, config))
         .map_err(|e| miette!("Invalid things... {}", e))
 }
 
@@ -290,8 +302,11 @@ impl cosmic::Application for App {
         let fontdb = Arc::new(fontdb);
 
         let mut windows = vec![];
+        let cli_mode = input.0.command.is_some_and(|command| match command {
+            Commands::Cli(_cli_command) => true,
+        });
 
-        if input.0.ui {
+        if !cli_mode {
             windows.push(core.main_window_id().expect("should be a window here"));
         }
 
@@ -392,7 +407,7 @@ impl cosmic::Application for App {
             file: PathBuf::default(),
             windows,
             presentation_open: false,
-            cli_mode: !input.0.ui,
+            cli_mode,
             library: None,
             library_open: true,
             editor_mode: None,
@@ -423,12 +438,12 @@ impl cosmic::Application for App {
         let mut batch = vec![];
         batch.push(presenter_obs_task);
 
-        if input.0.ui {
-            debug!("main view");
-            batch.push(app.update_title());
-        } else {
+        if cli_mode {
             debug!("window view");
             batch.push(app.show_window());
+        } else {
+            debug!("main view");
+            batch.push(app.update_title());
         }
 
         batch.push(add_library());
