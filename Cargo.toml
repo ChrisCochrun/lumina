@@ -72,7 +72,7 @@ features = ["wgpu"]
 [package.metadata.packager]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"
-icons = ["res/icons/app.ico", "res/icons/app.icns", "res/icons/app.svg"]
+icons = ["res/icons/lumina.ico", "res/icons/lumina.icns", "res/icons/lumina.svg"]
 resources = ["res"]
 category = "Video"
 
@@ -80,12 +80,12 @@ category = "Video"
 allow_downgrades = true
 
 [package.metadata.packager.nsis]
-installer_icon = "res/icons/app.ico"
+installer_icon = "res/icons/lumina.ico"
 installer_mode = "perMachine"
 preinstall_section = """
 Section PreInstall
   ; Check if GStreamer is already installed and skip this section
-  ReadRegStr $4 HKLM "SOFTWARE\\GStreamer1.0\\x86_64" "pv"
+  ReadRegStr $4 HKLM "SOFTWARE\\GStreamer1.0\\x86_64" "Version"
 
   StrCmp $4 "" 0 gstreamer_done
 
