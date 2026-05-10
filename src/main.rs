@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
 use clap::{Args, Parser, Subcommand};
@@ -100,7 +101,6 @@ fn main() -> Result<()> {
         .with_default_directive(LevelFilter::WARN.into())
         .parse_lossy(default_directive);
 
-    #[cfg(not(windows))]
     tracing_subscriber::FmtSubscriber::builder()
         .pretty()
         .with_line_number(true)
