@@ -78,6 +78,7 @@ category = "Video"
 
 [package.metadata.packager.windows]
 allow_downgrades = true
+sign_command = "./signtool.exe sign /debug /a /fd SHA256"
 
 [package.metadata.packager.nsis]
 installer_icon = "res/icons/lumina.ico"
