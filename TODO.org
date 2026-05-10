@@ -5,21 +5,6 @@
 
 * TODO [#A] Deployment pipeline and get a MVP going
 
-* DONE [#A] Make sure that adding, deleting and editing items in each model is working correctly [0/0]
-CLOSED: [2026-04-24 Fri 13:17]
-
-Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
-
-By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
-
-We should probably return a tuple with the original vector of items in case the db function fails somehow. This would be extremely important if we eventually create a server/client architecture and for whatever reason the server fails to respond with an answer, we'd lose all our items.
-
-** DONE [#A] Need to test the library
-CLOSED: [2026-04-15 Wed 15:58]
-Instead of testing the library itself, I think I'll just create a fake library in each core model and then test it in that
-** DONE Move to new design
-CLOSED: [2026-04-07 Tue 11:42]
-
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
 
@@ -44,6 +29,9 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 * TODO [#B] Develop ui for settings
 
 * TODO [#B] Develop library system for slides that are more than images or video i.e. content
+
+* TODO [#C] Self signed cert for windows
+This was created in the VM on May 10 2026. It is valid for 2 years. Maybe this self signed cert will be ok till we get some reputation, then maybe consider buying a cert or similar.
 
 * TODO [#C] Rename menu actions to menu commands and build a reverse hashmap for settings to map commands to key-binding such that we can allow for remapping them on the fly.
 
@@ -80,6 +68,21 @@ I bet this is tricking up the loading mechanism. Loading only grabs all the back
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later, and I believe that fix will come in the form of a multi-channel signed distance field wgpu rendered text eventually. We can work on this much later though.
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
+
+* DONE [#A] Make sure that adding, deleting and editing items in each model is working correctly [0/0]
+CLOSED: [2026-04-24 Fri 13:17]
+
+Let's build some tests that ensure that these functions are working for the models. Make sure the models are built in such a way as to make sure that they are testable and work fast for the user.
+
+By making the db functions take the vector of items in the model, we can drain the model, pass an owned version of those items to the async db function(adding, updating, deleting, etc) and then return an updated list of the items back in the Result.
+
+We should probably return a tuple with the original vector of items in case the db function fails somehow. This would be extremely important if we eventually create a server/client architecture and for whatever reason the server fails to respond with an answer, we'd lose all our items.
+
+** DONE [#A] Need to test the library
+CLOSED: [2026-04-15 Wed 15:58]
+Instead of testing the library itself, I think I'll just create a fake library in each core model and then test it in that
+** DONE Move to new design
+CLOSED: [2026-04-07 Tue 11:42]
 
 * DONE [#A] Add Action system
 CLOSED: [2026-04-15 Wed 15:57]
