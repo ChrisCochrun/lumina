@@ -552,6 +552,8 @@ impl cosmic::Application for App {
                 button::custom(
                     row![
                         Container::new(if cfg!(target_os = "macos") {
+                            let path = std::env::current_dir().unwrap();
+                            notifica::notify("Directory", path.to_str().unwrap());
                             icon::from_path("../Resources/res/icons/search.svg".into())
                                 .symbolic(true)
                                 .icon()
