@@ -1,4 +1,4 @@
 fn main() {
-    #[cfg(target_os = "macos")]
-    println!("cargo:rustc-link-lib=framework=GStreamer");
+    // #[cfg(target_os = "macos")]
+    // println!("cargo:rustc-link-lib=framework=GStreamer");
 }
