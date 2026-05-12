@@ -6,6 +6,7 @@ use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::Length;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::widget::{column, row};
+use cosmic::prelude::*;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
 use cosmic::{Element, Task, theme};
@@ -151,12 +152,18 @@ impl VideoEditor {
             },
         );
 
-        let video_player = self.video.as_ref().map_or_else(
-            || Element::from(Space::new()),
-            |video| {
-                Element::from(VideoPlayer::new(video).on_new_frame(Message::NewFrame))
-            },
-        );
+        let video_player = self
+            .video
+            .as_ref()
+            .map_or_else(
+                || Space::new().apply(container),
+                |video| {
+                    VideoPlayer::new(video)
+                        .on_new_frame(Message::NewFrame)
+                        .apply(container)
+                },
+            )
+            .center(Length::Fill);
 
         let video_section = column![video_player, video_elements]
             .spacing(cosmic::theme::spacing().space_s);

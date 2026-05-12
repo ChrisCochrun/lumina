@@ -23,6 +23,8 @@ If I can find out how to use my secrets in ci that would free up more tests, but
 Someday we should make the saving and loading to be aware of the fonts on the system and find a way to embed them into the save file.
 
 * TODO [#B] Video downloading system
+We need to create a way for users to download youtube or other videos by URL.
+
 * TODO [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
 * TODO [#B] Songs should have a way of storing a lyric video or other videos so they can be helpful for the editor
 
@@ -181,4 +183,3 @@ This proved easier by just creating the =Slide= first and inserting it into the 
 CLOSED: [2026-04-15 Wed 15:59]
 
 I think this got fixed in a recent update
-

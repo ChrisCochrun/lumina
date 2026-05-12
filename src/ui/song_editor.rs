@@ -1883,6 +1883,8 @@ impl SongEditor {
             .icon_size(space_xl)
             .on_press(Message::SearchSong(self.search_input.clone()));
 
+        let new_button = button::standard("New Song").leading_icon(icon::from_name("list-add-symbolic")).on_press(Message::None);
+
         let search_results = if self.state
             == (State::Importing {
                 loading_songs: true,
@@ -2006,7 +2008,7 @@ impl SongEditor {
             )
         };
 
-        let search_row = row![search_bar, submit_button]
+        let search_row = row![search_bar, submit_button, new_button]
             .spacing(space_s)
             .align_y(Vertical::Center);
 
