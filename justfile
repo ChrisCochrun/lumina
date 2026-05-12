@@ -54,7 +54,7 @@ mac-packager:
     export PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig
     export PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:$PATH
     cargo build --release
-    install_name_tool -add_rpath @executable_path/../Frameworks target/release/lumina
+    install_name_tool -add_rpath @executable_path/../Frameworks/GStreamer.framework/Libraries target/release/lumina
     cargo packager --release -f dmg
     # install_name_tool -change libgio-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgio-2.0.0.dylib target/release/lumina
     # install_name_tool -change libgstpbutils-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstpbutils-2.0.0.dylib target/release/lumina
