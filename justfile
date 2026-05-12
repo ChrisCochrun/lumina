@@ -48,12 +48,22 @@ windows-packager:
     cargo build --release
     cargo packager --release -f nsis
 
+# export DYLD_FALLBACK_LIBRARY_PATH="/Library/Frameworks/GStreamer.framework/Libraries"
 mac-packager:
     cargo install cargo-packager --locked
-    export DYLD_FALLBACK_LIBRARY_PATH="/Library/Frameworks/GStreamer.framework/Libraries"
     export PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig
     export PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:$PATH
     cargo build --release
+    install_name_tool -change libglib-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libglib-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgio-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgio-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstpbutils-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstpbutils-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstvideo-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstvideo-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstaudio-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstaudio-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstbase-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstbase-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstreamer-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstreamer-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgobject-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgobject-2.0.0.dylib target/release/lumina
+    install_name_tool -change libglib-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libglib-2.0.0.dylib target/release/lumina
+    install_name_tool -change libgstapp-2.0.0.dylib @loader_path/../Frameworks/GStreamer.framework/Libraries/libgstapp-2.0.0.dylib target/release/lumina
     cargo packager --release -f dmg
 
 ##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
