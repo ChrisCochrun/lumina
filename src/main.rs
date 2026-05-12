@@ -552,13 +552,7 @@ impl cosmic::Application for App {
                 button::custom(
                     row![
                         Container::new(if cfg!(target_os = "macos") {
-                            let path = std::env::current_dir().unwrap();
-                            notify_rust::Notification::new()
-                                .summary("Director")
-                                .body(path.to_str().unwrap())
-                                .show()
-                                .unwrap();
-                            icon::from_path("../Resources/res/icons/search.svg".into())
+                            icon::from_path("/Applications/lumina/Contents/Resources/res/icons/search.svg".into())
                                 .symbolic(true)
                                 .icon()
                         } else {
