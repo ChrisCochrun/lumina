@@ -1883,7 +1883,9 @@ impl SongEditor {
             .icon_size(space_xl)
             .on_press(Message::SearchSong(self.search_input.clone()));
 
-        let new_button = button::standard("New Song").leading_icon(icon::from_name("list-add-symbolic")).on_press(Message::None);
+        let new_button = button::standard("New Song")
+            .leading_icon(icon::from_name("list-add-symbolic"))
+            .on_press(Message::None);
 
         let search_results = if self.state
             == (State::Importing {

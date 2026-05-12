@@ -73,7 +73,7 @@ features = ["wgpu"]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"
 icons = ["res/icons/lumina.ico", "res/icons/lumina.icns", "res/icons/lumina.svg"]
-resources = ["res"]
+resources = ["res/icons" "res/xyz.cochrun.lumina.*"]
 category = "Video"
 
 [package.metadata.packager.windows]

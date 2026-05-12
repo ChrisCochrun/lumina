@@ -551,11 +551,15 @@ impl cosmic::Application for App {
             tooltip(
                 button::custom(
                     row![
-                        Container::new(
+                        Container::new(if cfg!(target_os = "macos") {
+                            icon::from_path("../Resources/res/icons/search.svg".into())
+                                .symbolic(true)
+                                .icon()
+                        } else {
                             icon::from_path("./res/icons/search.svg".into())
                                 .symbolic(true)
                                 .icon()
-                        )
+                        })
                         .center_y(Length::Fill),
                         text::body("Search")
                     ]
