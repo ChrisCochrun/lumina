@@ -80,6 +80,9 @@ category = "Video"
 allow_downgrades = true
 sign_command = "./signtool.exe sign /debug /a /fd SHA256 %1"
 
+[package.metadata.packager.macos]
+frameworks = ["GStreamer"]
+
 [package.metadata.packager.nsis]
 installer_icon = "res/icons/lumina.ico"
 installer_mode = "perMachine"
