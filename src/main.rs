@@ -553,7 +553,11 @@ impl cosmic::Application for App {
                     row![
                         Container::new(if cfg!(target_os = "macos") {
                             let path = std::env::current_dir().unwrap();
-                            notifica::notify("Directory", path.to_str().unwrap());
+                            notify_rust::Notification::new()
+                                .summary("Director")
+                                .body(path.to_str().unwrap())
+                                .show()
+                                .unwrap();
                             icon::from_path("../Resources/res/icons/search.svg".into())
                                 .symbolic(true)
                                 .icon()
