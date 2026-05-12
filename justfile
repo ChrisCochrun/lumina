@@ -48,6 +48,14 @@ windows-packager:
     cargo build --release
     cargo packager --release -f nsis
 
+mac-packager:
+    cargo install cargo-packager --locked
+    export DYLD_FALLBACK_LIBRARY_PATH="/Library/Frameworks/GStreamer.framework/Libraries"
+    export PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig
+    export PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:$PATH
+    cargo build --release
+    cargo packager --release -f dmg
+
 ##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
 flatpak-setup: flatpak-install-sdk install-flatpak-builder-tools
     git -C "cosmic-flatpak-runtime" pull || git clone https://github.com/pop-os/cosmic-flatpak-runtime.git "cosmic-flatpak-runtime"
