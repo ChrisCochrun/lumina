@@ -1703,7 +1703,7 @@ impl cosmic::Application for App {
             .presenter
             .preview_video
             .as_ref()
-            .map_or_else(|| 0.0, |video| video.duration().as_secs_f32());
+            .map_or_else(|| 0.0, |video| video.duration().as_secs_f64());
 
         let video_button_icon = self.presenter.preview_video.as_ref().map_or_else(
             || {

@@ -54,7 +54,7 @@ pub(crate) struct Presenter {
     pub total_slides: usize,
     pub presentation_video: Option<Video>,
     pub preview_video: Option<Video>,
-    pub video_position: f32,
+    pub video_position: f64,
     pub audio: Option<PathBuf>,
     audio_duration: Option<Duration>,
     audio_position: Option<Duration>,
@@ -92,7 +92,7 @@ pub(crate) enum Message {
     ActivateSlide(usize, usize),
     EndVideo,
     StartVideo,
-    VideoPos(f32),
+    VideoPos(f64),
     VideoFrame,
     MissingPlugin(iced_video_player::gst::Message),
     HoveredSlide(Option<(usize, usize, Point)>),
@@ -403,7 +403,7 @@ impl Presenter {
             Message::VideoPos(position) => {
                 if let Some(video) = &mut self.preview_video {
                     let position =
-                        Position::Time(std::time::Duration::from_secs_f32(position));
+                        Position::Time(std::time::Duration::from_secs_f64(position));
                     match video.seek(position, false) {
                         Ok(()) => debug!("Video position changed: {:?}", position),
                         Err(e) => error!("Problem changing video position: {e}"),
@@ -413,9 +413,9 @@ impl Presenter {
             Message::VideoFrame => {
                 if let Some(video) = &self.preview_video
                     && self.video_position > 0.0
-                    && video.position().as_secs_f32() != 0.0
+                    && video.position().as_secs_f64() != 0.0
                 {
-                    self.video_position = video.position().as_secs_f32();
+                    self.video_position = video.position().as_secs_f64();
                 }
             }
             Message::MissingPlugin(element) => {
