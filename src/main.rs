@@ -1722,6 +1722,11 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(presenter::Message::PlayPauseVideo))
             },
         );
+        let video_position = if let Some(video) = &self.presenter.preview_video {
+            video.position().as_secs_f64()
+        } else {
+            0.0
+        };
 
         let slide_preview = column![
             Space::new().height(Length::Fill),
@@ -1732,7 +1737,7 @@ impl cosmic::Application for App {
                 row![
                     video_button_icon,
                     Container::new(
-                        slider(0.0..=video_range, self.presenter.video_position, |pos| {
+                        slider(0.0..=video_range, video_position, |pos| {
                             Message::Present(presenter::Message::VideoPos(pos))
                         })
                         .step(0.1)

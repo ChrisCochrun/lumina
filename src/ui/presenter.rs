@@ -409,6 +409,14 @@ impl Presenter {
                         Err(e) => error!("Problem changing video position: {e}"),
                     }
                 }
+                if let Some(video) = &mut self.presentation_video {
+                    let position =
+                        Position::Time(std::time::Duration::from_secs_f64(position));
+                    match video.seek(position, false) {
+                        Ok(()) => debug!("Video position changed: {:?}", position),
+                        Err(e) => error!("Problem changing video position: {e}"),
+                    }
+                }
             }
             Message::VideoFrame => {
                 if let Some(video) = &self.preview_video
