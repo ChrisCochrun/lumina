@@ -547,19 +547,17 @@ impl cosmic::Application for App {
             text::body("Present")
         };
 
+        const SEARCH_ICON: &[u8] = include_bytes!(".././res/icons/search.svg");
+        const PREVIEW_ICON: &[u8] = include_bytes!(".././res/icons/preview.svg");
+        const PRESENTING_ICON: &[u8] = include_bytes!(".././res/icons/presenting.svg");
+
         let row = row![
             tooltip(
                 button::custom(
                     row![
-                        Container::new(if cfg!(target_os = "macos") {
-                            icon::from_path("/Applications/lumina/Contents/Resources/res/icons/search.svg".into())
-                                .symbolic(true)
-                                .icon()
-                        } else {
-                            icon::from_path("./res/icons/search.svg".into())
-                                .symbolic(true)
-                                .icon()
-                        })
+                        Container::new(
+                            icon::from_svg_bytes(SEARCH_ICON).symbolic(true).icon()
+                        )
                         .center_y(Length::Fill),
                         text::body("Search")
                     ]
@@ -575,9 +573,7 @@ impl cosmic::Application for App {
                 button::custom(
                     row![
                         Container::new(if self.editor_mode.is_some() {
-                            icon::from_path("./res/icons/preview.svg".into())
-                                .symbolic(true)
-                                .icon()
+                            icon::from_svg_bytes(PREVIEW_ICON).symbolic(true).icon()
                         } else {
                             icon::from_name("edit-symbolic").icon()
                         })
@@ -610,9 +606,7 @@ impl cosmic::Application for App {
                         } else if self.presentation_open {
                             icon::from_name("window-close-symbolic").scale(3).icon()
                         } else {
-                            icon::from_path("./res/icons/presenting.svg".into())
-                                .symbolic(true)
-                                .icon()
+                            icon::from_svg_bytes(PRESENTING_ICON).symbolic(true).icon()
                         })
                         .center_y(Length::Fill),
                         text
@@ -1676,7 +1670,12 @@ impl cosmic::Application for App {
             64
         };
 
-        let icon_left = icon::from_path("./res/icons/caret-left.svg".into())
+        const LEFT_ICON: &[u8] = include_bytes!(".././res/icons/caret-left.svg");
+        const RIGHT_ICON: &[u8] = include_bytes!(".././res/icons/caret-right.svg");
+        const GRID_ICON: &[u8] = include_bytes!(".././res/icons/layout-grid.svg");
+        const CAROUSEL_ICON: &[u8] = include_bytes!(".././res/icons/carousel.svg");
+
+        let icon_left = icon::from_svg_bytes(LEFT_ICON)
             .symbolic(true)
             .icon()
             .size(icon_size)
@@ -1688,7 +1687,7 @@ impl cosmic::Application for App {
                 }),
             }));
 
-        let icon_right = icon::from_path("./res/icons/caret-right.svg".into())
+        let icon_right = icon::from_svg_bytes(RIGHT_ICON)
             .symbolic(true)
             .icon()
             .size(icon_size)
@@ -1865,18 +1864,14 @@ impl cosmic::Application for App {
         let presenter_tool_bar = if self.editor_mode.is_none() {
             let grid_button = button::standard("Grid")
                 .on_press(Message::ViewModeSwitch(ViewMode::Grid))
-                .leading_icon(
-                    icon::from_path("./res/icons/layout-grid.svg".into()).symbolic(true),
-                )
+                .leading_icon(icon::from_svg_bytes(GRID_ICON).symbolic(true))
                 .class(if self.view_mode == ViewMode::Grid {
                     theme::Button::Standard
                 } else {
                     theme::Button::HeaderBar
                 });
             let list_button = button::standard("Preview")
-                .leading_icon(
-                    icon::from_path("./res/icons/carousel.svg".into()).symbolic(true),
-                )
+                .leading_icon(icon::from_svg_bytes(CAROUSEL_ICON).symbolic(true))
                 .on_press(Message::ViewModeSwitch(ViewMode::Row))
                 .class(if self.view_mode == ViewMode::Row {
                     theme::Button::Standard
