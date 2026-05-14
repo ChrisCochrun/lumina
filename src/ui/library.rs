@@ -825,14 +825,14 @@ impl<'a> Library {
 
         let texts = column([text.into(), subtext.into()]);
 
-        let add_button = button::icon(
-            icon::from_path("./res/icons/caret-right.svg".into()).symbolic(true),
-        )
-        .on_press(Message::ToService((
-            model.kind,
-            index.try_into().expect("Shouldn't have issues"),
-        )))
-        .tooltip("Add to service");
+        const RIGHT_ICON: &[u8] = include_bytes!("../../res/icons/caret-right.svg");
+
+        let add_button = button::icon(icon::from_svg_bytes(RIGHT_ICON).symbolic(true))
+            .on_press(Message::ToService((
+                model.kind,
+                index.try_into().expect("Shouldn't have issues"),
+            )))
+            .tooltip("Add to service");
 
         Container::new(
             rowm![horizontal().width(0), texts, add_button]

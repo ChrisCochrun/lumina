@@ -534,6 +534,10 @@ impl cosmic::Application for App {
     }
 
     fn header_end(&self) -> Vec<Element<Self::Message>> {
+        const SEARCH_ICON: &[u8] = include_bytes!(".././res/icons/search.svg");
+        const PREVIEW_ICON: &[u8] = include_bytes!(".././res/icons/preview.svg");
+        const PRESENTING_ICON: &[u8] = include_bytes!(".././res/icons/presenting.svg");
+
         // let editor_toggle = toggler(self.editor_mode.is_some())
         //     .label("Editor")
         //     .spacing(10)
@@ -546,10 +550,6 @@ impl cosmic::Application for App {
         } else {
             text::body("Present")
         };
-
-        const SEARCH_ICON: &[u8] = include_bytes!(".././res/icons/search.svg");
-        const PREVIEW_ICON: &[u8] = include_bytes!(".././res/icons/preview.svg");
-        const PRESENTING_ICON: &[u8] = include_bytes!(".././res/icons/presenting.svg");
 
         let row = row![
             tooltip(
@@ -1657,6 +1657,11 @@ impl cosmic::Application for App {
     // Main window view
     #[allow(clippy::too_many_lines)]
     fn view(&self) -> Element<Message> {
+        const LEFT_ICON: &[u8] = include_bytes!(".././res/icons/caret-left.svg");
+        const RIGHT_ICON: &[u8] = include_bytes!(".././res/icons/caret-right.svg");
+        const GRID_ICON: &[u8] = include_bytes!(".././res/icons/layout-grid.svg");
+        const CAROUSEL_ICON: &[u8] = include_bytes!(".././res/icons/carousel.svg");
+
         let cosmic::cosmic_theme::Spacing {
             space_none,
             space_s,
@@ -1669,11 +1674,6 @@ impl cosmic::Application for App {
         } else {
             64
         };
-
-        const LEFT_ICON: &[u8] = include_bytes!(".././res/icons/caret-left.svg");
-        const RIGHT_ICON: &[u8] = include_bytes!(".././res/icons/caret-right.svg");
-        const GRID_ICON: &[u8] = include_bytes!(".././res/icons/layout-grid.svg");
-        const CAROUSEL_ICON: &[u8] = include_bytes!(".././res/icons/carousel.svg");
 
         let icon_left = icon::from_svg_bytes(LEFT_ICON)
             .symbolic(true)
