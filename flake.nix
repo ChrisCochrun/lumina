@@ -49,9 +49,9 @@
           #   "rustc"
           #   "rustfmt"
           # ])
-          (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+          (rust-bin.stable.latest.default.override {
             extensions = [ "rust-src" "rust-analyzer" "clippy" ];
-          }))
+          })
           cargo-nextest
           cargo-criterion
           # rust-analyzer-nightly
@@ -72,6 +72,7 @@
           python313Packages.tomlkit
           python313Packages.pip
           unzip
+          dbus
           appstream
           appstream-glib
           libcosmicAppHook
