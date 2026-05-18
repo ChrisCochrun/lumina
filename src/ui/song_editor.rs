@@ -382,7 +382,6 @@ impl SongEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
-                debug!(?song);
                 let mut tasks = vec![];
                 self.song = Some(song.clone());
                 self.title = song.title.clone();
@@ -457,7 +456,6 @@ impl SongEditor {
                 }
                 self.background_video(song.background.as_ref());
                 self.background = song.background.clone();
-                debug!("Set slides to nothing");
                 self.song_slides = None;
 
                 self.verses = song.verse_map.as_ref().map(|map| {
