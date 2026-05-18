@@ -1873,12 +1873,13 @@ impl SongEditor {
             .on_input(Message::SearchUpdate)
             .on_submit(Message::SearchSong)
             .width(Length::Fill);
-        let submit_button = icon::from_name("document-send-symbolic")
+
+        let submit_button = icon::from_name("system-search-symbolic")
             .apply(button::icon)
             .icon_size(space_xl)
             .on_press(Message::SearchSong(self.search_input.clone()));
 
-        let new_button = button::standard("New Song")
+        let new_button = button::standard("Create Blank Song")
             .leading_icon(icon::from_name("list-add-symbolic"))
             .on_press(Message::None);
 
@@ -2005,12 +2006,13 @@ impl SongEditor {
             )
         };
 
-        let search_row = row![search_bar, submit_button, new_button]
+        let search_row = row![search_bar, submit_button]
             .spacing(space_s)
             .align_y(Vertical::Center);
 
         column![
             column![
+                new_button.apply(container).align_right(Length::Fill).align_top(Length::Shrink),
                 text::heading("Search for song")
                     .apply(container)
                     .padding([space_none, space_none, space_none, space_m]),
