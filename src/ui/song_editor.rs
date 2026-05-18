@@ -109,6 +109,7 @@ pub enum Action {
 #[derive(Debug, Clone)]
 pub enum Message {
     ChangeSong(Song),
+    BlankSong,
     UpdateSong(Song),
     ChangeFont(Face),
     ChangeFontStyle,
@@ -499,6 +500,11 @@ impl SongEditor {
                         .collect()
                 });
                 return Action::Task(Task::batch(tasks));
+            }
+            Message::BlankSong => {
+                debug!("Creating blank song");
+                self.importing = !self.importing;
+                return Action::AddSong(Song::default());
             }
             Message::ChangeFont(font) => {
                 self.font = Some(font.clone());
@@ -1881,7 +1887,7 @@ impl SongEditor {
 
         let new_button = button::standard("Create Blank Song")
             .leading_icon(icon::from_name("list-add-symbolic"))
-            .on_press(Message::None);
+            .on_press(Message::BlankSong);
 
         let search_results = if self.state
             == (State::Importing {
@@ -2012,7 +2018,10 @@ impl SongEditor {
 
         column![
             column![
-                new_button.apply(container).align_right(Length::Fill).align_top(Length::Shrink),
+                new_button
+                    .apply(container)
+                    .align_right(Length::Fill)
+                    .align_top(Length::Shrink),
                 text::heading("Search for song")
                     .apply(container)
                     .padding([space_none, space_none, space_none, space_m]),

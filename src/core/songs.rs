@@ -321,21 +321,11 @@ impl FromRow<'_, SqliteRow> for Song {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let lyrics: &str = row.try_get("lyrics")?;
 
-        let Ok(verse_map) =
-            ron::de::from_str::<Option<HashMap<VerseName, String>>>(lyrics)
-        else {
-            return Err(sqlx::Error::ColumnDecode {
-                index: "8".into(),
-                source: miette!("Couldn't decode the song into verses").into(),
-            });
-        };
+        let verse_map =
+            ron::de::from_str::<Option<HashMap<VerseName, String>>>(lyrics).unwrap_or(None);
+
         let verse_order: &str = row.try_get("verse_order")?;
-        let Ok(verses) = ron::de::from_str::<Option<Vec<VerseName>>>(verse_order) else {
-            return Err(sqlx::Error::ColumnDecode {
-                index: "0".into(),
-                source: miette!("Couldn't decode the song into verses").into(),
-            });
-        };
+        let verses = ron::de::from_str::<Option<Vec<VerseName>>>(verse_order).unwrap_or(None);
 
         let verse_order: Vec<String> = {
             verse_order
