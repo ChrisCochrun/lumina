@@ -1526,7 +1526,7 @@ impl SongEditor {
             stack![
                 combo_box(
                     &self.font_sizes,
-                    "Font Size",
+                    "Size",
                     selected_font_size.as_ref(),
                     Message::ChangeFontSize,
                 )
