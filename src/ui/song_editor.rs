@@ -382,12 +382,10 @@ impl SongEditor {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ChangeSong(song) => {
+                debug!(?song);
                 let mut tasks = vec![];
                 self.song = Some(song.clone());
-                let Ok(song_slides) = song.clone().to_slides() else {
-                    return Action::None;
-                };
-                self.title = song.title;
+                self.title = song.title.clone();
                 self.editing_verse_order = false;
                 if let Some(stroke_size) = song.stroke_size {
                     self.stroke_size = stroke_size;
@@ -400,9 +398,9 @@ impl SongEditor {
                         Some(stroke_color.into()),
                     );
                 }
-                if let Some(font) = song.font {
+                if let Some(font) = &song.font {
                     if let Some(id) = self.font_db.query(&fontdb::Query {
-                        families: &[fontdb::Family::Name(&font)],
+                        families: &[fontdb::Family::Name(font)],
                         weight: fontdb::Weight::NORMAL,
                         stretch: fontdb::Stretch::Normal,
                         style: fontdb::Style::Normal,
@@ -417,46 +415,61 @@ impl SongEditor {
                     self.font_size = usize::try_from(font_size)
                         .expect("There shouldn't be a negative font_size");
                 }
-                if let Some(verse_order) = song.verse_order {
+                if let Some(verse_order) = song.verse_order.as_ref() {
                     self.verse_order = verse_order
+                        .clone()
                         .into_iter()
                         .map(|mut s| {
                             s.push(' ');
                             s
                         })
                         .collect();
+                } else {
+                    self.verse_order = String::default();
                 }
-                if let Some(author) = song.author {
-                    self.author = author;
+
+                if let Some(author) = &song.author {
+                    self.author = author.clone();
                 }
 
                 self.player.stop();
                 self.player.clear();
-                if let Some(audio) = song.audio
+                if let Some(audio) = &song.audio
                     && audio.exists()
                 {
                     let file = BufReader::new(
-                        File::open(&audio).expect("There should be an audio file here"),
+                        File::open(audio).expect("There should be an audio file here"),
                     );
                     let source = Decoder::new(file)
                         .expect("There should be an audio decoder here");
-                    self.audio = audio;
+                    self.audio = audio.clone();
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
                     self.player.pause();
                 } else {
                 }
 
-                if let Some(ccli) = song.ccli {
-                    self.ccli = ccli;
+                if let Some(ccli) = &song.ccli {
+                    self.ccli = ccli.clone();
                 }
-                if let Some(lyrics) = song.lyrics {
-                    self.lyrics = text_editor::Content::with_text(&lyrics);
+                if let Some(lyrics) = &song.lyrics {
+                    self.lyrics = text_editor::Content::with_text(lyrics);
                 }
                 self.background_video(song.background.as_ref());
                 self.background = song.background.clone();
+                debug!("Set slides to nothing");
                 self.song_slides = None;
 
+                self.verses = song.verse_map.as_ref().map(|map| {
+                    map.into_iter()
+                        .sorted()
+                        .map(|(verse_name, lyric)| VerseEditor::new(*verse_name, lyric))
+                        .collect()
+                });
+
+                let Ok(song_slides) = song.clone().to_slides() else {
+                    return Action::None;
+                };
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
                 let font_db = self.font_db.clone();
@@ -493,12 +506,6 @@ impl SongEditor {
                 self.update_slide_handle = Some(handle);
                 tasks.push(task);
 
-                self.verses = song.verse_map.map(|map| {
-                    map.into_iter()
-                        .sorted()
-                        .map(|(verse_name, lyric)| VerseEditor::new(verse_name, &lyric))
-                        .collect()
-                });
                 return Action::Task(Task::batch(tasks));
             }
             Message::BlankSong => {
@@ -1018,40 +1025,49 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let audio_elements: Element<Message> = if self.audio.exists() {
-            let play_button = icon::from_name(if self.player.is_paused() {
-                "media-playback-start-symbolic"
-            } else {
-                "media-playback-pause-symbolic"
-            })
-            .apply(button::icon)
-            .on_press(Message::PlayPauseAudio);
+        let audio_elements: Element<Message> =
+            if self.song.as_ref().is_some_and(|song| {
+                song.audio.as_ref().is_some_and(|audio| audio.exists())
+            }) {
+                let play_button = icon::from_name(if self.player.is_paused() {
+                    "media-playback-start-symbolic"
+                } else {
+                    "media-playback-pause-symbolic"
+                })
+                .apply(button::icon)
+                .on_press(Message::PlayPauseAudio);
 
-            let audio_track = slider(
-                0.0..=self
-                    .audio_duration
-                    .map_or(0.0, |duration| duration.as_secs_f64()),
-                self.audio_position
-                    .map_or(0.0, |position| position.as_secs_f64()),
-                Message::SeekAudio,
-            );
-            container(column![
-                text::body(format!("Audio: {}", self.audio.to_string_lossy()))
-                    .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
-                row![play_button, audio_track]
-                    .align_y(Vertical::Center)
-                    .spacing(theme::spacing().space_m)
-            ])
-            .padding(
-                Padding::ZERO
-                    .horizontal(theme::spacing().space_m)
-                    .bottom(theme::spacing().space_m),
-            )
-            .center_x(Length::FillPortion(2))
-            .into()
-        } else {
-            space::horizontal().into()
-        };
+                let audio_track = slider(
+                    0.0..=self
+                        .audio_duration
+                        .map_or(0.0, |duration| duration.as_secs_f64()),
+                    self.audio_position
+                        .map_or(0.0, |position| position.as_secs_f64()),
+                    Message::SeekAudio,
+                );
+                let audio_path = self.song.as_ref().map_or("", |song| {
+                    song.audio
+                        .as_ref()
+                        .map_or("", |audio| audio.to_str().unwrap_or(""))
+                });
+
+                container(column![
+                    text::body(format!("Audio: {}", audio_path))
+                        .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
+                    row![play_button, audio_track]
+                        .align_y(Vertical::Center)
+                        .spacing(theme::spacing().space_m)
+                ])
+                .padding(
+                    Padding::ZERO
+                        .horizontal(theme::spacing().space_m)
+                        .bottom(theme::spacing().space_m),
+                )
+                .center_x(Length::FillPortion(2))
+                .into()
+            } else {
+                space::horizontal().into()
+            };
 
         let slide_preview = container(self.slide_preview()).width(Length::FillPortion(2));
 
@@ -1370,7 +1386,7 @@ impl SongEditor {
         .spacing(5);
 
         let verse_list = self.verses.as_ref().map_or_else(
-            || Element::from(space::horizontal()),
+            || space::horizontal().height(Length::Fill).into(),
             |verse_list| {
                 Element::from(
                     column(verse_list.iter().enumerate().map(|(index, v)| {
