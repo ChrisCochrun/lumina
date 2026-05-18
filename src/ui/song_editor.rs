@@ -465,9 +465,10 @@ impl SongEditor {
                         .collect()
                 });
 
-                let Ok(song_slides) = song.clone().to_slides() else {
+                let Ok(song_slides) = song.to_slides() else {
                     return Action::None;
                 };
+
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
                 let font_db = self.font_db.clone();
