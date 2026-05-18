@@ -1152,13 +1152,19 @@ impl SongEditor {
             ..
         } = theme::spacing();
 
-        let title_input = text_input("song", &self.title)
-            .on_input(Message::ChangeTitle)
-            .label("Song Title");
+        let title_input =
+            text_input("song", self.song.as_ref().map_or("", |song| &song.title))
+                .on_input(Message::ChangeTitle)
+                .label("Song Title");
 
-        let author_input = text_input("author", &self.author)
-            .on_input(Message::ChangeAuthor)
-            .label("Song Author");
+        let author_input = text_input(
+            "author",
+            self.song
+                .as_ref()
+                .map_or("", |song| song.author.as_ref().map_or("", |v| v)),
+        )
+        .on_input(Message::ChangeAuthor)
+        .label("Song Author");
 
         let top_input_row = row![title_input, author_input].spacing(space_m);
 
