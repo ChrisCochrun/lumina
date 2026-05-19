@@ -1246,6 +1246,18 @@ impl cosmic::Application for App {
                 }
             }
             Message::AddServiceItem(index, item) => {
+                if matches!(item.kind, ServiceItemKind::Song(_)) {
+                    item.slides = item
+                        .slides
+                        .into_par_iter()
+                        .map(|slide| {
+                            let fontdb = Arc::clone(&self.fontdb);
+                            text_svg::text_svg_generator(slide.clone(), &fontdb)
+                                .unwrap_or(slide)
+                        })
+                        .collect();
+                }
+
                 Arc::make_mut(&mut self.service).insert(index, item.clone());
                 self.presenter.update_items(self.service.clone());
                 self.hovered_dnd = None;
@@ -1352,17 +1364,6 @@ impl cosmic::Application for App {
                         };
                         item = presentation.to_service_item();
                     }
-                }
-                if matches!(kind, core::model::LibraryKind::Song) {
-                    item.slides = item
-                        .slides
-                        .into_par_iter()
-                        .map(|slide| {
-                            let fontdb = Arc::clone(&self.fontdb);
-                            text_svg::text_svg_generator(slide.clone(), &fontdb)
-                                .unwrap_or(slide)
-                        })
-                        .collect();
                 }
                 self.update(Message::AddServiceItem(index, item))
             }
