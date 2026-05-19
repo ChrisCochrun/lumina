@@ -297,7 +297,7 @@ mod test {
             ccli: None,
             audio: Some("/home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
-            background: Some(Background::try_from("/home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").expect("")),
+            background: Some(Background::try_from("/home/chris/nc/tfc/presentations/mb/Geo Square.mp4").expect("")),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: None,
             font_size: Some(120),
