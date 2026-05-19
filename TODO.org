@@ -25,7 +25,9 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 * TODO [#B] Video downloading system
 We need to create a way for users to download youtube or other videos by URL.
 
-* TODO [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
+* DONE [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
+CLOSED: [2026-05-19 Tue 06:01]
+
 * TODO [#B] Songs should have a way of storing a lyric video or other videos so they can be helpful for the editor
 
 * TODO [#B] Develop ui for settings
