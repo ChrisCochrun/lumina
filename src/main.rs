@@ -177,6 +177,7 @@ struct App {
     core: Core,
     nav_model: nav_bar::Model,
     file: Option<PathBuf>,
+    footer_message: Option<String>,
     presenter: Presenter,
     windows: Vec<window::Id>,
     service: Arc<Vec<ServiceItem>>,
@@ -270,6 +271,8 @@ enum Message {
     SetGeniusToken(String),
     InsertBackgroundImage((iced::core::image::Allocation, usize)),
     InsertThumbnail((iced::core::image::Allocation, usize)),
+    ClearFooterMsg,
+    SavingReport,
 }
 
 #[allow(dead_code)]
@@ -439,6 +442,7 @@ impl cosmic::Application for App {
             service: items,
             selected_items: vec![],
             file: None,
+            footer_message: None,
             windows,
             presentation_open: false,
             cli_mode,
@@ -671,6 +675,7 @@ impl cosmic::Application for App {
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
+        let cosmic::cosmic_theme::Spacing { space_xxl, .. } = cosmic::theme::spacing();
         let total_items_text = format!("Total Service Items: {}", self.service.len());
 
         let total_slides = self.service.iter().fold(0, |a, item| a + item.slides.len());
@@ -681,6 +686,8 @@ impl cosmic::Application for App {
                 || String::new(),
                 |file| file.to_string_lossy().to_string()
             )),
+            space::Space::new().width(space_xxl),
+            text::body(self.footer_message.as_ref().map_or("", |t| t)),
             space::horizontal(),
             text::body(total_items_text),
             text::body(total_slides_text)
@@ -1645,6 +1652,7 @@ impl cosmic::Application for App {
                     return self.update(Message::SaveAsDialog);
                 };
 
+                self.footer_message = Some(String::from("Saving..."));
                 self.update_recent_files(file.clone());
                 let file_name = file
                     .file_name()
@@ -1655,7 +1663,7 @@ impl cosmic::Application for App {
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!("saving file to: {:?}", file_name);
-                            cosmic::Action::None
+                            cosmic::Action::App(Message::SavingReport)
                         }
                         Err(e) => {
                             error!(?e, "There was a problem saving");
@@ -1669,6 +1677,17 @@ impl cosmic::Application for App {
                 self.update_recent_files(file.clone());
                 self.file = Some(file);
                 self.update(Message::Save)
+            }
+            Message::SavingReport => {
+                self.footer_message = Some("Saved!".into());
+                Task::perform(
+                    async { tokio::time::sleep(Duration::from_secs(2)).await },
+                    |_| cosmic::Action::App(Message::ClearFooterMsg),
+                )
+            }
+            Message::ClearFooterMsg => {
+                self.footer_message = None;
+                Task::none()
             }
             Message::SaveAsDialog => Task::perform(save_as_dialog(), |file| match file {
                 Ok(file) => cosmic::Action::App(Message::SaveAs(file)),
