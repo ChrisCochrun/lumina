@@ -5,7 +5,7 @@ use clap::{Args, Parser, Subcommand};
 use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
-use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use cosmic::cosmic_config::{Config, ConfigSet, CosmicConfigEntry};
 use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::core::text::Wrapping;
@@ -127,6 +127,26 @@ fn main() -> Result<()> {
                 (None, core::settings::Settings::default())
             }
         };
+    let (state_handler, state) = match cosmic_config::Config::new_state(
+        App::APP_ID,
+        core::settings::SETTINGS_VERSION,
+    ) {
+        Ok(config_handler) => {
+            let config = match core::settings::PersistentState::get_entry(&config_handler)
+            {
+                Ok(ok) => ok,
+                Err((errs, config)) => {
+                    error!("errors loading state: {:?}", errs);
+                    config
+                }
+            };
+            (Some(config_handler), config)
+        }
+        Err(err) => {
+            error!("failed to create state handler: {}", err);
+            (None, core::settings::PersistentState::default())
+        }
+    };
 
     let settings = if args.command.is_some_and(|command| match command {
         Commands::Cli(_) => true,
@@ -141,8 +161,11 @@ fn main() -> Result<()> {
         Settings::default().debug(false).is_daemon(true)
     };
 
-    cosmic::app::run::<App>(settings, (Cli::parse(), config_handler, config))
-        .map_err(|e| miette!("Invalid things... {}", e))
+    cosmic::app::run::<App>(
+        settings,
+        (Cli::parse(), config_handler, config, state_handler, state),
+    )
+    .map_err(|e| miette!("Invalid things... {}", e))
 }
 
 // fn theme(_state: &App) -> Theme {
@@ -153,7 +176,7 @@ fn main() -> Result<()> {
 struct App {
     core: Core,
     nav_model: nav_bar::Model,
-    file: PathBuf,
+    file: Option<PathBuf>,
     presenter: Presenter,
     windows: Vec<window::Id>,
     service: Arc<Vec<ServiceItem>>,
@@ -182,6 +205,8 @@ struct App {
     settings_open: bool,
     settings: core::settings::Settings,
     config_handler: Option<Config>,
+    state: core::settings::PersistentState,
+    state_handler: Option<Config>,
     obs_connection: String,
     view_mode: ViewMode,
     genius_token_hidden: bool,
@@ -284,7 +309,13 @@ const HEADER_SPACE: u16 = 6;
 
 impl cosmic::Application for App {
     type Executor = executor::Default;
-    type Flags = (Cli, Option<cosmic_config::Config>, core::settings::Settings);
+    type Flags = (
+        Cli,
+        Option<cosmic_config::Config>,
+        core::settings::Settings,
+        Option<cosmic_config::Config>,
+        core::settings::PersistentState,
+    );
     type Message = Message;
     const APP_ID: &'static str = "lumina";
     fn core(&self) -> &Core {
@@ -313,6 +344,7 @@ impl cosmic::Application for App {
         }
 
         let (config_handler, settings) = (input.1, input.2);
+        let (state_handler, state) = (input.3, input.4);
 
         // let items = input.0.file.map_or_else(Vec::new, |file| {
         //     match read_to_string(file) {
@@ -406,7 +438,7 @@ impl cosmic::Application for App {
             nav_model,
             service: items,
             selected_items: vec![],
-            file: PathBuf::default(),
+            file: None,
             windows,
             presentation_open: false,
             cli_mode,
@@ -432,6 +464,8 @@ impl cosmic::Application for App {
             settings_open: false,
             settings,
             config_handler,
+            state_handler,
+            state,
             obs_connection: String::new(),
             view_mode: ViewMode::Row,
             genius_token_hidden: true,
@@ -449,6 +483,11 @@ impl cosmic::Application for App {
         }
 
         batch.push(add_library());
+        if let Some(file) = app.state.recent_files.front()
+            && file.exists()
+        {
+            batch.push(app.update(Message::OpenFile(file.clone())));
+        }
         // batch.push(app.add_service(items, Arc::clone(&fontdb)));
         let batch = Task::batch(batch);
         (app, batch)
@@ -637,14 +676,17 @@ impl cosmic::Application for App {
         let total_slides = self.service.iter().fold(0, |a, item| a + item.slides.len());
 
         let total_slides_text = format!("Total Slides: {total_slides}");
-        let row =
-            row![text::body(total_items_text), text::body(total_slides_text)].spacing(10);
-        Some(
-            Container::new(row)
-                .align_right(Length::Fill)
-                .padding([5, 0, 0, 0])
-                .into(),
-        )
+        let row = row![
+            text::body(self.file.as_ref().map_or_else(
+                || String::new(),
+                |file| file.to_string_lossy().to_string()
+            )),
+            space::horizontal(),
+            text::body(total_items_text),
+            text::body(total_slides_text)
+        ]
+        .spacing(10);
+        Some(row.into())
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -1126,7 +1168,7 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::File(file) => {
-                self.file = file;
+                self.file = Some(file);
                 Task::none()
             }
             Message::OpenWindow => {
@@ -1325,7 +1367,7 @@ impl cosmic::Application for App {
             Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
                 let kind = item.0.0;
-                let mut item;
+                let item;
                 match kind {
                     core::model::LibraryKind::Song => {
                         let Some(library) = self.library.as_mut() else {
@@ -1576,6 +1618,8 @@ impl cosmic::Application for App {
             }
             Message::OpenFile(file) => {
                 debug!(?file, "opening file");
+                self.update_recent_files(file.clone());
+                self.file = Some(file.clone());
                 Task::perform(async move { file::load(file) }, |res| match res {
                     Ok(items) => cosmic::Action::App(Message::OpenLoadItems(items)),
                     Err(e) => {
@@ -1596,9 +1640,13 @@ impl cosmic::Application for App {
             }
             Message::Save => {
                 let service = self.service.clone();
-                let file = self.file.clone();
-                let file_name = self
-                    .file
+
+                let Some(file) = self.file.clone() else {
+                    return self.update(Message::SaveAsDialog);
+                };
+
+                self.update_recent_files(file.clone());
+                let file_name = file
                     .file_name()
                     .expect("Since we are saving we should have given a name by now")
                     .to_owned();
@@ -1618,7 +1666,8 @@ impl cosmic::Application for App {
             }
             Message::SaveAs(file) => {
                 debug!(?file, "saving as a file");
-                self.file = file;
+                self.update_recent_files(file.clone());
+                self.file = Some(file);
                 self.update(Message::Save)
             }
             Message::SaveAsDialog => Task::perform(save_as_dialog(), |file| match file {
@@ -2002,6 +2051,25 @@ impl App
 where
     Self: cosmic::Application,
 {
+    fn update_recent_files(&mut self, file: PathBuf) {
+        if let Some(index) = self
+            .state
+            .recent_files
+            .iter()
+            .position(|inner_file| inner_file == &file)
+            && let Some(same_file) = self.state.recent_files.remove(index)
+        {
+            self.state.recent_files.push_front(same_file)
+        } else {
+            self.state.recent_files.push_front(file);
+        }
+        if let Some(handler) = &self.state_handler {
+            match handler.set("recent_files", self.state.recent_files.clone()) {
+                Ok(b) => (),
+                Err(e) => error!("{e}"),
+            }
+        }
+    }
     fn active_page_title(&self) -> &str {
         let Some(label) = self.nav_model.text(self.nav_model.active()) else {
             return "Lumina";
