@@ -1246,35 +1246,69 @@ impl cosmic::Application for App {
                 }
             }
             Message::AddServiceItem(index, item) => {
-                let task = if matches!(
-                    item.kind,
-                    ServiceItemKind::Song(_) | ServiceItemKind::Image(_)
-                ) {
-                    let path = item
-                        .slides
-                        .first()
-                        .map(|slide| slide.background.path.clone())
-                        .unwrap_or_default();
+                Arc::make_mut(&mut self.service).insert(index, item.clone());
+                self.presenter.update_items(self.service.clone());
+                self.hovered_dnd = None;
 
+                let Some(first_slide) = item.slides.first() else {
+                    return Task::none();
+                };
+                let path = first_slide.background.path.clone();
+
+                if matches!(first_slide.background.kind, BackgroundKind::Image) {
                     cosmic::iced::runtime::image::allocate(path).map(move |allocation| {
                         match allocation {
-                            Ok(allocation) => cosmic::Action::App(
-                                Message::InsertBackgroundImage((allocation, index)),
-                            ),
+                            Ok(allocation) => {
+                                debug!(?allocation);
+                                cosmic::Action::App(Message::InsertBackgroundImage((
+                                    allocation, index,
+                                )))
+                            }
                             Err(e) => {
                                 error!("{e}");
                                 cosmic::Action::App(Message::None)
                             }
                         }
                     })
+                } else if matches!(first_slide.background.kind, BackgroundKind::Video) {
+                    cosmic::Task::future(async move {
+                        let url =
+                            url::Url::from_file_path(&path).expect("Should be here");
+
+                        let file_name = path.file_name().expect("hope").to_string_lossy();
+                        let mut output =
+                            dirs::cache_dir().expect("Should have on every platform");
+                        output.push("lumina");
+                        output.push("video_thumbnails");
+                        if !output.exists()
+                            && let Err(e) = std::fs::create_dir_all(&output)
+                        {
+                            error!("{e}");
+                        }
+                        output.push(file_name.to_string());
+                        debug!(?output);
+
+                        match gst_video::thumbnail(&url, &mut output) {
+                            Ok(handle) => handle,
+                            Err(e) => {
+                                error!("{e}");
+                                Handle::from_path(path)
+                            }
+                        }
+                    })
+                    .then(cosmic::iced::runtime::image::allocate)
+                    .map(move |allocation| match allocation {
+                        Ok(allocation) => cosmic::Action::App(Message::InsertThumbnail(
+                            (allocation, index),
+                        )),
+                        Err(e) => {
+                            error!("{e}");
+                            cosmic::Action::App(Message::None)
+                        }
+                    })
                 } else {
                     Task::none()
-                };
-
-                Arc::make_mut(&mut self.service).insert(index, item);
-                self.presenter.update_items(self.service.clone());
-                self.hovered_dnd = None;
-                task
+                }
             }
             Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
@@ -1550,9 +1584,14 @@ impl cosmic::Application for App {
                 })
             }
             Message::OpenLoadItems(items) => {
-                self.service = Arc::new(items);
-                self.presenter.service = self.service.clone();
-                Task::none()
+                let tasks: Vec<Task<Message>> = items
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, item)| {
+                        self.update(Message::AddServiceItem(index, item))
+                    })
+                    .collect();
+                Task::batch(tasks)
             }
             Message::Save => {
                 let service = self.service.clone();
