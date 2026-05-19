@@ -1245,7 +1245,7 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
-            Message::AddServiceItem(index, item) => {
+            Message::AddServiceItem(index, mut item) => {
                 if matches!(item.kind, ServiceItemKind::Song(_)) {
                     item.slides = item
                         .slides
