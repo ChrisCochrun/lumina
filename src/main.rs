@@ -675,24 +675,28 @@ impl cosmic::Application for App {
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
-        let cosmic::cosmic_theme::Spacing { space_xxl, .. } = cosmic::theme::spacing();
+        let cosmic::cosmic_theme::Spacing { space_m, .. } = cosmic::theme::spacing();
         let total_items_text = format!("Total Service Items: {}", self.service.len());
 
         let total_slides = self.service.iter().fold(0, |a, item| a + item.slides.len());
 
         let total_slides_text = format!("Total Slides: {total_slides}");
-        let row = row![
+        let mut row: Vec<Element<Message>> = Vec::new();
+        if let Some(message) = self.footer_message.as_ref() {
+            row.push(text::body(message).into());
+            row.push(space::horizontal().width(space_m).into());
+        }
+        row.push(
             text::body(self.file.as_ref().map_or_else(
                 || String::new(),
-                |file| file.to_string_lossy().to_string()
-            )),
-            space::Space::new().width(space_xxl),
-            text::body(self.footer_message.as_ref().map_or("", |t| t)),
-            space::horizontal(),
-            text::body(total_items_text),
-            text::body(total_slides_text)
-        ]
-        .spacing(10);
+                |file| file.to_string_lossy().to_string(),
+            ))
+            .into(),
+        );
+        row.push(space::horizontal().into());
+        row.push(text::body(total_items_text).into());
+        row.push(text::body(total_slides_text).into());
+        let row = row::with_children(row).spacing(10);
         Some(row.into())
     }
 
