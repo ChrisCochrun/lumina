@@ -311,7 +311,7 @@ impl menu::Action for MenuAction {
 const HEADER_SPACE: u16 = 6;
 
 impl cosmic::Application for App {
-    type Executor = executor::Default;
+    type Executor = executor::multi::Executor;
     type Flags = (
         Cli,
         Option<cosmic_config::Config>,
