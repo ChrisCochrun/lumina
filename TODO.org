@@ -7,6 +7,18 @@
 
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
+* TODO Add an access time to the database so that we can sort library items by last used or edited.
+* TODO Fix song imports so that they actually get rid of extra cruft
+Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
+
+* TODO Find a way to check if an item is in the library on load so that we can import it into the library
+* TODO Make loading not block the UI
+* TODO Loading and saving need to have a progress indicator of some sort
+* TODO Preview mode needs to allow for a larger preview of the slide if the library is closed
+* TODO Grid mode needs to use the actual aspect ratio correctly for the slide preview
+* TODO Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
+* TODO Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
+* TODO When editing songs, we should ensure that you can't effect the presentation without certain shortcuts
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
