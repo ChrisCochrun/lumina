@@ -13,6 +13,7 @@ use tracing::debug;
 pub struct Model<T> {
     pub items: Vec<T>,
     pub kind: LibraryKind,
+    pub sorting_method: Sort,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize)]
@@ -21,6 +22,14 @@ pub enum LibraryKind {
     Video,
     Image,
     Presentation,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy, Serialize, Deserialize)]
+pub enum Sort {
+    AccessTime,
+    CreatedTime,
+    Title,
+    Secondary, // This can be author or file name
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

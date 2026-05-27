@@ -1,3 +1,4 @@
+use crate::core::model::Sort;
 use crate::{Background, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -9,13 +10,14 @@ use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{SqliteConnection, SqlitePool, query, query_as};
+use sqlx::types::chrono::{DateTime, Local};
+use sqlx::{AssertSqlSafe, Decode, SqliteConnection, SqlitePool, query, query_as};
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::error;
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Decode)]
 pub struct Video {
     pub id: i32,
     pub title: String,
@@ -23,6 +25,10 @@ pub struct Video {
     pub start_time: Option<f32>,
     pub end_time: Option<f32>,
     pub looping: bool,
+    #[serde(skip)]
+    pub accessed_at: DateTime<Local>,
+    #[serde(skip)]
+    pub created_at: DateTime<Local>,
 }
 
 impl From<&Video> for Value {
@@ -178,13 +184,14 @@ impl Model<Video> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Video,
+            sorting_method: Sort::AccessTime,
         };
         model.load_from_db(db).await;
         model
     }
 
     pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
-        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos"#).fetch_all(&*db).await;
+        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from videos"#).fetch_all(&*db).await;
         match result {
             Ok(v) => {
                 for video in v {
@@ -195,6 +202,23 @@ impl Model<Video> {
                 error!("There was an error in converting videos: {e}");
             }
         }
+    }
+
+    pub fn sort(&mut self) {
+        match self.sorting_method {
+            Sort::AccessTime => {
+                self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
+            }
+            Sort::CreatedTime => todo!(),
+            Sort::Title => todo!(),
+            Sort::Secondary => todo!(),
+        }
+    }
+
+    pub fn set_sort(mut self, method: Sort) -> Self {
+        self.sorting_method = method;
+        self.sort();
+        self
     }
 }
 
@@ -213,7 +237,7 @@ pub async fn remove_videos(
         ids.iter().map(ToString::to_string).join(", ")
     );
 
-    query(&delete)
+    query(AssertSqlSafe(delete))
         .execute(&*db)
         .await
         .into_diagnostic()
@@ -306,7 +330,7 @@ pub async fn update_video(
 }
 
 pub async fn get_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Video> {
-    query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
+    query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from videos where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
 #[cfg(test)]
@@ -329,6 +353,7 @@ mod test {
         let mut video_model: Model<Video> = Model {
             items: vec![],
             kind: LibraryKind::Video,
+            sorting_method: Sort::AccessTime,
         };
         let db = Arc::new(add_db().await.expect(""));
         video_model.load_from_db(db).await;
@@ -346,6 +371,7 @@ mod test {
         let mut video_model: Model<Video> = Model {
             items: vec![],
             kind: LibraryKind::Video,
+            sorting_method: Sort::AccessTime,
         };
         let result = video_model.add_item(video.clone());
         let new_video = test_video("A newer video".into());

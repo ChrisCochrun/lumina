@@ -23,13 +23,14 @@ use itertools::Itertools;
 use miette::{Context, IntoDiagnostic, Result};
 use rapidfuzz::distance::levenshtein;
 use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::types::chrono::Local;
 use sqlx::{SqlitePool, migrate};
 use tracing::{debug, error, warn};
 
 use crate::core::content::Content;
 use crate::core::images::{self, Image};
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{KindWrapper, LibraryKind, Model};
+use crate::core::model::{KindWrapper, LibraryKind, Model, Sort};
 use crate::core::presentations::{self, Presentation};
 use crate::core::service_items::ServiceItem;
 use crate::core::songs::{self, Song, insert_song};
@@ -94,6 +95,7 @@ pub enum Action {
 pub enum Message {
     AddItem,
     DeleteItem,
+    AccessItem(Option<(LibraryKind, i32)>),
     OpenItem(Option<(LibraryKind, i32)>),
     OpenContextItem,
     HoverLibrary(Option<LibraryKind>),
@@ -129,6 +131,18 @@ pub enum Message {
     HoverPoint(cosmic::iced::Point),
 }
 
+impl Action {
+    fn chain_task(self, task: Task<Message>) -> Self {
+        match self {
+            Action::Task(inner_task) => {
+                let task = inner_task.chain(task);
+                Self::Task(task)
+            }
+            _ => self,
+        }
+    }
+}
+
 impl<'a> Library {
     pub async fn new(db: Arc<SqlitePool>) -> Self {
         // let db = add_db().await.expect("probs");
@@ -136,10 +150,18 @@ impl<'a> Library {
             error!(?e);
         }
         Self {
-            song_library: Model::new_song_model(Arc::clone(&db)).await,
-            image_library: Model::new_image_model(Arc::clone(&db)).await,
-            video_library: Model::new_video_model(Arc::clone(&db)).await,
-            presentation_library: Model::new_presentation_model(Arc::clone(&db)).await,
+            song_library: Model::new_song_model(Arc::clone(&db))
+                .await
+                .set_sort(Sort::AccessTime),
+            image_library: Model::new_image_model(Arc::clone(&db))
+                .await
+                .set_sort(Sort::AccessTime),
+            video_library: Model::new_video_model(Arc::clone(&db))
+                .await
+                .set_sort(Sort::AccessTime),
+            presentation_library: Model::new_presentation_model(Arc::clone(&db))
+                .await
+                .set_sort(Sort::AccessTime),
             library_open: None,
             library_hovered: None,
             selected_items: None,
@@ -201,7 +223,7 @@ impl<'a> Library {
                 return Action::CreateSong;
             }
             Message::AddSongFromEditor(song) => {
-                let after_task = Task::done(Message::OpenItem(Some((
+                let after_task = Task::done(Message::AccessItem(Some((
                     LibraryKind::Song,
                     self.song_library.items.len() as i32,
                 ))));
@@ -247,7 +269,7 @@ impl<'a> Library {
                 let _index = self.video_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
-                let after_task = Task::done(Message::OpenItem(Some((
+                let after_task = Task::done(Message::AccessItem(Some((
                     LibraryKind::Video,
                     self.video_library.items.len() as i32,
                 ))));
@@ -295,7 +317,7 @@ impl<'a> Library {
                 let _index = self.presentation_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
-                let after_task = Task::done(Message::OpenItem(Some((
+                let after_task = Task::done(Message::AccessItem(Some((
                     LibraryKind::Presentation,
                     self.presentation_library.items.len() as i32,
                 ))));
@@ -321,7 +343,7 @@ impl<'a> Library {
                 let _index = self.image_library.items.len();
                 // Check if empty
                 let mut tasks = Vec::new();
-                let after_task = Task::done(Message::OpenItem(Some((
+                let after_task = Task::done(Message::AccessItem(Some((
                     LibraryKind::Image,
                     self.image_library.items.len() as i32,
                 ))));
@@ -343,10 +365,79 @@ impl<'a> Library {
                 return Action::Task(Task::batch(tasks).chain(after_task));
             }
             Message::OpenItem(item) => {
+                // if let Some((kind, _)) = item {
+                //     match kind {
+                //         LibraryKind::Song => {
+                //             self.song_library.sort();
+                //             debug!(?self.song_library);
+                //         }
+                //         LibraryKind::Video => self.video_library.sort(),
+                //         LibraryKind::Image => self.image_library.sort(),
+                //         LibraryKind::Presentation => self.presentation_library.sort(),
+                //     }
+                // }
+                return Action::OpenItem(item);
+            }
+            Message::AccessItem(item) => {
                 debug!(?item);
                 self.context_menu = None;
                 self.editing_item = item;
-                return Action::OpenItem(item);
+                let task = Task::done(Message::OpenItem(item));
+                if let Some((kind, item)) = item {
+                    match kind {
+                        LibraryKind::Song
+                            if let Some(song) = self
+                                .song_library
+                                .items
+                                .clone()
+                                .get_mut(item as usize) =>
+                        {
+                            song.accessed_at = Local::now();
+                            debug!(?song);
+                            return self
+                                .update(Message::UpdateSong(song.clone()))
+                                .chain_task(task);
+                        }
+                        LibraryKind::Video
+                            if let Some(video) = self
+                                .video_library
+                                .items
+                                .clone()
+                                .get_mut(item as usize) =>
+                        {
+                            video.accessed_at = Local::now();
+                            debug!(?video);
+                            return self
+                                .update(Message::UpdateVideo(video.clone()))
+                                .chain_task(task);
+                        }
+                        LibraryKind::Image
+                            if let Some(image) = self
+                                .image_library
+                                .items
+                                .clone()
+                                .get_mut(item as usize) =>
+                        {
+                            image.accessed_at = Local::now();
+                            return self
+                                .update(Message::UpdateImage(image.clone()))
+                                .chain_task(task);
+                        }
+                        LibraryKind::Presentation
+                            if let Some(presentation) = self
+                                .presentation_library
+                                .items
+                                .clone()
+                                .get_mut(item as usize) =>
+                        {
+                            presentation.accessed_at = Local::now();
+                            return self
+                                .update(Message::UpdatePresentation(presentation.clone()))
+                                .chain_task(task);
+                        }
+                        _ => (),
+                    }
+                }
             }
             Message::OpenContextItem => {
                 let Some(kind) = self.library_open else {
@@ -355,7 +446,7 @@ impl<'a> Library {
                 let Some(index) = self.context_menu else {
                     return Action::None;
                 };
-                return self.update(Message::OpenItem(Some((kind, index))));
+                return self.update(Message::AccessItem(Some((kind, index))));
             }
             Message::HoverLibrary(library_kind) => {
                 self.library_hovered = library_kind;
@@ -726,7 +817,7 @@ impl<'a> Library {
                                 .on_enter(Message::HoverItem(Some((
                                     model.kind, i32_index,
                                 ))))
-                                .on_double_click(Message::OpenItem(Some((
+                                .on_double_click(Message::AccessItem(Some((
                                     model.kind, i32_index,
                                 ))))
                                 .on_right_press(Message::OpenContext(Some(i32_index)))
@@ -953,7 +1044,7 @@ impl<'a> Library {
             };
 
             let menu_items = column![
-                menu_item("Open", Message::OpenItem(Some((library, id)))),
+                menu_item("Open", Message::AccessItem(Some((library, id)))),
                 menu_item("Delete", Message::DeleteItem),
             ]
             .spacing(theme::spacing().space_s)
@@ -1173,7 +1264,7 @@ impl<'a> Library {
 
         let after_task = match last_item {
             Some(ServiceItemKind::Image(_image)) => {
-                Task::done(Message::OpenItem(Some((
+                Task::done(Message::AccessItem(Some((
                     LibraryKind::Image,
                     self.image_library
                         .items
@@ -1184,7 +1275,7 @@ impl<'a> Library {
             }
 
             Some(ServiceItemKind::Video(_image)) => {
-                Task::done(Message::OpenItem(Some((
+                Task::done(Message::AccessItem(Some((
                     LibraryKind::Video,
                     self.video_library
                         .items
@@ -1194,7 +1285,7 @@ impl<'a> Library {
                 ))))
             }
             Some(ServiceItemKind::Presentation(_image)) => {
-                Task::done(Message::OpenItem(Some((
+                Task::done(Message::AccessItem(Some((
                     LibraryKind::Presentation,
                     self.presentation_library
                         .items

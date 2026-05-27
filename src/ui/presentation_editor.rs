@@ -501,6 +501,8 @@ impl PresentationEditor {
                     },
                     _ => current_presentation.kind.clone(),
                 },
+                created_at: current_presentation.created_at,
+                accessed_at: current_presentation.accessed_at,
             };
             let second_presentation = Presentation {
                 id: 0,
@@ -513,6 +515,8 @@ impl PresentationEditor {
                     },
                     _ => current_presentation.kind.clone(),
                 },
+                created_at: current_presentation.created_at,
+                accessed_at: current_presentation.accessed_at,
             };
             Ok((first_presentation, second_presentation))
         } else {
@@ -539,6 +543,8 @@ impl PresentationEditor {
                     },
                     _ => current_presentation.kind.clone(),
                 },
+                created_at: current_presentation.created_at,
+                accessed_at: current_presentation.accessed_at,
             };
             let second_presentation = Presentation {
                 id: 0,
@@ -551,6 +557,8 @@ impl PresentationEditor {
                     },
                     _ => current_presentation.kind.clone(),
                 },
+                created_at: current_presentation.created_at,
+                accessed_at: current_presentation.accessed_at,
             };
             Ok((first_presentation, second_presentation))
         } else {

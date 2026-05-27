@@ -374,6 +374,7 @@ mod test {
 
     use super::*;
     use pretty_assertions::assert_eq;
+    use sqlx::types::chrono::Local;
 
     fn test_song() -> Song {
         Song {
@@ -390,6 +391,8 @@ mod test {
                 "~/docs/notes/lessons/20240327T133649--12-isaiah-and-jesus__lesson_project_tfc.html",
             ),
             kind: PresKind::Html,
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         }
     }
 

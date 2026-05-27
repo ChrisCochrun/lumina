@@ -6,12 +6,14 @@ use mupdf::{Colorspace, Document, Matrix};
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Row, SqliteConnection, SqlitePool, query};
+use sqlx::types::chrono::{DateTime, Local};
+use sqlx::{AssertSqlSafe, Row, SqliteConnection, SqlitePool, query};
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, error};
 
+use crate::core::model::Sort;
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -36,6 +38,10 @@ pub struct Presentation {
     pub title: String,
     pub path: PathBuf,
     pub kind: PresKind,
+    #[serde(skip)]
+    pub created_at: DateTime<Local>,
+    #[serde(skip)]
+    pub accessed_at: DateTime<Local>,
 }
 
 impl Eq for Presentation {}
@@ -89,6 +95,8 @@ impl From<PathBuf> for Presentation {
             title,
             path: value.canonicalize().unwrap_or(value),
             kind,
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         }
     }
 }
@@ -280,6 +288,8 @@ impl FromRow<'_, SqliteRow> for Presentation {
                     ending_index: row.try_get(5)?,
                 }
             },
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         })
     }
 }
@@ -289,6 +299,7 @@ impl Model<Presentation> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Presentation,
+            sorting_method: Sort::AccessTime,
         };
         model.load_from_db(db).await;
         model
@@ -296,7 +307,7 @@ impl Model<Presentation> {
 
     pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
         let result = query!(
-            r#"SELECT id as "id: i32", title, file_path as "path", html, starting_index, ending_index from presentations"#
+            r#"SELECT id as "id: i32", title, file_path as "path", html, starting_index, ending_index, accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from presentations"#
         )
             .fetch_all(&*db)
             .await;
@@ -341,11 +352,30 @@ impl Model<Presentation> {
                                 },
                             )
                         },
+                        created_at: presentation.created_at,
+                        accessed_at: presentation.accessed_at,
                     });
                 }
             }
             Err(e) => error!("There was an error in converting presentations: {e}"),
         }
+    }
+
+    pub fn sort(&mut self) {
+        match self.sorting_method {
+            Sort::AccessTime => {
+                self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
+            }
+            Sort::CreatedTime => todo!(),
+            Sort::Title => todo!(),
+            Sort::Secondary => todo!(),
+        }
+    }
+
+    pub fn set_sort(mut self, method: Sort) -> Self {
+        self.sorting_method = method;
+        self.sort();
+        self
     }
 }
 
@@ -364,7 +394,7 @@ pub async fn remove_presentations(
         ids.iter().map(ToString::to_string).join(", ")
     );
 
-    query(&delete)
+    query(AssertSqlSafe(delete))
         .execute(&*db)
         .await
         .into_diagnostic()
@@ -480,7 +510,7 @@ pub async fn get_presentation_from_db(
     database_id: i32,
     db: &mut SqliteConnection,
 ) -> Result<Presentation> {
-    let row = query(r#"SELECT id as "id: i32", title, file_path as "path", html from presentations where id = $1"#).bind(database_id).fetch_one(db).await.into_diagnostic()?;
+    let row = query(r#"SELECT id as "id: i32", title, file_path as "path", html, accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from presentations where id = $1"#).bind(database_id).fetch_one(db).await.into_diagnostic()?;
     Presentation::from_row(&row).into_diagnostic()
 }
 
@@ -498,6 +528,8 @@ mod test {
                 starting_index: 0,
                 ending_index: 67,
             },
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         }
     }
 
@@ -517,6 +549,7 @@ mod test {
         let mut presentation_model: Model<Presentation> = Model {
             items: vec![],
             kind: LibraryKind::Presentation,
+            sorting_method: Sort::AccessTime,
         };
         let db = Arc::new(add_db().await.expect("Getting db error"));
         presentation_model.load_from_db(db).await;

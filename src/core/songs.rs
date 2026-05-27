@@ -13,12 +13,13 @@ use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Row, SqlitePool, query};
+use sqlx::types::chrono::{DateTime, Local};
+use sqlx::{AssertSqlSafe, FromRow, Row, SqlitePool, query};
 use tracing::{debug, error};
 
 use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{LibraryKind, Model};
+use crate::core::model::{LibraryKind, Model, Sort};
 use crate::core::service_items::ServiceTrait;
 use crate::core::slide::{self, Background, TextAlignment};
 use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
@@ -49,6 +50,10 @@ pub struct Song {
     pub verse_map: Option<HashMap<VerseName, String>>,
     pub lyric_video: Option<PathBuf>,
     pub music_video: Option<PathBuf>,
+    #[serde(skip)]
+    pub created_at: DateTime<Local>,
+    #[serde(skip)]
+    pub accessed_at: DateTime<Local>,
 }
 
 #[derive(
@@ -379,6 +384,20 @@ impl FromRow<'_, SqliteRow> for Song {
             .try_get::<String, &str>("music_video")
             .map_or(None, |vid| Some(PathBuf::from(vid)));
 
+        let created_at = row
+            .try_get::<DateTime<Local>, &str>("created_at")
+            .unwrap_or_else(|e| {
+                error!(?e);
+                Local::now()
+            });
+
+        let accessed_at = row
+            .try_get::<DateTime<Local>, &str>("created_at")
+            .unwrap_or_else(|e| {
+                error!(?e);
+                Local::now()
+            });
+
         Ok(Self {
             id: row.try_get("id")?,
             title: row.try_get("title")?,
@@ -428,6 +447,8 @@ impl FromRow<'_, SqliteRow> for Song {
             verse_map,
             lyric_video,
             music_video,
+            created_at,
+            accessed_at,
             ..Default::default()
         })
     }
@@ -646,6 +667,7 @@ impl Model<Song> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Song,
+            sorting_method: Sort::AccessTime,
         };
 
         model.load_from_db(db).await;
@@ -677,6 +699,23 @@ impl Model<Song> {
             }
         }
     }
+
+    pub fn sort(&mut self) {
+        match self.sorting_method {
+            Sort::AccessTime => {
+                self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
+            }
+            Sort::CreatedTime => todo!(),
+            Sort::Title => todo!(),
+            Sort::Secondary => todo!(),
+        }
+    }
+
+    pub fn set_sort(mut self, method: Sort) -> Self {
+        self.sorting_method = method;
+        self.sort();
+        self
+    }
 }
 
 pub async fn remove_songs(
@@ -694,7 +733,7 @@ pub async fn remove_songs(
         ids.iter().map(ToString::to_string).join(", ")
     );
 
-    query(&delete)
+    query(AssertSqlSafe(delete))
         .execute(&*db)
         .await
         .into_diagnostic()
@@ -847,6 +886,8 @@ pub async fn update_song(
     let style = ron::ser::to_string(&song.font_style).into_diagnostic()?;
     let weight = ron::ser::to_string(&song.font_weight).into_diagnostic()?;
 
+    let accessed_at = song.accessed_at;
+
     // debug!(
     //     ?stroke_size,
     //     ?stroke_color,
@@ -857,7 +898,7 @@ pub async fn update_song(
     // );
 
     let result = query!(
-        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20, lyric_video = $21, music_video = $22 WHERE id = $1"#,
+        r#"UPDATE songs SET title = $2, lyrics = $3, author = $4, ccli = $5, verse_order = $6, audio = $7, font = $8, font_size = $9, background = $10, horizontal_text_alignment = $11, vertical_text_alignment = $12, stroke_color = $13, shadow_color = $14, stroke_size = $15, shadow_size = $16, shadow_offset_x = $17, shadow_offset_y = $18, style = $19, weight = $20, lyric_video = $21, music_video = $22, accessed_at = $23 WHERE id = $1"#,
         song.id,
         song.title,
         lyrics,
@@ -879,7 +920,8 @@ pub async fn update_song(
         style,
         weight,
         lyric_video,
-        music_video
+        music_video,
+        accessed_at
     )
         .execute(&*db)
         .await
@@ -1273,6 +1315,7 @@ You saved my soul"
         let song_model: Model<Song> = Model {
             items: vec![],
             kind: LibraryKind::Song,
+            sorting_method: Sort::AccessTime,
             // db: crate::core::model::get_db().await,
         };
         song_model

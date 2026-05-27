@@ -1166,6 +1166,7 @@ mod test {
 
     use super::*;
     use pretty_assertions::assert_eq;
+    use sqlx::types::chrono::Local;
 
     #[test]
     fn test_next_slide() {
@@ -1254,6 +1255,8 @@ mod test {
                 starting_index: 0,
                 ending_index: 67,
             },
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         }
     }
 }

@@ -1,5 +1,5 @@
-[lru]
-capacity = 64
+# [lru]
+# capacity = 64
 
 [semanticHighlighting]
 operator.enable = false

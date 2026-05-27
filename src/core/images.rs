@@ -1,3 +1,4 @@
+use crate::core::model::Sort;
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -8,7 +9,8 @@ use crisp::types::{Keyword, Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
-use sqlx::{SqliteConnection, SqlitePool, query, query_as};
+use sqlx::types::chrono::{DateTime, Local};
+use sqlx::{AssertSqlSafe, SqliteConnection, SqlitePool, query, query_as};
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -19,6 +21,10 @@ pub struct Image {
     pub id: i32,
     pub title: String,
     pub path: PathBuf,
+    #[serde(skip)]
+    pub created_at: DateTime<Local>,
+    #[serde(skip)]
+    pub accessed_at: DateTime<Local>,
 }
 
 impl From<PathBuf> for Image {
@@ -33,6 +39,8 @@ impl From<PathBuf> for Image {
             id: 0,
             title,
             path: value.canonicalize().unwrap_or(value),
+            created_at: Local::now(),
+            accessed_at: Local::now(),
         }
     }
 }
@@ -150,6 +158,7 @@ impl Model<Image> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Image,
+            sorting_method: Sort::AccessTime,
         };
 
         let mut db = db.acquire().await.expect("probs");
@@ -161,7 +170,7 @@ impl Model<Image> {
     pub async fn load_from_db(&mut self, db: &mut SqliteConnection) {
         let result = query_as!(
             Image,
-            r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images"#
+            r#"SELECT title as "title!", file_path as "path!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from images"#
         )
             .fetch_all(db)
             .await;
@@ -175,6 +184,23 @@ impl Model<Image> {
                 error!("There was an error in converting images: {e}");
             }
         }
+    }
+
+    pub fn sort(&mut self) {
+        match self.sorting_method {
+            Sort::AccessTime => {
+                self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
+            }
+            Sort::CreatedTime => todo!(),
+            Sort::Title => todo!(),
+            Sort::Secondary => todo!(),
+        }
+    }
+
+    pub fn set_sort(mut self, method: Sort) -> Self {
+        self.sorting_method = method;
+        self.sort();
+        self
     }
 }
 
@@ -193,7 +219,7 @@ pub async fn remove_images(
         ids.iter().map(ToString::to_string).join(", ")
     );
 
-    query(&delete)
+    query(AssertSqlSafe(delete))
         .execute(&*db)
         .await
         .into_diagnostic()
@@ -280,7 +306,7 @@ pub async fn update_image(
 }
 
 pub async fn get_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Image> {
-    query_as!(Image, r#"SELECT title as "title!", file_path as "path!", id as "id: i32" from images where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
+    query_as!(Image, r#"SELECT title as "title!", file_path as "path!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from images where id = ?"#, database_id).fetch_one(db).await.into_diagnostic()
 }
 
 #[cfg(test)]
@@ -301,6 +327,7 @@ mod test {
         let mut image_model: Model<Image> = Model {
             items: vec![],
             kind: LibraryKind::Image,
+            sorting_method: Sort::AccessTime,
         };
         let mut db = add_db()
             .await
@@ -323,6 +350,7 @@ mod test {
         let mut image_model: Model<Image> = Model {
             items: vec![],
             kind: LibraryKind::Image,
+            sorting_method: Sort::AccessTime,
         };
         let result = image_model.add_item(image.clone());
         let new_image = test_image("A newer image".into());
