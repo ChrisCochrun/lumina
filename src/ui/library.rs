@@ -191,6 +191,7 @@ impl<'a> Library {
                 }
             }
             Message::DeleteItem => {
+                self.context_menu = None;
                 return self.delete_items();
             }
             Message::ReaddSongs(songs) => {
@@ -343,6 +344,7 @@ impl<'a> Library {
             }
             Message::OpenItem(item) => {
                 debug!(?item);
+                self.context_menu = None;
                 self.editing_item = item;
                 return Action::OpenItem(item);
             }
