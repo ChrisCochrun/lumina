@@ -19,6 +19,10 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 * TODO Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
 * TODO Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
 * TODO When editing songs, we should ensure that you can't effect the presentation without certain shortcuts
+* TODO Fix the right click context menu in service list and library
+Remake this just like the one in the preview and grid view probably so that it can work regardless of scroll and things
+* TODO Fix the scrolling when switching slides for preview and grid
+They both need to be adjusted when changing the size of the slides that are there
 
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
