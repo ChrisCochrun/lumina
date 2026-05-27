@@ -9,14 +9,14 @@ use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::core::widget::tree::State as TreeState;
 use cosmic::iced::keyboard::Modifiers;
 use cosmic::iced::widget::{column, row as rowm, text as textm};
-use cosmic::iced::{Background, Border, Color, Length};
+use cosmic::iced::{Background, Border, Color, Length, Point};
 use cosmic::widget::menu::{self, Action as MenuAction};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     Container, DndSource, Space, button, container, context_menu, divider,
-    dnd_destination, icon, indeterminate_circular, mouse_area, row, scrollable, text,
-    text_input,
+    dnd_destination, icon, indeterminate_circular, mouse_area, popover, row, scrollable,
+    text, text_input,
 };
 use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
@@ -53,6 +53,8 @@ pub struct Library {
     modifiers_pressed: Option<Modifiers>,
     state: State,
     video_popup_input: String,
+    hovered_point: cosmic::iced::Point,
+    context_point: cosmic::iced::Point,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -108,7 +110,7 @@ pub enum Message {
     UpdatePresentation(Presentation),
     PresentationChanged,
     Error(String),
-    OpenContext(i32),
+    OpenContext(Option<i32>),
     None,
     AddFiles(Vec<ServiceItemKind>),
     ReaddSongs(Vec<Song>),
@@ -124,6 +126,7 @@ pub enum Message {
     AddSongFromEditor(Song),
     PopupUpdate(String),
     PopupSearch(String),
+    HoverPoint(cosmic::iced::Point),
 }
 
 impl<'a> Library {
@@ -148,6 +151,8 @@ impl<'a> Library {
             modifiers_pressed: None,
             state: State::Idle,
             video_popup_input: String::new(),
+            hovered_point: Point::ORIGIN,
+            context_point: Point::ORIGIN,
         }
     }
 
@@ -526,10 +531,14 @@ impl<'a> Library {
             }
             Message::PresentationChanged => (),
             Message::Error(_) => (),
-            Message::OpenContext(index) => {
+            Message::OpenContext(None) => {
+                self.context_menu = None;
+            }
+            Message::OpenContext(Some(index)) => {
                 let Some(kind) = self.library_open else {
                     return Action::None;
                 };
+                self.context_point = self.hovered_point;
                 debug!(index, "should context");
                 let Some(items) = self.selected_items.as_mut() else {
                     self.selected_items = vec![(kind, index)].into();
@@ -547,6 +556,7 @@ impl<'a> Library {
                 self.context_menu = Some(index);
             }
             Message::AddFiles(items) => return self.add_files(items),
+            Message::HoverPoint(point) => self.hovered_point = point,
             Message::PopupUpdate(_) => todo!(),
             Message::PopupSearch(_) => todo!(),
         }
@@ -707,16 +717,17 @@ impl<'a> Library {
                         let kind = model.kind;
                         let visual_item = self.single_item(index, item, model);
 
-                        DndSource::<Message, KindWrapper>::new({
+                        let item = DndSource::<Message, KindWrapper>::new({
                             let mouse_area = mouse_area(visual_item);
                             let mouse_area = mouse_area
+                                .on_move(|point| Message::HoverPoint(point))
                                 .on_enter(Message::HoverItem(Some((
                                     model.kind, i32_index,
                                 ))))
                                 .on_double_click(Message::OpenItem(Some((
                                     model.kind, i32_index,
                                 ))))
-                                .on_right_press(Message::OpenContext(i32_index))
+                                .on_right_press(Message::OpenContext(Some(i32_index)))
                                 .on_exit(Message::HoverItem(None))
                                 .on_press(Message::SelectItem(Some((
                                     model.kind, i32_index,
@@ -747,8 +758,9 @@ impl<'a> Library {
                                 (icon.into(), state, i)
                             }
                         })
-                        .drag_content(move || KindWrapper((kind, i32_index)))
-                        .into()
+                        .drag_content(move || KindWrapper((kind, i32_index)));
+
+                        self.context_menu(item.into(), kind, i32_index).into()
                     })
                 })
                 .spacing(2)
@@ -764,8 +776,7 @@ impl<'a> Library {
                     .on_press(Message::AddItem)
             )
             .align_y(Vertical::Center);
-            let context_menu = self.context_menu(items.into());
-            let library_column = column![library_toolbar, context_menu].spacing(3);
+            let library_column = column![library_toolbar, items].spacing(3);
             Container::new(library_column).padding(5)
         } else {
             Container::new(Space::new())
@@ -925,22 +936,36 @@ impl<'a> Library {
         .into()
     }
 
-    fn context_menu<'b>(&self, items: Element<'b, Message>) -> Element<'b, Message> {
-        if self.context_menu.is_some() {
-            let menu_items = vec![
-                menu::Item::Button("Open", None, MenuMessage::Open),
-                menu::Item::Button("Delete", None, MenuMessage::Delete),
-            ];
-            let context_menu = context_menu(
-                items,
-                self.context_menu.map_or_else(
-                    || None,
-                    |_| Some(menu::items(&self.menu_keys, menu_items)),
-                ),
-            );
+    fn context_menu<'b>(
+        &self,
+        item: Element<'b, Message>,
+        library: LibraryKind,
+        id: i32,
+    ) -> Element<'b, Message> {
+        if self.context_menu.is_some_and(|index| index == id)
+            && self.library_open.is_some_and(|kind| kind == library)
+        {
+            let menu_item = |label, message| {
+                menu::menu_button(vec![text(label).into(), space::horizontal().into()])
+                    .on_press(message)
+            };
+
+            let menu_items = column![
+                menu_item("Open", Message::OpenItem(Some((library, id)))),
+                menu_item("Delete", Message::DeleteItem),
+            ]
+            .spacing(theme::spacing().space_s)
+            .apply(container)
+            .width(300)
+            .padding(theme::spacing().space_s)
+            .class(theme::Container::Dropdown);
+            let context_menu = popover(item)
+                .position(popover::Position::Point(self.context_point))
+                .on_close(Message::OpenContext(None))
+                .popup(menu_items);
             Element::from(context_menu)
         } else {
-            items
+            item
         }
     }
 

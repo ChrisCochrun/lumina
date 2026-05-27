@@ -13,8 +13,8 @@ use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
-    self, Background as IcedBackground, Border, Color, Length, Subscription, event,
-    window,
+    self, Background as IcedBackground, Border, Color, Length, Point, Subscription,
+    event, window,
 };
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::image::Handle;
@@ -24,8 +24,8 @@ use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     Container, Space, button, container, context_menu, divider, icon, menu, mouse_area,
-    nav_bar, nav_bar_toggle, responsive, scrollable, search_input, settings, slider,
-    text, text_input, tooltip,
+    nav_bar, nav_bar_toggle, popover, responsive, scrollable, search_input, settings,
+    slider, text, text_input, tooltip,
 };
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
@@ -211,6 +211,8 @@ struct App {
     obs_connection: String,
     view_mode: ViewMode,
     genius_token_hidden: bool,
+    hovered_point: iced::Point,
+    context_point: iced::Point,
 }
 
 #[allow(dead_code)]
@@ -247,7 +249,7 @@ enum Message {
     AppendServiceItem(ServiceItem),
     AppendServiceItemKind(ServiceItemKind),
     ReorderService(usize, usize),
-    ContextMenuItem(usize),
+    ContextMenuItem(Option<usize>),
     SearchFocus,
     Search(String),
     CloseSearch,
@@ -273,6 +275,7 @@ enum Message {
     InsertThumbnail((iced::core::image::Allocation, usize)),
     ClearFooterMsg,
     SavingReport,
+    ContextPoint(Point),
 }
 
 #[allow(dead_code)]
@@ -464,6 +467,8 @@ impl cosmic::Application for App {
             hovered_item: None,
             hovered_dnd: None,
             context_menu: None,
+            hovered_point: Point::ORIGIN,
+            context_point: Point::ORIGIN,
             modifiers_pressed: None,
             settings_open: false,
             settings,
@@ -1434,7 +1439,12 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::ContextMenuItem(index) => {
-                self.context_menu = Some(index);
+                self.context_menu = index;
+                self.context_point = self.hovered_point;
+                Task::none()
+            }
+            Message::ContextPoint(point) => {
+                self.hovered_point = point;
                 Task::none()
             }
             Message::AddServiceItemDrop(index) => {
@@ -2172,21 +2182,41 @@ where
             }
             (Key::Character(k), _) if k == *"/" => self.update(Message::SearchFocus),
             (Key::Named(iced::keyboard::key::Named::ArrowRight), _) => {
-                self.update(Message::Present(presenter::Message::NextSlide))
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
             }
             (Key::Named(iced::keyboard::key::Named::ArrowLeft), _) => {
-                self.update(Message::Present(presenter::Message::PrevSlide))
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::PrevSlide))
+                } else {
+                    Task::none()
+                }
             }
             (Key::Character(k), _) if k == *" " => {
-                self.update(Message::Present(presenter::Message::NextSlide))
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
             }
             (Key::Character(k), _) if k == *"j" || k == *"l" => {
-                self.update(Message::Present(presenter::Message::NextSlide))
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
             }
             (Key::Character(k), _) if k == *"k" || k == *"h" => {
-                self.update(Message::Present(presenter::Message::PrevSlide))
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::PrevSlide))
+                } else {
+                    Task::none()
+                }
             }
-            (Key::Character(k), _) if k == *"q" => self.update(Message::Quit),
+            // (Key::Character(k), _) if k == *"q" => self.update(Message::Quit),
             _ => Task::none(),
         }
     }
@@ -2251,32 +2281,35 @@ where
                 container
             };
             let mouse_area = mouse_area(visual_item)
+                .on_move(|point| Message::ContextPoint(point))
                 .on_enter(Message::HoveredServiceItem(Some(index)))
                 .on_exit(Message::HoveredServiceItem(None))
                 .on_double_press(Message::ChangeServiceItem(index))
-                .on_right_press(Message::ContextMenuItem(index))
+                .on_right_press(Message::ContextMenuItem(Some(index)))
                 .on_release(Message::SelectServiceItem(index));
             let single_item = if let Some(context_menu_item) = self.context_menu {
+                let menu_item = |label, message| {
+                    menu::menu_button(vec![
+                        text(label).into(),
+                        space::horizontal().into(),
+                    ])
+                    .on_press(message)
+                };
+                let delete_button: Element<Message> =
+                    menu_item("Delete", Message::RemoveServiceItem(index)).into();
+
+                let menu = column![delete_button]
+                    .spacing(theme::spacing().space_s)
+                    .apply(cosmic::widget::container)
+                    .width(300)
+                    .padding(theme::spacing().space_s)
+                    .class(theme::Container::Dropdown);
+
                 if context_menu_item == index {
-                    let context_menu = context_menu(
-                        mouse_area,
-                        self.context_menu.map_or_else(
-                            || None,
-                            |i| {
-                                if i == index {
-                                    let menu = vec![menu::Item::Button(
-                                        "Delete",
-                                        None,
-                                        MenuAction::DeleteItem(index),
-                                    )];
-                                    Some(menu::items(&HashMap::new(), menu))
-                                } else {
-                                    None
-                                }
-                            },
-                        ),
-                    )
-                    .close_on_escape(true);
+                    let context_menu = popover(mouse_area)
+                        .position(popover::Position::Point(self.context_point))
+                        .on_close(Message::ContextMenuItem(None))
+                        .popup(menu);
                     Element::from(context_menu)
                 } else {
                     Element::from(mouse_area)
