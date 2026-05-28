@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
-use cosmic::iced::core::text::Alignment;
+use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{AbsoluteOffset, Direction, Scrollbar, scroll_to};
 use cosmic::iced::widget::stack;
@@ -590,7 +590,7 @@ impl Presenter {
         let scrollable = scrollable(
             container(
                 flex_row(items)
-                    .justify_content(Some(JustifyContent::SpaceEvenly))
+                    .justify_content(Some(JustifyContent::FlexStart))
                     .align_items(cosmic::iced::Alignment::Center)
                     .justify_items(cosmic::iced::Alignment::End)
                     .column_spacing(space_s)
@@ -613,6 +613,13 @@ impl Presenter {
 
     #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
+        let Spacing {
+            space_none,
+            space_xs,
+            space_s,
+            space_l,
+            ..
+        } = theme::spacing();
         let mut items = vec![];
         self.service
             .iter()
@@ -680,16 +687,17 @@ impl Presenter {
                             self.context_menu((item_index, slide_index), delegate.into());
                         slides.push(context_menu);
                     });
-                let row = Row::from_vec(slides).spacing(10).padding([20, 15]);
-                let label = text::body(item.title.clone());
-                let label_container = container(label)
-                    .align_top(Length::Fill)
-                    .align_left(Length::Fill)
-                    .padding([0, 0, 0, 35]);
+                let row = Row::from_vec(slides)
+                    .spacing(space_s)
+                    .padding([0, 15, 0, 15]);
+                let label = text::body(item.title.clone())
+                    .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
+                    .width(self.preview_size * 16.0 / 9.0);
+                let label_container = container(label).padding([0, 0, 0, 15]);
                 let divider = vertical::light();
                 items.push(
-                    container(stack!(row, label_container))
-                        .padding([5, 2])
+                    container(column![label_container, row].spacing(space_s))
+                        .padding(space_xs)
                         .into(),
                 );
                 items.push(divider.into());
