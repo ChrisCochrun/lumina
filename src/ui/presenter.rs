@@ -687,14 +687,15 @@ impl Presenter {
                             self.context_menu((item_index, slide_index), delegate.into());
                         slides.push(context_menu);
                     });
+                let slides_length = slides.len() as f32;
                 let row = Row::from_vec(slides)
                     .spacing(space_s)
                     .padding([0, 15, 0, 15]);
                 let label = text::body(item.title.clone())
                     .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
-                    .width(self.preview_size * 16.0 / 9.0);
+                    .width(self.preview_size * slides_length * 16.0 / 9.0);
                 let label_container = container(label).padding([0, 0, 0, 15]);
-                let divider = vertical::light();
+                let divider = vertical::light().width(2);
                 items.push(
                     container(column![label_container, row].spacing(space_s))
                         .padding(space_xs)
