@@ -1,4 +1,4 @@
-use crate::core::model::Sort;
+use crate::core::model::{Sort, SortDirection};
 use crate::{Background, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -184,7 +184,7 @@ impl Model<Video> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Video,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
         model.load_from_db(db).await;
         model
@@ -206,12 +206,30 @@ impl Model<Video> {
 
     pub fn sort(&mut self) {
         match self.sorting_method {
-            Sort::AccessTime => {
+            Sort::AccessTime(SortDirection::Descending) => {
                 self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
             }
-            Sort::CreatedTime => todo!(),
-            Sort::Title => todo!(),
-            Sort::Secondary => todo!(),
+            Sort::AccessTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.accessed_at.cmp(&b.accessed_at))
+            }
+            Sort::Title(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.title.cmp(&a.title))
+            }
+            Sort::Title(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.title.cmp(&b.title))
+            }
+            Sort::CreatedTime(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.created_at.cmp(&a.created_at))
+            }
+            Sort::CreatedTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.created_at.cmp(&b.created_at))
+            }
+            Sort::Secondary(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.path.cmp(&a.path))
+            }
+            Sort::Secondary(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.path.cmp(&b.path))
+            }
         }
     }
 
@@ -353,7 +371,7 @@ mod test {
         let mut video_model: Model<Video> = Model {
             items: vec![],
             kind: LibraryKind::Video,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
         let db = Arc::new(add_db().await.expect(""));
         video_model.load_from_db(db).await;
@@ -371,7 +389,7 @@ mod test {
         let mut video_model: Model<Video> = Model {
             items: vec![],
             kind: LibraryKind::Video,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
         let result = video_model.add_item(video.clone());
         let new_video = test_video("A newer video".into());

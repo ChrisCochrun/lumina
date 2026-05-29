@@ -26,10 +26,16 @@ pub enum LibraryKind {
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, Serialize, Deserialize)]
 pub enum Sort {
-    AccessTime,
-    CreatedTime,
-    Title,
-    Secondary, // This can be author or file name
+    AccessTime(SortDirection),
+    CreatedTime(SortDirection),
+    Title(SortDirection),
+    Secondary(SortDirection), // This can be author or file name
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy, Serialize, Deserialize)]
+pub enum SortDirection {
+    Ascending,
+    Descending,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

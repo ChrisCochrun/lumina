@@ -1,4 +1,4 @@
-use crate::core::model::Sort;
+use crate::core::model::{Sort, SortDirection};
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -158,7 +158,7 @@ impl Model<Image> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Image,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
 
         let mut db = db.acquire().await.expect("probs");
@@ -188,12 +188,30 @@ impl Model<Image> {
 
     pub fn sort(&mut self) {
         match self.sorting_method {
-            Sort::AccessTime => {
+            Sort::AccessTime(SortDirection::Descending) => {
                 self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
             }
-            Sort::CreatedTime => todo!(),
-            Sort::Title => todo!(),
-            Sort::Secondary => todo!(),
+            Sort::AccessTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.accessed_at.cmp(&b.accessed_at))
+            }
+            Sort::Title(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.title.cmp(&a.title))
+            }
+            Sort::Title(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.title.cmp(&b.title))
+            }
+            Sort::CreatedTime(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.created_at.cmp(&a.created_at))
+            }
+            Sort::CreatedTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.created_at.cmp(&b.created_at))
+            }
+            Sort::Secondary(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.path.cmp(&a.path))
+            }
+            Sort::Secondary(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.path.cmp(&b.path))
+            }
         }
     }
 
@@ -327,7 +345,7 @@ mod test {
         let mut image_model: Model<Image> = Model {
             items: vec![],
             kind: LibraryKind::Image,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
         let mut db = add_db()
             .await
@@ -350,7 +368,7 @@ mod test {
         let mut image_model: Model<Image> = Model {
             items: vec![],
             kind: LibraryKind::Image,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
         let result = image_model.add_item(image.clone());
         let new_image = test_image("A newer image".into());

@@ -19,7 +19,7 @@ use tracing::{debug, error};
 
 use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{LibraryKind, Model, Sort};
+use crate::core::model::{LibraryKind, Model, Sort, SortDirection};
 use crate::core::service_items::ServiceTrait;
 use crate::core::slide::{self, Background, TextAlignment};
 use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
@@ -667,7 +667,7 @@ impl Model<Song> {
         let mut model = Self {
             items: vec![],
             kind: LibraryKind::Song,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
         };
 
         model.load_from_db(db).await;
@@ -702,12 +702,32 @@ impl Model<Song> {
 
     pub fn sort(&mut self) {
         match self.sorting_method {
-            Sort::AccessTime => {
+            Sort::AccessTime(SortDirection::Descending) => {
                 self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at))
             }
-            Sort::CreatedTime => todo!(),
-            Sort::Title => todo!(),
-            Sort::Secondary => todo!(),
+            Sort::AccessTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.accessed_at.cmp(&b.accessed_at))
+            }
+            Sort::Title(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.title.cmp(&a.title))
+            }
+            Sort::Title(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.title.cmp(&b.title))
+            }
+            Sort::CreatedTime(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.created_at.cmp(&a.created_at))
+            }
+            Sort::CreatedTime(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.created_at.cmp(&b.created_at))
+            }
+            Sort::Secondary(SortDirection::Descending) => {
+                self.items.sort_by(|a, b| b.author.cmp(&a.author))
+            }
+            Sort::Secondary(SortDirection::Ascending) => {
+                self.items.sort_by(|a, b| a.author.cmp(&b.author))
+            } // Sort::CreatedTime => todo!(),
+              // Sort::Title => todo!(),
+              // Sort::Secondary => todo!(),
         }
     }
 
@@ -1315,7 +1335,7 @@ You saved my soul"
         let song_model: Model<Song> = Model {
             items: vec![],
             kind: LibraryKind::Song,
-            sorting_method: Sort::AccessTime,
+            sorting_method: Sort::AccessTime(SortDirection::Descending),
             // db: crate::core::model::get_db().await,
         };
         song_model

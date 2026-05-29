@@ -30,7 +30,7 @@ use tracing::{debug, error, warn};
 use crate::core::content::Content;
 use crate::core::images::{self, Image};
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{KindWrapper, LibraryKind, Model, Sort};
+use crate::core::model::{KindWrapper, LibraryKind, Model, Sort, SortDirection};
 use crate::core::presentations::{self, Presentation};
 use crate::core::service_items::ServiceItem;
 use crate::core::songs::{self, Song, insert_song};
@@ -56,6 +56,10 @@ pub struct Library {
     video_popup_input: String,
     hovered_point: cosmic::iced::Point,
     context_point: cosmic::iced::Point,
+    song_search_query: Option<String>,
+    image_search_query: Option<String>,
+    video_search_query: Option<String>,
+    presentation_search_query: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -102,6 +106,7 @@ pub enum Message {
     OpenLibrary(Option<LibraryKind>),
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
+    SearchLibrary(String),
     DragItem(ServiceItem),
     UpdateSong(Song),
     SongChanged,
@@ -152,16 +157,16 @@ impl<'a> Library {
         Self {
             song_library: Model::new_song_model(Arc::clone(&db))
                 .await
-                .set_sort(Sort::AccessTime),
+                .set_sort(Sort::AccessTime(SortDirection::Descending)),
             image_library: Model::new_image_model(Arc::clone(&db))
                 .await
-                .set_sort(Sort::AccessTime),
+                .set_sort(Sort::AccessTime(SortDirection::Descending)),
             video_library: Model::new_video_model(Arc::clone(&db))
                 .await
-                .set_sort(Sort::AccessTime),
+                .set_sort(Sort::AccessTime(SortDirection::Descending)),
             presentation_library: Model::new_presentation_model(Arc::clone(&db))
                 .await
-                .set_sort(Sort::AccessTime),
+                .set_sort(Sort::AccessTime(SortDirection::Descending)),
             library_open: None,
             library_hovered: None,
             selected_items: None,
@@ -175,6 +180,10 @@ impl<'a> Library {
             video_popup_input: String::new(),
             hovered_point: Point::ORIGIN,
             context_point: Point::ORIGIN,
+            song_search_query: None,
+            image_search_query: None,
+            video_search_query: None,
+            presentation_search_query: None,
         }
     }
 
@@ -216,6 +225,37 @@ impl<'a> Library {
                 self.context_menu = None;
                 return self.delete_items();
             }
+            Message::SearchLibrary(search) => match self.library_open {
+                Some(LibraryKind::Song) => {
+                    self.song_search_query = if search.is_empty() {
+                        None
+                    } else {
+                        Some(search)
+                    }
+                }
+                Some(LibraryKind::Image) => {
+                    self.image_search_query = if search.is_empty() {
+                        None
+                    } else {
+                        Some(search)
+                    }
+                }
+                Some(LibraryKind::Video) => {
+                    self.video_search_query = if search.is_empty() {
+                        None
+                    } else {
+                        Some(search)
+                    }
+                }
+                Some(LibraryKind::Presentation) => {
+                    self.presentation_search_query = if search.is_empty() {
+                        None
+                    } else {
+                        Some(search)
+                    }
+                }
+                None => (),
+            },
             Message::ReaddSongs(songs) => {
                 self.song_library.items = songs;
             }
@@ -804,57 +844,99 @@ impl<'a> Library {
         let lib_container = if self.library_open == Some(model.kind) {
             let items = scrollable(
                 column({
-                    model.items.iter().enumerate().map(|(index, item)| {
-                        let i32_index =
-                            i32::try_from(index).expect("shouldn't be negative");
-                        let kind = model.kind;
-                        let visual_item = self.single_item(index, item, model);
-
-                        let item = DndSource::<Message, KindWrapper>::new({
-                            let mouse_area = mouse_area(visual_item);
-                            let mouse_area = mouse_area
-                                .on_move(|point| Message::HoverPoint(point))
-                                .on_enter(Message::HoverItem(Some((
-                                    model.kind, i32_index,
-                                ))))
-                                .on_double_click(Message::AccessItem(Some((
-                                    model.kind, i32_index,
-                                ))))
-                                .on_right_press(Message::OpenContext(Some(i32_index)))
-                                .on_exit(Message::HoverItem(None))
-                                .on_press(Message::SelectItem(Some((
-                                    model.kind, i32_index,
-                                ))));
-
-                            Element::from(mouse_area)
-                        })
-                        .action(DndAction::Copy)
-                        .drag_icon({
-                            let model = model.kind;
-                            move |i| {
-                                let state = TreeState::None;
-                                let icon = match model {
-                                    LibraryKind::Song => {
-                                        icon::from_name("folder-music-symbolic")
-                                            .symbolic(true)
-                                    }
-                                    LibraryKind::Video => {
-                                        icon::from_name("folder-videos-symbolic")
-                                    }
-                                    LibraryKind::Image => {
-                                        icon::from_name("folder-pictures-symbolic")
-                                    }
-                                    LibraryKind::Presentation => {
-                                        icon::from_name("x-office-presentation-symbolic")
-                                    }
-                                };
-                                (icon.into(), state, i)
+                    model
+                        .items
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, item)| match &model.kind {
+                            LibraryKind::Song => {
+                                if let Some(search) = &self.song_search_query {
+                                    item.title()
+                                        .to_lowercase()
+                                        .contains(&search.to_lowercase())
+                                } else {
+                                    true
+                                }
+                            }
+                            LibraryKind::Video => {
+                                if let Some(search) = &self.video_search_query {
+                                    item.title()
+                                        .to_lowercase()
+                                        .contains(&search.to_lowercase())
+                                } else {
+                                    true
+                                }
+                            }
+                            LibraryKind::Image => {
+                                if let Some(search) = &self.image_search_query {
+                                    item.title()
+                                        .to_lowercase()
+                                        .contains(&search.to_lowercase())
+                                } else {
+                                    true
+                                }
+                            }
+                            LibraryKind::Presentation => {
+                                if let Some(search) = &self.presentation_search_query {
+                                    item.title()
+                                        .to_lowercase()
+                                        .contains(&search.to_lowercase())
+                                } else {
+                                    true
+                                }
                             }
                         })
-                        .drag_content(move || KindWrapper((kind, i32_index)));
+                        .map(|(index, item)| {
+                            let i32_index =
+                                i32::try_from(index).expect("shouldn't be negative");
+                            let kind = model.kind;
+                            let visual_item = self.single_item(index, item, model);
 
-                        self.context_menu(item.into(), kind, i32_index).into()
-                    })
+                            let item = DndSource::<Message, KindWrapper>::new({
+                                let mouse_area = mouse_area(visual_item);
+                                let mouse_area = mouse_area
+                                    .on_move(|point| Message::HoverPoint(point))
+                                    .on_enter(Message::HoverItem(Some((
+                                        model.kind, i32_index,
+                                    ))))
+                                    .on_double_click(Message::AccessItem(Some((
+                                        model.kind, i32_index,
+                                    ))))
+                                    .on_right_press(Message::OpenContext(Some(i32_index)))
+                                    .on_exit(Message::HoverItem(None))
+                                    .on_press(Message::SelectItem(Some((
+                                        model.kind, i32_index,
+                                    ))));
+
+                                Element::from(mouse_area)
+                            })
+                            .action(DndAction::Copy)
+                            .drag_icon({
+                                let model = model.kind;
+                                move |i| {
+                                    let state = TreeState::None;
+                                    let icon = match model {
+                                        LibraryKind::Song => {
+                                            icon::from_name("folder-music-symbolic")
+                                                .symbolic(true)
+                                        }
+                                        LibraryKind::Video => {
+                                            icon::from_name("folder-videos-symbolic")
+                                        }
+                                        LibraryKind::Image => {
+                                            icon::from_name("folder-pictures-symbolic")
+                                        }
+                                        LibraryKind::Presentation => icon::from_name(
+                                            "x-office-presentation-symbolic",
+                                        ),
+                                    };
+                                    (icon.into(), state, i)
+                                }
+                            })
+                            .drag_content(move || KindWrapper((kind, i32_index)));
+
+                            self.context_menu(item.into(), kind, i32_index).into()
+                        })
                 })
                 .spacing(2)
                 .width(Length::Fill),
@@ -862,8 +944,33 @@ impl<'a> Library {
             .spacing(5)
             .height(Length::Fill);
 
+            let search_bar = match &model.kind {
+                LibraryKind::Song => text_input(
+                    "Search...",
+                    self.song_search_query.clone().unwrap_or(String::new()),
+                )
+                .on_input(Message::SearchLibrary),
+                LibraryKind::Video => text_input(
+                    "Search...",
+                    self.video_search_query.clone().unwrap_or(String::new()),
+                )
+                .on_input(Message::SearchLibrary),
+                LibraryKind::Image => text_input(
+                    "Search...",
+                    self.image_search_query.clone().unwrap_or(String::new()),
+                )
+                .on_input(Message::SearchLibrary),
+                LibraryKind::Presentation => text_input(
+                    "Search...",
+                    self.presentation_search_query
+                        .clone()
+                        .unwrap_or(String::new()),
+                )
+                .on_input(Message::SearchLibrary),
+            };
+
             let library_toolbar = rowm!(
-                text_input("Search...", ""),
+                search_bar,
                 button::icon(icon::from_name("list-add-symbolic"))
                     .icon_size(theme::spacing().space_l)
                     .on_press(Message::AddItem)
