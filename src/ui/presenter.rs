@@ -16,6 +16,7 @@ use cosmic::iced::{
     Vector, animation,
 };
 use cosmic::prelude::*;
+use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
     Container, Id, JustifyContent, Row, Space, column, container, flex_row,
@@ -1055,6 +1056,7 @@ pub(crate) fn slide_view<'a>(
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'a, Message> {
+    // aspect_ratio_container(slide, ratio)
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let black = Container::new(Space::new())

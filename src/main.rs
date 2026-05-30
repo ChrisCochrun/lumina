@@ -1850,12 +1850,23 @@ impl cosmic::Application for App {
             0.0
         };
 
-        let slide_preview = column![
-            Space::new().height(Length::Fill),
-            Container::new(self.presenter.view_preview().map(Message::Present),)
-                .height(250)
-                .align_bottom(Length::Fill),
-            Container::new(if self.presenter.preview_video.is_some() {
+        let mut slide_preview = column![
+            responsive(|size| {
+                self.presenter
+                    .view_preview()
+                    .map(Message::Present)
+                    .apply(container)
+                    .width(Length::Fill)
+                    .height(size.width * 9.0 / 16.0)
+                    .into()
+            })
+            .width(Length::Fill)
+            .height(Length::Shrink)
+        ]
+        .spacing(3);
+
+        if self.presenter.preview_video.is_some() {
+            slide_preview = slide_preview.push(
                 row![
                     video_button_icon,
                     Container::new(
@@ -1868,13 +1879,12 @@ impl cosmic::Application for App {
                     .padding([7, 0, 0, 0])
                 ]
                 .padding(5)
-            } else {
-                row![]
-            })
-            .center_x(Length::Fill),
-            Space::new().height(Length::Fill)
-        ]
-        .spacing(3);
+                .apply(container)
+                .center_x(Length::Fill),
+            );
+        }
+
+        let slide_preview = slide_preview.apply(container).center_y(Length::Fill);
 
         let service_list = Container::new(self.service_list())
             .padding([
@@ -1950,9 +1960,7 @@ impl cosmic::Application for App {
             .apply(container)
             .center_y(Length::Fill)
             .align_right(Length::FillPortion(1)),
-            Container::new(slide_preview)
-                .center_y(Length::Fill)
-                .width(Length::FillPortion(3)),
+            slide_preview.width(Length::FillPortion(3)),
             tooltip(
                 button::custom(icon_right)
                     .width(icon_size)
