@@ -1765,6 +1765,7 @@ impl cosmic::Application for App {
                 let grid_to_row = matches!(mode, ViewMode::Row);
 
                 self.view_mode = mode;
+                self.presenter.view_mode = mode;
                 if grid_to_row && self.presenter.preview_size() > 150.0 {
                     self.update(Message::Present(presenter::Message::ChangePreviewSize(
                         150.0,

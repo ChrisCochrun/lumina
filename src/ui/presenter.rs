@@ -32,7 +32,6 @@ use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
-use crate::BackgroundKind;
 use crate::core::service_items::ServiceItem;
 use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
@@ -40,6 +39,7 @@ use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::library::elide_text;
 use crate::ui::widgets::loaded_image::loaded_image;
+use crate::{BackgroundKind, ViewMode};
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
 static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
@@ -73,6 +73,7 @@ pub(crate) struct Presenter {
     pub image_loader: ImageLoader,
     animation: Option<Animation<bool>>,
     now: Instant,
+    pub view_mode: ViewMode,
 }
 
 #[allow(dead_code)]
@@ -228,6 +229,7 @@ impl Presenter {
             preview_size: 100.0,
             animation: None,
             now: Instant::now(),
+            view_mode: ViewMode::Row,
         }
     }
 
@@ -563,7 +565,9 @@ impl Presenter {
                 .on_release(Message::ActivateSlide(item_index, slide_index))
                 .on_right_release(Message::RightClickSlide(item_index, slide_index));
                 let item = if slide_index == 0 {
-                    let label = text::body(elide_text(&item.title, 150.0));
+                    let label = text::body(&item.title)
+                        .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
+                        .width(self.preview_size * 16.0 / 9.0);
 
                     column![label, delegate]
                         .align_x(Horizontal::Center)
@@ -604,9 +608,9 @@ impl Presenter {
         )
         .auto_scroll(true)
         // .direction(Direction::Horizontal(Scrollbar::new()))
+        .id(self.scroll_id.clone())
         .height(Length::Fill)
         .width(Length::Fill);
-        // .id(self.scroll_id.clone());
         scrollable.into()
 
         // scrollable.into()
@@ -926,11 +930,13 @@ impl Presenter {
         // self.load_images();
 
         let mut target_item = 0;
+        let mut spacers_past = 0.0;
 
         self.service
             .iter()
             .enumerate()
             .try_for_each(|(index, item)| {
+                spacers_past = index as f32;
                 item.slides
                     .iter()
                     .enumerate()
@@ -946,22 +952,48 @@ impl Presenter {
                     })
             });
 
+        let total_items = self.service.len() as f32;
         debug!(target_item);
 
-        #[allow(clippy::cast_precision_loss)]
-        let offset = AbsoluteOffset {
-            x: {
-                if target_item > 2 {
-                    (target_item as f32).mul_add(187.5, -187.5)
-                } else {
-                    0.0
-                }
-            },
-            y: 0.0,
-        };
-
         let mut tasks = vec![];
-        tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+        #[allow(clippy::cast_precision_loss)]
+        match self.view_mode {
+            ViewMode::Grid => {
+                let offset = AbsoluteOffset {
+                    x: 0.0,
+                    y: {
+                        let item_height = self.preview_size * 9.0 / 16.0;
+                        // let items_in_row_guess = match self.preview_size {
+                        //     100.0 => { 2.0 },
+                        //     > 100.0 => { 3.0 },
+                        // };
+                        if target_item > 4 {
+                            (target_item as f32).mul_add(item_height, -item_height)
+                        } else {
+                            0.0
+                        }
+                    },
+                };
+                tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+            }
+            ViewMode::Row => {
+                let offset = AbsoluteOffset {
+                    x: {
+                        let space = 80.0 * spacers_past;
+                        if target_item > 2 {
+                            (target_item as f32)
+                                .mul_add(self.preview_size, -self.preview_size)
+                                + space
+                        } else {
+                            0.0
+                        }
+                    },
+                    y: 0.0,
+                };
+                tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+            }
+            ViewMode::Detail => todo!(),
+        };
 
         if self.slide_action_map.is_some() {
             debug!("Found slide actions, running them");
@@ -1056,7 +1088,6 @@ pub(crate) fn slide_view<'a>(
     delegate: bool,
     hide_mouse: bool,
 ) -> Element<'a, Message> {
-    // aspect_ratio_container(slide, ratio)
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
         let black = Container::new(Space::new())
