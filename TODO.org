@@ -16,7 +16,8 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 * TODO Loading and saving need to have a progress indicator of some sort
 * DONE Preview mode needs to allow for a larger preview of the slide if the library is closed
 CLOSED: [2026-05-30 Sat 15:15]
-* TODO Grid mode needs to use the actual aspect ratio correctly for the slide preview
+* DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
+CLOSED: [2026-05-31 Sun 07:02]
 * TODO Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
 * TODO Song editor audio slider not working
 * TODO Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
