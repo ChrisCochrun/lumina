@@ -66,6 +66,7 @@ pub(crate) struct Presenter {
     hovered_slide: Option<(usize, usize)>,
     hovered_point: Option<Point>,
     scroll_id: Id,
+    active_slide_id: Id,
     current_font: Font,
     slide_action_map: Option<HashMap<(usize, usize), Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
@@ -222,6 +223,7 @@ impl Presenter {
                 (Arc::new(stream_handle), player)
             },
             scroll_id: Id::unique(),
+            active_slide_id: Id::unique(),
             current_font: cosmic::font::default(),
             slide_action_map: None,
             obs_client: None,
@@ -523,6 +525,11 @@ impl Presenter {
                 let slide = slide_view(slide, self.preview_video.as_ref(), true, false);
                 let delegate = mouse_area(
                     Container::new(slide)
+                        .id(if is_current_slide {
+                            self.active_slide_id.clone()
+                        } else {
+                            Id::unique()
+                        })
                         .style(move |t| {
                             let mut style = container::Style::default();
                             let theme = t.cosmic();
@@ -978,7 +985,11 @@ impl Presenter {
                         }
                     },
                 };
-                tasks.push(focus_target(self.scroll_id.clone(), None, 30.0));
+                tasks.push(focus_target(
+                    self.scroll_id.clone(),
+                    Some(self.active_slide_id.clone()),
+                    30.0,
+                ));
             }
             ViewMode::Row => {
                 let offset = AbsoluteOffset {

@@ -21,7 +21,7 @@ use cosmic::{
 
 use crate::ui::presenter::Message;
 
-pub fn focus_target(
+pub(crate) fn focus_target(
     scrollable_id: core::id::Id,
     target_item_id: Option<core::id::Id>,
     padding: f32,
@@ -43,9 +43,6 @@ pub fn focus_target(
         fn container(&mut self, id: Option<&widget::Id>, bounds: Rectangle) {
             if Some(&self.target) == id {
                 self.target_rectangle = Some(bounds)
-            } else {
-                let cloned_id = id.expect("hellow").clone();
-                search_id(cloned_id.clone()).container(id, bounds);
             }
         }
 
@@ -104,7 +101,7 @@ pub fn focus_target(
             &mut self,
             operate: &mut dyn FnMut(&mut dyn Operation<AbsoluteOffset>),
         ) {
-            todo!()
+            operate(self);
         }
     }
 
