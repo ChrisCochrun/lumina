@@ -436,11 +436,24 @@ impl SongEditor {
                 if let Some(audio) = &song.audio
                     && audio.exists()
                 {
-                    let file = BufReader::new(
-                        File::open(audio).expect("There should be an audio file here"),
-                    );
-                    let source = Decoder::new(file)
+                    let extension = audio
+                        .extension()
+                        .expect("Audio files should have an extension")
+                        .to_str()
+                        .expect("Woops");
+
+                    let file =
+                        File::open(audio).expect("There should be an audio file here");
+                    let len = file.metadata().expect("Should be fine").len();
+
+                    let source = Decoder::builder()
+                        .with_data(file)
+                        .with_hint(extension)
+                        .with_byte_len(len)
+                        .with_seekable(true)
+                        .build()
                         .expect("There should be an audio decoder here");
+
                     self.audio = audio.clone();
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
@@ -617,11 +630,24 @@ impl SongEditor {
                 self.player.clear();
                 debug!(?path);
                 if let Some(mut song) = self.song.clone() {
-                    let file = BufReader::new(
-                        File::open(&path).expect("There should be an audio file here"),
-                    );
-                    let source = Decoder::new(file)
+                    let extension = &path
+                        .extension()
+                        .expect("Audio files should have an extension")
+                        .to_str()
+                        .expect("Woops");
+
+                    let file =
+                        File::open(&path).expect("There should be an audio file here");
+                    let len = file.metadata().expect("Should be fine").len();
+
+                    let source = Decoder::builder()
+                        .with_data(file)
+                        .with_hint(extension)
+                        .with_byte_len(len)
+                        .with_seekable(true)
+                        .build()
                         .expect("There should be an audio decoder here");
+
                     song.audio = Some(path);
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
