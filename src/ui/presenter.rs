@@ -9,7 +9,9 @@ use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
-use cosmic::iced::widget::scrollable::{AbsoluteOffset, Direction, Scrollbar, scroll_to};
+use cosmic::iced::widget::scrollable::{
+    AbsoluteOffset, Direction, Scrollbar, scroll_by, scroll_to,
+};
 use cosmic::iced::widget::stack;
 use cosmic::iced::{
     Animation, Background, Border, Color, ContentFit, Font, Length, Point, Shadow,
@@ -38,6 +40,7 @@ use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::library::elide_text;
+use crate::ui::scroll_operations::focus_target;
 use crate::ui::widgets::loaded_image::loaded_image;
 use crate::{BackgroundKind, ViewMode};
 
@@ -967,14 +970,15 @@ impl Presenter {
                         //     100.0 => { 2.0 },
                         //     > 100.0 => { 3.0 },
                         // };
-                        if target_item > 4 {
+                        let div_by_4 = (target_item as f32 - 1.0) / 4.0;
+                        if div_by_4.trunc() == div_by_4 {
                             (target_item as f32).mul_add(item_height, -item_height)
                         } else {
                             0.0
                         }
                     },
                 };
-                tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+                tasks.push(focus_target(self.scroll_id.clone(), None, 30.0));
             }
             ViewMode::Row => {
                 let offset = AbsoluteOffset {

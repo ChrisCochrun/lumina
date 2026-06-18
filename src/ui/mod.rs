@@ -13,6 +13,7 @@ pub mod song_editor;
 pub mod text_svg;
 pub mod video_editor;
 pub mod widgets;
+pub mod scroll_operations;
 
 pub enum EditorMode {
     Song,

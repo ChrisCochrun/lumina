@@ -19,13 +19,15 @@ CLOSED: [2026-05-30 Sat 15:15]
 * DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
 CLOSED: [2026-05-31 Sun 07:02]
 * TODO Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
-* TODO Song editor audio slider not working
+* DONE Song editor audio slider not working
+CLOSED: [2026-06-18 Thu 13:18]
 * TODO Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
 * DONE When editing songs, we should ensure that you can't effect the presentation without certain shortcuts
 CLOSED: [2026-05-30 Sat 15:17]
 * DONE Fix the right click context menu in service list and library
 CLOSED: [2026-05-30 Sat 15:15]
 Remake this just like the one in the preview and grid view probably so that it can work regardless of scroll and things
+
 * TODO Fix the scrolling when switching slides for preview and grid
 They both need to be adjusted when changing the size of the slides that are there
 
