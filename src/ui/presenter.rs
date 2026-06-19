@@ -40,7 +40,7 @@ use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::library::elide_text;
-use crate::ui::scroll_operations::focus_target;
+use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::loaded_image::loaded_image;
 use crate::{BackgroundKind, ViewMode};
 
@@ -65,6 +65,7 @@ pub(crate) struct Presenter {
     sink: (Arc<MixerDeviceSink>, Arc<Player>),
     hovered_slide: Option<(usize, usize)>,
     hovered_point: Option<Point>,
+    direction_of_slide_change: scroll_operations::Direction,
     scroll_id: Id,
     active_slide_id: Id,
     current_font: Font,
@@ -222,6 +223,7 @@ impl Presenter {
                 let player = Arc::new(rodio::Player::connect_new(stream_handle.mixer()));
                 (Arc::new(stream_handle), player)
             },
+            direction_of_slide_change: scroll_operations::Direction::Forward,
             scroll_id: Id::unique(),
             active_slide_id: Id::unique(),
             current_font: cosmic::font::default(),
@@ -243,11 +245,15 @@ impl Presenter {
         match message {
             Message::NextSlide => {
                 if let Some((item, slide)) = self.next_slide() {
+                    self.direction_of_slide_change =
+                        scroll_operations::Direction::Forward;
                     return self.update(Message::ActivateSlide(item, slide));
                 }
             }
             Message::PrevSlide => {
                 if let Some((item, slide)) = self.previous_slide() {
+                    self.direction_of_slide_change =
+                        scroll_operations::Direction::Backward;
                     return self.update(Message::ActivateSlide(item, slide));
                 }
             }
@@ -652,6 +658,11 @@ impl Presenter {
                             slide_view(slide, self.preview_video.as_ref(), true, false);
                         let delegate = mouse_area(
                             Container::new(container)
+                                .id(if is_current_slide {
+                                    self.active_slide_id.clone()
+                                } else {
+                                    Id::unique()
+                                })
                                 .style(move |t| {
                                     let mut style = container::Style::default();
                                     let theme = t.cosmic();
@@ -966,46 +977,22 @@ impl Presenter {
         debug!(target_item);
 
         let mut tasks = vec![];
+        let item_height = self.preview_size * 9.0 / 16.0;
         #[allow(clippy::cast_precision_loss)]
         match self.view_mode {
             ViewMode::Grid => {
-                let offset = AbsoluteOffset {
-                    x: 0.0,
-                    y: {
-                        let item_height = self.preview_size * 9.0 / 16.0;
-                        // let items_in_row_guess = match self.preview_size {
-                        //     100.0 => { 2.0 },
-                        //     > 100.0 => { 3.0 },
-                        // };
-                        let div_by_4 = (target_item as f32 - 1.0) / 4.0;
-                        if div_by_4.trunc() == div_by_4 {
-                            (target_item as f32).mul_add(item_height, -item_height)
-                        } else {
-                            0.0
-                        }
-                    },
-                };
                 tasks.push(focus_target(
                     self.scroll_id.clone(),
                     Some(self.active_slide_id.clone()),
-                    30.0,
+                    self.direction_of_slide_change.clone(),
                 ));
             }
             ViewMode::Row => {
-                let offset = AbsoluteOffset {
-                    x: {
-                        let space = 80.0 * spacers_past;
-                        if target_item > 2 {
-                            (target_item as f32)
-                                .mul_add(self.preview_size, -self.preview_size)
-                                + space
-                        } else {
-                            0.0
-                        }
-                    },
-                    y: 0.0,
-                };
-                tasks.push(scroll_to(self.scroll_id.clone(), offset.into()));
+                tasks.push(focus_target(
+                    self.scroll_id.clone(),
+                    Some(self.active_slide_id.clone()),
+                    self.direction_of_slide_change.clone(),
+                ));
             }
             ViewMode::Detail => todo!(),
         };

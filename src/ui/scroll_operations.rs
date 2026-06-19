@@ -18,13 +18,20 @@ use cosmic::{
     },
     widget::{Operation, container},
 };
+use tracing::debug;
 
 use crate::ui::presenter::Message;
+
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub enum Direction {
+    Forward,
+    Backward,
+}
 
 pub(crate) fn focus_target(
     scrollable_id: core::id::Id,
     target_item_id: Option<core::id::Id>,
-    padding: f32,
+    direction: Direction,
 ) -> Task<Message> {
     let Some(target_item_id) = target_item_id else {
         return scroll_to(scrollable_id.clone(), AbsoluteOffset::default());
@@ -36,7 +43,7 @@ pub(crate) fn focus_target(
         viewport_rectangle: Option<Rectangle>,
         viewport_translation: Option<Vector>,
         target_rectangle: Option<Rectangle>,
-        padding: f32,
+        direction: Direction,
     }
 
     impl Operation<AbsoluteOffset> for CalculateScrollToIdOffset {
@@ -84,15 +91,26 @@ pub(crate) fn focus_target(
             let v_x = viewport_rectangle.x;
             let v_y = viewport_rectangle.y;
 
-            let pad = self.padding;
+            let pad = if v_w > v_h {
+                (v_w / 3.0) * 2.0
+            } else {
+                (v_h / 3.0) * 2.0
+            };
 
-            let offset_x = t_x.max(r_x + r_w - (v_x + v_w) + pad).min(r_x - v_x - pad);
-            let offset_y = t_y.max(r_y + r_h - (v_y + v_h) + pad).min(r_y - v_y - pad);
+            debug!(t_x, r_x, v_x, r_w, v_w, pad);
+            let mut offset_x = t_x.max(r_x + r_w + pad - (v_x + v_w));
+            let mut offset_y = t_y.max(r_y + r_h + pad - (v_y + v_h));
+
+            if self.direction == Direction::Backward {
+                offset_x = offset_x.min(r_x - v_x - (pad / 2.0));
+                offset_y = offset_y.min(r_y - v_y - (pad / 2.0));
+            }
 
             let offset = AbsoluteOffset {
                 x: offset_x,
                 y: offset_y,
             };
+            debug!(?offset);
 
             Outcome::Some(offset)
         }
@@ -111,7 +129,7 @@ pub(crate) fn focus_target(
         viewport_rectangle: None,
         viewport_translation: None,
         target_rectangle: None,
-        padding,
+        direction,
     };
 
     let scrollable_id = scrollable_id.clone();
