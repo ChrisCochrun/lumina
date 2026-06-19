@@ -8,12 +8,12 @@ pub mod presenter;
 // pub mod service;
 pub mod gst_video;
 pub mod image_loader;
+pub mod scroll_operations;
 pub mod slide_editor;
 pub mod song_editor;
 pub mod text_svg;
 pub mod video_editor;
 pub mod widgets;
-pub mod scroll_operations;
 
 pub enum EditorMode {
     Song,
