@@ -12,8 +12,10 @@ This can include title, author, and ccli info so that it will be compliant and h
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 
 * TODO Find a way to check if an item is in the library on load so that we can import it into the library
+
 * TODO Make loading not block the UI
 * TODO Loading and saving need to have a progress indicator of some sort
+
 * DONE Preview mode needs to allow for a larger preview of the slide if the library is closed
 CLOSED: [2026-05-30 Sat 15:15]
 * DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
@@ -28,7 +30,8 @@ CLOSED: [2026-05-30 Sat 15:17]
 CLOSED: [2026-05-30 Sat 15:15]
 Remake this just like the one in the preview and grid view probably so that it can work regardless of scroll and things
 
-* TODO Fix the scrolling when switching slides for preview and grid
+* DONE Fix the scrolling when switching slides for preview and grid
+CLOSED: [2026-06-19 Fri 05:43]
 They both need to be adjusted when changing the size of the slides that are there
 
 * TODO [#B] Font in the song editor doesn't always use the original version
