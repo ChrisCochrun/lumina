@@ -291,7 +291,7 @@ impl TextSvg {
         let font_scale = size.height / 1080.0;
         let font_size = f32::from(self.font.size) * font_scale;
         let total_lines = self.text.lines().count();
-        let half_lines = (total_lines / 2) as f32;
+        let half_lines = total_lines as f32 / 2.0;
         let line_spacing = 10.0;
         let text_and_line_spacing = font_size + line_spacing;
 
