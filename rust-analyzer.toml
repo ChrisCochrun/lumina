@@ -1,11 +1,11 @@
 # [lru]
 # capacity = 64
 
-[semanticHighlighting]
-operator.enable = false
-punctuation.enable = false
-strings.enable = false
-nonStandardTokens = false
+# [semanticHighlighting]
+# operator.enable = false
+# punctuation.enable = false
+# strings.enable = false
+# nonStandardTokens = false
 
 [files]
 exclude = ["flatpak-builder-tools", "cosmic-flatpak-runtime",
