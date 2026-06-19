@@ -97,7 +97,7 @@ pub(crate) fn focus_target(
                 (v_h / 3.0) * 2.0
             };
 
-            debug!(t_x, r_x, v_x, r_w, v_w, pad);
+            // debug!(t_x, r_x, v_x, r_w, v_w, pad);
             let mut offset_x = t_x.max(r_x + r_w + pad - (v_x + v_w));
             let mut offset_y = t_y.max(r_y + r_h + pad - (v_y + v_h));
 
@@ -110,7 +110,7 @@ pub(crate) fn focus_target(
                 x: offset_x,
                 y: offset_y,
             };
-            debug!(?offset);
+            // debug!(?offset);
 
             Outcome::Some(offset)
         }
