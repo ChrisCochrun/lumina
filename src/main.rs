@@ -10,7 +10,7 @@ use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::core::text::Wrapping;
 use cosmic::iced::keyboard::{Key, Modifiers};
-use cosmic::iced::widget::{column, row, stack};
+use cosmic::iced::widget::{column, progress_bar, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
     self, Background as IcedBackground, Border, Color, Length, Point, Subscription,
@@ -203,6 +203,7 @@ struct App {
     menu_keys: HashMap<KeyBind, MenuAction>,
     context_menu: Option<usize>,
     modifiers_pressed: Option<Modifiers>,
+    loading_state: LoadingState,
     settings_open: bool,
     settings: core::settings::Settings,
     config_handler: Option<Config>,
@@ -213,6 +214,16 @@ struct App {
     genius_token_hidden: bool,
     hovered_point: iced::Point,
     context_point: iced::Point,
+}
+
+#[derive(Debug, Clone)]
+enum LoadingState {
+    Loading {
+        total_items: usize,
+        current_item: usize,
+    },
+    Loaded,
+    None,
 }
 
 #[allow(dead_code)]
@@ -276,6 +287,9 @@ enum Message {
     ClearFooterMsg,
     SavingReport,
     ContextPoint(Point),
+    AddSlideTextToItem(usize, usize, Slide),
+    LoadedOpenItem(usize),
+    HideLoadingBar,
 }
 
 #[allow(dead_code)]
@@ -470,6 +484,7 @@ impl cosmic::Application for App {
             hovered_point: Point::ORIGIN,
             context_point: Point::ORIGIN,
             modifiers_pressed: None,
+            loading_state: LoadingState::None,
             settings_open: false,
             settings,
             config_handler,
@@ -680,13 +695,30 @@ impl cosmic::Application for App {
     }
 
     fn footer(&self) -> Option<Element<Self::Message>> {
-        let cosmic::cosmic_theme::Spacing { space_m, .. } = cosmic::theme::spacing();
+        let cosmic::cosmic_theme::Spacing {
+            space_s, space_m, ..
+        } = cosmic::theme::spacing();
         let total_items_text = format!("Total Service Items: {}", self.service.len());
 
         let total_slides = self.service.iter().fold(0, |a, item| a + item.slides.len());
 
         let total_slides_text = format!("Total Slides: {total_slides}");
         let mut row: Vec<Element<Message>> = Vec::new();
+        match self.loading_state {
+            LoadingState::Loading {
+                total_items,
+                current_item,
+            } => {
+                row.push(
+                    progress_bar(0.0..=total_items as f32, current_item as f32)
+                        .apply(container)
+                        .padding(space_s)
+                        .into(),
+                );
+            }
+            LoadingState::Loaded => row.push(text::body("Loaded!").into()),
+            LoadingState::None => (),
+        }
         if let Some(message) = self.footer_message.as_ref() {
             row.push(text::body(message).into());
             row.push(space::horizontal().width(space_m).into());
@@ -1303,17 +1335,44 @@ impl cosmic::Application for App {
                     Task::none()
                 }
             }
+            Message::AddSlideTextToItem(item_index, slide_index, slide_with_text) => {
+                let service = Arc::make_mut(&mut self.service);
+                if let Some(item) = service.get_mut(item_index) {
+                    if let Some(_old) = item.slides.get(slide_index) {
+                        let _ = item.slides.remove(slide_index);
+                        item.slides.insert(slide_index, slide_with_text);
+                    } else {
+                        item.slides.push(slide_with_text)
+                    }
+                }
+                Task::none()
+            }
             Message::AddServiceItem(index, mut item) => {
+                let mut tasks = Vec::new();
                 if matches!(item.kind, ServiceItemKind::Song(_)) {
-                    item.slides = item
-                        .slides
-                        .into_par_iter()
-                        .map(|slide| {
-                            let fontdb = Arc::clone(&self.fontdb);
-                            text_svg::text_svg_generator(slide.clone(), &fontdb)
-                                .unwrap_or(slide)
-                        })
-                        .collect();
+                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                    let item_index = index;
+                    let slides = item.slides.clone();
+                    let font_db = Arc::clone(&self.fontdb);
+
+                    std::thread::spawn(move || {
+                        for (slide_index, slide) in slides.into_iter().enumerate() {
+                            let slide =
+                                text_svg::text_svg_generator(slide.clone(), &font_db)
+                                    .unwrap_or(slide);
+                            let _ = tx.send(cosmic::Action::App(
+                                Message::AddSlideTextToItem(
+                                    item_index,
+                                    slide_index,
+                                    slide,
+                                ),
+                            ));
+                        }
+                    });
+
+                    tasks.push(Task::stream(
+                        tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
+                    ));
                 }
 
                 Arc::make_mut(&mut self.service).insert(index, item.clone());
@@ -1326,8 +1385,8 @@ impl cosmic::Application for App {
                 let path = first_slide.background.path.clone();
 
                 if matches!(first_slide.background.kind, BackgroundKind::Image) {
-                    cosmic::iced::runtime::image::allocate(path).map(move |allocation| {
-                        match allocation {
+                    tasks.push(cosmic::iced::runtime::image::allocate(path).map(
+                        move |allocation| match allocation {
                             Ok(allocation) => {
                                 debug!(?allocation);
                                 cosmic::Action::App(Message::InsertBackgroundImage((
@@ -1338,47 +1397,49 @@ impl cosmic::Application for App {
                                 error!("{e}");
                                 cosmic::Action::App(Message::None)
                             }
-                        }
-                    })
+                        },
+                    ));
                 } else if matches!(first_slide.background.kind, BackgroundKind::Video) {
-                    cosmic::Task::future(async move {
-                        let url =
-                            url::Url::from_file_path(&path).expect("Should be here");
+                    tasks.push(
+                        cosmic::Task::future(async move {
+                            let url =
+                                url::Url::from_file_path(&path).expect("Should be here");
 
-                        let file_name = path.file_name().expect("hope").to_string_lossy();
-                        let mut output =
-                            dirs::cache_dir().expect("Should have on every platform");
-                        output.push("lumina");
-                        output.push("video_thumbnails");
-                        if !output.exists()
-                            && let Err(e) = std::fs::create_dir_all(&output)
-                        {
-                            error!("{e}");
-                        }
-                        output.push(file_name.to_string());
-                        debug!(?output);
+                            let file_name =
+                                path.file_name().expect("hope").to_string_lossy();
+                            let mut output =
+                                dirs::cache_dir().expect("Should have on every platform");
+                            output.push("lumina");
+                            output.push("video_thumbnails");
+                            if !output.exists()
+                                && let Err(e) = std::fs::create_dir_all(&output)
+                            {
+                                error!("{e}");
+                            }
+                            output.push(file_name.to_string());
+                            debug!(?output);
 
-                        match gst_video::thumbnail(&url, &mut output) {
-                            Ok(handle) => handle,
+                            match gst_video::thumbnail(&url, &mut output) {
+                                Ok(handle) => handle,
+                                Err(e) => {
+                                    error!("{e}");
+                                    Handle::from_path(path)
+                                }
+                            }
+                        })
+                        .then(cosmic::iced::runtime::image::allocate)
+                        .map(move |allocation| match allocation {
+                            Ok(allocation) => cosmic::Action::App(
+                                Message::InsertThumbnail((allocation, index)),
+                            ),
                             Err(e) => {
                                 error!("{e}");
-                                Handle::from_path(path)
+                                cosmic::Action::App(Message::None)
                             }
-                        }
-                    })
-                    .then(cosmic::iced::runtime::image::allocate)
-                    .map(move |allocation| match allocation {
-                        Ok(allocation) => cosmic::Action::App(Message::InsertThumbnail(
-                            (allocation, index),
-                        )),
-                        Err(e) => {
-                            error!("{e}");
-                            cosmic::Action::App(Message::None)
-                        }
-                    })
-                } else {
-                    Task::none()
+                        }),
+                    );
                 }
+                Task::batch(tasks)
             }
             Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
@@ -1650,14 +1711,50 @@ impl cosmic::Application for App {
                 })
             }
             Message::OpenLoadItems(items) => {
+                self.loading_state = LoadingState::Loading {
+                    total_items: items.len(),
+                    current_item: 0,
+                };
                 let tasks: Vec<Task<Message>> = items
                     .into_iter()
                     .enumerate()
                     .map(|(index, item)| {
                         self.update(Message::AddServiceItem(index, item))
+                            .chain(self.update(Message::LoadedOpenItem(index)))
                     })
                     .collect();
                 Task::batch(tasks)
+            }
+            Message::LoadedOpenItem(item) => {
+                let mut task = Task::none();
+                match self.loading_state {
+                    LoadingState::Loading {
+                        total_items,
+                        current_item,
+                    } => {
+                        if item + 1 == total_items {
+                            self.loading_state = LoadingState::Loaded;
+                            task = self.update(Message::LoadedOpenItem(item));
+                        } else if item + 1 < total_items {
+                            self.loading_state = LoadingState::Loading {
+                                total_items,
+                                current_item: item,
+                            };
+                        }
+                    }
+                    LoadingState::Loaded => {
+                        task = Task::future(async {
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                            cosmic::Action::App(Message::HideLoadingBar)
+                        })
+                    }
+                    LoadingState::None => (),
+                }
+                task
+            }
+            Message::HideLoadingBar => {
+                self.loading_state = LoadingState::None;
+                Task::none()
             }
             Message::Save => {
                 let service = self.service.clone();
