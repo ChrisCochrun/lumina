@@ -4,9 +4,11 @@
 
 
 * TODO [#A] Deployment pipeline and get a MVP going
+We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
+
 * TODO Add an access time to the database so that we can sort library items by last used or edited.
 * TODO Fix song imports so that they actually get rid of extra cruft
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
