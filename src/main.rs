@@ -1637,19 +1637,15 @@ impl cosmic::Application for App {
                 self.search(query)
             }
             Message::SearchEnterPress => {
-                if let Some(item) = self.search_results.first() {
-                    if let Some(modifiers) = self.modifiers_pressed
-                        && matches!(Modifiers::CTRL, modifiers)
-                    {
-                        self.update(Message::AppendServiceItemKind(item.clone()))
-                            .chain(self.update(Message::CloseSearch))
-                            .chain(self.update(Message::EditorToggle(false)))
-                    } else {
-                        self.update(Message::OpenEditorKind(item.clone()))
-                            .chain(self.update(Message::CloseSearch))
-                    }
-                } else {
-                    Task::none()
+                match (self.search_results.first(), self.modifiers_pressed) {
+                    (Some(item), Some(modifiers)) if modifiers == Modifiers::CTRL => self
+                        .update(Message::AppendServiceItemKind(item.clone()))
+                        .chain(self.update(Message::CloseSearch))
+                        .chain(self.update(Message::EditorToggle(false))),
+                    (Some(item), None) | (Some(item), Some(_)) => self
+                        .update(Message::OpenEditorKind(item.clone()))
+                        .chain(self.update(Message::CloseSearch)),
+                    _ => Task::none(),
                 }
             }
             Message::UpdateSearchResults(items) => {
