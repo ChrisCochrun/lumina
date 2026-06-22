@@ -711,10 +711,7 @@ impl cosmic::Application for App {
                 current_item,
             } => {
                 row.push(
-                    progress_bar(0.0..=total_items as f32, current_item as f32)
-                        .apply(container)
-                        .padding(space_s)
-                        .into(),
+                    progress_bar(0.0..=total_items as f32, current_item as f32).into(),
                 );
             }
             LoadingState::Loaded => row.push(text::body("Loaded!").into()),
@@ -1728,15 +1725,18 @@ impl cosmic::Application for App {
                     total_items: items.len(),
                     current_item: 0,
                 };
-                let tasks: Vec<Task<Message>> = items
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, item)| {
-                        self.update(Message::AddServiceItem(index, item))
-                            .chain(self.update(Message::LoadedOpenItem(index)))
-                    })
-                    .collect();
-                Task::batch(tasks)
+
+                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+                std::thread::spawn(move || {
+                    for (index, item) in items.into_iter().enumerate() {
+                        let _ = tx.send(cosmic::Action::App(Message::AddServiceItem(
+                            index, item,
+                        )));
+                    }
+                });
+
+                Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
             }
             Message::LoadedOpenItem(item) => {
                 let mut task = Task::none();
@@ -1761,7 +1761,9 @@ impl cosmic::Application for App {
                             cosmic::Action::App(Message::HideLoadingBar)
                         })
                     }
-                    LoadingState::None => (),
+                    LoadingState::None => {
+                        task = Task::done(cosmic::Action::App(Message::HideLoadingBar))
+                    }
                 }
                 task
             }
