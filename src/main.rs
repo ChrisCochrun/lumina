@@ -263,6 +263,7 @@ enum Message {
     ContextMenuItem(Option<usize>),
     SearchFocus,
     Search(String),
+    SearchSelect,
     CloseSearch,
     UpdateSearchResults(Vec<ServiceItemKind>),
     OpenEditor(ServiceItem),
@@ -855,7 +856,7 @@ impl cosmic::Application for App {
                     .id(self.search_id.clone())
                     .select_on_focus(true)
                     .on_input(Message::Search)
-                    .on_submit(Message::Search),
+                    .on_submit(|_| Message::SearchSelect),
                 column(items).spacing(space_xxs)
             ]
             .spacing(space_s)
@@ -1634,6 +1635,13 @@ impl cosmic::Application for App {
             Message::Search(query) => {
                 self.search_query.clone_from(&query);
                 self.search(query)
+            }
+            Message::SearchSelect => {
+                if let Some(item) = self.search_results.first() {
+                    self.update(Message::OpenEditorKind(item.clone()))
+                } else {
+                    Task::none()
+                }
             }
             Message::UpdateSearchResults(items) => {
                 self.search_results = items;
