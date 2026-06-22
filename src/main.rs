@@ -263,7 +263,7 @@ enum Message {
     ContextMenuItem(Option<usize>),
     SearchFocus,
     Search(String),
-    SearchSelect,
+    SearchEnterPress,
     CloseSearch,
     UpdateSearchResults(Vec<ServiceItemKind>),
     OpenEditor(ServiceItem),
@@ -855,8 +855,8 @@ impl cosmic::Application for App {
                 search_input("Amazing Grace", &self.search_query)
                     .id(self.search_id.clone())
                     .select_on_focus(true)
-                    .on_input(Message::Search)
-                    .on_submit(|_| Message::SearchSelect),
+                    .on_submit(|_| Message::SearchEnterPress)
+                    .on_input(Message::Search),
                 column(items).spacing(space_xxs)
             ]
             .spacing(space_s)
@@ -1636,9 +1636,18 @@ impl cosmic::Application for App {
                 self.search_query.clone_from(&query);
                 self.search(query)
             }
-            Message::SearchSelect => {
+            Message::SearchEnterPress => {
                 if let Some(item) = self.search_results.first() {
-                    self.update(Message::OpenEditorKind(item.clone()))
+                    if let Some(modifiers) = self.modifiers_pressed
+                        && matches!(Modifiers::CTRL, modifiers)
+                    {
+                        self.update(Message::AppendServiceItemKind(item.clone()))
+                            .chain(self.update(Message::CloseSearch))
+                            .chain(self.update(Message::EditorToggle(false)))
+                    } else {
+                        self.update(Message::OpenEditorKind(item.clone()))
+                            .chain(self.update(Message::CloseSearch))
+                    }
                 } else {
                     Task::none()
                 }
@@ -1864,6 +1873,7 @@ impl cosmic::Application for App {
                     library.set_modifiers(Some(modifiers));
                 }
                 self.modifiers_pressed = Some(modifiers);
+                debug!(?self.modifiers_pressed);
                 Task::none()
             }
             Message::ViewModeSwitch(mode) => {
