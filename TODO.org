@@ -6,36 +6,23 @@
 * TODO [#A] Deployment pipeline and get a MVP going
 We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
+* TODO [#A] Fix song imports so that they actually get rid of extra cruft
+Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
+
+* TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
+
+* TODO [#A] Make loading not block the UI
+Not working just yet but loading is faster.
+
+* TODO [#A] Loading and saving need to have a progress indicator of some sort
+This is sorta in there, but apparently I'm not streaming the tasks back correctly so there is some sort of disconnect in the UI.
+
+* TODO [#A] Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
 
-* TODO Add an access time to the database so that we can sort library items by last used or edited.
-* TODO Fix song imports so that they actually get rid of extra cruft
-Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
-
-* TODO Find a way to check if an item is in the library on load so that we can import it into the library
-
-* TODO Make loading not block the UI
-* TODO Loading and saving need to have a progress indicator of some sort
-
-* DONE Preview mode needs to allow for a larger preview of the slide if the library is closed
-CLOSED: [2026-05-30 Sat 15:15]
-* DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
-CLOSED: [2026-05-31 Sun 07:02]
-* TODO Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
-* DONE Song editor audio slider not working
-CLOSED: [2026-06-18 Thu 13:18]
-* TODO Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
-* DONE When editing songs, we should ensure that you can't effect the presentation without certain shortcuts
-CLOSED: [2026-05-30 Sat 15:17]
-* DONE Fix the right click context menu in service list and library
-CLOSED: [2026-05-30 Sat 15:15]
-Remake this just like the one in the preview and grid view probably so that it can work regardless of scroll and things
-
-* DONE Fix the scrolling when switching slides for preview and grid
-CLOSED: [2026-06-19 Fri 05:43]
-They both need to be adjusted when changing the size of the slides that are there
-
+* TODO [#B] Add an access time to the database so that we can sort library items by last used or edited.
+* TODO [#B] Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
 
@@ -52,9 +39,6 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 
 * TODO [#B] Video downloading system
 We need to create a way for users to download youtube or other videos by URL.
-
-* DONE [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
-CLOSED: [2026-05-19 Tue 06:01]
 
 * TODO [#B] Songs should have a way of storing a lyric video or other videos so they can be helpful for the editor
 
@@ -158,6 +142,22 @@ There is likely some work that still needs to be done here, I believe I am someh
 * DONE [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
 
+* DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
+CLOSED: [2026-05-31 Sun 07:02]
+* DONE Song editor audio slider not working
+CLOSED: [2026-06-18 Thu 13:18]
+* DONE Preview mode needs to allow for a larger preview of the slide if the library is closed
+CLOSED: [2026-05-30 Sat 15:15]
+* DONE Fix the scrolling when switching slides for preview and grid
+CLOSED: [2026-06-19 Fri 05:43]
+They both need to be adjusted when changing the size of the slides that are there
+
+* DONE When editing songs, we should ensure that you can't effect the presentation without certain shortcuts
+CLOSED: [2026-05-30 Sat 15:17]
+* DONE Fix the right click context menu in service list and library
+CLOSED: [2026-05-30 Sat 15:15]
+Remake this just like the one in the preview and grid view probably so that it can work regardless of scroll and things
+
 * DONE Presenter module needs 2 videos
 CLOSED: [2026-04-16 Thu 13:49]
 This will allow for us to have different parameters in the framerate and even ensure that we can modify them separately.
@@ -168,6 +168,9 @@ CLOSED: [2026-04-10 Fri 13:08]
 
 * DONE [#B] Functions for text alignments
 This will need to be matched on for the =TextAlignment= from the user
+
+* DONE [#B] Songs should have a place to store the audio file and then play it during editing so you can ensure the order of verses
+CLOSED: [2026-05-19 Tue 06:01]
 
 * DONE Move text_generation function to be asynchronous so that UI doesn't lock up during song editing.
 * DONE Build a presentation editor
