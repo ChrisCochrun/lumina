@@ -1751,9 +1751,12 @@ impl cosmic::Application for App {
                         if let cosmic::Action::App(Message::AddServiceItem(index, item)) =
                             action
                         {
-                            Task::done(cosmic::Action::App(Message::LoadedOpenItem(
-                                index,
+                            Task::done(cosmic::Action::App(Message::AddServiceItem(
+                                index, item,
                             )))
+                            .chain(Task::done(
+                                cosmic::Action::App(Message::LoadedOpenItem(index)),
+                            ))
                         } else {
                             Task::none()
                         }
