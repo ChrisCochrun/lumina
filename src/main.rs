@@ -711,7 +711,9 @@ impl cosmic::Application for App {
                 current_item,
             } => {
                 row.push(
-                    progress_bar(0.0..=total_items as f32, current_item as f32).into(),
+                    progress_bar(0.0..=total_items as f32, current_item as f32)
+                        .girth(space_m)
+                        .into(),
                 );
             }
             LoadingState::Loaded => row.push(text::body("Loaded!").into()),
@@ -1726,10 +1728,18 @@ impl cosmic::Application for App {
                     current_item: 0,
                 };
 
+                // let mut tasks = Vec::new();
+                // for (index, item) in items.into_iter().enumerate() {
+                //     debug!(index, ?item, "adding items");
+                //     tasks.push(self.update(Message::AddServiceItem(index, item)))
+                // }
+                // Task::batch(tasks)
+
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
                 std::thread::spawn(move || {
                     for (index, item) in items.into_iter().enumerate() {
+                        debug!(index, ?item, "adding items");
                         let _ = tx.send(cosmic::Action::App(Message::AddServiceItem(
                             index, item,
                         )));
@@ -1737,6 +1747,17 @@ impl cosmic::Application for App {
                 });
 
                 Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
+                    .then(|action| {
+                        if let cosmic::Action::App(Message::AddServiceItem(index, item)) =
+                            action
+                        {
+                            Task::done(cosmic::Action::App(Message::LoadedOpenItem(
+                                index,
+                            )))
+                        } else {
+                            Task::none()
+                        }
+                    })
             }
             Message::LoadedOpenItem(item) => {
                 let mut task = Task::none();
