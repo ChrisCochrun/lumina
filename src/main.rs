@@ -2367,6 +2367,7 @@ where
 
     #[allow(clippy::too_many_lines)]
     fn service_list(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing { space_s, .. } = theme::spacing();
         let list = self.service.iter().enumerate().map(|(index, item)| {
             let icon = match item.kind {
                 ServiceItemKind::Song(_) => icon::from_name("folder-music-symbolic"),
@@ -2540,6 +2541,7 @@ where
                 })
                 .height(Length::Shrink),
         )
+        .spacing(space_s)
         .anchor_top()
         .height(Length::Fill);
 
