@@ -232,10 +232,9 @@ pub async fn get_genius_lyrics(mut song: OnlineSong) -> Result<OnlineSong> {
             })
         })
         .flat_map(|element| {
-            // dbg!(&root);
-            // debug!(?element);
+            // dbg!(&element);
             let inner = element.inner_html().replace("<br>", "\n");
-            // debug!(inner);
+            // dbg!(&inner);
             let line_broken = scraper::Html::parse_fragment(&inner);
             line_broken
                 .root_element()
@@ -270,6 +269,7 @@ pub async fn get_genius_lyrics(mut song: OnlineSong) -> Result<OnlineSong> {
         },
         |position| lyrics.split_at(position).1.to_string(),
     );
+    // dbg!(&lyrics);
     song.provider = Provider::Genius {
         parsable: lyrics.contains('['),
     };
@@ -568,11 +568,12 @@ Lord, I'm gonna sing (Sing it, Dave)
 [Outro]
 I'm gonna sing
 Aw man, that was good"#;
-        let new_song = r"[Verse 1]\nAlone in my sorrow and dead in my sin\nLost without hope with no place to begin\nYour love made a way to let mercy come in\nWhen death was arrested and my life began\nAsh was redeemed, only beauty remains\nMy orphan heart was given a name\nMy mourning grew quiet, my feet rose to dance\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Verse 2]\nReleased from my chains, I'm a prisoner no more\nMy shame was a ransom He faithfully bore\nHe cancelled my debt and He called me His friend\nWhen death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n[Verse 3]\nOur Savior displayed on a criminal's cross\nDarkness rejoiced as though heaven had lost\nBut then Jesus arose with our freedom in hand\nThat's when death was arrested and my life began\n\n[Chorus]\nOh, Your grace so free, washes over me\nYou have made me new, now life begins with You\nIt's Your endless love, pouring down on us\nYou have made us new, now life begins with You\n\n[Outro]\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nOh, we're free, free, forever we're free\nCome join the song of all the redeemed\nYes, we're free, free, forever amen\nWhen death was arrested and my life began\nWhen death was arrested and my life began\nWhen death was arrested and my life began".replace("\\n", "\n");
+        let new_song = r"[Intro: Forrest Frank]\nHaha\nAyy\n\n[Chorus: Forrest Frank & The Figs]\nThe love of God has got me clean, no Old Spice\nThat desert I was in was deep, so dry\nBut now I'm out here feeling free (I'm feeling free), so fly\nI'm chillin' in the shade\nLife gave me some lemons\nBut my Jesus, He be makin' lemonade (Aha), lemonade\nMy Jesus making lemonade (Aha), lemonade\nI watch my worries wash a-way, lemonade\nIt's gonna be okay\nLife gave me some lemons\nBut my Jesus, He be makin' lemonade (Okay)\n\n[Verse 1: Forrest Frank]\nMade it with that living water (Woah)\nSpirit, Son, Holy Father\nDevil thought he really got us\nI guess he just forgot that\nGod works everything for better\nNo matter what the weather\nHe knits it all together\nCozier than a sweater (Ohh)\n[Pre-Chorus: Forrest Frank]\nI'm lighter than a feather (So light)\nJust thinkin' 'bout the things You've done (Done)\nYou mix the sour with the sweet (Ah)\nAnd that's the perfect remedy (Haha)\n\n[Chorus: Forrest Frank & The Figs]\nThe love of God has got me clean, no Old Spice\nThat desert I was in was deep, so dry\nBut now I'm out here feeling free (I'm feeling free), so fly\nI'm chillin' in the shade\nLife gave me some lemons\nBut my Jesus, He be makin' lemonade (Aha), lemonade\nMy Jesus making lemonade (Aha), lemonade\nI watch my worries wash a-way, lemonade\nIt's gonna be okay\nLife gave me some lemons\nBut my Jesus, He be makin' lemonade (One, two, three, four)\n\n[Instrumental Break]\n\n[Bridge: The Figs]\n(Lemonade)\n\n[Verse 2: The Figs]\nSweet like sugarcane on a summer day\nAin't my Jesus better than the words I could ever say\nPromised that the great (The great), the good (The good)\nThe bad would come along\n'Cause if life is always easy\nProbably doing something wrong (Probably doing something wrong)\nHe comforts in the sorrow, He's giving in the loss\nHe stole the shame I carried and wore it on the cross (He wore it on)\nProviding me a future and manna for today\nLife tried to give me lemons\nBut my Jesus makin' lemonade\n[Chorus: Forrest Frank & The Figs, The Figs]\nLemonade\nMy Jesus makin' lemonade (My Jesus makin' lemonade, yeah)\nLemonade\nI watch my worries wash a-way, lemonade\nIt's gonna be okay\nLife gave me some lemons\nBut my Jesus, He be makin' lemonade\n\n[Outro: The Figs, Forrest Frank]\nOld Spice (Ooh)\nHe's always makin' lemonade (ooh, ooh, ooh-ooh, ooh-ooh)\nOoh (Ooh)".replace("\\n", "\n");
         let map = parse_genius_lyrics(song)?;
         let new_map = parse_genius_lyrics(&new_song)?;
         dbg!(map);
         dbg!(new_map);
+        // assert!(false);
         Ok(())
     }
 }
