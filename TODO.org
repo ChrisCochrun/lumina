@@ -11,12 +11,6 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
-* TODO [#A] Make loading not block the UI
-Not working just yet but loading is faster.
-
-* TODO [#A] Loading and saving need to have a progress indicator of some sort
-This is sorta in there, but apparently I'm not streaming the tasks back correctly so there is some sort of disconnect in the UI.
-
 * TODO [#A] Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
@@ -84,6 +78,14 @@ I bet this is tricking up the loading mechanism. Loading only grabs all the back
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later, and I believe that fix will come in the form of a multi-channel signed distance field wgpu rendered text eventually. We can work on this much later though.
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
+
+* DONE [#A] Make loading not block the UI
+CLOSED: [2026-06-23 Tue 10:19]
+Not working just yet but loading is faster.
+
+* DONE [#A] Loading and saving need to have a progress indicator of some sort
+CLOSED: [2026-06-23 Tue 10:19]
+This is sorta in there, but apparently I'm not streaming the tasks back correctly so there is some sort of disconnect in the UI.
 
 * DONE [#A] Make sure that adding, deleting and editing items in each model is working correctly [0/0]
 CLOSED: [2026-04-24 Fri 13:17]
