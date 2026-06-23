@@ -9,6 +9,8 @@ We are close on this. The main pipeline consists of needing some virtual machine
 * TODO [#A] Fix song imports so that they actually get rid of extra cruft
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 
+??????? Don't know if this is still broke or not.....
+
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 * TODO [#A] Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
@@ -24,6 +26,10 @@ There seems to be some issue with fontdb not able to decipher all the versions o
 The animation type that comes with Iced is basically a way to say how long animations take and at what easing to do them, but they do not at all tell you WHAT to animate, that is all in where you put the animation's interpolate function in the view.
 
 So what I think I'll do is either, build a custom widget for slides (might need to do this anyway eventually since we are doing a lot of custom stuff with slides) or build my own Animation type to hold all of the correct info and based on that Animation, place the Iced animation interpolate function where it needs to go.
+
+I need to think more on this. I'm trying to make sure that each slide will always look the way you want it when editing songs, so it's nice to have the =slide_view= function be the authority on what a slide looks like, but it is really difficult to do that well when you also need to make sure that there are special things that happen when it is actually being run in the presentation.
+
+Maybe a good model to follow would be similar the the =gst_video= system we have. To create a settings type that is passed into the function so that when viewing from the presentation vs. editing, you can pass in extra info that will effect the way the function returns and interpolates things...
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
