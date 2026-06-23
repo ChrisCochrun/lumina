@@ -1728,13 +1728,8 @@ impl cosmic::Application for App {
                     current_item: 0,
                 };
 
-                // let mut tasks = Vec::new();
-                // for (index, item) in items.into_iter().enumerate() {
-                //     debug!(index, ?item, "adding items");
-                //     tasks.push(self.update(Message::AddServiceItem(index, item)))
-                // }
-                // Task::batch(tasks)
-
+                self.service = Arc::new(Vec::new());
+                self.presenter.update_items(self.service.clone());
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
                 std::thread::spawn(move || {
