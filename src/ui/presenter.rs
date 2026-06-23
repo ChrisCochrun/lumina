@@ -101,6 +101,7 @@ pub(crate) enum Message {
     StartVideo,
     VideoPos(f64),
     VideoFrame,
+    LoadedService,
     MissingPlugin(iced_video_player::gst::Message),
     HoveredSlide(Option<(usize, usize, Point)>),
     ChangeFont(String),
@@ -412,6 +413,18 @@ impl Presenter {
                 if let Some(video) = &mut self.presentation_video {
                     video.set_paused(!video.paused());
                     video.set_looping(self.current_slide.video_loop());
+                }
+            }
+            Message::LoadedService => {
+                if let Some(item) = self.service.first()
+                    && let Some(slide) = item.slides.first()
+                {
+                    let _ = self.change_slide(slide.clone());
+                    self.sink.1.pause();
+                    if let Some(video) = &mut self.preview_video {
+                        video.set_paused(true);
+                        video.set_looping(self.current_slide.video_loop());
+                    }
                 }
             }
             Message::VideoPos(position) => {
@@ -948,36 +961,8 @@ impl Presenter {
             }
             self.reset_video();
         }
-        // self.load_images();
-
-        let mut target_item = 0;
-        let mut spacers_past = 0.0;
-
-        self.service
-            .iter()
-            .enumerate()
-            .try_for_each(|(index, item)| {
-                spacers_past = index as f32;
-                item.slides
-                    .iter()
-                    .enumerate()
-                    .try_for_each(|(slide_index, _)| {
-                        target_item += 1;
-                        if (index, slide_index)
-                            == (self.current_item_index, self.current_slide_index)
-                        {
-                            None
-                        } else {
-                            Some(())
-                        }
-                    })
-            });
-
-        let total_items = self.service.len() as f32;
-        debug!(target_item);
 
         let mut tasks = vec![];
-        let item_height = self.preview_size * 9.0 / 16.0;
         #[allow(clippy::cast_precision_loss)]
         match self.view_mode {
             ViewMode::Grid => {

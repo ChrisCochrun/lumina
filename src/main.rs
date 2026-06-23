@@ -1779,6 +1779,9 @@ impl cosmic::Application for App {
                             tokio::time::sleep(Duration::from_secs(5)).await;
                             cosmic::Action::App(Message::HideLoadingBar)
                         })
+                        .chain(Task::done(cosmic::Action::App(Message::Present(
+                            presenter::Message::LoadedService,
+                        ))))
                     }
                     LoadingState::None => {
                         task = Task::done(cosmic::Action::App(Message::HideLoadingBar))
