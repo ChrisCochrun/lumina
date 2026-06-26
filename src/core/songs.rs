@@ -17,6 +17,7 @@ use sqlx::types::chrono::{DateTime, Local};
 use sqlx::{AssertSqlSafe, FromRow, Row, SqlitePool, query};
 use tracing::{debug, error};
 
+use crate::core::animation::Animation;
 use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::{LibraryKind, Model, Sort, SortDirection};
@@ -54,6 +55,7 @@ pub struct Song {
     pub created_at: DateTime<Local>,
     #[serde(skip)]
     pub accessed_at: DateTime<Local>,
+    pub animation: Option<Animation>,
 }
 
 #[derive(

@@ -9,16 +9,12 @@ use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
-use cosmic::iced::widget::scrollable::{
-    AbsoluteOffset, Direction, Scrollbar, scroll_by, scroll_to,
-};
+use cosmic::iced::widget::scrollable::{Direction, Scrollbar};
 use cosmic::iced::widget::stack;
 use cosmic::iced::{
-    Animation, Background, Border, Color, ContentFit, Font, Length, Point, Shadow,
-    Vector, animation,
+    Animation, Background, Border, Color, ContentFit, Font, Length, Point, Shadow, Vector,
 };
 use cosmic::prelude::*;
-use cosmic::widget::aspect_ratio::aspect_ratio_container;
 use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
     Container, Id, JustifyContent, Row, Space, column, container, flex_row,
@@ -39,7 +35,6 @@ use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
-use crate::ui::library::elide_text;
 use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::loaded_image::loaded_image;
 use crate::{BackgroundKind, ViewMode};
@@ -53,6 +48,7 @@ pub(crate) struct Presenter {
     pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
     pub activating_slide: Option<Slide>,
+    pub old_slide: Option<Slide>,
     pub current_item_index: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
@@ -76,7 +72,8 @@ pub(crate) struct Presenter {
     obs_scenes: Option<Vec<Scene>>,
     preview_size: f32,
     pub image_loader: ImageLoader,
-    animation: Option<Animation<bool>>,
+    animation: Option<crate::core::animation::Animation>,
+    animator: Option<Animation<bool>>,
     now: Instant,
     pub view_mode: ViewMode,
 }
@@ -206,6 +203,7 @@ impl Presenter {
         Self {
             current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
             activating_slide: None,
+            old_slide: None,
             current_item_index: 0,
             current_slide_index: 0,
             total_slides,
@@ -236,6 +234,7 @@ impl Presenter {
             image_loader: ImageLoader::default(),
             preview_size: 100.0,
             animation: None,
+            animator: None,
             now: Instant::now(),
             view_mode: ViewMode::Row,
         }
@@ -512,6 +511,14 @@ impl Presenter {
             self.presentation_video.as_ref(),
             false,
             true,
+            SlideSettings {
+                delegate: false,
+                hide_mouse: true,
+                previous_slide: self.old_slide.as_ref(),
+                animation: self.animation.as_ref(),
+                animator: self.animator.as_ref(),
+                now: self.now,
+            },
         )
     }
 
@@ -521,6 +528,14 @@ impl Presenter {
             self.preview_video.as_ref(),
             false,
             false,
+            SlideSettings {
+                delegate: false,
+                hide_mouse: false,
+                previous_slide: self.old_slide.as_ref(),
+                animation: self.animation.as_ref(),
+                animator: self.animator.as_ref(),
+                now: self.now,
+            },
         )
     }
 
@@ -541,7 +556,20 @@ impl Presenter {
                 let is_current_slide = (item_index, slide_index)
                     == (self.current_item_index, self.current_slide_index);
 
-                let slide = slide_view(slide, self.preview_video.as_ref(), true, false);
+                let slide = slide_view(
+                    slide,
+                    self.preview_video.as_ref(),
+                    true,
+                    false,
+                    SlideSettings {
+                        delegate: true,
+                        hide_mouse: false,
+                        previous_slide: self.old_slide.as_ref(),
+                        animation: self.animation.as_ref(),
+                        animator: self.animator.as_ref(),
+                        now: self.now,
+                    },
+                );
                 let delegate = mouse_area(
                     Container::new(slide)
                         .id(if is_current_slide {
@@ -648,11 +676,7 @@ impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
         let Spacing {
-            space_none,
-            space_xs,
-            space_s,
-            space_l,
-            ..
+            space_xs, space_s, ..
         } = theme::spacing();
         let mut items = vec![];
         self.service
@@ -667,8 +691,20 @@ impl Presenter {
                         let is_current_slide = (item_index, slide_index)
                             == (self.current_item_index, self.current_slide_index);
 
-                        let container =
-                            slide_view(slide, self.preview_video.as_ref(), true, false);
+                        let container = slide_view(
+                            slide,
+                            self.preview_video.as_ref(),
+                            true,
+                            false,
+                            SlideSettings {
+                                delegate: true,
+                                hide_mouse: false,
+                                previous_slide: self.old_slide.as_ref(),
+                                animation: self.animation.as_ref(),
+                                animator: self.animator.as_ref(),
+                                now: self.now,
+                            },
+                        );
                         let delegate = mouse_area(
                             Container::new(container)
                                 .id(if is_current_slide {
@@ -951,6 +987,7 @@ impl Presenter {
             .map_or_else(String::new, |font| font.get_name());
         let _ = self.update(Message::ChangeFont(font));
         debug!("changing video now...");
+        self.old_slide = Some(self.current_slide.clone());
         self.current_slide = slide;
         if !backgrounds_match {
             if let Some(video) = &mut self.preview_video {
@@ -1006,23 +1043,14 @@ impl Presenter {
                 self.audio_position = Some(self.sink.1.get_pos());
             }
         }
-        if self
-            .service
-            .get(self.current_item_index)
-            .is_some_and(|item| {
-                matches!(item.kind, crate::core::kinds::ServiceItemKind::Song(..))
-            })
+        if let Some(item) = self.service.get(self.current_item_index)
+            && let Some(animation) = item.animation.clone()
         {
-            self.animation = Some(
-                Animation::new(false)
-                    .slow()
-                    .easing(animation::Easing::EaseInExpo),
-            );
-            if let Some(animation) = &mut self.animation {
-                animation.go_mut(true, self.now);
-            }
+            self.animator = Some(animation.get_animator(self.now));
+            self.animation = Some(animation);
         } else {
             self.animation = None;
+            self.animator = None;
         }
 
         let task_count = tasks.len();
@@ -1068,12 +1096,22 @@ impl Presenter {
     }
 }
 
+pub struct SlideSettings<'a> {
+    pub delegate: bool,
+    pub hide_mouse: bool,
+    pub previous_slide: Option<&'a Slide>,
+    pub animation: Option<&'a crate::core::animation::Animation>,
+    pub animator: Option<&'a Animation<bool>>,
+    pub now: Instant,
+}
+
 #[allow(clippy::too_many_lines)]
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
     video: Option<&'a Video>,
     delegate: bool,
     hide_mouse: bool,
+    settings: SlideSettings<'a>,
 ) -> Element<'a, Message> {
     responsive(move |size| {
         let width = size.height * 16.0 / 9.0;
@@ -1114,12 +1152,12 @@ pub(crate) fn slide_view<'a>(
             }
             BackgroundKind::Video => {
                 if let Some(video) = &video
-                    && !delegate
+                    && !settings.delegate
                 {
                     stack = stack.push(
                         Container::new(
                             VideoPlayer::new(video)
-                                .mouse_hidden(hide_mouse)
+                                .mouse_hidden(settings.hide_mouse)
                                 .width(width)
                                 .height(Length::Fill)
                                 .on_end_of_stream(Message::EndVideo)
@@ -1132,7 +1170,7 @@ pub(crate) fn slide_view<'a>(
                         .center(Length::Fill)
                         .clip(true),
                     );
-                } else if delegate {
+                } else if settings.delegate {
                     stack = stack.push(slide.thumbnail.as_ref().map_or_else(
                         || {
                             Container::new(space::horizontal())
@@ -1174,10 +1212,50 @@ pub(crate) fn slide_view<'a>(
         if let Some(text) = &slide.text_svg
             && let Some(handle) = &text.handle
         {
+            if let Some(slide) = settings.previous_slide
+                && let Some(text) = &slide.text_svg
+                && let Some(handle) = &text.handle
+                && !settings.delegate
+                && settings.animation.is_some()
+            {
+                stack = stack.push(loaded_image(
+                    handle,
+                    cosmic_image(handle)
+                        .content_fit(ContentFit::Contain)
+                        .opacity({
+                            if let Some(animator) = settings.animator
+                                && let Some(animation) = settings.animation
+                                && matches!(
+                                    animation,
+                                    crate::core::animation::Animation::CrossFade { .. }
+                                )
+                            {
+                                animator.interpolate(1.0, 0.0, settings.now)
+                            } else {
+                                1.0
+                            }
+                        })
+                        .width(Length::Fill)
+                        .height(Length::Fill),
+                ));
+            }
             stack = stack.push(loaded_image(
                 handle,
                 cosmic_image(handle)
                     .content_fit(ContentFit::Contain)
+                    .opacity({
+                        if let Some(animator) = settings.animator
+                            && let Some(animation) = settings.animation
+                            && matches!(
+                                animation,
+                                crate::core::animation::Animation::CrossFade { .. }
+                            )
+                        {
+                            animator.interpolate(0.0, 1.0, settings.now)
+                        } else {
+                            1.0
+                        }
+                    })
                     .width(Length::Fill)
                     .height(Length::Fill),
             ));

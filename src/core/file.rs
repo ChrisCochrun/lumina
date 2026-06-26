@@ -334,6 +334,7 @@ mod test {
                 id: 0,
                 title: "Death was Arrested".into(),
                 slides: slides.clone(),
+                animation: None,
             },
             ServiceItem {
                 database_id: 7,
@@ -341,6 +342,7 @@ mod test {
                 id: 1,
                 title: "Death was Arrested".into(),
                 slides,
+                animation: None,
             },
         ];
         items

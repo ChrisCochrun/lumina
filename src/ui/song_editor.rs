@@ -2,11 +2,12 @@
 #![allow(clippy::too_many_lines)]
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{self, BufReader};
+use std::io::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use cosmic::cosmic_theme::Spacing;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
@@ -21,13 +22,14 @@ use cosmic::iced::{
     Background as ContainerBackground, Border, Color, Length, Padding, Shadow, Vector,
     color, task,
 };
+use cosmic::widget::Widget;
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::dnd_destination::dnd_destination_for_data;
 use cosmic::widget::grid::{self};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    ColorPickerModel, Id, JustifyContent, RcElementWrapper, Widget, button, combo_box,
+    ColorPickerModel, Id, JustifyContent, RcElementWrapper, button, checkbox, combo_box,
     container, divider, dnd_destination, dnd_source, dropdown, flex_row, icon,
     indeterminate_circular, mouse_area, popover, scrollable, slider, text, text_editor,
     text_input, tooltip,
@@ -41,11 +43,12 @@ use itertools::Itertools;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error};
 
+use crate::core::animation::Animation;
 use crate::core::service_items::ServiceTrait;
 use crate::core::slide::{Slide, TextAlignment};
 use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
-use crate::ui::presenter::slide_view;
+use crate::ui::presenter::{SlideSettings, slide_view};
 use crate::ui::slide_editor::SlideEditor;
 use crate::ui::text_svg;
 use crate::ui::widgets::draggable;
@@ -81,6 +84,7 @@ pub struct SongEditor {
     stroke_sizes: [String; 21],
     shadow_sizes: [String; 21],
     shadow_offset_sizes: [String; 21],
+    animations: [String; 2],
     stroke_size: u16,
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
@@ -149,6 +153,8 @@ pub enum Message {
     UpdateShadowSize(usize),
     UpdateShadowOffsetX(usize),
     UpdateShadowOffsetY(usize),
+    SelectAnimation(usize),
+    ToggleAnimation(bool),
     ChangeFontWeight,
     SearchUpdate(String),
     SearchSong(String),
@@ -350,6 +356,7 @@ impl SongEditor {
                 "19".to_string(),
                 "20".to_string(),
             ],
+            animations: ["Cross Fade".to_string(), "Slide Up".to_string()],
             stroke_size: 0,
             stroke_color_model: ColorPickerModel::new(
                 "hex",
@@ -982,6 +989,39 @@ impl SongEditor {
                 }
                 return Action::Task(Task::batch(tasks));
             }
+            Message::SelectAnimation(animation) => {
+                if let Some(mut song) = self.song.clone() {
+                    let animation = self.animations.get(animation).map(|animation| {
+                        match animation.as_str() {
+                            "Cross Fade" => Animation::CrossFade {
+                                duration: None,
+                                easing: None,
+                            },
+                            "Slide Up" => Animation::CrossFade {
+                                duration: None,
+                                easing: None,
+                            },
+                            _ => todo!(),
+                        }
+                    });
+                    song.animation = animation;
+                    return Action::Task(self.update_song(&song));
+                }
+            }
+            Message::ToggleAnimation(toggled) => {
+                if let Some(mut song) = self.song.clone() {
+                    if toggled {
+                        let animation = Some(Animation::CrossFade {
+                            duration: None,
+                            easing: None,
+                        });
+                        song.animation = animation;
+                    } else {
+                        song.animation = None;
+                    }
+                    return Action::Task(self.update_song(&song));
+                }
+            }
             Message::ToggleShadowTools => {
                 self.state = match self.state {
                     State::ShadowToolOpen => State::Idle,
@@ -1050,6 +1090,12 @@ impl SongEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
+        let Spacing {
+            space_s,
+            space_m,
+            space_l,
+            ..
+        } = cosmic::theme::spacing();
         let audio_elements: Element<Message> =
             if self.song.as_ref().is_some_and(|song| {
                 song.audio.as_ref().is_some_and(|audio| audio.exists())
@@ -1081,13 +1127,9 @@ impl SongEditor {
                         .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
                     row![play_button, audio_track]
                         .align_y(Vertical::Center)
-                        .spacing(theme::spacing().space_m)
+                        .spacing(space_m)
                 ])
-                .padding(
-                    Padding::ZERO
-                        .horizontal(theme::spacing().space_m)
-                        .bottom(theme::spacing().space_m),
-                )
+                .padding(Padding::ZERO.horizontal(space_m).bottom(space_m))
                 .center_x(Length::FillPortion(2))
                 .into()
             } else {
@@ -1096,8 +1138,37 @@ impl SongEditor {
 
         let slide_preview = container(self.slide_preview()).width(Length::FillPortion(2));
 
-        let slide_section = column![audio_elements, slide_preview]
-            .spacing(cosmic::theme::spacing().space_s);
+        let animation_selector = row![
+            checkbox(
+                self.song
+                    .as_ref()
+                    .is_some_and(|song| { song.animation.is_some() })
+            )
+            .on_toggle(Message::ToggleAnimation)
+            .label("Slide Transition:"),
+            dropdown(
+                &self.animations,
+                self.song.as_ref().and_then(|song| {
+                    song.animation
+                        .as_ref()
+                        .and_then(|animation| match animation {
+                            Animation::CrossFade { .. } => Some(0),
+                            Animation::SlideUp { .. } => Some(1),
+                            Animation::SlideLeft { .. } => Some(2),
+                            Animation::ScrollUp { .. } => Some(3),
+                        })
+                }),
+                Message::SelectAnimation
+            )
+            .gap(5.0)
+        ]
+        .spacing(space_s)
+        .align_y(Vertical::Center)
+        .apply(container)
+        .padding(space_s);
+
+        let slide_section =
+            column![audio_elements, slide_preview, animation_selector].spacing(space_s);
         let column = column![
             self.toolbar(),
             row![
@@ -1105,7 +1176,7 @@ impl SongEditor {
                 container(slide_section).center_x(Length::FillPortion(2))
             ],
         ]
-        .spacing(theme::active().cosmic().space_l());
+        .spacing(space_l);
         column.into()
     }
 
@@ -1126,6 +1197,14 @@ impl SongEditor {
                             },
                             false,
                             false,
+                            SlideSettings {
+                                delegate: false,
+                                hide_mouse: false,
+                                previous_slide: None,
+                                animation: None,
+                                animator: None,
+                                now: Instant::now(),
+                            },
                         )
                         .map(|_| Message::None),
                     )

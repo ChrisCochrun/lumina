@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 use crate::Slide;
+use crate::core::animation::Animation;
 
 use super::images::Image;
 use super::presentations::Presentation;
@@ -25,6 +26,7 @@ pub struct ServiceItem {
     pub database_id: i32,
     pub kind: ServiceItemKind,
     pub slides: Vec<Slide>,
+    pub animation: Option<Animation>,
     // pub item: Box<dyn ServiceTrait>,
 }
 
@@ -129,6 +131,7 @@ impl Default for ServiceItem {
             database_id: 0,
             kind: ServiceItemKind::Content(Slide::default()),
             slides: vec![],
+            animation: None,
             // item: Box::new(Image::default()),
         }
     }
@@ -175,6 +178,7 @@ impl From<&Value> for ServiceItem {
                             database_id: 0,
                             kind: ServiceItemKind::Content(slide.clone()),
                             slides: vec![slide],
+                            animation: None,
                         }
                     } else if let Some(background) = list.get(background_pos) {
                         if let Value::List(item) = background {
@@ -244,12 +248,14 @@ impl From<&Song> for ServiceItem {
                 kind: ServiceItemKind::Song(song.clone()),
                 database_id: song.id,
                 title: song.title.clone(),
+                animation: song.animation.clone(),
                 ..Default::default()
             },
             |slides| Self {
                 kind: ServiceItemKind::Song(song.clone()),
                 database_id: song.id,
                 title: song.title.clone(),
+                animation: song.animation.clone(),
                 slides,
                 ..Default::default()
             },

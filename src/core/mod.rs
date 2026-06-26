@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod content;
 pub mod file;
 pub mod images;
