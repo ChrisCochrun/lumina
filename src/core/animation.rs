@@ -44,25 +44,44 @@ pub enum Animation {
 
 impl Animation {
     pub fn get_animator(&self, instant: Instant) -> cosmic::iced::Animation<bool> {
+        const DURATION_DEFAULT: Duration = Duration::from_millis(500);
+        const EASING_DEFAULT: Easing = Easing::EaseOutCubic;
         match self {
             Animation::CrossFade { duration, easing } => {
                 let mut animator = cosmic::iced::Animation::new(false);
                 if let Some(duration) = duration {
                     animator = animator.duration(duration.clone());
+                } else {
+                    animator = animator.duration(DURATION_DEFAULT);
                 }
                 if let Some(easing) = easing {
                     animator = animator.easing(easing.ease());
+                } else {
+                    animator = animator.easing(EASING_DEFAULT.ease());
                 }
                 animator.go(true, instant)
             }
-            Animation::SlideUp { duration, easing } => todo!(),
+            Animation::SlideUp { duration, easing } => {
+                let mut animator = cosmic::iced::Animation::new(false);
+                if let Some(duration) = duration {
+                    animator = animator.duration(duration.clone());
+                } else {
+                    animator = animator.duration(DURATION_DEFAULT);
+                }
+                if let Some(easing) = easing {
+                    animator = animator.easing(easing.ease());
+                } else {
+                    animator = animator.easing(EASING_DEFAULT.ease());
+                }
+                animator.go(true, instant)
+            }
             Animation::SlideLeft { duration, easing } => todo!(),
             Animation::ScrollUp { duration, easing } => todo!(),
         }
     }
     pub fn slide_animation(&self) -> (SlideAnimation, SlideAnimation) {
         const DURATION_DEFAULT: Duration = Duration::from_millis(500);
-        const EASING_DEFAULT: Easing = Easing::EaseOutQuint;
+        const EASING_DEFAULT: Easing = Easing::EaseOutCubic;
         match self {
             Animation::CrossFade { duration, easing } => (
                 SlideAnimation {

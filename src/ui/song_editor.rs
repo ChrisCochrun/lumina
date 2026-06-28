@@ -22,7 +22,6 @@ use cosmic::iced::{
     Background as ContainerBackground, Border, Color, Length, Padding, Shadow, Vector,
     color, task,
 };
-use cosmic::widget::Widget;
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::dnd_destination::dnd_destination_for_data;
 use cosmic::widget::grid::{self};
@@ -84,7 +83,7 @@ pub struct SongEditor {
     stroke_sizes: [String; 21],
     shadow_sizes: [String; 21],
     shadow_offset_sizes: [String; 21],
-    animations: [String; 2],
+    animations: [String; 3],
     stroke_size: u16,
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
@@ -356,7 +355,11 @@ impl SongEditor {
                 "19".to_string(),
                 "20".to_string(),
             ],
-            animations: ["Cross Fade".to_string(), "Slide Up".to_string()],
+            animations: [
+                "None".to_string(),
+                "Cross Fade".to_string(),
+                "Slide Up".to_string(),
+            ],
             stroke_size: 0,
             stroke_color_model: ColorPickerModel::new(
                 "hex",
@@ -997,7 +1000,7 @@ impl SongEditor {
                                 duration: None,
                                 easing: None,
                             },
-                            "Slide Up" => Animation::CrossFade {
+                            "Slide Up" => Animation::SlideUp {
                                 duration: None,
                                 easing: None,
                             },
@@ -1129,7 +1132,7 @@ impl SongEditor {
                         .align_y(Vertical::Center)
                         .spacing(space_m)
                 ])
-                .padding(Padding::ZERO.horizontal(space_m).bottom(space_m))
+                .padding(Padding::ZERO.right(space_m).bottom(space_m))
                 .center_x(Length::FillPortion(2))
                 .into()
             } else {
@@ -1148,23 +1151,29 @@ impl SongEditor {
             .label("Slide Transition:"),
             dropdown(
                 &self.animations,
-                self.song.as_ref().and_then(|song| {
+                if let Some(animation) = self.song.as_ref().and_then(|song| {
                     song.animation
                         .as_ref()
                         .and_then(|animation| match animation {
-                            Animation::CrossFade { .. } => Some(0),
-                            Animation::SlideUp { .. } => Some(1),
-                            Animation::SlideLeft { .. } => Some(2),
-                            Animation::ScrollUp { .. } => Some(3),
+                            Animation::CrossFade { .. } => Some(1),
+                            Animation::SlideUp { .. } => Some(2),
+                            Animation::SlideLeft { .. } => Some(3),
+                            Animation::ScrollUp { .. } => Some(4),
                         })
-                }),
+                }) {
+                    Some(animation)
+                } else {
+                    Some(0)
+                },
                 Message::SelectAnimation
             )
-            .gap(5.0)
+            .gap(5.0),
+            space::horizontal(),
         ]
         .spacing(space_s)
         .align_y(Vertical::Center)
         .apply(container)
+        .class(theme::Container::Card)
         .padding(space_s);
 
         let slide_section =
@@ -1174,7 +1183,8 @@ impl SongEditor {
             row![
                 container(self.left_column()).center_x(Length::FillPortion(2)),
                 container(slide_section).center_x(Length::FillPortion(2))
-            ],
+            ]
+            .spacing(space_m),
         ]
         .spacing(space_l);
         column.into()
@@ -1195,8 +1205,6 @@ impl SongEditor {
                             } else {
                                 None
                             },
-                            false,
-                            false,
                             SlideSettings {
                                 delegate: false,
                                 hide_mouse: false,

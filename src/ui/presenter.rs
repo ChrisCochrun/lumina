@@ -37,6 +37,7 @@ use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::loaded_image::loaded_image;
+use crate::ui::widgets::slide::slide;
 use crate::{BackgroundKind, ViewMode};
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
@@ -509,8 +510,6 @@ impl Presenter {
         slide_view(
             &self.current_slide,
             self.presentation_video.as_ref(),
-            false,
-            true,
             SlideSettings {
                 delegate: false,
                 hide_mouse: true,
@@ -523,11 +522,32 @@ impl Presenter {
     }
 
     pub fn view_preview(&self) -> Element<Message> {
+        // let settings = crate::ui::widget::slide::SlideSettings {
+        //         delegate: false,
+        //         hide_mouse: false,
+        //         animation: self.animation.as_ref(),
+        //         now: self.now,
+        // };
+        // let video = if let Some(video) = &self.preview_video {
+        //                     VideoPlayer::new(video)
+        //                         .mouse_hidden(settings.hide_mouse)
+        //                         .width(Length::Fill)
+        //                         .height(Length::Fill)
+        //                         .on_end_of_stream(Message::EndVideo)
+        //                         .on_new_frame(Message::VideoFrame)
+        //                         .on_missing_plugin(Message::MissingPlugin)
+        //                         .on_warning(|w| Message::Error(w.to_string()))
+        //                         .on_error(|e| Message::Error(e.to_string()))
+        //                         .content_fit(ContentFit::Contain).into()
+        // } else {
+        //     space::horizontal().into()
+        // };
+
+        // slide(&self.current_slide, self.old_slide.as_ref(), video)
+
         slide_view(
             &self.current_slide,
             self.preview_video.as_ref(),
-            false,
-            false,
             SlideSettings {
                 delegate: false,
                 hide_mouse: false,
@@ -559,14 +579,12 @@ impl Presenter {
                 let slide = slide_view(
                     slide,
                     self.preview_video.as_ref(),
-                    true,
-                    false,
                     SlideSettings {
                         delegate: true,
                         hide_mouse: false,
-                        previous_slide: self.old_slide.as_ref(),
-                        animation: self.animation.as_ref(),
-                        animator: self.animator.as_ref(),
+                        previous_slide: None,
+                        animation: None,
+                        animator: None,
                         now: self.now,
                     },
                 );
@@ -694,14 +712,12 @@ impl Presenter {
                         let container = slide_view(
                             slide,
                             self.preview_video.as_ref(),
-                            true,
-                            false,
                             SlideSettings {
                                 delegate: true,
                                 hide_mouse: false,
-                                previous_slide: self.old_slide.as_ref(),
-                                animation: self.animation.as_ref(),
-                                animator: self.animator.as_ref(),
+                                previous_slide: None,
+                                animation: None,
+                                animator: None,
                                 now: self.now,
                             },
                         );
@@ -1109,8 +1125,6 @@ pub struct SlideSettings<'a> {
 pub(crate) fn slide_view<'a>(
     slide: &'a Slide,
     video: Option<&'a Video>,
-    delegate: bool,
-    hide_mouse: bool,
     settings: SlideSettings<'a>,
 ) -> Element<'a, Message> {
     responsive(move |size| {
@@ -1127,14 +1141,13 @@ pub(crate) fn slide_view<'a>(
                 stack =
                     stack.push(slide.background().image_allocation.as_ref().map_or_else(
                         || {
-                            Container::new(
-                                cosmic_image(&slide.background().path)
-                                    .content_fit(ContentFit::Contain)
-                                    .width(width)
-                                    .height(Length::Fill),
-                            )
-                            .center(Length::Fill)
-                            .clip(true)
+                            cosmic_image(&slide.background().path)
+                                .content_fit(ContentFit::Contain)
+                                .width(width)
+                                .height(Length::Fill)
+                                .apply(container)
+                                .center(Length::Fill)
+                                .clip(true)
                         },
                         |allocation| {
                             loaded_image(
@@ -1218,31 +1231,68 @@ pub(crate) fn slide_view<'a>(
                 && !settings.delegate
                 && settings.animation.is_some()
             {
-                stack = stack.push(loaded_image(
+                let mut column = column(Vec::new());
+                column = column.push(loaded_image(
                     handle,
                     cosmic_image(handle)
                         .content_fit(ContentFit::Contain)
                         .opacity({
                             if let Some(animator) = settings.animator
                                 && let Some(animation) = settings.animation
-                                && matches!(
+                            {
+                                if matches!(
                                     animation,
                                     crate::core::animation::Animation::CrossFade { .. }
-                                )
-                            {
-                                animator.interpolate(1.0, 0.0, settings.now)
+                                ) {
+                                    animator.interpolate(1.0, 0.0, settings.now)
+                                } else {
+                                    if animator.is_animating(settings.now) {
+                                        1.0
+                                    } else {
+                                        0.0
+                                    }
+                                }
                             } else {
                                 1.0
                             }
                         })
                         .width(Length::Fill)
-                        .height(Length::Fill),
+                        .height(size.height),
                 ));
+                if let Some(animator) = settings.animator
+                    && let Some(animation) = settings.animation
+                    && matches!(
+                        animation,
+                        crate::core::animation::Animation::SlideUp { .. }
+                    )
+                {
+                    column = column.push(space::vertical().height({
+                        animator.interpolate(0.0, size.height, settings.now)
+                    }));
+                };
+                stack = stack.push(
+                    column
+                        .apply(scrollable)
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .scrollbar_width(0)
+                        .scroller_width(0),
+                );
             }
-            stack = stack.push(loaded_image(
+            let mut column = column(Vec::new());
+            if let Some(animator) = settings.animator
+                && let Some(animation) = settings.animation
+                && matches!(animation, crate::core::animation::Animation::SlideUp { .. })
+            {
+                column = column
+                    .push(space::vertical().height({
+                        animator.interpolate(size.height, 0.0, settings.now)
+                    }));
+            }
+            column = column.push(loaded_image(
                 handle,
                 cosmic_image(handle)
-                    .content_fit(ContentFit::Contain)
+                    .content_fit(ContentFit::Cover)
                     .opacity({
                         if let Some(animator) = settings.animator
                             && let Some(animation) = settings.animation
@@ -1257,8 +1307,16 @@ pub(crate) fn slide_view<'a>(
                         }
                     })
                     .width(Length::Fill)
-                    .height(Length::Fill),
+                    .height(size.height),
             ));
+            stack = stack.push(
+                column
+                    .apply(scrollable)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .scrollbar_width(0)
+                    .scroller_width(0),
+            );
         }
         Container::new(stack).center(Length::Fill).into()
     })
