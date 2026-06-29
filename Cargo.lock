@@ -4438,6 +4438,7 @@ dependencies = [
  "fastrand",
  "fontdb",
  "iced_video_player",
+ "iced_wgpu",
  "image",
  "itertools 0.14.0",
  "libcosmic",

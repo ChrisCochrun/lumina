@@ -37,7 +37,7 @@ use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::loaded_image::loaded_image;
-use crate::ui::widgets::slide::slide;
+use crate::ui::widgets::{self, slide::slide};
 use crate::{BackgroundKind, ViewMode};
 
 // const REFERENCE_WIDTH: f32 = 1920.0;
@@ -507,56 +507,78 @@ impl Presenter {
     }
 
     pub fn view(&self) -> Element<Message> {
-        slide_view(
+        let settings = crate::ui::widgets::slide::SlideSettings {
+            delegate: false,
+            hide_mouse: false,
+            animation: self.animation.as_ref(),
+            now: self.now,
+        };
+
+        let video: Option<Element<Message>> =
+            self.presentation_video.as_ref().map(|video| {
+                VideoPlayer::new(video)
+                    .mouse_hidden(settings.hide_mouse)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .on_end_of_stream(Message::EndVideo)
+                    .on_new_frame(Message::VideoFrame)
+                    .on_missing_plugin(Message::MissingPlugin)
+                    .on_warning(|w| Message::Error(w.to_string()))
+                    .on_error(|e| Message::Error(e.to_string()))
+                    .content_fit(ContentFit::Contain)
+                    .into()
+            });
+
+        slide(
             &self.current_slide,
-            self.presentation_video.as_ref(),
-            SlideSettings {
-                delegate: false,
-                hide_mouse: true,
-                previous_slide: self.old_slide.as_ref(),
-                animation: self.animation.as_ref(),
-                animator: self.animator.as_ref(),
-                now: self.now,
-            },
+            self.old_slide.as_ref(),
+            video,
+            settings,
         )
+        .into()
     }
 
     pub fn view_preview(&self) -> Element<Message> {
-        // let settings = crate::ui::widget::slide::SlideSettings {
+        let settings = crate::ui::widgets::slide::SlideSettings {
+            delegate: false,
+            hide_mouse: false,
+            animation: self.animation.as_ref(),
+            now: self.now,
+        };
+        let video: Option<Element<Message>> = self.preview_video.as_ref().map(|video| {
+            VideoPlayer::new(video)
+                .mouse_hidden(settings.hide_mouse)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .on_end_of_stream(Message::EndVideo)
+                .on_new_frame(Message::VideoFrame)
+                .on_missing_plugin(Message::MissingPlugin)
+                .on_warning(|w| Message::Error(w.to_string()))
+                .on_error(|e| Message::Error(e.to_string()))
+                .content_fit(ContentFit::Contain)
+                .into()
+        });
+
+        slide(
+            &self.current_slide,
+            self.old_slide.as_ref(),
+            video,
+            settings,
+        )
+        .into()
+
+        // slide_view(
+        //     &self.current_slide,
+        //     self.preview_video.as_ref(),
+        //     SlideSettings {
         //         delegate: false,
         //         hide_mouse: false,
+        //         previous_slide: self.old_slide.as_ref(),
         //         animation: self.animation.as_ref(),
+        //         animator: self.animator.as_ref(),
         //         now: self.now,
-        // };
-        // let video = if let Some(video) = &self.preview_video {
-        //                     VideoPlayer::new(video)
-        //                         .mouse_hidden(settings.hide_mouse)
-        //                         .width(Length::Fill)
-        //                         .height(Length::Fill)
-        //                         .on_end_of_stream(Message::EndVideo)
-        //                         .on_new_frame(Message::VideoFrame)
-        //                         .on_missing_plugin(Message::MissingPlugin)
-        //                         .on_warning(|w| Message::Error(w.to_string()))
-        //                         .on_error(|e| Message::Error(e.to_string()))
-        //                         .content_fit(ContentFit::Contain).into()
-        // } else {
-        //     space::horizontal().into()
-        // };
-
-        // slide(&self.current_slide, self.old_slide.as_ref(), video)
-
-        slide_view(
-            &self.current_slide,
-            self.preview_video.as_ref(),
-            SlideSettings {
-                delegate: false,
-                hide_mouse: false,
-                previous_slide: self.old_slide.as_ref(),
-                animation: self.animation.as_ref(),
-                animator: self.animator.as_ref(),
-                now: self.now,
-            },
-        )
+        //     },
+        // )
     }
 
     #[allow(clippy::too_many_lines)]
@@ -576,18 +598,20 @@ impl Presenter {
                 let is_current_slide = (item_index, slide_index)
                     == (self.current_item_index, self.current_slide_index);
 
-                let slide = slide_view(
+                let settings = crate::ui::widgets::slide::SlideSettings {
+                    delegate: true,
+                    hide_mouse: false,
+                    animation: self.animation.as_ref(),
+                    now: self.now,
+                };
+
+                let slide = widgets::slide::slide(
                     slide,
-                    self.preview_video.as_ref(),
-                    SlideSettings {
-                        delegate: true,
-                        hide_mouse: false,
-                        previous_slide: None,
-                        animation: None,
-                        animator: None,
-                        now: self.now,
-                    },
+                    None,
+                    None::<Element<Message>>,
+                    settings,
                 );
+
                 let delegate = mouse_area(
                     Container::new(slide)
                         .id(if is_current_slide {
@@ -709,18 +733,32 @@ impl Presenter {
                         let is_current_slide = (item_index, slide_index)
                             == (self.current_item_index, self.current_slide_index);
 
-                        let container = slide_view(
+                        let settings = crate::ui::widgets::slide::SlideSettings {
+                            delegate: true,
+                            hide_mouse: false,
+                            animation: self.animation.as_ref(),
+                            now: self.now,
+                        };
+
+                        let container = widgets::slide::slide(
                             slide,
-                            self.preview_video.as_ref(),
-                            SlideSettings {
-                                delegate: true,
-                                hide_mouse: false,
-                                previous_slide: None,
-                                animation: None,
-                                animator: None,
-                                now: self.now,
-                            },
+                            None,
+                            None::<Element<Message>>,
+                            settings,
                         );
+
+                        // let container = slide_view(
+                        //     slide,
+                        //     self.preview_video.as_ref(),
+                        //     SlideSettings {
+                        //         delegate: true,
+                        //         hide_mouse: false,
+                        //         previous_slide: None,
+                        //         animation: None,
+                        //         animator: None,
+                        //         now: self.now,
+                        //     },
+                        // );
                         let delegate = mouse_area(
                             Container::new(container)
                                 .id(if is_current_slide {

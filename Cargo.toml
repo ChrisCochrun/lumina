@@ -62,10 +62,14 @@ git = "https://github.com/pop-os/libcosmic"
 default-features = false
 features = ["debug", "winit", "tokio", "rfd", "wgpu", "multi-window",]
 
+[dependencies.iced_wgpu]
+git = "https://github.com/pop-os/libcosmic"
+
 [dependencies.iced_video_player]
 git = "https://github.com/wash2/iced_video_player.git"
 branch = "iced-rebase"
 features = ["wgpu"]
+
 
 # [profile.dev]
 # opt-level = 3

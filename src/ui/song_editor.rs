@@ -19,8 +19,8 @@ use cosmic::iced::widget::scrollable::{
 };
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::{
-    Background as ContainerBackground, Border, Color, Length, Padding, Shadow, Vector,
-    color, task,
+    Background as ContainerBackground, Border, Color, ContentFit, Length, Padding,
+    Shadow, Vector, color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::dnd_destination::dnd_destination_for_data;
@@ -37,7 +37,7 @@ use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
 use dirs::font_dir;
 use fontdb;
-use iced_video_player::Video;
+use iced_video_player::{Video, VideoPlayer};
 use itertools::Itertools;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error};
@@ -1194,33 +1194,39 @@ impl SongEditor {
         self.song_slides.as_ref().map_or_else(
             || space::horizontal().into(),
             |slides| {
-                let mut slide_column = column::with_capacity(slides.len());
+                let mut slide_column = column::with_capacity(slides.len()).clip(true);
                 let slide_height = 250.0;
+
                 for (index, slide) in slides.iter().enumerate() {
-                    let mut slide: Element<Message> = container(
-                        slide_view(
+                    let settings = crate::ui::widgets::slide::SlideSettings {
+                        delegate: false,
+                        hide_mouse: false,
+                        animation: None,
+                        now: Instant::now(),
+                    };
+                    let mut slide: Element<Message> =
+                        container(crate::ui::widgets::slide::slide(
                             slide,
+                            None,
                             if index == 0 {
-                                self.video.as_ref()
+                                self.video.as_ref().map(|video| {
+                                    VideoPlayer::new(video)
+                                        .mouse_hidden(settings.hide_mouse)
+                                        .width(Length::Fill)
+                                        .height(Length::Fill)
+                                        .content_fit(ContentFit::Contain)
+                                        .into()
+                                })
                             } else {
-                                None
+                                None::<Element<Message>>
                             },
-                            SlideSettings {
-                                delegate: false,
-                                hide_mouse: false,
-                                previous_slide: None,
-                                animation: None,
-                                animator: None,
-                                now: Instant::now(),
-                            },
-                        )
-                        .map(|_| Message::None),
-                    )
-                    .height(slide_height) // need to find out how to do this differently
-                    .center_x(Length::Fill)
-                    .padding([0, 20])
-                    .clip(true)
-                    .into();
+                            settings,
+                        ))
+                        .height(slide_height) // need to find out how to do this differently
+                        .center_x(Length::Fill)
+                        .padding([0, 20])
+                        .clip(true)
+                        .into();
 
                     if index == 0 {
                         let video_elements: Element<Message> =
@@ -1255,6 +1261,7 @@ impl SongEditor {
                         slide = column![slide, video_elements]
                             .align_x(Horizontal::Center)
                             .spacing(theme::spacing().space_xxxs)
+                            .clip(true)
                             .into();
                     }
                     slide_column = slide_column.push(slide);
