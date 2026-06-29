@@ -158,11 +158,11 @@ where
             || Size::new(1920.0, 1080.0),
             |size| Size::new(size.width as f32, size.height as f32),
         );
-        layout::Node::new(limits.resolve(
-            original_size.width,
-            original_size.height,
-            measured_size,
-        ))
+        layout::Node::new(
+            limits
+                .resolve(original_size.width, original_size.height, measured_size)
+                .ratio(16.0 / 9.0),
+        )
     }
 
     fn operate(
