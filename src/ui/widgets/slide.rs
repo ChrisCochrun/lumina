@@ -86,6 +86,21 @@ where
             content_fit: ContentFit::Fill,
         }
     }
+
+    pub(crate) fn width(mut self, width: impl Into<Length>) -> Self {
+        self.width = width.into();
+        self
+    }
+
+    pub(crate) fn height(mut self, height: impl Into<Length>) -> Self {
+        self.height = height.into();
+        self
+    }
+
+    pub(crate) fn content_fit(mut self, content_fit: ContentFit) -> Self {
+        self.content_fit = content_fit;
+        self
+    }
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
