@@ -322,7 +322,14 @@ where
                     }
                 }
             }
-            crate::core::slide::BackgroundKind::Pdf => todo!(),
+            crate::core::slide::BackgroundKind::Pdf => {
+                if let Some(pdf) = &self.slide.pdf_page() {
+                    let _ = renderer.load_image(pdf);
+                    renderer.with_layer(bounds, |renderer| {
+                        renderer.draw_image(pdf.into(), bounds, clip_bounds)
+                    })
+                }
+            }
             crate::core::slide::BackgroundKind::Html => todo!(),
         }
         if let Some(text) = &self.slide.text_svg
