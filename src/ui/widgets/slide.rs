@@ -1,5 +1,6 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
+use cosmic::anim::slerp;
 use cosmic::iced::{
     Border, Color, ContentFit, Point, Radius, Shadow, Size, core as iced_core,
     widget as iced_widget,
@@ -8,13 +9,13 @@ use cosmic::widget::Id;
 use iced_core::event::Event;
 use iced_core::widget::{Operation, Tree};
 use iced_core::{
-    Clipboard, Element, Layout, Length, Rectangle, Shell, Vector, Widget, layout, mouse,
-    overlay, renderer,
+    Clipboard, Element, Layout, Length, Rectangle, Shell, Widget, layout, mouse, renderer,
 };
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
-use tracing::debug;
+
+use crate::core::animation::{Animation, Easing};
 
 pub fn slide<'a, Message: 'static, Theme, Renderer>(
     slide: &'a crate::core::slide::Slide,
@@ -45,11 +46,19 @@ where
     video: Option<cosmic::iced::Element<'a, Message, Theme, Renderer>>,
     settings: SlideSettings<'a>,
 
-    background_position: Point,
-    text_position: Point,
+    current_background_position: Point,
+    previous_background_position: Point,
+    current_background_opacity: f32,
+    previous_background_opacity: f32,
+    current_text_position: Point,
+    previous_text_position: Point,
+    current_text_opacity: f32,
+    previous_text_opacity: f32,
     width: Length,
     height: Length,
     content_fit: ContentFit,
+    animation_state: AnimationState,
+    animator: cosmic::iced::animation::Animation<bool>,
 }
 
 pub struct SlideSettings<'a> {
@@ -57,6 +66,30 @@ pub struct SlideSettings<'a> {
     pub hide_mouse: bool,
     pub animation: Option<&'a crate::core::animation::Animation>,
     pub now: Instant,
+}
+
+#[derive(PartialEq)]
+enum AnimationState {
+    Idle,
+    Running { start: Instant, end: Instant },
+    Done,
+}
+
+impl AnimationState {
+    pub fn start_time(&self) -> Option<Instant> {
+        if let Self::Running { start, .. } = self {
+            Some(*start)
+        } else {
+            None
+        }
+    }
+    pub fn end_time(&self) -> Option<Instant> {
+        if let Self::Running { end, .. } = self {
+            Some(*end)
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a, Message, Theme, Renderer> Slide<'a, Message, Theme, Renderer>
@@ -79,11 +112,19 @@ where
             previous_slide,
             video: video.map(|video| video.into()),
             settings,
-            background_position: Point::ORIGIN,
-            text_position: Point::ORIGIN,
             width: Length::Fill,
             height: Length::Fill,
             content_fit: ContentFit::Fill,
+            animation_state: AnimationState::Idle,
+            current_background_position: Point::ORIGIN,
+            previous_background_position: Point::ORIGIN,
+            current_background_opacity: 1.0,
+            previous_background_opacity: 1.0,
+            current_text_position: Point::ORIGIN,
+            previous_text_position: Point::ORIGIN,
+            current_text_opacity: 1.0,
+            previous_text_opacity: 1.0,
+            animator: cosmic::iced::animation::Animation::new(false),
         }
     }
 
@@ -100,6 +141,40 @@ where
     pub(crate) fn content_fit(mut self, content_fit: ContentFit) -> Self {
         self.content_fit = content_fit;
         self
+    }
+
+    fn animate_slide(&mut self, now: Instant) {
+        if let Some(end) = self.animation_state.end_time()
+            && now >= end
+        {
+            self.animator = cosmic::iced::animation::Animation::new(false);
+            return ();
+        }
+
+        // let age = if let Some(start_time) = self.animation_state.start_time() {
+        //     now.duration_since(start_time)
+        // } else {
+        //     Duration::ZERO
+        // };
+
+        match self.settings.animation {
+            Some(Animation::SlideUp { duration, easing })
+            | Some(Animation::ScrollUp { duration, easing })
+            | Some(Animation::SlideLeft { duration, easing })
+            | Some(Animation::CrossFade { duration, easing }) => {
+                let (duration, easing) = (
+                    duration.unwrap_or(Duration::from_millis(500)),
+                    easing.unwrap_or(Easing::EaseOutCubic),
+                );
+                self.animator = self
+                    .animator
+                    .clone()
+                    .duration(duration)
+                    .easing(easing.ease())
+                    .go(true, now);
+            }
+            None => (),
+        }
     }
 }
 
@@ -210,7 +285,34 @@ where
         }
 
         if let Event::Window(iced_core::window::Event::RedrawRequested(now)) = event {
-            // debug!("redraw");
+            if let Some(animation) = self.settings.animation {
+                match animation {
+                    crate::core::animation::Animation::CrossFade { duration, easing }
+                    | crate::core::animation::Animation::SlideUp { duration, easing }
+                    | crate::core::animation::Animation::SlideLeft { duration, easing }
+                    | crate::core::animation::Animation::ScrollUp { duration, easing } => {
+                        if let Some(duration) = duration
+                            && self.animation_state == AnimationState::Idle
+                        {
+                            self.animation_state = AnimationState::Running {
+                                start: *now,
+                                end: now.checked_add(*duration).unwrap_or(*now),
+                            };
+                            shell.request_redraw();
+                        } else if let AnimationState::Running { start, end } =
+                            self.animation_state
+                            && &end <= now
+                        {
+                            self.animation_state = AnimationState::Done;
+                        } else if let AnimationState::Running { start, end } =
+                            self.animation_state
+                        {
+                            self.animate_slide(*now);
+                            shell.request_redraw();
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -278,12 +380,22 @@ where
             )
         }
 
+        let current_slide_opacity =
+            self.animator.interpolate(0.0, 1.0, self.settings.now);
+
         match background.kind {
             crate::core::slide::BackgroundKind::Image => {
                 if let Some(allocation) = background.image_allocation.as_ref() {
                     renderer.with_layer(bounds, |renderer| {
                         renderer.draw_image(
-                            allocation.handle().into(),
+                            iced_core::image::Image {
+                                handle: allocation.handle().clone(),
+                                filter_method: iced_core::image::FilterMethod::Nearest,
+                                rotation: iced_core::Radians(0.0),
+                                border_radius: Radius::new(0.0),
+                                opacity: current_slide_opacity,
+                                snap: true,
+                            },
                             bounds,
                             clip_bounds,
                         )
@@ -292,7 +404,19 @@ where
                     if let Some(handle) = &background.image_handle {
                         let _ = renderer.load_image(handle);
                         renderer.with_layer(bounds, |renderer| {
-                            renderer.draw_image(handle.into(), bounds, clip_bounds)
+                            renderer.draw_image(
+                                iced_core::image::Image {
+                                    handle: handle.clone(),
+                                    filter_method:
+                                        iced_core::image::FilterMethod::Nearest,
+                                    rotation: iced_core::Radians(0.0),
+                                    border_radius: Radius::new(0.0),
+                                    opacity: current_slide_opacity,
+                                    snap: true,
+                                },
+                                bounds,
+                                clip_bounds,
+                            )
                         });
                     }
                 }
@@ -314,7 +438,15 @@ where
                     if let Some(allocation) = &self.slide.thumbnail {
                         renderer.with_layer(bounds, |renderer| {
                             renderer.draw_image(
-                                allocation.handle().into(),
+                                iced_core::image::Image {
+                                    handle: allocation.handle().clone(),
+                                    filter_method:
+                                        iced_core::image::FilterMethod::Nearest,
+                                    rotation: iced_core::Radians(0.0),
+                                    border_radius: Radius::new(0.0),
+                                    opacity: current_slide_opacity,
+                                    snap: true,
+                                },
                                 bounds,
                                 clip_bounds,
                             )
@@ -326,7 +458,18 @@ where
                 if let Some(pdf) = &self.slide.pdf_page() {
                     let _ = renderer.load_image(pdf);
                     renderer.with_layer(bounds, |renderer| {
-                        renderer.draw_image(pdf.into(), bounds, clip_bounds)
+                        renderer.draw_image(
+                            iced_core::image::Image {
+                                handle: pdf.clone(),
+                                filter_method: iced_core::image::FilterMethod::Nearest,
+                                rotation: iced_core::Radians(0.0),
+                                border_radius: Radius::new(0.0),
+                                opacity: current_slide_opacity,
+                                snap: true,
+                            },
+                            bounds,
+                            clip_bounds,
+                        )
                     })
                 }
             }
@@ -337,7 +480,18 @@ where
         {
             let _ = renderer.load_image(handle);
             renderer.with_layer(bounds, |renderer| {
-                renderer.draw_image(handle.into(), bounds, clip_bounds)
+                renderer.draw_image(
+                    iced_core::image::Image {
+                        handle: handle.clone(),
+                        filter_method: iced_core::image::FilterMethod::Nearest,
+                        rotation: iced_core::Radians(0.0),
+                        border_radius: Radius::new(0.0),
+                        opacity: current_slide_opacity,
+                        snap: true,
+                    },
+                    bounds,
+                    clip_bounds,
+                )
             });
         }
     }
