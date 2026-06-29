@@ -10,6 +10,8 @@ We are close on this. The main pipeline consists of needing some virtual machine
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 
 ??????? Don't know if this is still broke or not.....
+* TODO [#A] Custom widget for slides to work with animations
+Since position animations are very difficult in Iced, I'm going to be using a custom widget to build my animations, but they still need to have app state to drive them it seems. As to when the animation starts and such.
 
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 

@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-use cosmic::anim::slerp;
 use cosmic::iced::{
     Border, Color, ContentFit, Point, Radius, Shadow, Size, core as iced_core,
     widget as iced_widget,
@@ -46,19 +45,10 @@ where
     video: Option<cosmic::iced::Element<'a, Message, Theme, Renderer>>,
     settings: SlideSettings<'a>,
 
-    current_background_position: Point,
-    previous_background_position: Point,
-    current_background_opacity: f32,
-    previous_background_opacity: f32,
-    current_text_position: Point,
-    previous_text_position: Point,
-    current_text_opacity: f32,
-    previous_text_opacity: f32,
     width: Length,
     height: Length,
     content_fit: ContentFit,
     animation_state: AnimationState,
-    animator: cosmic::iced::animation::Animation<bool>,
 }
 
 pub struct SlideSettings<'a> {
@@ -69,27 +59,20 @@ pub struct SlideSettings<'a> {
 }
 
 #[derive(PartialEq)]
-enum AnimationState {
+pub enum AnimationState {
     Idle,
-    Running { start: Instant, end: Instant },
+    Running {
+        direction: Direction,
+        new_slide_progress: f32,
+        prev_slide_progress: f32,
+    },
     Done,
 }
 
-impl AnimationState {
-    pub fn start_time(&self) -> Option<Instant> {
-        if let Self::Running { start, .. } = self {
-            Some(*start)
-        } else {
-            None
-        }
-    }
-    pub fn end_time(&self) -> Option<Instant> {
-        if let Self::Running { end, .. } = self {
-            Some(*end)
-        } else {
-            None
-        }
-    }
+#[derive(PartialEq)]
+pub enum Direction {
+    Forward,
+    Backward,
 }
 
 impl<'a, Message, Theme, Renderer> Slide<'a, Message, Theme, Renderer>
@@ -116,15 +99,6 @@ where
             height: Length::Fill,
             content_fit: ContentFit::Fill,
             animation_state: AnimationState::Idle,
-            current_background_position: Point::ORIGIN,
-            previous_background_position: Point::ORIGIN,
-            current_background_opacity: 1.0,
-            previous_background_opacity: 1.0,
-            current_text_position: Point::ORIGIN,
-            previous_text_position: Point::ORIGIN,
-            current_text_opacity: 1.0,
-            previous_text_opacity: 1.0,
-            animator: cosmic::iced::animation::Animation::new(false),
         }
     }
 
@@ -143,39 +117,44 @@ where
         self
     }
 
-    fn animate_slide(&mut self, now: Instant) {
-        if let Some(end) = self.animation_state.end_time()
-            && now >= end
-        {
-            self.animator = cosmic::iced::animation::Animation::new(false);
-            return ();
-        }
-
-        // let age = if let Some(start_time) = self.animation_state.start_time() {
-        //     now.duration_since(start_time)
-        // } else {
-        //     Duration::ZERO
-        // };
-
-        match self.settings.animation {
-            Some(Animation::SlideUp { duration, easing })
-            | Some(Animation::ScrollUp { duration, easing })
-            | Some(Animation::SlideLeft { duration, easing })
-            | Some(Animation::CrossFade { duration, easing }) => {
-                let (duration, easing) = (
-                    duration.unwrap_or(Duration::from_millis(500)),
-                    easing.unwrap_or(Easing::EaseOutCubic),
-                );
-                self.animator = self
-                    .animator
-                    .clone()
-                    .duration(duration)
-                    .easing(easing.ease())
-                    .go(true, now);
-            }
-            None => (),
-        }
+    pub(crate) fn animate(mut self, animation_state: AnimationState) -> Self {
+        self.animation_state = animation_state;
+        self
     }
+
+    // fn animate_slide(&mut self, now: Instant) {
+    //     if let Some(end) = self.animation_state.end_time()
+    //         && now >= end
+    //     {
+    //         self.animator = cosmic::iced::animation::Animation::new(false);
+    //         return ();
+    //     }
+
+    //     // let age = if let Some(start_time) = self.animation_state.start_time() {
+    //     //     now.duration_since(start_time)
+    //     // } else {
+    //     //     Duration::ZERO
+    //     // };
+
+    //     match self.settings.animation {
+    //         Some(Animation::SlideUp { duration, easing })
+    //         | Some(Animation::ScrollUp { duration, easing })
+    //         | Some(Animation::SlideLeft { duration, easing })
+    //         | Some(Animation::CrossFade { duration, easing }) => {
+    //             let (duration, easing) = (
+    //                 duration.unwrap_or(Duration::from_millis(500)),
+    //                 easing.unwrap_or(Easing::EaseOutCubic),
+    //             );
+    //             self.animator = self
+    //                 .animator
+    //                 .clone()
+    //                 .duration(duration)
+    //                 .easing(easing.ease())
+    //                 .go(true, now);
+    //         }
+    //         None => (),
+    //     }
+    // }
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -285,34 +264,34 @@ where
         }
 
         if let Event::Window(iced_core::window::Event::RedrawRequested(now)) = event {
-            if let Some(animation) = self.settings.animation {
-                match animation {
-                    crate::core::animation::Animation::CrossFade { duration, easing }
-                    | crate::core::animation::Animation::SlideUp { duration, easing }
-                    | crate::core::animation::Animation::SlideLeft { duration, easing }
-                    | crate::core::animation::Animation::ScrollUp { duration, easing } => {
-                        if let Some(duration) = duration
-                            && self.animation_state == AnimationState::Idle
-                        {
-                            self.animation_state = AnimationState::Running {
-                                start: *now,
-                                end: now.checked_add(*duration).unwrap_or(*now),
-                            };
-                            shell.request_redraw();
-                        } else if let AnimationState::Running { start, end } =
-                            self.animation_state
-                            && &end <= now
-                        {
-                            self.animation_state = AnimationState::Done;
-                        } else if let AnimationState::Running { start, end } =
-                            self.animation_state
-                        {
-                            self.animate_slide(*now);
-                            shell.request_redraw();
-                        }
-                    }
-                }
-            }
+            // if let Some(animation) = self.settings.animation {
+            //     match animation {
+            //         crate::core::animation::Animation::CrossFade { duration, easing }
+            //         | crate::core::animation::Animation::SlideUp { duration, easing }
+            //         | crate::core::animation::Animation::SlideLeft { duration, easing }
+            //         | crate::core::animation::Animation::ScrollUp { duration, easing } => {
+            //             if let Some(duration) = duration
+            //                 && self.animation_state == AnimationState::Idle
+            //             {
+            //                 self.animation_state = AnimationState::Running {
+            //                     start: *now,
+            //                     end: now.checked_add(*duration).unwrap_or(*now),
+            //                 };
+            //                 shell.request_redraw();
+            //             } else if let AnimationState::Running { start, end } =
+            //                 self.animation_state
+            //                 && &end <= now
+            //             {
+            //                 self.animation_state = AnimationState::Done;
+            //             } else if let AnimationState::Running { start, end } =
+            //                 self.animation_state
+            //             {
+            //                 self.animate_slide(*now);
+            //                 shell.request_redraw();
+            //             }
+            //         }
+            //     }
+            // }
         }
     }
 
@@ -380,8 +359,18 @@ where
             )
         }
 
-        let current_slide_opacity =
-            self.animator.interpolate(0.0, 1.0, self.settings.now);
+        let (current_slide_opacity, prev_slide_opacity) =
+            if let Some(Animation::CrossFade { .. }) = self.settings.animation
+                && let AnimationState::Running {
+                    direction,
+                    new_slide_progress,
+                    prev_slide_progress,
+                } = &self.animation_state
+            {
+                (*new_slide_progress, *prev_slide_progress)
+            } else {
+                (1.0, 0.0)
+            };
 
         match background.kind {
             crate::core::slide::BackgroundKind::Image => {
@@ -474,6 +463,26 @@ where
                 }
             }
             crate::core::slide::BackgroundKind::Html => todo!(),
+        }
+        if let Some(slide) = &self.previous_slide
+            && let Some(text) = &slide.text_svg
+            && let Some(handle) = &text.handle
+        {
+            let _ = renderer.load_image(handle);
+            renderer.with_layer(bounds, |renderer| {
+                renderer.draw_image(
+                    iced_core::image::Image {
+                        handle: handle.clone(),
+                        filter_method: iced_core::image::FilterMethod::Nearest,
+                        rotation: iced_core::Radians(0.0),
+                        border_radius: Radius::new(0.0),
+                        opacity: prev_slide_opacity,
+                        snap: true,
+                    },
+                    bounds,
+                    clip_bounds,
+                )
+            });
         }
         if let Some(text) = &self.slide.text_svg
             && let Some(handle) = &text.handle

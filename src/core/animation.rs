@@ -44,7 +44,7 @@ pub enum Animation {
 
 impl Animation {
     pub fn get_animator(&self, instant: Instant) -> cosmic::iced::Animation<bool> {
-        const DURATION_DEFAULT: Duration = Duration::from_millis(500);
+        const DURATION_DEFAULT: Duration = Duration::from_millis(1500);
         const EASING_DEFAULT: Easing = Easing::EaseOutCubic;
         match self {
             Animation::CrossFade { duration, easing } => {
