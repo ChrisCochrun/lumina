@@ -45,7 +45,7 @@ pub enum Animation {
 impl Animation {
     pub fn get_animator(&self, instant: Instant) -> cosmic::iced::Animation<bool> {
         const DURATION_DEFAULT: Duration = Duration::from_millis(1500);
-        const EASING_DEFAULT: Easing = Easing::EaseOutCubic;
+        const EASING_DEFAULT: Easing = Easing::EaseOut;
         match self {
             Animation::CrossFade { duration, easing } => {
                 let mut animator = cosmic::iced::Animation::new(false);
@@ -79,46 +79,6 @@ impl Animation {
             Animation::ScrollUp { duration, easing } => todo!(),
         }
     }
-    pub fn slide_animation(&self) -> (SlideAnimation, SlideAnimation) {
-        const DURATION_DEFAULT: Duration = Duration::from_millis(500);
-        const EASING_DEFAULT: Easing = Easing::EaseOutCubic;
-        match self {
-            Animation::CrossFade { duration, easing } => (
-                SlideAnimation {
-                    from_props: SlideProps {
-                        opacity: 1.0,
-                        translation: Rect(Rectangle::new(Point::ORIGIN, Size::UNIT)),
-                        scale: 1.0,
-                    },
-                    to_props: SlideProps {
-                        opacity: 0.0,
-                        translation: Rect(Rectangle::new(Point::ORIGIN, Size::UNIT)),
-                        scale: 1.0,
-                    },
-                    duration: duration.unwrap_or(DURATION_DEFAULT),
-                    easing: easing.unwrap_or(EASING_DEFAULT),
-                },
-                SlideAnimation {
-                    from_props: SlideProps {
-                        opacity: 0.0,
-                        translation: Rect(Rectangle::new(Point::ORIGIN, Size::UNIT)),
-                        scale: 1.0,
-                    },
-                    to_props: SlideProps {
-                        opacity: 1.0,
-                        translation: Rect(Rectangle::new(Point::ORIGIN, Size::UNIT)),
-                        scale: 1.0,
-                    },
-                    duration: duration.unwrap_or(DURATION_DEFAULT),
-                    easing: easing.unwrap_or(EASING_DEFAULT),
-                },
-            ),
-            Animation::SlideUp { duration, easing } => todo!(),
-            Animation::SlideLeft { duration, easing } => todo!(),
-            Animation::ScrollUp { duration, easing } => todo!(),
-        }
-    }
-
     pub fn to_string(&self) -> String {
         match self {
             Animation::CrossFade { duration, easing } => "Cross Fade".to_string(),
