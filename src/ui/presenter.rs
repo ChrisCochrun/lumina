@@ -1071,6 +1071,18 @@ impl Presenter {
             self.reset_video();
         }
 
+
+        if let Some(item) = self.service.get(self.current_item_index)
+            && let Some(animation) = item.animation.clone()
+        {
+            self.animator = Some(animation.get_animator(self.now));
+            self.animation = Some(animation);
+        } else {
+            self.animation = None;
+            self.animator = None;
+        }
+
+
         let mut tasks = vec![];
         #[allow(clippy::cast_precision_loss)]
         match self.view_mode {
@@ -1115,16 +1127,6 @@ impl Presenter {
                 self.audio_position = Some(self.sink.1.get_pos());
             }
         }
-        if let Some(item) = self.service.get(self.current_item_index)
-            && let Some(animation) = item.animation.clone()
-        {
-            self.animator = Some(animation.get_animator(self.now));
-            self.animation = Some(animation);
-        } else {
-            self.animation = None;
-            self.animator = None;
-        }
-
         let task_count = tasks.len();
         debug!(?task_count);
         Action::Task(Task::batch(tasks))

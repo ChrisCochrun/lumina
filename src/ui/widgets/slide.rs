@@ -186,6 +186,7 @@ where
         }
     }
 
+    #[inline(always)]
     fn layout(
         &mut self,
         tree: &mut Tree,
@@ -321,6 +322,7 @@ where
         }
     }
 
+    #[inline(always)]
     fn draw(
         &self,
         tree: &Tree,
@@ -372,7 +374,7 @@ where
                 (1.0, 0.0)
             };
 
-        let (current_foreground_position, prev_foreground_position) =
+        let (current_foreground_position, prev_foreground_position, prev_slide_opacity) =
             if let Some(Animation::SlideUp { .. }) = self.settings.animation
                 && let AnimationState::Running {
                     direction,
@@ -380,23 +382,32 @@ where
                     prev_slide_progress: new_slide_progress,
                 } = &self.animation_state
             {
-                let foreground_y = bounds.y + (bounds.height - bounds.y)
-                    - ((bounds.height - bounds.y) * progress);
-                // tracing::debug!(
-                //     progress,
-                //     new_slide_progress,
-                //     bounds.y,
-                //     bounds.height,
-                //     foreground_y
-                // );
+                let bottom = bounds.height + bounds.y;
+                let foreground_y = bounds.y + (viewport.height - bounds.y)
+                    - ((viewport.height - bounds.y) * progress);
+                let prev_slide_y = if progress == &0.0 {
+                    bounds.y
+                } else {
+                    bounds.y - bounds.height * progress
+                };
+                tracing::debug!(
+                    progress,
+                    new_slide_progress,
+                    bounds.y,
+                    bounds.height,
+                    foreground_y,
+                    prev_slide_y
+                );
                 (
                     Point::new(bounds.x, foreground_y),
-                    Point::new(bounds.x, bounds.height * -progress),
+                    Point::new(bounds.x, prev_slide_y),
+                    1.0,
                 )
             } else {
                 (
                     Point::new(bounds.x, bounds.y),
                     Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
+                    0.0,
                 )
             };
 
