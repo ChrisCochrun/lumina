@@ -77,7 +77,10 @@ pub enum Direction {
 
 impl<'a, Message, Theme, Renderer> Slide<'a, Message, Theme, Renderer>
 where
-    Renderer: PrimitiveRenderer + iced_core::Renderer + iced_core::image::Renderer,
+    Renderer: PrimitiveRenderer
+        + iced_core::Renderer
+        + iced_core::image::Renderer
+        + cosmic::iced::advanced::image::Renderer<Handle = Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
     /// Creates an empty [`Slide`].
@@ -122,39 +125,56 @@ where
         self
     }
 
-    // fn animate_slide(&mut self, now: Instant) {
-    //     if let Some(end) = self.animation_state.end_time()
-    //         && now >= end
-    //     {
-    //         self.animator = cosmic::iced::animation::Animation::new(false);
-    //         return ();
-    //     }
-
-    //     // let age = if let Some(start_time) = self.animation_state.start_time() {
-    //     //     now.duration_since(start_time)
-    //     // } else {
-    //     //     Duration::ZERO
-    //     // };
-
-    //     match self.settings.animation {
-    //         Some(Animation::SlideUp { duration, easing })
-    //         | Some(Animation::ScrollUp { duration, easing })
-    //         | Some(Animation::SlideLeft { duration, easing })
-    //         | Some(Animation::CrossFade { duration, easing }) => {
-    //             let (duration, easing) = (
-    //                 duration.unwrap_or(Duration::from_millis(500)),
-    //                 easing.unwrap_or(Easing::EaseOutCubic),
-    //             );
-    //             self.animator = self
-    //                 .animator
-    //                 .clone()
-    //                 .duration(duration)
-    //                 .easing(easing.ease())
-    //                 .go(true, now);
-    //         }
-    //         None => (),
-    //     }
-    // }
+    #[inline(always)]
+    fn draw_background(
+        &self,
+        _tree: &Tree,
+        renderer: &mut Renderer,
+        _theme: &Theme,
+        _renderer_style: &renderer::Style,
+        _layout: Layout<'_>,
+        _cursor_position: mouse::Cursor,
+        _viewport: &Rectangle,
+        bounds: Rectangle,
+        clip_bounds: Rectangle,
+        opacity: f32,
+    ) {
+        let background = self.slide.background();
+        if let Some(allocation) = background.image_allocation.as_ref() {
+            renderer.with_layer(bounds, |renderer| {
+                renderer.draw_image(
+                    iced_core::image::Image {
+                        handle: allocation.handle().clone(),
+                        filter_method: iced_core::image::FilterMethod::Nearest,
+                        rotation: iced_core::Radians(0.0),
+                        border_radius: Radius::new(0.0),
+                        opacity,
+                        snap: true,
+                    },
+                    bounds,
+                    clip_bounds,
+                )
+            });
+        } else {
+            if let Some(handle) = &background.image_handle {
+                let _ = renderer.load_image(handle);
+                renderer.with_layer(bounds, |renderer| {
+                    renderer.draw_image(
+                        iced_core::image::Image {
+                            handle: handle.clone(),
+                            filter_method: iced_core::image::FilterMethod::Nearest,
+                            rotation: iced_core::Radians(0.0),
+                            border_radius: Radius::new(0.0),
+                            opacity,
+                            snap: true,
+                        },
+                        bounds,
+                        clip_bounds,
+                    )
+                });
+            }
+        }
+    }
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -193,11 +213,6 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        // let node =
-        //     self.video
-        //         .as_widget_mut()
-        //         .layout(&mut tree.children[0], renderer, limits);
-        // let size = node.size();
         let intrisic_size = self
             .slide
             .background()
@@ -262,37 +277,6 @@ where
                 shell,
                 viewport,
             );
-        }
-
-        if let Event::Window(iced_core::window::Event::RedrawRequested(now)) = event {
-            // if let Some(animation) = self.settings.animation {
-            //     match animation {
-            //         crate::core::animation::Animation::CrossFade { duration, easing }
-            //         | crate::core::animation::Animation::SlideUp { duration, easing }
-            //         | crate::core::animation::Animation::SlideLeft { duration, easing }
-            //         | crate::core::animation::Animation::ScrollUp { duration, easing } => {
-            //             if let Some(duration) = duration
-            //                 && self.animation_state == AnimationState::Idle
-            //             {
-            //                 self.animation_state = AnimationState::Running {
-            //                     start: *now,
-            //                     end: now.checked_add(*duration).unwrap_or(*now),
-            //                 };
-            //                 shell.request_redraw();
-            //             } else if let AnimationState::Running { start, end } =
-            //                 self.animation_state
-            //                 && &end <= now
-            //             {
-            //                 self.animation_state = AnimationState::Done;
-            //             } else if let AnimationState::Running { start, end } =
-            //                 self.animation_state
-            //             {
-            //                 self.animate_slide(*now);
-            //                 shell.request_redraw();
-            //             }
-            //         }
-            //     }
-            // }
         }
     }
 
@@ -370,11 +354,13 @@ where
                 } = &self.animation_state
             {
                 (*new_slide_progress, *prev_slide_progress)
+            } else if let Some(_animation) = self.settings.animation {
+                (1.0, 1.0)
             } else {
                 (1.0, 0.0)
             };
 
-        let (current_foreground_position, prev_foreground_position, prev_slide_opacity) =
+        let (current_foreground_position, prev_foreground_position) =
             if let Some(Animation::SlideUp { .. }) = self.settings.animation
                 && let AnimationState::Running {
                     direction,
@@ -401,52 +387,75 @@ where
                 (
                     Point::new(bounds.x, foreground_y),
                     Point::new(bounds.x, prev_slide_y),
-                    1.0,
                 )
             } else {
                 (
                     Point::new(bounds.x, bounds.y),
                     Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
-                    0.0,
                 )
             };
 
         match background.kind {
             crate::core::slide::BackgroundKind::Image => {
-                if let Some(allocation) = background.image_allocation.as_ref() {
-                    renderer.with_layer(bounds, |renderer| {
-                        renderer.draw_image(
-                            iced_core::image::Image {
-                                handle: allocation.handle().clone(),
-                                filter_method: iced_core::image::FilterMethod::Nearest,
-                                rotation: iced_core::Radians(0.0),
-                                border_radius: Radius::new(0.0),
-                                opacity: current_slide_opacity,
-                                snap: true,
-                            },
-                            bounds,
-                            clip_bounds,
-                        )
-                    });
-                } else {
-                    if let Some(handle) = &background.image_handle {
-                        let _ = renderer.load_image(handle);
+                if let Some(prev_slide) = self.previous_slide
+                    && let Some(prev_allocation) =
+                        prev_slide.background().image_allocation.as_ref()
+                {
+                    if prev_slide.background() != background {
                         renderer.with_layer(bounds, |renderer| {
                             renderer.draw_image(
                                 iced_core::image::Image {
-                                    handle: handle.clone(),
+                                    handle: prev_allocation.handle().clone(),
                                     filter_method:
                                         iced_core::image::FilterMethod::Nearest,
                                     rotation: iced_core::Radians(0.0),
                                     border_radius: Radius::new(0.0),
-                                    opacity: current_slide_opacity,
+                                    opacity: prev_slide_opacity,
                                     snap: true,
                                 },
                                 bounds,
                                 clip_bounds,
                             )
                         });
+                        self.draw_background(
+                            tree,
+                            renderer,
+                            theme,
+                            renderer_style,
+                            layout,
+                            cursor_position,
+                            viewport,
+                            bounds,
+                            clip_bounds,
+                            current_slide_opacity,
+                        );
+                    } else {
+                        self.draw_background(
+                            tree,
+                            renderer,
+                            theme,
+                            renderer_style,
+                            layout,
+                            cursor_position,
+                            viewport,
+                            bounds,
+                            clip_bounds,
+                            1.0,
+                        );
                     }
+                } else {
+                    self.draw_background(
+                        tree,
+                        renderer,
+                        theme,
+                        renderer_style,
+                        layout,
+                        cursor_position,
+                        viewport,
+                        bounds,
+                        clip_bounds,
+                        current_slide_opacity,
+                    );
                 }
             }
             crate::core::slide::BackgroundKind::Video => {

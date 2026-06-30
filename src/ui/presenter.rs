@@ -536,6 +536,23 @@ impl Presenter {
             video,
             settings,
         )
+        .animate({
+            if let Some(animator) = &self.animator {
+                let progress = animator.interpolate(0.0, 1.0, self.now);
+                let prev_progress = animator.interpolate(1.0, 0.0, self.now);
+                if progress >= 1.0 {
+                    AnimationState::Idle
+                } else {
+                    AnimationState::Running {
+                        direction: crate::ui::widgets::slide::Direction::Forward,
+                        new_slide_progress: progress,
+                        prev_slide_progress: prev_progress,
+                    }
+                }
+            } else {
+                AnimationState::Idle
+            }
+        })
         .into()
     }
 
