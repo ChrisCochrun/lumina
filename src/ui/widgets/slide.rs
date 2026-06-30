@@ -372,6 +372,34 @@ where
                 (1.0, 0.0)
             };
 
+        let (current_foreground_position, prev_foreground_position) =
+            if let Some(Animation::SlideUp { .. }) = self.settings.animation
+                && let AnimationState::Running {
+                    direction,
+                    new_slide_progress: progress,
+                    prev_slide_progress: new_slide_progress,
+                } = &self.animation_state
+            {
+                let foreground_y = bounds.y + (bounds.height - bounds.y)
+                    - ((bounds.height - bounds.y) * progress);
+                // tracing::debug!(
+                //     progress,
+                //     new_slide_progress,
+                //     bounds.y,
+                //     bounds.height,
+                //     foreground_y
+                // );
+                (
+                    Point::new(bounds.x, foreground_y),
+                    Point::new(bounds.x, bounds.height * -progress),
+                )
+            } else {
+                (
+                    Point::new(bounds.x, bounds.y),
+                    Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
+                )
+            };
+
         match background.kind {
             crate::core::slide::BackgroundKind::Image => {
                 if let Some(allocation) = background.image_allocation.as_ref() {
@@ -479,7 +507,7 @@ where
                         opacity: prev_slide_opacity,
                         snap: true,
                     },
-                    bounds,
+                    Rectangle::new(prev_foreground_position, bounds.size()),
                     clip_bounds,
                 )
             });
@@ -498,7 +526,7 @@ where
                         opacity: current_slide_opacity,
                         snap: true,
                     },
-                    bounds,
+                    Rectangle::new(current_foreground_position, bounds.size()),
                     clip_bounds,
                 )
             });
