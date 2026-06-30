@@ -19,6 +19,7 @@ use crate::core::animation::{Animation, Easing};
 pub fn slide<'a, Message: 'static, Theme, Renderer>(
     slide: &'a crate::core::slide::Slide,
     previous_slide: Option<&'a crate::core::slide::Slide>,
+    next_slide: Option<&'a crate::core::slide::Slide>,
     video: Option<impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>>,
     settings: SlideSettings<'a>,
 ) -> Slide<'a, Message, Theme, Renderer>
@@ -31,7 +32,7 @@ where
         + iced_core::image::Renderer<Handle = Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
-    Slide::new(slide, previous_slide, video, settings)
+    Slide::new(slide, previous_slide, next_slide, video, settings)
 }
 
 #[allow(missing_debug_implementations)]
@@ -42,6 +43,7 @@ where
     id: Id,
     slide: &'a crate::core::slide::Slide,
     previous_slide: Option<&'a crate::core::slide::Slide>,
+    next_slide: Option<&'a crate::core::slide::Slide>,
     video: Option<cosmic::iced::Element<'a, Message, Theme, Renderer>>,
     settings: SlideSettings<'a>,
 
@@ -87,8 +89,7 @@ where
     pub(crate) fn new(
         slide: &'a crate::core::slide::Slide,
         previous_slide: Option<&'a crate::core::slide::Slide>,
-        // background: impl Into<<cosmic::Renderer as iced_core::image::Renderer>::Handle>,
-        // text: impl Into<<cosmic::Renderer as iced_core::image::Renderer>::Handle>,
+        next_slide: Option<&'a crate::core::slide::Slide>,
         video: Option<impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>>,
         settings: SlideSettings<'a>,
     ) -> Self {
@@ -96,6 +97,7 @@ where
             id: Id::unique(),
             slide,
             previous_slide,
+            next_slide,
             video: video.map(|video| video.into()),
             settings,
             width: Length::Fill,
@@ -344,56 +346,79 @@ where
                 cosmic::iced::Background::Color(Color::BLACK),
             )
         }
-
-        let (current_slide_opacity, prev_slide_opacity) =
-            if let Some(Animation::CrossFade { .. }) = self.settings.animation
-                && let AnimationState::Running {
-                    direction,
-                    new_slide_progress,
-                    prev_slide_progress,
-                } = &self.animation_state
-            {
-                (*new_slide_progress, *prev_slide_progress)
-            } else if let Some(_animation) = self.settings.animation {
-                (1.0, 1.0)
+        let (mut current_slide_opacity, mut prev_slide_opacity, mut next_text_opacity) = (
+            1.0,
+            0.0,
+            if matches!(self.settings.animation, Some(Animation::ScrollUp { .. })) {
+                0.5
             } else {
-                (1.0, 0.0)
-            };
+                1.0
+            },
+        );
 
-        let (current_foreground_position, prev_foreground_position) =
-            if let Some(Animation::SlideUp { .. }) = self.settings.animation
-                && let AnimationState::Running {
-                    direction,
-                    new_slide_progress: progress,
-                    prev_slide_progress: new_slide_progress,
-                } = &self.animation_state
-            {
-                let bottom = bounds.height + bounds.y;
-                let foreground_y = bounds.y + (viewport.height - bounds.y)
-                    - ((viewport.height - bounds.y) * progress);
-                let prev_slide_y = if progress == &0.0 {
-                    bounds.y
-                } else {
-                    bounds.y - bounds.height * progress
-                };
-                tracing::debug!(
-                    progress,
-                    new_slide_progress,
-                    bounds.y,
-                    bounds.height,
-                    foreground_y,
-                    prev_slide_y
-                );
-                (
-                    Point::new(bounds.x, foreground_y),
-                    Point::new(bounds.x, prev_slide_y),
-                )
-            } else {
-                (
-                    Point::new(bounds.x, bounds.y),
-                    Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
-                )
-            };
+        let next_ending_pos = bounds.y + bounds.height / 3.0 * 2.0;
+
+        let (
+            mut current_foreground_position,
+            mut prev_foreground_position,
+            mut next_foreground_position,
+        ) = (
+            Point::new(bounds.x, bounds.y),
+            Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
+            Point::new(bounds.x, next_ending_pos),
+        );
+
+        if let AnimationState::Running {
+            direction,
+            new_slide_progress,
+            prev_slide_progress,
+        } = &self.animation_state
+        {
+            match self.settings.animation {
+                Some(Animation::CrossFade { .. }) => {
+                    current_slide_opacity = *new_slide_progress;
+                    prev_slide_opacity = *prev_slide_progress;
+                }
+                Some(Animation::SlideUp { .. }) => {
+                    prev_slide_opacity = 1.0;
+
+                    let foreground_y = bounds.y + (viewport.height - bounds.y)
+                        - ((viewport.height - bounds.y) * new_slide_progress);
+                    let prev_slide_y = if new_slide_progress == &0.0 {
+                        bounds.y
+                    } else {
+                        bounds.y - bounds.height * new_slide_progress
+                    };
+
+                    current_foreground_position = Point::new(bounds.x, foreground_y);
+                    prev_foreground_position = Point::new(bounds.x, prev_slide_y);
+                }
+                Some(Animation::ScrollUp { .. }) => {
+                    prev_slide_opacity = 1.0;
+                    next_text_opacity = 1.0_f32;
+
+                    let foreground_y = bounds.y
+                        + (viewport.height - bounds.y + next_ending_pos)
+                        - ((viewport.height - bounds.y + next_ending_pos)
+                            * new_slide_progress);
+
+                    let prev_slide_y = if new_slide_progress == &0.0 {
+                        bounds.y
+                    } else {
+                        bounds.y - bounds.height * new_slide_progress
+                    };
+                    let next_foreground_y = next_ending_pos
+                        + (viewport.height - bounds.y)
+                        - ((viewport.height - bounds.y) * new_slide_progress);
+
+                    current_foreground_position = Point::new(bounds.x, foreground_y);
+                    next_foreground_position = Point::new(bounds.x, next_ending_pos);
+                    prev_foreground_position = Point::new(bounds.x, prev_slide_y);
+                }
+                Some(Animation::SlideLeft { .. }) => todo!(),
+                None => (),
+            }
+        }
 
         match background.kind {
             crate::core::slide::BackgroundKind::Image => {
@@ -528,6 +553,26 @@ where
                         snap: true,
                     },
                     Rectangle::new(prev_foreground_position, bounds.size()),
+                    clip_bounds,
+                )
+            });
+        }
+        if let Some(slide) = &self.next_slide
+            && let Some(text) = &slide.text_svg
+            && let Some(handle) = &text.handle
+        {
+            let _ = renderer.load_image(handle);
+            renderer.with_layer(bounds, |renderer| {
+                renderer.draw_image(
+                    iced_core::image::Image {
+                        handle: handle.clone(),
+                        filter_method: iced_core::image::FilterMethod::Nearest,
+                        rotation: iced_core::Radians(0.0),
+                        border_radius: Radius::new(0.0),
+                        opacity: next_text_opacity,
+                        snap: true,
+                    },
+                    Rectangle::new(next_foreground_position, bounds.size()),
                     clip_bounds,
                 )
             });

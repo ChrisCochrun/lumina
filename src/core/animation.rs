@@ -47,7 +47,10 @@ impl Animation {
         const DURATION_DEFAULT: Duration = Duration::from_millis(500);
         const EASING_DEFAULT: Easing = Easing::EaseOut;
         match self {
-            Animation::CrossFade { duration, easing } => {
+            Animation::CrossFade { duration, easing }
+            | Animation::SlideUp { duration, easing }
+            | Animation::SlideLeft { duration, easing }
+            | Animation::ScrollUp { duration, easing } => {
                 let mut animator = cosmic::iced::Animation::new(false);
                 if let Some(duration) = duration {
                     animator = animator.duration(duration.clone());
@@ -61,30 +64,56 @@ impl Animation {
                 }
                 animator.go(true, instant)
             }
-            Animation::SlideUp { duration, easing } => {
-                let mut animator = cosmic::iced::Animation::new(false);
-                if let Some(duration) = duration {
-                    animator = animator.duration(duration.clone());
-                } else {
-                    animator = animator.duration(DURATION_DEFAULT);
-                }
-                if let Some(easing) = easing {
-                    animator = animator.easing(easing.ease());
-                } else {
-                    animator = animator.easing(EASING_DEFAULT.ease());
-                }
-                animator.go(true, instant)
-            }
-            Animation::SlideLeft { duration, easing } => todo!(),
-            Animation::ScrollUp { duration, easing } => todo!(),
         }
     }
     pub fn to_string(&self) -> String {
         match self {
-            Animation::CrossFade { duration, easing } => "Cross Fade".to_string(),
-            Animation::SlideUp { duration, easing } => "Slide Up".to_string(),
-            Animation::SlideLeft { duration, easing } => todo!(),
-            Animation::ScrollUp { duration, easing } => todo!(),
+            Animation::CrossFade { .. } => "Cross Fade".to_string(),
+            Animation::SlideUp { .. } => "Slide Up".to_string(),
+            Animation::SlideLeft { .. } => "Slide Left".to_string(),
+            Animation::ScrollUp { .. } => "Scrolling Up Text".to_string(),
+        }
+    }
+
+    pub fn easing(self, new_easing: Easing) -> Self {
+        match self {
+            Animation::CrossFade { duration, .. } => Animation::CrossFade {
+                duration,
+                easing: Some(new_easing),
+            },
+            Animation::SlideUp { duration, .. } => Animation::SlideUp {
+                duration,
+                easing: Some(new_easing),
+            },
+            Animation::SlideLeft { duration, .. } => Animation::SlideLeft {
+                duration,
+                easing: Some(new_easing),
+            },
+            Animation::ScrollUp { duration, .. } => Animation::ScrollUp {
+                duration,
+                easing: Some(new_easing),
+            },
+        }
+    }
+
+    pub fn duration(self, new_duration: Duration) -> Self {
+        match self {
+            Animation::CrossFade { easing, .. } => Animation::CrossFade {
+                duration: Some(new_duration),
+                easing,
+            },
+            Animation::SlideUp { easing, .. } => Animation::SlideUp {
+                duration: Some(new_duration),
+                easing,
+            },
+            Animation::SlideLeft { easing, .. } => Animation::SlideLeft {
+                duration: Some(new_duration),
+                easing,
+            },
+            Animation::ScrollUp { easing, .. } => Animation::ScrollUp {
+                duration: Some(new_duration),
+                easing,
+            },
         }
     }
 }

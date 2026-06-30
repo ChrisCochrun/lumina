@@ -83,7 +83,7 @@ pub struct SongEditor {
     stroke_sizes: [String; 21],
     shadow_sizes: [String; 21],
     shadow_offset_sizes: [String; 21],
-    animations: [String; 3],
+    animations: [String; 5],
     stroke_size: u16,
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
@@ -359,6 +359,8 @@ impl SongEditor {
                 "None".to_string(),
                 "Cross Fade".to_string(),
                 "Slide Up".to_string(),
+                "Scroll Up".to_string(),
+                "Slide Left".to_string(),
             ],
             stroke_size: 0,
             stroke_color_model: ColorPickerModel::new(
@@ -994,19 +996,30 @@ impl SongEditor {
             }
             Message::SelectAnimation(animation) => {
                 if let Some(mut song) = self.song.clone() {
-                    let animation = self.animations.get(animation).map(|animation| {
-                        match animation.as_str() {
-                            "Cross Fade" => Animation::CrossFade {
+                    let animation = self
+                        .animations
+                        .get(animation)
+                        .map(|animation| match animation.as_str() {
+                            "Cross Fade" => Some(Animation::CrossFade {
                                 duration: None,
                                 easing: None,
-                            },
-                            "Slide Up" => Animation::SlideUp {
+                            }),
+                            "Slide Up" => Some(Animation::SlideUp {
                                 duration: None,
                                 easing: None,
-                            },
+                            }),
+                            "Scroll Up" => Some(Animation::ScrollUp {
+                                duration: None,
+                                easing: None,
+                            }),
+                            "Slide Left" => Some(Animation::ScrollUp {
+                                duration: None,
+                                easing: None,
+                            }),
+                            "None" => None,
                             _ => todo!(),
-                        }
-                    });
+                        })
+                        .flatten();
                     song.animation = animation;
                     return Action::Task(self.update_song(&song));
                 }
@@ -1157,8 +1170,8 @@ impl SongEditor {
                         .and_then(|animation| match animation {
                             Animation::CrossFade { .. } => Some(1),
                             Animation::SlideUp { .. } => Some(2),
-                            Animation::SlideLeft { .. } => Some(3),
-                            Animation::ScrollUp { .. } => Some(4),
+                            Animation::ScrollUp { .. } => Some(3),
+                            Animation::SlideLeft { .. } => Some(4),
                         })
                 }) {
                     Some(animation)
@@ -1207,6 +1220,7 @@ impl SongEditor {
                     let mut slide: Element<Message> =
                         container(crate::ui::widgets::slide::slide(
                             slide,
+                            None,
                             None,
                             if index == 0 {
                                 self.video.as_ref().map(|video| {

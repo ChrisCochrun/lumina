@@ -30,6 +30,7 @@ use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error, info, warn};
 use url::Url;
 
+use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
 use crate::core::slide::Slide;
 use crate::core::slide_actions::{self, ObsAction};
@@ -49,7 +50,7 @@ static DEFAULT_SLIDE: LazyLock<Slide> = LazyLock::new(Slide::default);
 pub(crate) struct Presenter {
     pub service: Arc<Vec<ServiceItem>>,
     pub current_slide: Slide,
-    pub activating_slide: Option<Slide>,
+    pub next_slide: Option<Slide>,
     pub old_slide: Option<Slide>,
     pub current_item_index: usize,
     pub current_slide_index: usize,
@@ -204,7 +205,7 @@ impl Presenter {
 
         Self {
             current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone(),
-            activating_slide: None,
+            next_slide: None,
             old_slide: None,
             current_item_index: 0,
             current_slide_index: 0,
@@ -533,6 +534,7 @@ impl Presenter {
         slide(
             &self.current_slide,
             self.old_slide.as_ref(),
+            self.next_slide.as_ref(),
             video,
             settings,
         )
@@ -580,6 +582,7 @@ impl Presenter {
         slide(
             &self.current_slide,
             self.old_slide.as_ref(),
+            self.next_slide.as_ref(),
             video,
             settings,
         )
@@ -642,6 +645,7 @@ impl Presenter {
 
                 let slide = widgets::slide::slide(
                     slide,
+                    None,
                     None,
                     None::<Element<Message>>,
                     settings,
@@ -777,6 +781,7 @@ impl Presenter {
 
                         let container = widgets::slide::slide(
                             slide,
+                            None,
                             None,
                             None::<Element<Message>>,
                             settings,
@@ -1047,7 +1052,7 @@ impl Presenter {
                 }
         }
 
-        if let Some(slide) = self.activating_slide.as_mut()
+        if let Some(slide) = self.next_slide.as_mut()
             && matches!(slide.background().kind, BackgroundKind::Image)
         {
             let path = &slide.background().path;
@@ -1088,17 +1093,28 @@ impl Presenter {
             self.reset_video();
         }
 
-
         if let Some(item) = self.service.get(self.current_item_index)
             && let Some(animation) = item.animation.clone()
         {
+            if matches!(
+                animation,
+                crate::core::animation::Animation::ScrollUp { .. }
+            ) && let Some(item) = self.service.get(self.current_item_index)
+                && matches!(item.kind, ServiceItemKind::Song(_))
+                && let Some((next_item, next_slide)) = self.next_slide()
+                && let Some(next_item) = self.service.get(next_item)
+                && next_item == item
+            {
+                self.next_slide = next_item.slides.get(next_slide).cloned();
+            } else {
+                self.next_slide = None;
+            }
             self.animator = Some(animation.get_animator(self.now));
             self.animation = Some(animation);
         } else {
             self.animation = None;
             self.animator = None;
         }
-
 
         let mut tasks = vec![];
         #[allow(clippy::cast_precision_loss)]
