@@ -10,9 +10,6 @@ We are close on this. The main pipeline consists of needing some virtual machine
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 
 ??????? Don't know if this is still broke or not.....
-* TODO [#A] Custom widget for slides to work with animations
-Since position animations are very difficult in Iced, I'm going to be using a custom widget to build my animations, but they still need to have app state to drive them it seems. As to when the animation starts and such.
-
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 * TODO [#A] Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
@@ -23,16 +20,6 @@ This can include title, author, and ccli info so that it will be compliant and h
 * TODO [#B] Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
-
-* DONE [#B] Build an Animation type that will hold all the info for what a slide animation is.
-CLOSED: [2026-06-26 Fri 17:08]
-The animation type that comes with Iced is basically a way to say how long animations take and at what easing to do them, but they do not at all tell you WHAT to animate, that is all in where you put the animation's interpolate function in the view.
-
-So what I think I'll do is either, build a custom widget for slides (might need to do this anyway eventually since we are doing a lot of custom stuff with slides) or build my own Animation type to hold all of the correct info and based on that Animation, place the Iced animation interpolate function where it needs to go.
-
-I need to think more on this. I'm trying to make sure that each slide will always look the way you want it when editing songs, so it's nice to have the =slide_view= function be the authority on what a slide looks like, but it is really difficult to do that well when you also need to make sure that there are special things that happen when it is actually being run in the presentation.
-
-Maybe a good model to follow would be similar the the =gst_video= system we have. To create a settings type that is passed into the function so that when viewing from the presentation vs. editing, you can pass in extra info that will effect the way the function returns and interpolates things...
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
@@ -96,6 +83,10 @@ Not working just yet but loading is faster.
 CLOSED: [2026-06-23 Tue 10:19]
 This is sorta in there, but apparently I'm not streaming the tasks back correctly so there is some sort of disconnect in the UI.
 
+* DONE [#A] Custom widget for slides to work with animations
+CLOSED: [2026-07-01 Wed 10:51]
+Since position animations are very difficult in Iced, I'm going to be using a custom widget to build my animations, but they still need to have app state to drive them it seems. As to when the animation starts and such.
+
 * DONE [#A] Make sure that adding, deleting and editing items in each model is working correctly [0/0]
 CLOSED: [2026-04-24 Fri 13:17]
 
@@ -152,6 +143,16 @@ This is necessary so that the entire song gets changed and we can propogate thos
 There is likely some work that still needs to be done here, I believe I am somehow deleting some of my verses.
 * DONE [#A] Need to fixup how songs are edited in the editors
 Currently the song is cloned many times to pass around and then finally get updated in DB. Instead, we need to edit the song directly in the editor and after it's been changed appropriatel, run the update_song method to get the current song and create slides from it and then update it in the DB.
+
+* DONE [#B] Build an Animation type that will hold all the info for what a slide animation is.
+CLOSED: [2026-06-26 Fri 17:08]
+The animation type that comes with Iced is basically a way to say how long animations take and at what easing to do them, but they do not at all tell you WHAT to animate, that is all in where you put the animation's interpolate function in the view.
+
+So what I think I'll do is either, build a custom widget for slides (might need to do this anyway eventually since we are doing a lot of custom stuff with slides) or build my own Animation type to hold all of the correct info and based on that Animation, place the Iced animation interpolate function where it needs to go.
+
+I need to think more on this. I'm trying to make sure that each slide will always look the way you want it when editing songs, so it's nice to have the =slide_view= function be the authority on what a slide looks like, but it is really difficult to do that well when you also need to make sure that there are special things that happen when it is actually being run in the presentation.
+
+Maybe a good model to follow would be similar the the =gst_video= system we have. To create a settings type that is passed into the function so that when viewing from the presentation vs. editing, you can pass in extra info that will effect the way the function returns and interpolates things...
 
 * DONE Grid mode needs to use the actual aspect ratio correctly for the slide preview
 CLOSED: [2026-05-31 Sun 07:02]

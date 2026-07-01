@@ -356,7 +356,7 @@ where
             },
         );
 
-        let next_ending_pos = bounds.y + bounds.height / 3.0 * 2.0;
+        let next_ending_pos = bounds.y + bounds.height / 2.0;
 
         let (
             mut current_foreground_position,
