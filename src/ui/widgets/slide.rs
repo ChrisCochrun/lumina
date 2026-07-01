@@ -395,12 +395,11 @@ where
                 }
                 Some(Animation::ScrollUp { .. }) => {
                     prev_slide_opacity = 1.0;
-                    next_text_opacity = 1.0_f32;
+                    current_slide_opacity = new_slide_progress.max(0.65);
+                    next_text_opacity = 0.65_f32;
 
-                    let foreground_y = bounds.y
-                        + (viewport.height - bounds.y + next_ending_pos)
-                        - ((viewport.height - bounds.y + next_ending_pos)
-                            * new_slide_progress);
+                    let foreground_y = bounds.y + (next_ending_pos - bounds.y)
+                        - (next_ending_pos - bounds.y) * new_slide_progress;
 
                     let prev_slide_y = if new_slide_progress == &0.0 {
                         bounds.y
@@ -412,7 +411,7 @@ where
                         - ((viewport.height - bounds.y) * new_slide_progress);
 
                     current_foreground_position = Point::new(bounds.x, foreground_y);
-                    next_foreground_position = Point::new(bounds.x, next_ending_pos);
+                    next_foreground_position = Point::new(bounds.x, next_foreground_y);
                     prev_foreground_position = Point::new(bounds.x, prev_slide_y);
                 }
                 Some(Animation::SlideLeft { .. }) => todo!(),
