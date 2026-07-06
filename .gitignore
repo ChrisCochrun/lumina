@@ -21,3 +21,4 @@ flatpak-cargo-generator.py
 flatpak-out/
 cosmic-flatpak-runtime/
 flatpak-builder-tools/
+.helix
