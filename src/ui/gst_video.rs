@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::num::NonZero;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use cosmic::widget::image::Handle;

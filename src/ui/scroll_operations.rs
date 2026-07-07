@@ -5,20 +5,13 @@ use cosmic::{
         advanced::widget::operate,
         core::{
             self,
-            widget::{
-                self,
-                operation::{Outcome, search_id::search_id},
-            },
+            widget::{self, operation::Outcome},
         },
         daemon::program::graphics::core::widget::operation::Scrollable,
-        widget::{
-            operation::AbsoluteOffset,
-            scrollable::{self, scroll_to},
-        },
+        widget::{operation::AbsoluteOffset, scrollable::scroll_to},
     },
-    widget::{Operation, container},
+    widget::Operation,
 };
-use tracing::debug;
 
 use crate::ui::presenter::Message;
 

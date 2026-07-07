@@ -47,7 +47,6 @@ use crate::core::service_items::ServiceTrait;
 use crate::core::slide::{Slide, TextAlignment};
 use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
-use crate::ui::presenter::{SlideSettings, slide_view};
 use crate::ui::slide_editor::SlideEditor;
 use crate::ui::text_svg;
 use crate::ui::widgets::draggable;
