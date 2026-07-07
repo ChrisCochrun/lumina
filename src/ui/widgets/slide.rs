@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use cosmic::iced::{
     Border, Color, ContentFit, Point, Radius, Shadow, Size, core as iced_core,
@@ -14,7 +14,7 @@ use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
 
-use crate::core::animation::{Animation, Easing};
+use crate::core::animation::Animation;
 
 pub fn slide<'a, Message: 'static, Theme, Renderer>(
     slide: &'a crate::core::slide::Slide,
@@ -36,6 +36,7 @@ where
 }
 
 #[allow(missing_debug_implementations)]
+#[allow(dead_code)]
 pub struct Slide<'a, Message, Theme, Renderer>
 where
     Renderer: PrimitiveRenderer + iced_core::Renderer + iced_core::image::Renderer,
@@ -77,6 +78,7 @@ pub enum Direction {
     Backward,
 }
 
+#[allow(dead_code)]
 impl<'a, Message, Theme, Renderer> Slide<'a, Message, Theme, Renderer>
 where
     Renderer: PrimitiveRenderer
