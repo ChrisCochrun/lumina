@@ -23,9 +23,9 @@ use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    Container, Space, button, container, context_menu, divider, icon, menu, mouse_area,
-    nav_bar, nav_bar_toggle, popover, responsive, scrollable, search_input, settings,
-    slider, text, text_input, tooltip,
+    Container, Space, button, container, divider, icon, menu, mouse_area, nav_bar,
+    nav_bar_toggle, popover, responsive, scrollable, search_input, settings, slider,
+    text, text_input, tooltip,
 };
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
@@ -168,10 +168,6 @@ fn main() -> Result<()> {
     .map_err(|e| miette!("Invalid things... {}", e))
 }
 
-// fn theme(_state: &App) -> Theme {
-//     Theme::dark()
-// }
-
 #[allow(clippy::struct_excessive_bools)]
 struct App {
     core: Core,
@@ -301,6 +297,7 @@ enum ViewMode {
     Detail,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
     New,
@@ -1347,7 +1344,7 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
-            Message::AddServiceItem(index, mut item) => {
+            Message::AddServiceItem(index, item) => {
                 let mut tasks = Vec::new();
                 if matches!(item.kind, ServiceItemKind::Song(_)) {
                     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();

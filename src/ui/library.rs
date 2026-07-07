@@ -14,9 +14,8 @@ use cosmic::widget::menu::{self, Action as MenuAction};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    Container, DndSource, Space, button, container, context_menu, divider,
-    dnd_destination, icon, indeterminate_circular, mouse_area, popover, row, scrollable,
-    text, text_input,
+    Container, DndSource, Space, button, container, divider, dnd_destination, icon,
+    indeterminate_circular, mouse_area, popover, row, scrollable, text, text_input,
 };
 use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
