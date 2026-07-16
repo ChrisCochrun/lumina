@@ -1114,6 +1114,7 @@ impl Presenter {
         } else {
             self.animation = None;
             self.animator = None;
+            self.next_slide = None;
         }
 
         let mut tasks = vec![];
