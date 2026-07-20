@@ -1803,8 +1803,9 @@ impl cosmic::Application for App {
                     .file_name()
                     .expect("Since we are saving we should have given a name by now")
                     .to_owned();
+                let fontdb = Arc::clone(&self.fontdb);
                 Task::perform(
-                    async move { file::save(&service, file, true) },
+                    async move { file::save(&service, file, true, &fontdb) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!("saving file to: {:?}", file_name);

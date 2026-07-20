@@ -17,6 +17,7 @@ pub fn save(
     list: &Arc<Vec<ServiceItem>>,
     path: impl AsRef<Path>,
     overwrite: bool,
+    fontdb: &Arc<fontdb::Database>,
 ) -> Result<()> {
     let path = path.as_ref();
     if overwrite && path.exists() {
@@ -82,26 +83,50 @@ pub fn save(
     for item in list.iter() {
         let background;
         let audio: Option<PathBuf>;
+        let font;
         match &item.kind {
             ServiceItemKind::Song(song) => {
                 background = song.background.clone();
                 audio = song.audio.clone();
+                let fontdb = Arc::clone(fontdb);
+                font = song.font.as_ref().map(|font| {
+                    let id = fontdb.query(&fontdb::Query {
+                        families: &[fontdb::Family::Name(&font)],
+                        weight: fontdb::Weight::NORMAL,
+                        stretch: fontdb::Stretch::Normal,
+                        style: fontdb::Style::Normal,
+                    });
+                    id.map(|id| {
+                        fontdb.face(id).map(|font| {
+                            if matches!(font.clone().source, fontdb::Source::File(path)) {
+                                Some(path.to_owned())
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .flatten()
+                    .flatten()
+                })
             }
             ServiceItemKind::Image(image) => {
                 background =
                     Some(Background::try_from(image.path.clone()).into_diagnostic()?);
                 audio = None;
+                font = None;
             }
             ServiceItemKind::Video(video) => {
                 background =
                     Some(Background::try_from(video.path.clone()).into_diagnostic()?);
                 audio = None;
+                font = None;
             }
             ServiceItemKind::Presentation(presentation) => {
                 background = Some(
                     Background::try_from(presentation.path.clone()).into_diagnostic()?,
                 );
                 audio = None;
+                font = None;
             }
             ServiceItemKind::Content(_slide) => {
                 todo!()
@@ -120,6 +145,13 @@ pub fn save(
             debug!(?path);
             append_file(path)?;
         }
+        if let Some(font) = font.flatten()
+            && font.exists()
+        {
+            debug!(?font);
+            append_file(font)?;
+        }
+
         for slide in &item.slides {
             if let Some(svg) = &slide.text_svg
                 && let Some(path) = &svg.path
