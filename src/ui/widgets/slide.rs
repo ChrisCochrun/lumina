@@ -13,6 +13,7 @@ use iced_core::{
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
+use tracing::debug;
 
 use crate::core::animation::Animation;
 
@@ -360,14 +361,26 @@ where
 
         let next_ending_pos = bounds.y + bounds.height / 2.0;
 
+        let mut next_foreground_size =
+            if matches!(self.settings.animation, Some(Animation::ScrollUp { .. })) {
+                // debug!("***********");
+                bounds.size() * 0.8
+            } else {
+                bounds.size()
+            };
+
+        let next_size_difference = bounds.size().width - next_foreground_size.width;
+        let next_foreground_x = next_size_difference / 2.0 + bounds.x;
+        let mut next_foreground_position = Point::new(next_foreground_x, next_ending_pos);
+
         let (
             mut current_foreground_position,
+            mut current_foreground_size,
             mut prev_foreground_position,
-            mut next_foreground_position,
         ) = (
             Point::new(bounds.x, bounds.y),
+            bounds.size(),
             Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
-            Point::new(bounds.x, next_ending_pos),
         );
 
         if let AnimationState::Running {
@@ -403,6 +416,20 @@ where
                     let foreground_y = bounds.y + (next_ending_pos - bounds.y)
                         - (next_ending_pos - bounds.y) * new_slide_progress;
 
+                    next_foreground_size = bounds.size() * 0.8;
+
+                    let size_progress = bounds.size() * *new_slide_progress;
+                    current_foreground_size = next_foreground_size
+                        + (bounds.size() - next_foreground_size) * *new_slide_progress;
+
+                    let current_size_difference =
+                        bounds.size().width - current_foreground_size.width;
+                    let current_foreground_x = current_size_difference / 2.0 + bounds.x;
+
+                    let og_size = bounds.size();
+
+                    // debug!(?next_foreground_size, ?og_size, ?size_progress);
+
                     let prev_slide_y = if new_slide_progress == &0.0 {
                         bounds.y
                     } else {
@@ -412,8 +439,10 @@ where
                         + (viewport.height - bounds.y)
                         - ((viewport.height - bounds.y) * new_slide_progress);
 
-                    current_foreground_position = Point::new(bounds.x, foreground_y);
-                    next_foreground_position = Point::new(bounds.x, next_foreground_y);
+                    current_foreground_position =
+                        Point::new(current_foreground_x, foreground_y);
+                    next_foreground_position =
+                        Point::new(next_foreground_x, next_foreground_y);
                     prev_foreground_position = Point::new(bounds.x, prev_slide_y);
                 }
                 Some(Animation::SlideLeft { .. }) => todo!(),
@@ -573,7 +602,7 @@ where
                         opacity: next_text_opacity,
                         snap: true,
                     },
-                    Rectangle::new(next_foreground_position, bounds.size()),
+                    Rectangle::new(next_foreground_position, next_foreground_size),
                     clip_bounds,
                 )
             });
@@ -592,7 +621,7 @@ where
                         opacity: current_slide_opacity,
                         snap: true,
                     },
-                    Rectangle::new(current_foreground_position, bounds.size()),
+                    Rectangle::new(current_foreground_position, current_foreground_size),
                     clip_bounds,
                 )
             });
