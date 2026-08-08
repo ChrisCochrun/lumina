@@ -10,6 +10,12 @@ We are close on this. The main pipeline consists of needing some virtual machine
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 
 ??????? Don't know if this is still broke or not.....
+
+* TODO [#A] Fix loading file with pdf not showing the pdf properly
+I think this has something to do with the pdf rendering not starting up yet when loading from a file? Like maybe a hook i missed?
+
+Maybe this isn't even a real blocker for using this at church. Just need it to build.
+
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
