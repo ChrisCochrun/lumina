@@ -7,25 +7,20 @@ use crate::core::service_items::ServiceItem;
 pub fn parse_lisp(value: Value) -> Vec<ServiceItem> {
     match &value {
         Value::List(vec) => match &vec[0] {
-            Value::Symbol(Symbol(s))
-                if s == "slide" || s == "song" =>
-            {
+            Value::Symbol(Symbol(s)) if s == "slide" || s == "song" => {
                 let item = ServiceItem::from(value.clone());
                 vec![item]
             }
             Value::Symbol(Symbol(s)) if s == "load" => {
-                let Ok(path) = PathBuf::from(String::from(&vec[1]))
-                    .canonicalize()
-                else {
+                let Ok(path) = PathBuf::from(String::from(&vec[1])).canonicalize() else {
                     return vec![ServiceItem::default()];
                 };
                 let lisp = read_to_string(path).expect("oops");
                 let lisp_value = crisp::reader::read(&lisp);
                 match lisp_value {
-                    Value::List(value) => value
-                        .into_iter()
-                        .flat_map(parse_lisp)
-                        .collect(),
+                    Value::List(value) => {
+                        value.into_iter().flat_map(parse_lisp).collect()
+                    }
                     _ => panic!("Should not be"),
                 }
             }
