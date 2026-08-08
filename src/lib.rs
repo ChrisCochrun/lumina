@@ -1,0 +1,2631 @@
+#![windows_subsystem = "windows"]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+
+pub mod core;
+// pub mod lisp;
+pub mod ui;
+
+use clap::{Args, Parser, Subcommand};
+use core::service_items::ServiceItem;
+use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
+use cosmic::app::{Core, Settings, Task};
+use cosmic::cosmic_config::{Config, ConfigSet, CosmicConfigEntry};
+use cosmic::dialog::file_chooser::{open, save};
+use cosmic::iced::alignment::Vertical;
+use cosmic::iced::core::text::Wrapping;
+use cosmic::iced::keyboard::{Key, Modifiers};
+use cosmic::iced::widget::{column, progress_bar, row, stack};
+use cosmic::iced::window::Position;
+use cosmic::iced::{
+    self, Background as IcedBackground, Border, Color, Length, Point, Subscription,
+    event, window,
+};
+use cosmic::widget::dnd_destination::dnd_destination;
+use cosmic::widget::image::Handle;
+use cosmic::widget::menu::key_bind::Modifier;
+use cosmic::widget::menu::{ItemWidth, KeyBind};
+use cosmic::widget::nav_bar::nav_bar_style;
+use cosmic::widget::space::{self, horizontal};
+use cosmic::widget::{
+    Container, Space, button, container, divider, icon, menu, mouse_area, nav_bar,
+    nav_bar_toggle, popover, responsive, scrollable, search_input, settings, slider,
+    text, text_input, tooltip,
+};
+use cosmic::{
+    Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
+};
+use std::time::{Duration, Instant};
+// use crisp::types::Value;
+// use lisp::parse_lisp;
+use miette::{IntoDiagnostic, Result, miette};
+use rayon::prelude::*;
+use resvg::usvg::fontdb;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tracing::level_filters::LevelFilter;
+use tracing::{debug, error, warn};
+use tracing_subscriber::EnvFilter;
+use ui::EditorMode;
+use ui::library::{self, Library};
+use ui::presenter::{self, Presenter};
+use ui::song_editor::{self, SongEditor};
+
+use core::content::Content;
+use core::file;
+use core::kinds::ServiceItemKind;
+use core::model::KindWrapper;
+use ui::gst_video;
+use ui::image_editor::{self, ImageEditor};
+use ui::presentation_editor::{self, PresentationEditor};
+use ui::text_svg::{self};
+use ui::video_editor::{self, VideoEditor};
+use ui::widgets::draggable;
+
+#[derive(Debug, Parser)]
+#[command(name = "lumina", version, about = "A church presentation app")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+    #[arg(short = 'v', long)]
+    verbose: bool,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+#[command(version, about, long_about = None)]
+enum Commands {
+    Cli(CliCommand),
+}
+
+#[derive(Args, Debug, Clone)]
+#[command(about = "Run headless from the cli", long_about = None)]
+struct CliCommand {
+    #[arg(short, long)]
+    watch: bool,
+    file: Option<PathBuf>,
+}
+
+pub fn run() -> Result<()> {
+    let timer = tracing_subscriber::fmt::time::ChronoLocal::new(
+        "%Y-%m-%d_%I:%M:%S%.6f %P".to_owned(),
+    );
+    let args = Cli::parse();
+
+    let default_directive = if args.verbose {
+        "lumina=debug"
+    } else {
+        "lumina=info"
+    };
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::WARN.into())
+        .parse_lossy(default_directive);
+
+    tracing_subscriber::FmtSubscriber::builder()
+        .pretty()
+        .with_line_number(true)
+        .with_level(true)
+        .with_env_filter(filter)
+        .with_target(true)
+        .with_timer(timer)
+        .init();
+
+    let (config_handler, config) =
+        match cosmic_config::Config::new(App::APP_ID, core::settings::SETTINGS_VERSION) {
+            Ok(config_handler) => {
+                let config = match core::settings::Settings::get_entry(&config_handler) {
+                    Ok(ok) => ok,
+                    Err((errs, config)) => {
+                        error!("errors loading settings: {:?}", errs);
+                        config
+                    }
+                };
+                (Some(config_handler), config)
+            }
+            Err(err) => {
+                error!("failed to create settings handler: {}", err);
+                (None, core::settings::Settings::default())
+            }
+        };
+    let (state_handler, state) = match cosmic_config::Config::new_state(
+        App::APP_ID,
+        core::settings::SETTINGS_VERSION,
+    ) {
+        Ok(config_handler) => {
+            let config = match core::settings::PersistentState::get_entry(&config_handler)
+            {
+                Ok(ok) => ok,
+                Err((errs, config)) => {
+                    error!("errors loading state: {:?}", errs);
+                    config
+                }
+            };
+            (Some(config_handler), config)
+        }
+        Err(err) => {
+            error!("failed to create state handler: {}", err);
+            (None, core::settings::PersistentState::default())
+        }
+    };
+
+    let settings = if args.command.is_some_and(|command| match command {
+        Commands::Cli(_) => true,
+    }) {
+        debug!("window view");
+        Settings::default()
+            .debug(false)
+            .no_main_window(true)
+            .is_daemon(true)
+    } else {
+        debug!(target: "lumina", "main view");
+        Settings::default().debug(false).is_daemon(true)
+    };
+
+    cosmic::app::run::<App>(
+        settings,
+        (Cli::parse(), config_handler, config, state_handler, state),
+    )
+    .map_err(|e| miette!("Invalid things... {}", e))
+}
+
+#[allow(clippy::struct_excessive_bools)]
+struct App {
+    core: Core,
+    nav_model: nav_bar::Model,
+    file: Option<PathBuf>,
+    footer_message: Option<String>,
+    presenter: Presenter,
+    windows: Vec<window::Id>,
+    service: Arc<Vec<ServiceItem>>,
+    selected_items: Vec<usize>,
+    current_item: (usize, usize),
+    hovered_item: Option<usize>,
+    hovered_dnd: Option<usize>,
+    presentation_open: bool,
+    cli_mode: bool,
+    library: Option<Library>,
+    library_open: bool,
+    editor_mode: Option<EditorMode>,
+    song_editor: SongEditor,
+    video_editor: VideoEditor,
+    image_editor: ImageEditor,
+    presentation_editor: PresentationEditor,
+    searching: bool,
+    search_query: String,
+    search_results: Vec<ServiceItemKind>,
+    search_id: cosmic::widget::Id,
+    library_dragged_item: Option<ServiceItem>,
+    fontdb: Arc<fontdb::Database>,
+    menu_keys: HashMap<KeyBind, MenuAction>,
+    context_menu: Option<usize>,
+    modifiers_pressed: Option<Modifiers>,
+    loading_state: LoadingState,
+    settings_open: bool,
+    settings: core::settings::Settings,
+    config_handler: Option<Config>,
+    state: core::settings::PersistentState,
+    state_handler: Option<Config>,
+    obs_connection: String,
+    view_mode: ViewMode,
+    genius_token_hidden: bool,
+    hovered_point: iced::Point,
+    context_point: iced::Point,
+}
+
+#[derive(Debug, Clone)]
+enum LoadingState {
+    Loading {
+        total_items: usize,
+        current_item: usize,
+    },
+    Loaded,
+    None,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+enum Message {
+    Present(presenter::Message),
+    Library(library::Message),
+    SongEditor(song_editor::Message),
+    VideoEditor(video_editor::Message),
+    ImageEditor(image_editor::Message),
+    PresentationEditor(presentation_editor::Message),
+    File(PathBuf),
+    OpenWindow,
+    CloseWindow(Option<window::Id>),
+    WindowOpened(window::Id),
+    WindowClosed(window::Id),
+    AddLibrary(Library),
+    LibraryToggle,
+    Quit,
+    Key(Key, Modifiers),
+    Tick(Instant),
+    None,
+    EditorToggle(bool),
+    ChangeServiceItem(usize),
+    SelectServiceItem(usize),
+    AddSelectServiceItem(usize),
+    HoveredServiceItem(Option<usize>),
+    HoveredServiceDrop(Option<usize>),
+    AddServiceItem(usize, ServiceItem),
+    AddServiceItemKind(usize, KindWrapper),
+    AddServiceItemsFiles(usize, Vec<ServiceItem>),
+    RemoveServiceItem(usize),
+    AddServiceItemDrop(usize),
+    AppendServiceItem(ServiceItem),
+    AppendServiceItemKind(ServiceItemKind),
+    ReorderService(usize, usize),
+    ContextMenuItem(Option<usize>),
+    SearchFocus,
+    Search(String),
+    SearchEnterPress,
+    CloseSearch,
+    UpdateSearchResults(Vec<ServiceItemKind>),
+    OpenEditor(ServiceItem),
+    OpenEditorKind(ServiceItemKind),
+    New,
+    Open,
+    OpenFile(PathBuf),
+    OpenLoadItems(Vec<ServiceItem>),
+    Save,
+    SaveAsDialog,
+    SaveAs(PathBuf),
+    OpenSettings,
+    CloseSettings,
+    SetObsUrl(String),
+    SetObsConnection(String),
+    ModifiersPressed(Modifiers),
+    ViewModeSwitch(ViewMode),
+    ShowGeniusToken,
+    SetGeniusToken(String),
+    InsertBackgroundImage((iced::core::image::Allocation, usize)),
+    InsertThumbnail((iced::core::image::Allocation, usize)),
+    ClearFooterMsg,
+    SavingReport,
+    ContextPoint(Point),
+    AddSlideTextToItem(usize, usize, Slide),
+    LoadedOpenItem(usize),
+    HideLoadingBar,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ViewMode {
+    Grid,
+    Row,
+    Detail,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MenuAction {
+    New,
+    Save,
+    SaveAs,
+    Open,
+    OpenSettings,
+    DeleteItem(usize),
+}
+
+impl menu::Action for MenuAction {
+    type Message = Message;
+
+    fn message(&self) -> Self::Message {
+        match self {
+            Self::New => Message::New,
+            Self::Save => Message::Save,
+            Self::SaveAs => Message::SaveAsDialog,
+            Self::Open => Message::Open,
+            Self::OpenSettings => Message::OpenSettings,
+            Self::DeleteItem(index) => Message::RemoveServiceItem(*index),
+        }
+    }
+}
+
+const HEADER_SPACE: u16 = 6;
+
+impl cosmic::Application for App {
+    type Executor = executor::multi::Executor;
+    type Flags = (
+        Cli,
+        Option<cosmic_config::Config>,
+        core::settings::Settings,
+        Option<cosmic_config::Config>,
+        core::settings::PersistentState,
+    );
+    type Message = Message;
+    const APP_ID: &'static str = "lumina";
+    fn core(&self) -> &Core {
+        &self.core
+    }
+    fn core_mut(&mut self) -> &mut Core {
+        &mut self.core
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn init(core: Core, input: Self::Flags) -> (Self, Task<Self::Message>) {
+        debug!("init");
+        let nav_model = nav_bar::Model::default();
+
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+        let fontdb = Arc::new(fontdb);
+
+        let mut windows = vec![];
+        let cli_mode = input.0.command.is_some_and(|command| match command {
+            Commands::Cli(_cli_command) => true,
+        });
+
+        if !cli_mode {
+            windows.push(core.main_window_id().expect("should be a window here"));
+        }
+
+        let (config_handler, settings) = (input.1, input.2);
+        let (state_handler, state) = (input.3, input.4);
+
+        // let items = input.0.file.map_or_else(Vec::new, |file| {
+        //     match read_to_string(file) {
+        //         Ok(lisp) => {
+        //             let mut service_items = vec![];
+        //             let lisp = crisp::reader::read(&lisp);
+        //             match lisp {
+        //                 Value::List(vec) => {
+        //                     for value in vec {
+        //                         let mut inner_vector =
+        //                             parse_lisp(value);
+        //                         service_items
+        //                             .append(&mut inner_vector);
+        //                     }
+        //                 }
+        //                 _ => todo!(),
+        //             }
+        //             service_items
+        //         }
+        //         Err(e) => {
+        //             warn!("Missing file or could not read: {e}");
+        //             vec![]
+        //         }
+        //     }
+        // });
+
+        // let items: Vec<ServiceItem> = items
+        //     .into_par_iter()
+        //     .map(|mut item| {
+        //         item.slides = item
+        //             .slides
+        //             .into_par_iter()
+        //             .map(|mut slide| {
+        //                 text_svg::text_svg_generator(
+        //                     &mut slide, &fontdb,
+        //                 );
+        //                 slide
+        //             })
+        //             .collect();
+        //         item
+        //     })
+        //     .collect();
+        let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
+
+        let presenter = Presenter::with_items(items.clone());
+        let song_editor =
+            SongEditor::new(Arc::clone(&fontdb), settings.genius_token.clone());
+
+        // for item in items.iter() {
+        //     nav_model.insert().text(item.title()).data(item.clone());
+        // }
+        let presenter_obs_task = Task::perform(
+            async { obws::Client::connect("localhost", 4455, Some("")).await },
+            |res| match res {
+                Ok(client) => cosmic::Action::App(Message::Present(
+                    presenter::Message::AddObsClient(Arc::new(client)),
+                )),
+                Err(e) => {
+                    warn!("Obs may not be running: {e}");
+                    cosmic::Action::None
+                }
+            },
+        );
+
+        let mut menu_keys = HashMap::new();
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("s".into()),
+            },
+            MenuAction::Save,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character("o".into()),
+            },
+            MenuAction::Open,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl],
+                key: Key::Character(",".into()),
+            },
+            MenuAction::OpenSettings,
+        );
+        // nav_model.activate_position(0);
+        let mut app = Self {
+            presenter,
+            core,
+            nav_model,
+            service: items,
+            selected_items: vec![],
+            file: None,
+            footer_message: None,
+            windows,
+            presentation_open: false,
+            cli_mode,
+            library: None,
+            library_open: true,
+            editor_mode: None,
+            song_editor,
+            video_editor: VideoEditor::new(),
+            image_editor: ImageEditor::new(),
+            presentation_editor: PresentationEditor::new(),
+            searching: false,
+            search_results: vec![],
+            search_query: String::new(),
+            search_id: cosmic::widget::Id::unique(),
+            current_item: (0, 0),
+            library_dragged_item: None,
+            fontdb: Arc::clone(&fontdb),
+            menu_keys,
+            hovered_item: None,
+            hovered_dnd: None,
+            context_menu: None,
+            hovered_point: Point::ORIGIN,
+            context_point: Point::ORIGIN,
+            modifiers_pressed: None,
+            loading_state: LoadingState::None,
+            settings_open: false,
+            settings,
+            config_handler,
+            state_handler,
+            state,
+            obs_connection: String::new(),
+            view_mode: ViewMode::Row,
+            genius_token_hidden: true,
+        };
+
+        let mut batch = vec![];
+        batch.push(presenter_obs_task);
+
+        if cli_mode {
+            debug!("window view");
+            batch.push(app.show_window());
+        } else {
+            debug!("main view");
+            batch.push(app.update_title());
+        }
+
+        batch.push(add_library());
+        if let Some(file) = app.state.recent_files.front()
+            && file.exists()
+        {
+            batch.push(app.update(Message::OpenFile(file.clone())));
+        }
+        // batch.push(app.add_service(items, Arc::clone(&fontdb)));
+        let batch = Task::batch(batch);
+        (app, batch)
+    }
+
+    fn header_start(&self) -> Vec<Element<Self::Message>> {
+        let file_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(menu::root("File")),
+            menu::items(
+                &self.menu_keys,
+                vec![
+                    menu::Item::Button(
+                        "New",
+                        Some(
+                            icon::from_name("document-new-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::New,
+                    ),
+                    menu::Item::Button(
+                        "Open",
+                        Some(
+                            icon::from_name("document-open-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::Open,
+                    ),
+                    menu::Item::Button(
+                        "Save",
+                        Some(
+                            icon::from_name("document-save-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::Save,
+                    ),
+                    menu::Item::Button(
+                        "Save As",
+                        Some(
+                            icon::from_name("document-save-as-symbolic")
+                                .symbolic(true)
+                                .into(),
+                        ),
+                        MenuAction::SaveAs,
+                    ),
+                ],
+            ),
+        );
+        let settings_menu = menu::Tree::with_children(
+            Into::<Element<Message>>::into(
+                menu::root("Settings").on_press(Message::None),
+            ),
+            menu::items(
+                &self.menu_keys,
+                vec![menu::Item::Button(
+                    "Open Settings",
+                    Some(icon::from_name("preferences-system-symbolic").into()),
+                    MenuAction::OpenSettings,
+                )],
+            ),
+        );
+        let menu_bar = menu::bar::<Message>(vec![file_menu, settings_menu])
+            .item_width(ItemWidth::Uniform(250))
+            .path_highlight(Some(menu::PathHighlight::Full))
+            .main_offset(10);
+        let library_button = tooltip(
+            nav_bar_toggle().on_toggle(Message::LibraryToggle),
+            if self.library_open {
+                "Hide library"
+            } else {
+                "Show library"
+            },
+            tooltip::Position::Bottom,
+        )
+        .gap(cosmic::theme::spacing().space_xs);
+        vec![library_button.into(), menu_bar.into()]
+    }
+
+    fn header_center(&self) -> Vec<Element<Self::Message>> {
+        vec![]
+    }
+
+    fn header_end(&self) -> Vec<Element<Self::Message>> {
+        const SEARCH_ICON: &[u8] = include_bytes!(".././res/icons/search.svg");
+        const PREVIEW_ICON: &[u8] = include_bytes!(".././res/icons/preview.svg");
+        const PRESENTING_ICON: &[u8] = include_bytes!(".././res/icons/presenting.svg");
+
+        // let editor_toggle = toggler(self.editor_mode.is_some())
+        //     .label("Editor")
+        //     .spacing(10)
+        //     .width(Length::Shrink)
+        //     .on_toggle(Message::EditorToggle);
+
+        let presenter_window = self.windows.get(1);
+        let text = if self.presentation_open {
+            text::body("End Presentation")
+        } else {
+            text::body("Present")
+        };
+
+        let row = row![
+            tooltip(
+                button::custom(
+                    row![
+                        Container::new(
+                            icon::from_svg_bytes(SEARCH_ICON).symbolic(true).icon()
+                        )
+                        .center_y(Length::Fill),
+                        text::body("Search")
+                    ]
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press(Message::SearchFocus),
+                "Search Library",
+                tooltip::Position::Bottom,
+            )
+            .gap(cosmic::theme::spacing().space_xs),
+            tooltip(
+                button::custom(
+                    row![
+                        Container::new(if self.editor_mode.is_some() {
+                            icon::from_svg_bytes(PREVIEW_ICON).symbolic(true).icon()
+                        } else {
+                            icon::from_name("edit-symbolic").icon()
+                        })
+                        .center_y(Length::Fill),
+                        text::body(if self.editor_mode.is_some() {
+                            "Present Mode"
+                        } else {
+                            "Edit Mode"
+                        })
+                    ]
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press(Message::EditorToggle(self.editor_mode.is_none(),)),
+                "Enter Edit Mode",
+                tooltip::Position::Bottom,
+            )
+            .gap(cosmic::theme::spacing().space_xs),
+            tooltip(
+                button::custom(
+                    row![
+                        Container::new(if cfg!(target_os = "linux") {
+                            icon::from_name(if self.presentation_open {
+                                "window-close-symbolic"
+                            } else {
+                                "view-presentation-symbolic"
+                            })
+                            .scale(3)
+                            .icon()
+                        } else if self.presentation_open {
+                            icon::from_name("window-close-symbolic").scale(3).icon()
+                        } else {
+                            icon::from_svg_bytes(PRESENTING_ICON).symbolic(true).icon()
+                        })
+                        .center_y(Length::Fill),
+                        text
+                    ]
+                    .spacing(5),
+                )
+                .class(cosmic::theme::style::Button::HeaderBar)
+                .on_press({
+                    if self.presentation_open {
+                        Message::CloseWindow(presenter_window.copied())
+                    } else {
+                        Message::OpenWindow
+                    }
+                }),
+                "Start Presentation",
+                tooltip::Position::Bottom,
+            )
+            .gap(cosmic::theme::spacing().space_xs),
+        ]
+        .spacing(HEADER_SPACE)
+        .into();
+        vec![row]
+    }
+
+    fn footer(&self) -> Option<Element<Self::Message>> {
+        let cosmic::cosmic_theme::Spacing {
+            space_s, space_m, ..
+        } = cosmic::theme::spacing();
+        let total_items_text = format!("Total Service Items: {}", self.service.len());
+
+        let total_slides = self.service.iter().fold(0, |a, item| a + item.slides.len());
+
+        let total_slides_text = format!("Total Slides: {total_slides}");
+        let mut row: Vec<Element<Message>> = Vec::new();
+        match self.loading_state {
+            LoadingState::Loading {
+                total_items,
+                current_item,
+            } => {
+                row.push(
+                    progress_bar(0.0..=total_items as f32, current_item as f32)
+                        .girth(space_m)
+                        .into(),
+                );
+            }
+            LoadingState::Loaded => row.push(text::body("Loaded!").into()),
+            LoadingState::None => (),
+        }
+        if let Some(message) = self.footer_message.as_ref() {
+            row.push(text::body(message).into());
+            row.push(space::horizontal().width(space_m).into());
+        }
+        row.push(
+            text::body(self.file.as_ref().map_or_else(
+                || String::new(),
+                |file| file.to_string_lossy().to_string(),
+            ))
+            .into(),
+        );
+        row.push(space::horizontal().into());
+        row.push(text::body(total_items_text).into());
+        row.push(text::body(total_slides_text).into());
+        let row = row::with_children(row).spacing(10);
+        Some(row.into())
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        let time_subscription =
+            cosmic::iced::time::every(Duration::from_millis(50)).map(Message::Tick);
+        let event_subscription = event::listen_with(|event, status, id| {
+            // debug!(?event);
+            match status {
+                event::Status::Ignored => {
+                    match event {
+                        iced::Event::Keyboard(event) => match event {
+                            iced::keyboard::Event::KeyReleased {
+                                key, modifiers, ..
+                            } => Some(Message::Key(key, modifiers)),
+                            iced::keyboard::Event::ModifiersChanged(modifiers) => {
+                                Some(Message::ModifiersPressed(modifiers))
+                            }
+                            iced::keyboard::Event::KeyPressed { .. } => None,
+                        },
+                        iced::Event::Mouse(_event) => None,
+                        iced::Event::Window(window_event) => match window_event {
+                            window::Event::CloseRequested => {
+                                debug!("Closing window");
+                                Some(Message::CloseWindow(Some(id)))
+                            }
+                            window::Event::Opened { .. } => {
+                                debug!(?window_event, ?id);
+                                Some(Message::WindowOpened(id))
+                            }
+                            window::Event::Closed => {
+                                debug!("Closed window");
+                                Some(Message::WindowClosed(id))
+                            }
+                            window::Event::FileHovered(file) => {
+                                debug!(?file);
+                                None
+                            }
+                            window::Event::FileDropped(file) => {
+                                debug!(?file);
+                                None
+                            }
+                            _ => None,
+                        },
+                        iced::Event::Touch(_touch) => None,
+                        // iced::Event::A11y(_id, _action_request) => None,
+                        iced::Event::Dnd(_dnd_event) => {
+                            // debug!(?dnd_event);
+                            None
+                        }
+                        iced::Event::PlatformSpecific(_platform_specific) => {
+                            // debug!(?platform_specific);
+                            None
+                        }
+                        iced::Event::InputMethod(_event) => None,
+                    }
+                }
+                event::Status::Captured => None,
+            }
+        });
+
+        Subscription::batch([time_subscription, event_subscription])
+    }
+
+    fn context_drawer(
+        &self,
+    ) -> Option<cosmic::app::context_drawer::ContextDrawer<Self::Message>> {
+        None
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn dialog(&self) -> Option<Element<'_, Self::Message>> {
+        let cosmic::cosmic_theme::Spacing {
+            space_xxs,
+            space_s,
+            space_l,
+            space_xl,
+            space_xxl,
+            space_xxxl,
+            ..
+        } = cosmic::theme::spacing();
+        if self.searching {
+            let items: Vec<Element<Message>> = self
+                .search_results
+                .iter()
+                .map(|item| {
+                    let title = text::title4(item.title());
+                    let subtitle = text::body(item.to_string());
+                    Element::from(
+                        row![
+                            column![title, subtitle].spacing(space_xxs),
+                            horizontal(),
+                            tooltip(
+                                icon::from_name("list-add-symbolic")
+                                    .apply(button::icon)
+                                    .icon_size(space_l)
+                                    .on_press(Message::AppendServiceItemKind(
+                                        item.clone()
+                                    )),
+                                "Add to service",
+                                tooltip::Position::FollowCursor
+                            ),
+                            tooltip(
+                                icon::from_name("edit-symbolic")
+                                    .apply(button::icon)
+                                    .icon_size(space_l)
+                                    .on_press(Message::OpenEditorKind(item.clone())),
+                                "Edit Item",
+                                tooltip::Position::FollowCursor
+                            ),
+                        ]
+                        .align_y(Vertical::Center)
+                        .apply(container),
+                    )
+                })
+                .collect();
+            let modal = column![
+                search_input("Amazing Grace", &self.search_query)
+                    .id(self.search_id.clone())
+                    .select_on_focus(true)
+                    .on_submit(|_| Message::SearchEnterPress)
+                    .on_input(Message::Search),
+                column(items).spacing(space_xxs)
+            ]
+            .spacing(space_s)
+            .apply(container)
+            .padding(space_xl)
+            .max_width(600)
+            .style(nav_bar_style);
+            let modal = mouse_area(modal)
+                .on_press(Message::None)
+                .apply(container)
+                .padding([space_xxl, space_xxxl * 2])
+                .center_x(Length::Fill)
+                .align_top(Length::Fill);
+            let mouse_stack = stack!(
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(Color::BLACK)
+                                .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::CloseSearch),
+                modal
+            );
+            Some(mouse_stack.into())
+        } else if self.settings_open {
+            let obs_socket = settings::item(
+                "Obs Connection",
+                text_input("127.0.0.1", &self.obs_connection)
+                    .select_on_focus(true)
+                    .on_input(Message::SetObsConnection)
+                    .on_submit(Message::SetObsConnection),
+            );
+            let apply_button = settings::item::builder("").control(
+                button::standard("Connect")
+                    .on_press(Message::SetObsUrl(self.obs_connection.clone())),
+            );
+            let genius_token = settings::item::builder("Auth Token").control(
+                text_input::secure_input(
+                    "",
+                    self.settings.genius_token.clone().unwrap_or_default(),
+                    Some(Message::ShowGeniusToken),
+                    self.genius_token_hidden,
+                )
+                .select_on_focus(true)
+                .on_input(Message::SetGeniusToken),
+            );
+            let close_button = icon::from_name("window-close-symbolic")
+                .apply(button::icon)
+                .class(theme::Button::Icon)
+                .icon_size(space_xl)
+                .on_press(Message::CloseSettings)
+                .apply(container)
+                .padding(space_s)
+                .align_right(Length::Fill)
+                .align_top(space_xl * 2);
+            let settings_column = column![
+                settings::section()
+                    .title("Obs Settings")
+                    .add(obs_socket)
+                    .add(apply_button),
+                settings::section().title("Genius").add(genius_token),
+                space::vertical(),
+            ]
+            .spacing(space_s)
+            .height(Length::Fill)
+            .apply(container)
+            .padding(space_xxl);
+            let settings_container = column![close_button, settings_column]
+                .apply(container)
+                .style(nav_bar_style)
+                .center_x(Length::Fill)
+                .align_top(Length::Fill);
+            let modal = mouse_area(settings_container)
+                .on_press(Message::None)
+                .apply(container)
+                .padding([space_xxl, space_xxxl * 2]);
+            let mouse_stack = stack!(
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(Color::BLACK)
+                                .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::CloseSettings),
+                modal
+            );
+            Some(mouse_stack.into())
+        } else if self.song_editor.state.is_importing() {
+            let song_editor_dialog =
+                self.song_editor.import_view().map(Message::SongEditor);
+            let modal = mouse_area(song_editor_dialog)
+                .on_press(Message::None)
+                .apply(container)
+                .center_x(Length::Fill)
+                .padding([space_xxl, space_xxxl * 2]);
+            let mouse_stack = stack!(
+                Space::new()
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+                    .apply(container)
+                    .style(|_| {
+                        container::background(
+                            cosmic::iced::Background::Color(Color::BLACK)
+                                .scale_alpha(0.3),
+                        )
+                    })
+                    .apply(mouse_area)
+                    .on_press(Message::SongEditor(
+                        song_editor::Message::ToggleSongDialog
+                    )),
+                modal
+            );
+            Some(mouse_stack.into())
+        } else {
+            None
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn update(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::Key(key, modifiers) => self.process_key_press(key, modifiers),
+            Message::SongEditor(message) => {
+                // debug!(?message);
+                match self.song_editor.update(message) {
+                    song_editor::Action::Task(task) => {
+                        task.map(|m| cosmic::Action::App(Message::SongEditor(m)))
+                    }
+                    song_editor::Action::UpdateSong(song) => {
+                        if self.library.is_some() {
+                            self.update(Message::Library(library::Message::UpdateSong(
+                                song,
+                            )))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    song_editor::Action::AddSong(song) => {
+                        if self.library.is_some() {
+                            self.update(Message::Library(
+                                library::Message::AddSongFromEditor(song),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    song_editor::Action::None => Task::none(),
+                }
+            }
+            Message::ImageEditor(message) => match self.image_editor.update(message) {
+                image_editor::Action::Task(task) => {
+                    task.map(|m| cosmic::Action::App(Message::ImageEditor(m)))
+                }
+                image_editor::Action::UpdateImage(image) => {
+                    if self.library.is_some() {
+                        self.update(Message::Library(library::Message::UpdateImage(
+                            image,
+                        )))
+                    } else {
+                        Task::none()
+                    }
+                }
+                image_editor::Action::None => Task::none(),
+            },
+            Message::VideoEditor(message) => match self.video_editor.update(message) {
+                video_editor::Action::Task(task) => {
+                    task.map(|m| cosmic::Action::App(Message::VideoEditor(m)))
+                }
+                video_editor::Action::UpdateVideo(video) => {
+                    if self.library.is_some() {
+                        self.update(Message::Library(library::Message::UpdateVideo(
+                            video,
+                        )))
+                    } else {
+                        Task::none()
+                    }
+                }
+                video_editor::Action::None => Task::none(),
+            },
+            Message::PresentationEditor(message) => {
+                match self.presentation_editor.update(message) {
+                    presentation_editor::Action::Task(task) => {
+                        task.map(|m| cosmic::Action::App(Message::PresentationEditor(m)))
+                    }
+                    presentation_editor::Action::UpdatePresentation(presentation) => {
+                        if self.library.is_some() {
+                            self.update(Message::Library(
+                                library::Message::UpdatePresentation(presentation),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presentation_editor::Action::SplitAddPresentation((
+                        first,
+                        second,
+                    )) => {
+                        if self.library.is_some() {
+                            let second_task = self.update(Message::Library(
+                                library::Message::AddPresentationSplit(Some(second)),
+                            ));
+                            self.update(Message::Library(
+                                library::Message::UpdatePresentation(first),
+                            ))
+                            .chain(second_task)
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presentation_editor::Action::None => Task::none(),
+                }
+            }
+            Message::Present(message) => {
+                // debug!(?message);
+                if self.presentation_open
+                    && let Some(video) = &mut self.presenter.presentation_video
+                {
+                    video.set_muted(false);
+                }
+                if self.presentation_open
+                    && let Some(video) = &mut self.presenter.preview_video
+                {
+                    video.set_muted(true);
+                }
+                match self.presenter.update(message) {
+                    presenter::Action::Task(task) => task.map(|m| {
+                        // debug!("Should run future");
+                        cosmic::Action::App(Message::Present(m))
+                    }),
+                    presenter::Action::None => Task::none(),
+                    presenter::Action::ChangeSlide(item_index, slide_index) => {
+                        self.current_item = (item_index, slide_index);
+                        let action = self.presenter.update(
+                            presenter::Message::ActivateSlide(item_index, slide_index),
+                        );
+
+                        if let presenter::Action::Task(task) = action {
+                            task.map(|m| cosmic::Action::App(Message::Present(m)))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presenter::Action::NextSlide => {
+                        let action = self.presenter.update(presenter::Message::NextSlide);
+                        self.current_item = (
+                            self.presenter.current_item_index,
+                            self.presenter.current_slide_index,
+                        );
+                        if let presenter::Action::Task(task) = action {
+                            task.map(|m| cosmic::Action::App(Message::Present(m)))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                    presenter::Action::PrevSlide => {
+                        let action = self.presenter.update(presenter::Message::PrevSlide);
+                        self.current_item = (
+                            self.presenter.current_item_index,
+                            self.presenter.current_slide_index,
+                        );
+                        if let presenter::Action::Task(task) = action {
+                            task.map(|m| cosmic::Action::App(Message::Present(m)))
+                        } else {
+                            Task::none()
+                        }
+                    }
+                }
+            }
+            Message::Tick(instant) => {
+                let present_task =
+                    self.update(Message::Present(presenter::Message::Tick(instant)));
+                let song_editor_task =
+                    self.update(Message::SongEditor(song_editor::Message::Tick(instant)));
+                Task::batch([present_task, song_editor_task])
+            }
+            Message::Library(message) => {
+                if let Some(library) = &mut self.library {
+                    match library.update(message) {
+                        library::Action::CreateSong => {
+                            return self.update(Message::SongEditor(
+                                song_editor::Message::ToggleSongDialog,
+                            ));
+                        }
+                        library::Action::OpenItem(None) => {
+                            return Task::none();
+                        }
+                        library::Action::ToService(item) => {
+                            return self.update(Message::AppendServiceItem(item));
+                        }
+                        library::Action::Task(task) => {
+                            return task.map(|message| {
+                                cosmic::Action::App(Message::Library(message))
+                            });
+                        }
+                        library::Action::None => return Task::none(),
+                        library::Action::OpenItem(Some((kind, index))) => match kind {
+                            core::model::LibraryKind::Song => {
+                                let Some(lib_song) = library.get_song(index) else {
+                                    return Task::none();
+                                };
+                                self.editor_mode = Some(kind.into());
+                                let song = lib_song.to_owned();
+                                return self.update(Message::SongEditor(
+                                    song_editor::Message::ChangeSong(song),
+                                ));
+                            }
+                            core::model::LibraryKind::Video => {
+                                let Some(lib_video) = library.get_video(index) else {
+                                    return Task::none();
+                                };
+                                self.editor_mode = Some(kind.into());
+                                let video = lib_video.to_owned();
+                                return self.update(Message::VideoEditor(
+                                    video_editor::Message::ChangeVideo(video),
+                                ));
+                            }
+                            core::model::LibraryKind::Image => {
+                                let Some(lib_image) = library.get_image(index) else {
+                                    return Task::none();
+                                };
+                                self.editor_mode = Some(kind.into());
+                                let image = lib_image.to_owned();
+                                return self.update(Message::ImageEditor(
+                                    image_editor::Message::ChangeImage(image),
+                                ));
+                            }
+                            core::model::LibraryKind::Presentation => {
+                                let Some(lib_presentation) =
+                                    library.get_presentation(index)
+                                else {
+                                    return Task::none();
+                                };
+                                self.editor_mode = Some(kind.into());
+                                let presentation = lib_presentation.to_owned();
+                                return self.update(Message::PresentationEditor(
+                                    presentation_editor::Message::ChangePresentation(
+                                        presentation,
+                                    ),
+                                ));
+                            }
+                        },
+                        library::Action::DraggedItem(service_item) => {
+                            debug!("hi");
+                            self.library_dragged_item = Some(service_item);
+                        }
+                    }
+                }
+                Task::none()
+            }
+            Message::File(file) => {
+                self.file = Some(file);
+                Task::none()
+            }
+            Message::OpenWindow => {
+                let count = self.windows.len() + 1;
+
+                let (id, spawn_window) = window::open(window::Settings {
+                    position: Position::Centered,
+                    exit_on_close_request: count.is_multiple_of(2),
+                    decorations: false,
+                    ..Default::default()
+                });
+
+                self.windows.push(id);
+                _ = self.set_window_title(format!("window_{count}"), id);
+
+                spawn_window.map(|id| cosmic::Action::App(Message::WindowOpened(id)))
+            }
+            Message::CloseWindow(id) => id.map_or_else(Task::none, window::close),
+            Message::WindowOpened(id) => {
+                debug!(?id, "Window opened");
+                // let radii =
+                //     self.core.sync_window_border_radii_to_theme();
+                // self.core.set_sync_window_border_radii_to_theme(true);
+                // debug!(radii);
+                // let radii = self.core.window.sharp_corners;
+                // debug!(radii);
+                // self.core.window.sharp_corners = true;
+                if self.cli_mode
+                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
+                                                        {
+                                                            self.presentation_open = true;
+                                                            if let Some(video) = &mut self.presenter.preview_video {
+                                                                video.set_muted(true);
+                                                            }
+                                                            if let Some(video) = &mut self.presenter.presentation_video {
+                                                                video.set_muted(false);
+                                                            }
+                                                            window::disable_blur(id).chain(window::set_mode(id, window::Mode::Fullscreen))
+                                                        } else {
+                                                            Task::none()
+                                                        }
+            }
+            Message::WindowClosed(id) => {
+                warn!("Closing window: {id}");
+                let Some(window) = self.windows.iter().position(|w| *w == id) else {
+                    error!("Nothing matches this window id: {id}");
+                    return Task::none();
+                };
+                self.windows.remove(window);
+                // This closes the app if using the cli example
+                if self.windows.is_empty() {
+                    self.update(Message::Quit)
+                } else {
+                    self.presentation_open = false;
+                    if let Some(video) = &mut self.presenter.preview_video {
+                        video.set_muted(true);
+                    }
+                    if let Some(video) = &mut self.presenter.presentation_video {
+                        video.set_muted(true);
+                    }
+                    Task::none()
+                }
+            }
+            Message::LibraryToggle => {
+                self.library_open = !self.library_open;
+                Task::none()
+            }
+            Message::Quit => cosmic::iced::exit(),
+            Message::AddLibrary(library) => {
+                self.library = Some(library);
+                Task::none()
+            }
+            Message::None => Task::none(),
+            Message::EditorToggle(edit) => {
+                if edit {
+                    self.editor_mode = Some(EditorMode::Song);
+                } else {
+                    self.editor_mode = None;
+                }
+                Task::none()
+            }
+            Message::SearchFocus => {
+                self.settings_open = false;
+                self.searching = true;
+                cosmic::widget::text_input::focus(self.search_id.clone())
+            }
+            Message::HoveredServiceItem(index) => {
+                debug!(index);
+                self.hovered_item = index;
+                Task::none()
+            }
+            Message::HoveredServiceDrop(index) => {
+                debug!(index);
+                self.hovered_dnd = index;
+                Task::none()
+            }
+            Message::SelectServiceItem(index) => {
+                self.selected_items = vec![index];
+                Task::none()
+            }
+            Message::AddSelectServiceItem(index) => {
+                self.selected_items.push(index);
+                Task::none()
+            }
+            Message::ChangeServiceItem(index) => {
+                if let Some((index, item)) =
+                    self.service.iter().enumerate().find(|(id, _)| index == *id)
+                    && let Some(_slide) = item.slides.first()
+                {
+                    self.current_item = (index, 0);
+                    self.update(Message::Present(presenter::Message::ActivateSlide(
+                        self.current_item.0,
+                        self.current_item.1,
+                    )))
+                } else {
+                    Task::none()
+                }
+            }
+            Message::AddSlideTextToItem(item_index, slide_index, slide_with_text) => {
+                let service = Arc::make_mut(&mut self.service);
+                if let Some(item) = service.get_mut(item_index) {
+                    if let Some(_old) = item.slides.get(slide_index) {
+                        let _ = item.slides.remove(slide_index);
+                        item.slides.insert(slide_index, slide_with_text);
+                    } else {
+                        item.slides.push(slide_with_text)
+                    }
+                }
+                Task::none()
+            }
+            Message::AddServiceItem(index, item) => {
+                let mut tasks = Vec::new();
+                if matches!(item.kind, ServiceItemKind::Song(_)) {
+                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                    let item_index = index;
+                    let slides = item.slides.clone();
+                    let font_db = Arc::clone(&self.fontdb);
+
+                    std::thread::spawn(move || {
+                        for (slide_index, slide) in slides.into_iter().enumerate() {
+                            let slide =
+                                text_svg::text_svg_generator(slide.clone(), &font_db)
+                                    .unwrap_or(slide);
+                            let _ = tx.send(cosmic::Action::App(
+                                Message::AddSlideTextToItem(
+                                    item_index,
+                                    slide_index,
+                                    slide,
+                                ),
+                            ));
+                        }
+                    });
+
+                    tasks.push(Task::stream(
+                        tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
+                    ));
+                }
+
+                Arc::make_mut(&mut self.service).insert(index, item.clone());
+                self.presenter.update_items(self.service.clone());
+                self.hovered_dnd = None;
+
+                let Some(first_slide) = item.slides.first() else {
+                    return Task::none();
+                };
+                let path = first_slide.background.path.clone();
+
+                if matches!(first_slide.background.kind, BackgroundKind::Image) {
+                    tasks.push(cosmic::iced::runtime::image::allocate(path).map(
+                        move |allocation| match allocation {
+                            Ok(allocation) => {
+                                debug!(?allocation);
+                                cosmic::Action::App(Message::InsertBackgroundImage((
+                                    allocation, index,
+                                )))
+                            }
+                            Err(e) => {
+                                error!("{e}");
+                                cosmic::Action::App(Message::None)
+                            }
+                        },
+                    ));
+                } else if matches!(first_slide.background.kind, BackgroundKind::Video) {
+                    tasks.push(
+                        cosmic::Task::future(async move {
+                            let url =
+                                url::Url::from_file_path(&path).expect("Should be here");
+
+                            let file_name =
+                                path.file_name().expect("hope").to_string_lossy();
+                            let mut output =
+                                dirs::cache_dir().expect("Should have on every platform");
+                            output.push("lumina");
+                            output.push("video_thumbnails");
+                            if !output.exists()
+                                && let Err(e) = std::fs::create_dir_all(&output)
+                            {
+                                error!("{e}");
+                            }
+                            output.push(file_name.to_string());
+                            debug!(?output);
+
+                            match gst_video::thumbnail(&url, &mut output) {
+                                Ok(handle) => handle,
+                                Err(e) => {
+                                    error!("{e}");
+                                    Handle::from_path(path)
+                                }
+                            }
+                        })
+                        .then(cosmic::iced::runtime::image::allocate)
+                        .map(move |allocation| match allocation {
+                            Ok(allocation) => cosmic::Action::App(
+                                Message::InsertThumbnail((allocation, index)),
+                            ),
+                            Err(e) => {
+                                error!("{e}");
+                                cosmic::Action::App(Message::None)
+                            }
+                        }),
+                    );
+                }
+                Task::batch(tasks)
+            }
+            Message::AddServiceItemKind(index, item) => {
+                let item_index = item.0.1;
+                let kind = item.0.0;
+                let item;
+                match kind {
+                    core::model::LibraryKind::Song => {
+                        let Some(library) = self.library.as_mut() else {
+                            return Task::none();
+                        };
+                        let Some(song) = library.get_song(item_index) else {
+                            return Task::none();
+                        };
+                        item = song.to_service_item();
+                    }
+                    core::model::LibraryKind::Video => {
+                        let Some(library) = self.library.as_mut() else {
+                            return Task::none();
+                        };
+                        let Some(video) = library.get_video(item_index) else {
+                            return Task::none();
+                        };
+                        item = video.to_service_item();
+                    }
+                    core::model::LibraryKind::Image => {
+                        let Some(library) = self.library.as_mut() else {
+                            return Task::none();
+                        };
+                        let Some(image) = library.get_image(item_index) else {
+                            return Task::none();
+                        };
+                        item = image.to_service_item();
+                    }
+                    core::model::LibraryKind::Presentation => {
+                        let Some(library) = self.library.as_mut() else {
+                            return Task::none();
+                        };
+                        let Some(presentation) = library.get_presentation(item_index)
+                        else {
+                            return Task::none();
+                        };
+                        item = presentation.to_service_item();
+                    }
+                }
+                self.update(Message::AddServiceItem(index, item))
+            }
+            Message::AddServiceItemsFiles(index, items) => {
+                self.hovered_dnd = None;
+                let mut tasks = Vec::new();
+                for (i, item) in items.into_iter().enumerate() {
+                    tasks.push(self.update(Message::AddServiceItem(index + i, item)));
+                }
+                Task::batch(tasks)
+            }
+            Message::RemoveServiceItem(index) => {
+                Arc::make_mut(&mut self.service).remove(index);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
+            Message::ContextMenuItem(index) => {
+                self.context_menu = index;
+                self.context_point = self.hovered_point;
+                Task::none()
+            }
+            Message::ContextPoint(point) => {
+                self.hovered_point = point;
+                Task::none()
+            }
+            Message::AddServiceItemDrop(index) => {
+                if let Some(item) = &self.library_dragged_item {
+                    return self.update(Message::AddServiceItem(index, item.clone()));
+                }
+                Task::none()
+            }
+            Message::AppendServiceItem(mut item) => {
+                if matches!(item.kind, ServiceItemKind::Song(_)) {
+                    item.slides = item
+                        .slides
+                        .into_par_iter()
+                        .map(|slide| {
+                            let fontdb = Arc::clone(&self.fontdb);
+                            text_svg::text_svg_generator(slide.clone(), &fontdb)
+                                .unwrap_or(slide)
+                        })
+                        .collect();
+                }
+                let mut tasks = Vec::new();
+
+                if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_) | ServiceItemKind::Image(_)
+                ) && let Some(path) = item
+                    .slides
+                    .first()
+                    .filter(|slide| slide.background.kind == BackgroundKind::Image)
+                    .map(|slide| slide.background.path.clone())
+                {
+                    let item_index = self.service.len();
+                    tasks.push(cosmic::iced::runtime::image::allocate(path).map(
+                        move |allocation| match allocation {
+                            Ok(allocation) => cosmic::Action::App(
+                                Message::InsertBackgroundImage((allocation, item_index)),
+                            ),
+                            Err(e) => {
+                                error!("{e}");
+                                cosmic::Action::App(Message::None)
+                            }
+                        },
+                    ));
+                }
+                if matches!(
+                    item.kind,
+                    ServiceItemKind::Song(_) | ServiceItemKind::Video(_)
+                ) && let Some(path) = item
+                    .slides
+                    .first()
+                    .filter(|slide| slide.background.kind == BackgroundKind::Video)
+                    .map(|slide| slide.background.path.clone())
+                {
+                    let item_index = self.service.len();
+                    let task = cosmic::Task::future(async move {
+                        let url =
+                            url::Url::from_file_path(&path).expect("Should be here");
+
+                        let file_name = path.file_name().expect("hope").to_string_lossy();
+                        let mut output =
+                            dirs::cache_dir().expect("Should have on every platform");
+                        output.push("lumina");
+                        output.push("video_thumbnails");
+                        if !output.exists()
+                            && let Err(e) = std::fs::create_dir_all(&output)
+                        {
+                            error!("{e}");
+                        }
+                        output.push(file_name.to_string());
+                        debug!(?output);
+
+                        match gst_video::thumbnail(&url, &mut output) {
+                            Ok(handle) => handle,
+                            Err(e) => {
+                                error!("{e}");
+                                Handle::from_path(path)
+                            }
+                        }
+                    })
+                    .then(cosmic::iced::runtime::image::allocate)
+                    .map(move |allocation| match allocation {
+                        Ok(allocation) => cosmic::Action::App(Message::InsertThumbnail(
+                            (allocation, item_index),
+                        )),
+                        Err(e) => {
+                            error!("{e}");
+                            cosmic::Action::App(Message::None)
+                        }
+                    });
+                    tasks.push(task);
+                }
+                Arc::make_mut(&mut self.service).push(item);
+                self.presenter.update_items(Arc::clone(&self.service));
+                Task::batch(tasks)
+            }
+            Message::InsertThumbnail((allocation, item_index)) => {
+                if let Some(item) = Arc::make_mut(&mut self.service).get_mut(item_index) {
+                    debug!(?allocation, item_index, "Inserting handle into item: ");
+                    for slide in &mut item.slides {
+                        slide.thumbnail = Some(allocation.clone());
+                    }
+                }
+                self.presenter.update_items(Arc::clone(&self.service));
+                Task::none()
+            }
+            Message::InsertBackgroundImage((allocation, item_index)) => {
+                if let Some(item) = Arc::make_mut(&mut self.service).get_mut(item_index) {
+                    debug!(?allocation, item_index, "Inserting handle into item: ");
+                    for slide in &mut item.slides {
+                        slide.background.image_allocation = Some(allocation.clone());
+                    }
+                }
+                self.presenter.update_items(Arc::clone(&self.service));
+                Task::none()
+            }
+            Message::AppendServiceItemKind(item) => {
+                let item = item.to_service_item();
+                self.update(Message::AppendServiceItem(item))
+            }
+            Message::ReorderService(index, target_index) => {
+                let item = Arc::make_mut(&mut self.service).remove(index);
+                Arc::make_mut(&mut self.service).insert(target_index, item);
+                self.presenter.update_items(self.service.clone());
+                Task::none()
+            }
+            Message::Search(query) => {
+                self.search_query.clone_from(&query);
+                self.search(query)
+            }
+            Message::SearchEnterPress => {
+                match (self.search_results.first(), self.modifiers_pressed) {
+                    (Some(item), Some(modifiers)) if modifiers == Modifiers::CTRL => self
+                        .update(Message::AppendServiceItemKind(item.clone()))
+                        .chain(self.update(Message::CloseSearch))
+                        .chain(self.update(Message::EditorToggle(false))),
+                    (Some(item), None) | (Some(item), Some(_)) => self
+                        .update(Message::OpenEditorKind(item.clone()))
+                        .chain(self.update(Message::CloseSearch)),
+                    _ => Task::none(),
+                }
+            }
+            Message::UpdateSearchResults(items) => {
+                self.search_results = items;
+                Task::none()
+            }
+            Message::CloseSearch => {
+                self.search_query = String::new();
+                self.search_results = vec![];
+                self.searching = false;
+                Task::none()
+            }
+            Message::OpenEditor(item) => {
+                let kind = item.kind;
+                self.search_query = String::new();
+                self.search_results = vec![];
+                self.searching = false;
+                match kind {
+                    ServiceItemKind::Song(song) => {
+                        self.editor_mode = Some(EditorMode::Song);
+                        self.update(Message::SongEditor(
+                            song_editor::Message::ChangeSong(song),
+                        ))
+                    }
+                    ServiceItemKind::Video(video) => {
+                        self.editor_mode = Some(EditorMode::Video);
+                        self.update(Message::VideoEditor(
+                            video_editor::Message::ChangeVideo(video),
+                        ))
+                    }
+                    ServiceItemKind::Image(image) => {
+                        self.editor_mode = Some(EditorMode::Image);
+                        self.update(Message::ImageEditor(
+                            image_editor::Message::ChangeImage(image),
+                        ))
+                    }
+                    ServiceItemKind::Presentation(presentation) => {
+                        self.editor_mode = Some(EditorMode::Presentation);
+                        self.update(Message::PresentationEditor(
+                            presentation_editor::Message::ChangePresentation(
+                                presentation,
+                            ),
+                        ))
+                    }
+                    ServiceItemKind::Content(_slide) => todo!(),
+                }
+            }
+            Message::OpenEditorKind(item) => {
+                let item = item.to_service_item();
+                self.update(Message::OpenEditor(item))
+            }
+            Message::New => {
+                debug!("new file");
+                Task::none()
+            }
+            Message::Open => {
+                debug!("Open file");
+                Task::perform(open_dialog(), |res| match res {
+                    Ok(file) => cosmic::Action::App(Message::OpenFile(file)),
+                    Err(e) => {
+                        error!(?e, "There was an error during opening");
+                        cosmic::Action::None
+                    }
+                })
+            }
+            Message::OpenFile(file) => {
+                debug!(?file, "opening file");
+                self.update_recent_files(file.clone());
+                self.file = Some(file.clone());
+                Task::perform(async move { file::load(file) }, |res| match res {
+                    Ok(items) => cosmic::Action::App(Message::OpenLoadItems(items)),
+                    Err(e) => {
+                        error!(?e);
+                        cosmic::Action::None
+                    }
+                })
+            }
+            Message::OpenLoadItems(items) => {
+                self.loading_state = LoadingState::Loading {
+                    total_items: items.len(),
+                    current_item: 0,
+                };
+
+                self.service = Arc::new(Vec::new());
+                self.presenter.update_items(self.service.clone());
+                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+                std::thread::spawn(move || {
+                    for (index, item) in items.into_iter().enumerate() {
+                        debug!(index, ?item, "adding items");
+                        let _ = tx.send(cosmic::Action::App(Message::AddServiceItem(
+                            index, item,
+                        )));
+                    }
+                });
+
+                Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
+                    .then(|action| {
+                        if let cosmic::Action::App(Message::AddServiceItem(index, item)) =
+                            action
+                        {
+                            Task::done(cosmic::Action::App(Message::AddServiceItem(
+                                index, item,
+                            )))
+                            .chain(Task::done(
+                                cosmic::Action::App(Message::LoadedOpenItem(index)),
+                            ))
+                        } else {
+                            Task::none()
+                        }
+                    })
+            }
+            Message::LoadedOpenItem(item) => {
+                let mut task = Task::none();
+                match self.loading_state {
+                    LoadingState::Loading {
+                        total_items,
+                        current_item,
+                    } => {
+                        if item + 1 == total_items {
+                            self.loading_state = LoadingState::Loaded;
+                            task = self.update(Message::LoadedOpenItem(item));
+                        } else if item + 1 < total_items {
+                            self.loading_state = LoadingState::Loading {
+                                total_items,
+                                current_item: item,
+                            };
+                        }
+                    }
+                    LoadingState::Loaded => {
+                        task = Task::future(async {
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                            cosmic::Action::App(Message::HideLoadingBar)
+                        })
+                        .chain(Task::done(cosmic::Action::App(Message::Present(
+                            presenter::Message::LoadedService,
+                        ))))
+                    }
+                    LoadingState::None => {
+                        task = Task::done(cosmic::Action::App(Message::HideLoadingBar))
+                    }
+                }
+                task
+            }
+            Message::HideLoadingBar => {
+                self.loading_state = LoadingState::None;
+                Task::none()
+            }
+            Message::Save => {
+                let service = self.service.clone();
+
+                let Some(file) = self.file.clone() else {
+                    return self.update(Message::SaveAsDialog);
+                };
+
+                self.footer_message = Some(String::from("Saving..."));
+                self.update_recent_files(file.clone());
+                let file_name = file
+                    .file_name()
+                    .expect("Since we are saving we should have given a name by now")
+                    .to_owned();
+                let fontdb = Arc::clone(&self.fontdb);
+                Task::perform(
+                    async move { file::save(&service, file, true, &fontdb) },
+                    move |res| match res {
+                        Ok(()) => {
+                            tracing::info!("saving file to: {:?}", file_name);
+                            cosmic::Action::App(Message::SavingReport)
+                        }
+                        Err(e) => {
+                            error!(?e, "There was a problem saving");
+                            cosmic::Action::None
+                        }
+                    },
+                )
+            }
+            Message::SaveAs(file) => {
+                debug!(?file, "saving as a file");
+                self.update_recent_files(file.clone());
+                self.file = Some(file);
+                self.update(Message::Save)
+            }
+            Message::SavingReport => {
+                self.footer_message = Some("Saved!".into());
+                Task::perform(
+                    async { tokio::time::sleep(Duration::from_secs(2)).await },
+                    |_| cosmic::Action::App(Message::ClearFooterMsg),
+                )
+            }
+            Message::ClearFooterMsg => {
+                self.footer_message = None;
+                Task::none()
+            }
+            Message::SaveAsDialog => Task::perform(save_as_dialog(), |file| match file {
+                Ok(file) => cosmic::Action::App(Message::SaveAs(file)),
+                Err(e) => {
+                    error!(?e, "There was an error during saving");
+                    cosmic::Action::None
+                }
+            }),
+            Message::OpenSettings => {
+                self.searching = false;
+                self.settings_open = true;
+                Task::none()
+            }
+            Message::CloseSettings => {
+                self.settings_open = false;
+                Task::none()
+            }
+            Message::SetObsUrl(url) => {
+                if let Some(config) = &self.config_handler
+                    && let Err(e) = self
+                        .settings
+                        .set_obs_url(config, url::Url::parse(&url).ok())
+                {
+                    error!(?e, "Can't write to disk obs url");
+                }
+                Task::none()
+            }
+            Message::SetObsConnection(url) => {
+                if let Some(_config_handler) = self.config_handler.as_ref() {}
+                self.obs_connection = url;
+                Task::none()
+            }
+            Message::SetGeniusToken(token) => {
+                if let Some(config_handler) = self.config_handler.as_ref() {
+                    let _ = self
+                        .settings
+                        .set_genius_token(config_handler, Some(token.clone()));
+                    self.song_editor.genius_token = Some(token);
+                }
+                Task::none()
+            }
+            Message::ShowGeniusToken => {
+                self.genius_token_hidden = !self.genius_token_hidden;
+                Task::none()
+            }
+            Message::ModifiersPressed(modifiers) => {
+                if modifiers.is_empty() {
+                    self.modifiers_pressed = None;
+                    if let Some(library) = self.library.as_mut() {
+                        library.set_modifiers(None);
+                    }
+                    return Task::none();
+                }
+                if let Some(library) = self.library.as_mut() {
+                    library.set_modifiers(Some(modifiers));
+                }
+                self.modifiers_pressed = Some(modifiers);
+                debug!(?self.modifiers_pressed);
+                Task::none()
+            }
+            Message::ViewModeSwitch(mode) => {
+                let grid_to_row = matches!(mode, ViewMode::Row);
+
+                self.view_mode = mode;
+                self.presenter.view_mode = mode;
+                if grid_to_row && self.presenter.preview_size() > 150.0 {
+                    self.update(Message::Present(presenter::Message::ChangePreviewSize(
+                        150.0,
+                    )))
+                } else {
+                    Task::none()
+                }
+            }
+        }
+    }
+
+    // Main window view
+    #[allow(clippy::too_many_lines)]
+    fn view(&self) -> Element<Message> {
+        const LEFT_ICON: &[u8] = include_bytes!(".././res/icons/caret-left.svg");
+        const RIGHT_ICON: &[u8] = include_bytes!(".././res/icons/caret-right.svg");
+        const GRID_ICON: &[u8] = include_bytes!(".././res/icons/layout-grid.svg");
+        const CAROUSEL_ICON: &[u8] = include_bytes!(".././res/icons/carousel.svg");
+
+        let cosmic::cosmic_theme::Spacing {
+            space_none,
+            space_s,
+            space_l,
+            space_xl,
+            ..
+        } = cosmic::theme::spacing();
+        let icon_size = if self.view_mode == ViewMode::Row {
+            128
+        } else {
+            64
+        };
+
+        let icon_left = icon::from_svg_bytes(LEFT_ICON)
+            .symbolic(true)
+            .icon()
+            .size(icon_size)
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }));
+
+        let icon_right = icon::from_svg_bytes(RIGHT_ICON)
+            .symbolic(true)
+            .icon()
+            .size(icon_size)
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }));
+
+        let video_range = self
+            .presenter
+            .preview_video
+            .as_ref()
+            .map_or_else(|| 0.0, |video| video.duration().as_secs_f64());
+
+        let video_button_icon = self.presenter.preview_video.as_ref().map_or_else(
+            || {
+                button::icon(icon::from_name("media-playback-start-symbolic"))
+                    .tooltip("Play")
+                    .on_press(Message::Present(presenter::Message::PlayPauseVideo))
+            },
+            |video| {
+                let (icon_name, tooltip) = if video.paused() {
+                    ("media-playback-start-symbolic", "Play")
+                } else {
+                    ("media-playback-pause-symbolic", "Pause")
+                };
+                button::icon(icon::from_name(icon_name))
+                    .tooltip(tooltip)
+                    .on_press(Message::Present(presenter::Message::PlayPauseVideo))
+            },
+        );
+        let video_position = if let Some(video) = &self.presenter.preview_video {
+            video.position().as_secs_f64()
+        } else {
+            0.0
+        };
+
+        let mut slide_preview = column![
+            responsive(|size| {
+                self.presenter
+                    .view_preview()
+                    .map(Message::Present)
+                    .apply(container)
+                    .width(Length::Fill)
+                    .height(size.width * 9.0 / 16.0)
+                    .into()
+            })
+            .width(Length::Fill)
+            .height(Length::Shrink)
+        ]
+        .spacing(3);
+
+        if self.presenter.preview_video.is_some() {
+            slide_preview = slide_preview.push(
+                row![
+                    video_button_icon,
+                    Container::new(
+                        slider(0.0..=video_range, video_position, |pos| {
+                            Message::Present(presenter::Message::VideoPos(pos))
+                        })
+                        .step(0.1)
+                    )
+                    .center_x(Length::Fill)
+                    .padding([7, 0, 0, 0])
+                ]
+                .padding(5)
+                .apply(container)
+                .center_x(Length::Fill),
+            );
+        }
+
+        let slide_preview = slide_preview.apply(container).center_y(Length::Fill);
+
+        let service_list = Container::new(self.service_list())
+            .padding([
+                space_s,
+                space_s,
+                space_s,
+                if self.library_open {
+                    space_none
+                } else {
+                    space_s
+                },
+            ])
+            .width(Length::FillPortion(2));
+
+        let library = if self.library_open {
+            Container::new(
+                Container::new(self.library.as_ref().map_or_else(
+                    || Element::from(Space::new()),
+                    |library| library.view().map(Message::Library),
+                ))
+                .style(nav_bar_style),
+            )
+            .padding(space_s)
+            .width(Length::FillPortion(2))
+        } else {
+            Container::new(horizontal().width(0))
+        };
+
+        let editor = self.editor_mode.as_ref().map_or_else(
+            || Element::from(Space::new()),
+            |mode| match mode {
+                EditorMode::Song => self.song_editor.view().map(Message::SongEditor),
+                EditorMode::Image => self.image_editor.view().map(Message::ImageEditor),
+                EditorMode::Video => self.video_editor.view().map(Message::VideoEditor),
+                EditorMode::Presentation => self
+                    .presentation_editor
+                    .view()
+                    .map(Message::PresentationEditor),
+                EditorMode::Slide => todo!(),
+            },
+        );
+
+        let preview_slides =
+            if self.editor_mode.is_none() && self.view_mode == ViewMode::Row {
+                if self.service.is_empty() {
+                    Container::new(horizontal())
+                } else {
+                    Container::new(self.presenter.preview_bar().map(Message::Present))
+                        .clip(true)
+                        .width(Length::Fill)
+                        .center_y(200)
+                }
+            } else {
+                Container::new(horizontal())
+            };
+
+        let icon_size = if self.view_mode == ViewMode::Row {
+            128
+        } else {
+            64
+        };
+
+        let presenter_controls = row![
+            tooltip(
+                button::custom(icon_left)
+                    .width(icon_size)
+                    .height(icon_size)
+                    .on_press(Message::Present(presenter::Message::PrevSlide))
+                    .class(theme::style::Button::Transparent),
+                text::body("Previous Slide"),
+                tooltip::Position::FollowCursor
+            )
+            .apply(container)
+            .center_y(Length::Fill)
+            .align_right(Length::FillPortion(1)),
+            slide_preview.width(Length::FillPortion(3)),
+            tooltip(
+                button::custom(icon_right)
+                    .width(icon_size)
+                    .height(icon_size)
+                    .on_press(Message::Present(presenter::Message::NextSlide))
+                    .class(theme::style::Button::Transparent),
+                text::body("Next Slide"),
+                tooltip::Position::FollowCursor
+            )
+            .apply(container)
+            .center_y(Length::Fill)
+            .align_left(Length::FillPortion(1))
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(space_s);
+
+        let presenter_row = match self.view_mode {
+            ViewMode::Grid => row![
+                self.presenter
+                    .preview_grid()
+                    .map(Message::Present)
+                    .apply(container)
+                    .width(Length::FillPortion(2)),
+                column![presenter_controls, space::vertical()]
+                    .width(Length::FillPortion(1))
+                    .height(Length::Fill)
+            ]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .apply(container),
+            ViewMode::Row => presenter_controls.apply(container),
+            ViewMode::Detail => todo!(),
+        };
+
+        let presenter_tool_bar = if self.editor_mode.is_none() {
+            let grid_button = button::standard("Grid")
+                .on_press(Message::ViewModeSwitch(ViewMode::Grid))
+                .leading_icon(icon::from_svg_bytes(GRID_ICON).symbolic(true))
+                .class(if self.view_mode == ViewMode::Grid {
+                    theme::Button::Standard
+                } else {
+                    theme::Button::HeaderBar
+                });
+            let list_button = button::standard("Preview")
+                .leading_icon(icon::from_svg_bytes(CAROUSEL_ICON).symbolic(true))
+                .on_press(Message::ViewModeSwitch(ViewMode::Row))
+                .class(if self.view_mode == ViewMode::Row {
+                    theme::Button::Standard
+                } else {
+                    theme::Button::HeaderBar
+                });
+            let (preview_size_range, preview_breakpoints) = match self.view_mode {
+                ViewMode::Grid => (100.0..=300.0, &[100.0, 150.0, 200.0, 250.0, 300.0]),
+                ViewMode::Row => (100.0..=150.0, &[100.0, 110.0, 120.0, 130.0, 140.0]),
+                ViewMode::Detail => todo!(),
+            };
+            let preview_size_slider = row![
+                text::body("Preview Size"),
+                slider(preview_size_range, self.presenter.preview_size(), |size| {
+                    Message::Present(presenter::Message::ChangePreviewSize(size))
+                },)
+                .height(space_l)
+                // .name("Preview Size")
+                .step(10.0)
+                .breakpoints(preview_breakpoints)
+            ]
+            .align_y(Vertical::Center)
+            .spacing(space_s)
+            .apply(container)
+            .padding([space_none, space_none, space_none, space_s]);
+            row![
+                grid_button,
+                list_button,
+                space::horizontal(),
+                preview_size_slider
+            ]
+            .align_y(Vertical::Center)
+            .spacing(space_s)
+            .apply(container)
+            .class(theme::Container::Primary)
+            .padding(space_s)
+        } else {
+            horizontal().apply(container)
+        };
+
+        let presenter_view = column![presenter_tool_bar, presenter_row]
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding([space_s, space_s, space_s, space_none])
+            .spacing(space_s);
+
+        let service_row = row![
+            service_list.width(Length::FillPortion(1)),
+            presenter_view.width(Length::FillPortion(3))
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .spacing(space_none);
+
+        let main_area = self.editor_mode.as_ref().map_or_else(
+            || container(service_row),
+            |_| container(editor).padding(space_s),
+        );
+
+        let column = column![
+            row![
+                if self.library_open {
+                    library.width(Length::FillPortion(1))
+                } else {
+                    container(Space::new())
+                },
+                main_area.width(Length::FillPortion(4))
+            ]
+            .spacing(space_none),
+            preview_slides
+        ];
+
+        column.into()
+    }
+
+    // View for presentation
+    fn view_window(&self, _id: window::Id) -> Element<Message> {
+        self.presenter.view().map(Message::Present)
+    }
+}
+
+impl App
+where
+    Self: cosmic::Application,
+{
+    fn update_recent_files(&mut self, file: PathBuf) {
+        if let Some(index) = self
+            .state
+            .recent_files
+            .iter()
+            .position(|inner_file| inner_file == &file)
+            && let Some(same_file) = self.state.recent_files.remove(index)
+        {
+            self.state.recent_files.push_front(same_file)
+        } else {
+            self.state.recent_files.push_front(file);
+        }
+        if let Some(handler) = &self.state_handler {
+            match handler.set("recent_files", self.state.recent_files.clone()) {
+                Ok(b) => (),
+                Err(e) => error!("{e}"),
+            }
+        }
+    }
+    fn active_page_title(&self) -> &str {
+        let Some(label) = self.nav_model.text(self.nav_model.active()) else {
+            return "Lumina";
+        };
+        label
+    }
+
+    fn update_title(&mut self) -> Task<Message> {
+        let header_title = self.active_page_title().to_owned();
+        let window_title = format!("{header_title} — Lumina");
+        self.core
+            .main_window_id()
+            .map_or_else(Task::none, |id| self.set_window_title(window_title, id))
+    }
+
+    fn show_window(&mut self) -> Task<Message> {
+        let (id, spawn_window) = window::open(window::Settings {
+            position: Position::Centered,
+            exit_on_close_request: true,
+            decorations: false,
+            ..Default::default()
+        });
+        self.windows.push(id);
+        _ = self.set_window_title("Lumina Presenter".to_owned(), id);
+        spawn_window.map(|id| cosmic::Action::App(Message::WindowOpened(id)))
+    }
+
+    fn search(&self, query: String) -> Task<Message> {
+        self.library.clone().map_or_else(Task::none, |library| {
+            Task::perform(async move { library.search_items(query).await }, |items| {
+                cosmic::Action::App(Message::UpdateSearchResults(items))
+            })
+        })
+
+        // if let Some(library) = self.library.clone() {
+        //     Task::perform(
+        //         async move { library.search_items(query).await },
+        //         |items| {
+        //             cosmic::Action::App(Message::UpdateSearchResults(
+        //                 items,
+        //             ))
+        //         },
+        //     )
+        // } else {
+        //     Task::none()
+        // }
+    }
+
+    fn process_key_press(&mut self, key: Key, modifiers: Modifiers) -> Task<Message> {
+        // debug!(?key, ?modifiers);
+        // if self.editor_mode.is_some() {
+        //     return Task::none();
+        // }
+        if self.song_editor.editing() {
+            return Task::none();
+        }
+        if self.searching {
+            match (key, modifiers) {
+                (Key::Named(iced::keyboard::key::Named::Escape), _) => {
+                    return self.update(Message::CloseSearch);
+                }
+                _ => return Task::none(),
+            }
+        }
+        match (key, modifiers) {
+            (Key::Character(k), Modifiers::CTRL) if k == *"s" => {
+                self.update(Message::Save)
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"o" => {
+                self.update(Message::Open)
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"," => {
+                self.update(Message::OpenSettings)
+            }
+            (Key::Character(k), Modifiers::CTRL) if k == *"k" || k == *"f" => {
+                self.update(Message::SearchFocus)
+            }
+            (Key::Character(k), _) if k == *"/" => self.update(Message::SearchFocus),
+            (Key::Named(iced::keyboard::key::Named::ArrowRight), _) => {
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
+            }
+            (Key::Named(iced::keyboard::key::Named::ArrowLeft), _) => {
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::PrevSlide))
+                } else {
+                    Task::none()
+                }
+            }
+            (Key::Character(k), _) if k == *" " => {
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
+            }
+            (Key::Character(k), _) if k == *"j" || k == *"l" => {
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::NextSlide))
+                } else {
+                    Task::none()
+                }
+            }
+            (Key::Character(k), _) if k == *"k" || k == *"h" => {
+                if self.editor_mode.is_none() {
+                    self.update(Message::Present(presenter::Message::PrevSlide))
+                } else {
+                    Task::none()
+                }
+            }
+            // (Key::Character(k), _) if k == *"q" => self.update(Message::Quit),
+            _ => Task::none(),
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn service_list(&self) -> Element<Message> {
+        let cosmic::cosmic_theme::Spacing { space_s, .. } = theme::spacing();
+        let list = self.service.iter().enumerate().map(|(index, item)| {
+            let icon = match item.kind {
+                ServiceItemKind::Song(_) => icon::from_name("folder-music-symbolic"),
+                ServiceItemKind::Video(_) => icon::from_name("folder-videos-symbolic"),
+                ServiceItemKind::Image(_) => icon::from_name("folder-pictures-symbolic"),
+                ServiceItemKind::Presentation(_) | ServiceItemKind::Content(_) => {
+                    icon::from_name("x-office-presentation-symbolic")
+                }
+            };
+            let title = responsive(|size| {
+                text::heading(library::elide_text(&item.title, size.width))
+                    .align_y(Vertical::Center)
+                    .wrapping(Wrapping::None)
+                    .into()
+            });
+            let container = container(
+                row![icon, title]
+                    .align_y(Vertical::Center)
+                    .spacing(cosmic::theme::spacing().space_xs),
+            )
+            .height(cosmic::theme::spacing().space_xl)
+            .padding(cosmic::theme::spacing().space_s)
+            .class(cosmic::theme::style::Container::Secondary)
+            .style(move |t| {
+                container::Style::default()
+                    .background(IcedBackground::Color(
+                        if self
+                            .hovered_item
+                            .is_some_and(|hovered_index| index == hovered_index)
+                            || self.selected_items.contains(&index)
+                        {
+                            t.cosmic().button.hover.into()
+                        } else {
+                            t.cosmic().button.base.into()
+                        },
+                    ))
+                    .border(Border::default().rounded(t.cosmic().corner_radii.radius_m))
+            })
+            .width(Length::Fill);
+            let visual_item = if self.hovered_dnd.is_some_and(|h| h == index) {
+                let divider = divider::horizontal::default()
+                    .class(theme::Rule::custom(|t| {
+                        let color = t.cosmic().accent_color();
+                        cosmic::iced::widget::rule::Style {
+                            color: color.into(),
+                            snap: true,
+                            radius: t.cosmic().corner_radii.radius_xs.into(),
+                            fill_mode: cosmic::iced::widget::rule::FillMode::Full,
+                        }
+                    }))
+                    .width(2);
+                Container::new(
+                    column![divider, container].spacing(theme::spacing().space_s),
+                )
+            } else {
+                container
+            };
+            let mouse_area = mouse_area(visual_item)
+                .on_move(|point| Message::ContextPoint(point))
+                .on_enter(Message::HoveredServiceItem(Some(index)))
+                .on_exit(Message::HoveredServiceItem(None))
+                .on_double_press(Message::ChangeServiceItem(index))
+                .on_right_press(Message::ContextMenuItem(Some(index)))
+                .on_release(Message::SelectServiceItem(index));
+            let single_item = if let Some(context_menu_item) = self.context_menu {
+                let menu_item = |label, message| {
+                    menu::menu_button(vec![
+                        text(label).into(),
+                        space::horizontal().into(),
+                    ])
+                    .on_press(message)
+                };
+                let delete_button: Element<Message> =
+                    menu_item("Delete", Message::RemoveServiceItem(index)).into();
+
+                let menu = column![delete_button]
+                    .spacing(theme::spacing().space_s)
+                    .apply(cosmic::widget::container)
+                    .width(300)
+                    .padding(theme::spacing().space_s)
+                    .class(theme::Container::Dropdown);
+
+                if context_menu_item == index {
+                    let context_menu = popover(mouse_area)
+                        .position(popover::Position::Point(self.context_point))
+                        .on_close(Message::ContextMenuItem(None))
+                        .popup(menu);
+                    Element::from(context_menu)
+                } else {
+                    Element::from(mouse_area)
+                }
+            } else {
+                Element::from(mouse_area)
+            };
+            let tooltip = tooltip(
+                single_item,
+                text::body(item.kind.to_string()),
+                tooltip::Position::Right,
+            )
+            .gap(cosmic::theme::spacing().space_xs);
+            dnd_destination(
+                tooltip,
+                vec![
+                    "application/service-item".into(),
+                    "text/uri-list".into(),
+                    "x-special/gnome-copied-files".into(),
+                ],
+            )
+            .on_enter(move |_, _, _| Message::HoveredServiceDrop(Some(index)))
+            .on_leave(move || Message::HoveredServiceDrop(None))
+            .on_finish(move |mime, data, _, _, _| match mime.as_str() {
+                "application/service-item" => {
+                    let Ok(item) = KindWrapper::try_from((data, mime)) else {
+                        error!("couldn't drag in Service item");
+                        return Message::None;
+                    };
+                    debug!(?item, index, "adding Service item");
+                    Message::AddServiceItemKind(index, item)
+                }
+                "text/uri-list" => {
+                    let Ok(text) = str::from_utf8(&data) else {
+                        return Message::None;
+                    };
+                    let mut items = Vec::new();
+                    for line in text.lines() {
+                        let Ok(url) = url::Url::parse(line) else {
+                            error!(?line, "problem parsing this file url");
+                            continue;
+                        };
+                        let Ok(path) = url.to_file_path() else {
+                            error!(?url, "invalid file URL");
+                            continue;
+                        };
+                        let item = ServiceItem::try_from(path);
+                        match item {
+                            Ok(item) => items.push(item),
+                            Err(e) => error!(?e),
+                        }
+                    }
+                    Message::AddServiceItemsFiles(index, items)
+                }
+                _ => Message::None,
+            })
+            .into()
+        });
+
+        let scrollable = scrollable(
+            draggable::column::column(list)
+                .spacing(10)
+                .on_drag(|event| match event {
+                    draggable::DragEvent::Picked { .. }
+                    | draggable::DragEvent::Canceled { .. } => Message::None,
+                    draggable::DragEvent::Dropped {
+                        index,
+                        target_index,
+                        ..
+                    } => Message::ReorderService(index, target_index),
+                })
+                .style(|t| draggable::column::Style {
+                    scale: 1.05,
+                    moved_item_overlay: Color::from(t.cosmic().primary.base)
+                        .scale_alpha(0.2),
+                    ghost_border: Border {
+                        width: 1.0,
+                        color: t.cosmic().secondary.base.into(),
+                        radius: t.cosmic().radius_m().into(),
+                    },
+                    ghost_background: Color::from(t.cosmic().secondary.base)
+                        .scale_alpha(0.2)
+                        .into(),
+                })
+                .height(Length::Shrink),
+        )
+        .spacing(space_s)
+        .anchor_top()
+        .height(Length::Fill);
+
+        let column = column![
+            text::heading("Service List").center().width(Length::Fill),
+            divider::horizontal::light(),
+            scrollable
+        ]
+        .padding(10)
+        .spacing(10);
+        let last_index = self.service.len();
+        let container = Container::new(
+            dnd_destination(
+                column,
+                vec!["application/service-item".into(), "text/uri-list".into()],
+            )
+            .on_finish(move |mime, data, _, _, _| match mime.as_str() {
+                "application/service-item" => {
+                    let Ok(item) = KindWrapper::try_from((data, mime)) else {
+                        error!("couldn't drag in Service item");
+                        return Message::None;
+                    };
+                    debug!(?item, "adding Service item");
+                    Message::AddServiceItemKind(last_index, item)
+                }
+                "text/uri-list" => {
+                    let Ok(text) = str::from_utf8(&data) else {
+                        return Message::None;
+                    };
+                    let mut items = Vec::new();
+                    for line in text.lines() {
+                        let Ok(url) = url::Url::parse(line) else {
+                            error!(?line, "problem parsing this file url");
+                            continue;
+                        };
+                        let Ok(path) = url.to_file_path() else {
+                            error!(?url, "invalid file URL");
+                            continue;
+                        };
+                        ServiceItem::try_from(path)
+                            .map_or_else(|e| error!(?e), |item| items.push(item));
+                    }
+                    Message::AddServiceItemsFiles(last_index, items)
+                }
+                _ => Message::None,
+            }),
+        )
+        .style(nav_bar_style);
+
+        container.center(Length::FillPortion(2)).into()
+    }
+}
+
+fn add_library() -> Task<Message> {
+    cosmic::Task::future(library::add_db()).then(|res| {
+        Task::perform(
+            Library::new(Arc::new(match res {
+                Ok(db) => db,
+                Err(e) => {
+                    error!("{e}");
+                    panic!("{e}")
+                }
+            })),
+            |x| cosmic::Action::App(Message::AddLibrary(x)),
+        )
+    })
+}
+
+async fn save_as_dialog() -> Result<PathBuf> {
+    let dialog = save::Dialog::new();
+
+    save::file(dialog).await.into_diagnostic().map(|response| {
+        response.url().map_or_else(
+            || Err(miette!("Can't convert url of file to a path")),
+            |url| Ok(url.to_file_path().expect("Should be a file here")),
+        )
+    })?
+}
+
+async fn open_dialog() -> Result<PathBuf> {
+    let dialog = open::Dialog::new();
+    open::file(dialog).await.into_diagnostic().map(|response| {
+        response
+            .url()
+            .to_file_path()
+            .map_err(|e| miette!("Can't convert to file path: {:?}", e))
+    })?
+}
