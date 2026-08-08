@@ -518,7 +518,8 @@ mod test {
     fn test_save() {
         let path = PathBuf::from("./test.pres");
         let list = get_items();
-        match save(&Arc::new(list), &path, true) {
+        let fontdb = Arc::new(fontdb::Database::new());
+        match save(&Arc::new(list), &path, true, &fontdb) {
             Ok(()) => {
                 assert!(path.is_file());
                 let Ok(file) = fs::File::open(path) else {
