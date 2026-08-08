@@ -12,6 +12,9 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 ??????? Don't know if this is still broke or not.....
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
+This could play into font systems...
+If an item needs to be imported and relies on a font that the current machine does not have, we could ask the user if they'd like to move that file from the cache dir to the system's font directory and therefore install it?
+
 * TODO [#A] Good keyboard shortcuts for the song editor so that making songs is faster and more intuitive
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
