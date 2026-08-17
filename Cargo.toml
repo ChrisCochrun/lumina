@@ -131,9 +131,16 @@ Section PreInstall
 SectionEnd
 """
 
+[build]
+rustflags = ["-Z", "threads=8"]
+
 [profile.release]
 opt-level = 3
-debug = true
+debug = "line-tables-only"
+
+[profile.dev]
+debug = "line-tables-only"
+# codegen-backend = "cranelift"
 
 # [profile.production]
 # opt-level = 3
