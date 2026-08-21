@@ -168,8 +168,7 @@ pub fn save(
     fs::remove_dir_all(temp_dir).into_diagnostic()
 }
 
-#[allow(clippy::too_many_lines)]
-pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
+pub fn unpack_load_file(path: impl AsRef<Path>) -> Result<PathBuf> {
     let decoder =
         Decoder::new(fs::File::open(&path).into_diagnostic()?).into_diagnostic()?;
     let mut tar = Archive::new(decoder);
@@ -203,8 +202,34 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         let mut entry = entry.into_diagnostic()?;
         entry.unpack_in(&cache_dir).into_diagnostic()?;
     }
+    Ok(cache_dir)
+}
 
-    let mut dir = fs::read_dir(&cache_dir).into_diagnostic()?;
+pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
+    let dir = fs::read_dir(&path).into_diagnostic().ok()?;
+    let fonts: Vec<PathBuf> = dir
+        .filter_map(|file| {
+            if let Some(file) = file.ok() {
+                let path = file.path();
+                if match path.extension().map(|font| font.to_str().unwrap_or("")) {
+                    Some("ttf") | Some("otf") => true,
+                    _ => false,
+                } {
+                    Some(path)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+    if fonts.len() > 0 { Some(fonts) } else { None }
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
+    let mut dir = fs::read_dir(&path).into_diagnostic()?;
     let ron_file = dir
         .find_map(|file| {
             if file.as_ref().ok()?.path().extension()?.to_str()? == "ron" {
@@ -221,7 +246,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         ron::de::from_str::<Vec<ServiceItem>>(&ron_string).into_diagnostic()?;
 
     for item in &mut items {
-        let dir = fs::read_dir(&cache_dir).into_diagnostic()?;
+        let dir = fs::read_dir(&path).into_diagnostic()?;
         for file in dir {
             for slide in &mut item.slides {
                 if let Ok(file) = file.as_ref() {
@@ -515,7 +540,9 @@ mod test {
     fn test_save() {
         let path = PathBuf::from("./test.pres");
         let list = get_items();
-        let fontdb = Arc::new(fontdb::Database::new());
+        let mut db = fontdb::Database::new();
+        db.load_system_fonts();
+        let fontdb = Arc::new(db);
         match save(&Arc::new(list), &path, true, &fontdb) {
             Ok(()) => {
                 assert!(path.is_file());
