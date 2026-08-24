@@ -97,7 +97,7 @@ pub fn save(
                         style: fontdb::Style::Normal,
                     });
                     id.map(|id| {
-                        fontdb.face(id).map(|font| match (font.clone().source) {
+                        fontdb.face(id).map(|font| match font.clone().source {
                             fontdb::Source::File(font_path) => Some(font_path),
                             _ => None,
                         })

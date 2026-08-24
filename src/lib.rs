@@ -45,7 +45,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::level_filters::LevelFilter;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
 use ui::EditorMode;
 use ui::library::{self, Library};
@@ -288,6 +288,7 @@ enum Message {
     AddSlideTextToItem(usize, usize, Slide),
     LoadedOpenItem(usize),
     HideLoadingBar,
+    LoadFonts(Vec<PathBuf>),
 }
 
 #[allow(dead_code)]
@@ -1708,17 +1709,57 @@ impl cosmic::Application for App {
                     }
                 })
             }
+            Message::LoadFonts(dir) => {
+                let Some(fontdb) = Arc::get_mut(&mut self.fontdb) else {
+                    return Task::none();
+                };
+                for font in dir {
+                    if let Err(e) = fontdb.load_font_file(font) {
+                        error!(?e);
+                    }
+                }
+                Task::none()
+            }
             Message::OpenFile(file) => {
                 debug!(?file, "opening file");
                 self.update_recent_files(file.clone());
                 self.file = Some(file.clone());
-                Task::perform(async move { file::load(file) }, |res| match res {
-                    Ok(items) => cosmic::Action::App(Message::OpenLoadItems(items)),
-                    Err(e) => {
-                        error!(?e);
-                        cosmic::Action::None
-                    }
-                })
+                cosmic::Task::future(async move { file::unpack_load_file(file) }).then(
+                    |res| match res {
+                        Ok(dir) => {
+                            let dir_for_fonts = dir.clone();
+                            Task::batch(vec![
+                                Task::perform(
+                                    async move { file::find_fonts(dir_for_fonts) },
+                                    |res| match res {
+                                        Some(fonts) => {
+                                            cosmic::Action::App(Message::LoadFonts(fonts))
+                                        }
+                                        None => {
+                                            info!("There were no fonts");
+                                            cosmic::Action::None
+                                        }
+                                    },
+                                ),
+                                Task::perform(async move { file::load(&dir) }, |res| {
+                                    match res {
+                                        Ok(items) => cosmic::Action::App(
+                                            Message::OpenLoadItems(items),
+                                        ),
+                                        Err(e) => {
+                                            error!(?e);
+                                            cosmic::Action::None
+                                        }
+                                    }
+                                }),
+                            ])
+                        }
+                        Err(e) => {
+                            error!(?e);
+                            Task::done(cosmic::Action::None)
+                        }
+                    },
+                )
             }
             Message::OpenLoadItems(items) => {
                 self.loading_state = LoadingState::Loading {
