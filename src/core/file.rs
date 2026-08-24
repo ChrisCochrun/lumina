@@ -212,7 +212,7 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
             if let Some(file) = file.ok() {
                 let path = file.path();
                 if match path.extension().map(|font| font.to_str().unwrap_or("")) {
-                    Some("ttf") | Some("otf") => true,
+                    Some("ttf" | "otf") => true,
                     _ => false,
                 } {
                     Some(path)

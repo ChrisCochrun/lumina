@@ -469,7 +469,6 @@ impl SongEditor {
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
                     self.player.pause();
-                } else {
                 }
 
                 if let Some(ccli) = &song.ccli {
@@ -869,8 +868,6 @@ impl SongEditor {
                         debug!(?verses, "Adding verse");
                         let song = song.clone();
                         return Action::Task(self.update_song(&song));
-                    } else {
-                        error!("No song here?");
                     }
                 } else {
                     error!("Couldn't find verse back");
