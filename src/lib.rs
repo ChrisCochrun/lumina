@@ -512,6 +512,11 @@ impl cosmic::Application for App {
         {
             batch.push(app.update(Message::OpenFile(file.clone())));
         }
+        if let Some(size) = app.state.presenter_zoom_level {
+            batch.push(app.update(Message::Present(
+                presenter::Message::ChangePreviewSize(size as f64),
+            )));
+        }
         // batch.push(app.add_service(items, Arc::clone(&fontdb)));
         let batch = Task::batch(batch);
         (app, batch)
@@ -696,7 +701,9 @@ impl cosmic::Application for App {
 
     fn footer(&self) -> Option<Element<Self::Message>> {
         let cosmic::cosmic_theme::Spacing {
-            space_s, space_m, ..
+            space_s: _,
+            space_m,
+            ..
         } = cosmic::theme::spacing();
         let total_items_text = format!("Total Service Items: {}", self.service.len());
 
@@ -723,10 +730,11 @@ impl cosmic::Application for App {
             row.push(space::horizontal().width(space_m).into());
         }
         row.push(
-            text::body(self.file.as_ref().map_or_else(
-                || String::new(),
-                |file| file.to_string_lossy().to_string(),
-            ))
+            text::body(
+                self.file
+                    .as_ref()
+                    .map_or_else(String::new, |file| file.to_string_lossy().to_string()),
+            )
             .into(),
         );
         row.push(space::horizontal().into());
@@ -1089,6 +1097,9 @@ impl cosmic::Application for App {
                 {
                     video.set_muted(true);
                 }
+                if let presenter::Message::ChangePreviewSize(size) = message {
+                    self.update_preview_size(size as f32);
+                }
                 match self.presenter.update(message) {
                     presenter::Action::Task(task) => task.map(|m| {
                         // debug!("Should run future");
@@ -1341,7 +1352,7 @@ impl cosmic::Application for App {
                         let _ = item.slides.remove(slide_index);
                         item.slides.insert(slide_index, slide_with_text);
                     } else {
-                        item.slides.push(slide_with_text)
+                        item.slides.push(slide_with_text);
                     }
                 }
                 Task::none()
@@ -1640,7 +1651,7 @@ impl cosmic::Application for App {
                         .update(Message::AppendServiceItemKind(item.clone()))
                         .chain(self.update(Message::CloseSearch))
                         .chain(self.update(Message::EditorToggle(false))),
-                    (Some(item), None) | (Some(item), Some(_)) => self
+                    (Some(item), None | Some(_)) => self
                         .update(Message::OpenEditorKind(item.clone()))
                         .chain(self.update(Message::CloseSearch)),
                     _ => Task::none(),
@@ -1731,11 +1742,10 @@ impl cosmic::Application for App {
                             Task::batch(vec![
                                 Task::perform(
                                     async move { file::find_fonts(dir_for_fonts) },
-                                    |res| match res {
-                                        Some(fonts) => {
+                                    |res| {
+                                        if let Some(fonts) = res {
                                             cosmic::Action::App(Message::LoadFonts(fonts))
-                                        }
-                                        None => {
+                                        } else {
                                             info!("There were no fonts");
                                             cosmic::Action::None
                                         }
@@ -1801,7 +1811,7 @@ impl cosmic::Application for App {
                 match self.loading_state {
                     LoadingState::Loading {
                         total_items,
-                        current_item,
+                        current_item: _,
                     } => {
                         if item + 1 == total_items {
                             self.loading_state = LoadingState::Loaded;
@@ -1820,10 +1830,10 @@ impl cosmic::Application for App {
                         })
                         .chain(Task::done(cosmic::Action::App(Message::Present(
                             presenter::Message::LoadedService,
-                        ))))
+                        ))));
                     }
                     LoadingState::None => {
-                        task = Task::done(cosmic::Action::App(Message::HideLoadingBar))
+                        task = Task::done(cosmic::Action::App(Message::HideLoadingBar));
                     }
                 }
                 task
@@ -1870,7 +1880,7 @@ impl cosmic::Application for App {
                 self.footer_message = Some("Saved!".into());
                 Task::perform(
                     async { tokio::time::sleep(Duration::from_secs(2)).await },
-                    |_| cosmic::Action::App(Message::ClearFooterMsg),
+                    |()| cosmic::Action::App(Message::ClearFooterMsg),
                 )
             }
             Message::ClearFooterMsg => {
@@ -1964,7 +1974,7 @@ impl cosmic::Application for App {
             space_none,
             space_s,
             space_l,
-            space_xl,
+            space_xl: _,
             ..
         } = cosmic::theme::spacing();
         let icon_size = if self.view_mode == ViewMode::Row {
@@ -2268,6 +2278,16 @@ impl App
 where
     Self: cosmic::Application,
 {
+    fn update_preview_size(&mut self, size: f32) {
+        self.state.presenter_zoom_level = Some(size);
+        if let Some(handler) = &self.state_handler
+            && let Err(e) = handler.set("presenter_zoom_level", Some(size))
+        {
+            error!("{e}");
+        } else {
+            debug!("Changed size: {size}");
+        }
+    }
     fn update_recent_files(&mut self, file: PathBuf) {
         if let Some(index) = self
             .state
@@ -2276,13 +2296,13 @@ where
             .position(|inner_file| inner_file == &file)
             && let Some(same_file) = self.state.recent_files.remove(index)
         {
-            self.state.recent_files.push_front(same_file)
+            self.state.recent_files.push_front(same_file);
         } else {
             self.state.recent_files.push_front(file);
         }
         if let Some(handler) = &self.state_handler {
             match handler.set("recent_files", self.state.recent_files.clone()) {
-                Ok(b) => (),
+                Ok(_b) => (),
                 Err(e) => error!("{e}"),
             }
         }
@@ -2466,7 +2486,7 @@ where
                 container
             };
             let mouse_area = mouse_area(visual_item)
-                .on_move(|point| Message::ContextPoint(point))
+                .on_move(Message::ContextPoint)
                 .on_enter(Message::HoveredServiceItem(Some(index)))
                 .on_exit(Message::HoveredServiceItem(None))
                 .on_double_press(Message::ChangeServiceItem(index))
