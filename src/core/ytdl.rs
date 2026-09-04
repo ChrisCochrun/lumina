@@ -19,7 +19,7 @@ pub async fn download_video(
                     video.ext.expect("Should be an extension")
                 );
                 output_directory.push(video_path);
-            };
+            }
             output_directory
         })
 }

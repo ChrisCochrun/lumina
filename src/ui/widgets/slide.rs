@@ -13,7 +13,6 @@ use iced_core::{
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
-use tracing::debug;
 
 use crate::core::animation::Animation;
 
@@ -73,7 +72,7 @@ pub enum AnimationState {
     Done,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Direction {
     Forward,
     Backward,
@@ -101,7 +100,7 @@ where
             slide,
             previous_slide,
             next_slide,
-            video: video.map(|video| video.into()),
+            video: video.map(std::convert::Into::into),
             settings,
             width: Length::Fill,
             height: Length::Fill,
@@ -120,12 +119,12 @@ where
         self
     }
 
-    pub(crate) fn content_fit(mut self, content_fit: ContentFit) -> Self {
+    pub(crate) const fn content_fit(mut self, content_fit: ContentFit) -> Self {
         self.content_fit = content_fit;
         self
     }
 
-    pub(crate) fn animate(mut self, animation_state: AnimationState) -> Self {
+    pub(crate) const fn animate(mut self, animation_state: AnimationState) -> Self {
         self.animation_state = animation_state;
         self
     }
@@ -158,26 +157,24 @@ where
                     },
                     bounds,
                     clip_bounds,
-                )
+                );
             });
-        } else {
-            if let Some(handle) = &background.image_handle {
-                let _ = renderer.load_image(handle);
-                renderer.with_layer(bounds, |renderer| {
-                    renderer.draw_image(
-                        iced_core::image::Image {
-                            handle: handle.clone(),
-                            filter_method: iced_core::image::FilterMethod::Nearest,
-                            rotation: iced_core::Radians(0.0),
-                            border_radius: Radius::new(0.0),
-                            opacity,
-                            snap: true,
-                        },
-                        bounds,
-                        clip_bounds,
-                    )
-                });
-            }
+        } else if let Some(handle) = &background.image_handle {
+            let _ = renderer.load_image(handle);
+            renderer.with_layer(bounds, |renderer| {
+                renderer.draw_image(
+                    iced_core::image::Image {
+                        handle: handle.clone(),
+                        filter_method: iced_core::image::FilterMethod::Nearest,
+                        rotation: iced_core::Radians(0.0),
+                        border_radius: Radius::new(0.0),
+                        opacity,
+                        snap: true,
+                    },
+                    bounds,
+                    clip_bounds,
+                );
+            });
         }
     }
 }
@@ -214,20 +211,19 @@ where
     #[inline(always)]
     fn layout(
         &mut self,
-        tree: &mut Tree,
+        _tree: &mut Tree,
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let intrisic_size = self
-            .slide
-            .background()
-            .image_handle
-            .as_ref()
-            .map(|handle| {
-                let _ = renderer.load_image(handle);
-                renderer.measure_image(handle)
-            })
-            .flatten();
+        let intrisic_size =
+            self.slide
+                .background()
+                .image_handle
+                .as_ref()
+                .and_then(|handle| {
+                    let _ = renderer.load_image(handle);
+                    renderer.measure_image(handle)
+                });
         let original_size = self.size();
         let measured_size = intrisic_size.map_or_else(
             || Size::new(1920.0, 1080.0),
@@ -347,7 +343,7 @@ where
                     snap: true,
                 },
                 cosmic::iced::Background::Color(Color::BLACK),
-            )
+            );
         }
         let (mut current_slide_opacity, mut prev_slide_opacity, mut next_text_opacity) = (
             1.0,
@@ -384,7 +380,7 @@ where
         );
 
         if let AnimationState::Running {
-            direction,
+            direction: _,
             new_slide_progress,
             prev_slide_progress,
         } = &self.animation_state
@@ -418,7 +414,7 @@ where
 
                     next_foreground_size = bounds.size() * 0.8;
 
-                    let size_progress = bounds.size() * *new_slide_progress;
+                    let _size_progress = bounds.size() * *new_slide_progress;
                     current_foreground_size = next_foreground_size
                         + (bounds.size() - next_foreground_size) * *new_slide_progress;
 
@@ -426,7 +422,7 @@ where
                         bounds.size().width - current_foreground_size.width;
                     let current_foreground_x = current_size_difference / 2.0 + bounds.x;
 
-                    let og_size = bounds.size();
+                    let _og_size = bounds.size();
 
                     // debug!(?next_foreground_size, ?og_size, ?size_progress);
 
@@ -456,7 +452,20 @@ where
                     && let Some(prev_allocation) =
                         prev_slide.background().image_allocation.as_ref()
                 {
-                    if prev_slide.background() != background {
+                    if prev_slide.background() == background {
+                        self.draw_background(
+                            tree,
+                            renderer,
+                            theme,
+                            renderer_style,
+                            layout,
+                            cursor_position,
+                            viewport,
+                            bounds,
+                            clip_bounds,
+                            1.0,
+                        );
+                    } else {
                         renderer.with_layer(bounds, |renderer| {
                             renderer.draw_image(
                                 iced_core::image::Image {
@@ -470,7 +479,7 @@ where
                                 },
                                 bounds,
                                 clip_bounds,
-                            )
+                            );
                         });
                         self.draw_background(
                             tree,
@@ -483,19 +492,6 @@ where
                             bounds,
                             clip_bounds,
                             current_slide_opacity,
-                        );
-                    } else {
-                        self.draw_background(
-                            tree,
-                            renderer,
-                            theme,
-                            renderer_style,
-                            layout,
-                            cursor_position,
-                            viewport,
-                            bounds,
-                            clip_bounds,
-                            1.0,
                         );
                     }
                 } else {
@@ -526,24 +522,23 @@ where
                         cursor_position,
                         viewport,
                     );
-                } else if self.settings.delegate {
-                    if let Some(allocation) = &self.slide.thumbnail {
-                        renderer.with_layer(bounds, |renderer| {
-                            renderer.draw_image(
-                                iced_core::image::Image {
-                                    handle: allocation.handle().clone(),
-                                    filter_method:
-                                        iced_core::image::FilterMethod::Nearest,
-                                    rotation: iced_core::Radians(0.0),
-                                    border_radius: Radius::new(0.0),
-                                    opacity: current_slide_opacity,
-                                    snap: true,
-                                },
-                                bounds,
-                                clip_bounds,
-                            )
-                        });
-                    }
+                } else if self.settings.delegate
+                    && let Some(allocation) = &self.slide.thumbnail
+                {
+                    renderer.with_layer(bounds, |renderer| {
+                        renderer.draw_image(
+                            iced_core::image::Image {
+                                handle: allocation.handle().clone(),
+                                filter_method: iced_core::image::FilterMethod::Nearest,
+                                rotation: iced_core::Radians(0.0),
+                                border_radius: Radius::new(0.0),
+                                opacity: current_slide_opacity,
+                                snap: true,
+                            },
+                            bounds,
+                            clip_bounds,
+                        );
+                    });
                 }
             }
             crate::core::slide::BackgroundKind::Pdf => {
@@ -561,8 +556,8 @@ where
                             },
                             bounds,
                             clip_bounds,
-                        )
-                    })
+                        );
+                    });
                 }
             }
             crate::core::slide::BackgroundKind::Html => todo!(),
@@ -584,7 +579,7 @@ where
                     },
                     Rectangle::new(prev_foreground_position, bounds.size()),
                     clip_bounds,
-                )
+                );
             });
         }
         if let Some(slide) = &self.next_slide
@@ -604,7 +599,7 @@ where
                     },
                     Rectangle::new(next_foreground_position, next_foreground_size),
                     clip_bounds,
-                )
+                );
             });
         }
         if let Some(text) = &self.slide.text_svg
@@ -623,7 +618,7 @@ where
                     },
                     Rectangle::new(current_foreground_position, current_foreground_size),
                     clip_bounds,
-                )
+                );
             });
         }
     }

@@ -482,7 +482,7 @@ impl SongEditor {
                 self.song_slides = None;
 
                 self.verses = song.verse_map.as_ref().map(|map| {
-                    map.into_iter()
+                    map.iter()
                         .sorted()
                         .map(|(verse_name, lyric)| VerseEditor::new(*verse_name, lyric))
                         .collect()
@@ -902,7 +902,7 @@ impl SongEditor {
                 };
 
                 let reordered: Vec<VerseName> = event.iter().map(|id| {
-                    old_order.get(*id).expect("These are reorders not removals, this item should always be here").clone()
+                    *old_order.get(*id).expect("These are reorders not removals, this item should always be here")
                 }).collect();
                 debug!(?reordered);
                 song.verses = Some(reordered);
@@ -992,30 +992,29 @@ impl SongEditor {
             }
             Message::SelectAnimation(animation) => {
                 if let Some(mut song) = self.song.clone() {
-                    let animation = self
-                        .animations
-                        .get(animation)
-                        .map(|animation| match animation.as_str() {
-                            "Cross Fade" => Some(Animation::CrossFade {
-                                duration: None,
-                                easing: None,
-                            }),
-                            "Slide Up" => Some(Animation::SlideUp {
-                                duration: None,
-                                easing: None,
-                            }),
-                            "Scroll Up" => Some(Animation::ScrollUp {
-                                duration: None,
-                                easing: None,
-                            }),
-                            "Slide Left" => Some(Animation::ScrollUp {
-                                duration: None,
-                                easing: None,
-                            }),
-                            "None" => None,
-                            _ => todo!(),
-                        })
-                        .flatten();
+                    let animation =
+                        self.animations.get(animation).and_then(|animation| {
+                            match animation.as_str() {
+                                "Cross Fade" => Some(Animation::CrossFade {
+                                    duration: None,
+                                    easing: None,
+                                }),
+                                "Slide Up" => Some(Animation::SlideUp {
+                                    duration: None,
+                                    easing: None,
+                                }),
+                                "Scroll Up" => Some(Animation::ScrollUp {
+                                    duration: None,
+                                    easing: None,
+                                }),
+                                "Slide Left" => Some(Animation::ScrollUp {
+                                    duration: None,
+                                    easing: None,
+                                }),
+                                "None" => None,
+                                _ => todo!(),
+                            }
+                        });
                     song.animation = animation;
                     return Action::Task(self.update_song(&song));
                 }
@@ -1135,7 +1134,7 @@ impl SongEditor {
                 });
 
                 container(column![
-                    text::body(format!("Audio: {}", audio_path))
+                    text::body(format!("Audio: {audio_path}"))
                         .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
                     row![play_button, audio_track]
                         .align_y(Vertical::Center)
@@ -1161,14 +1160,12 @@ impl SongEditor {
             dropdown(
                 &self.animations,
                 if let Some(animation) = self.song.as_ref().and_then(|song| {
-                    song.animation
-                        .as_ref()
-                        .and_then(|animation| match animation {
-                            Animation::CrossFade { .. } => Some(1),
-                            Animation::SlideUp { .. } => Some(2),
-                            Animation::ScrollUp { .. } => Some(3),
-                            Animation::SlideLeft { .. } => Some(4),
-                        })
+                    song.animation.as_ref().map(|animation| match animation {
+                        Animation::CrossFade { .. } => 1,
+                        Animation::SlideUp { .. } => 2,
+                        Animation::ScrollUp { .. } => 3,
+                        Animation::SlideLeft { .. } => 4,
+                    })
                 }) {
                     Some(animation)
                 } else {
@@ -1340,7 +1337,7 @@ impl SongEditor {
                                 .on_finish(Some(Message::DraggingChipStart))
                                 .on_cancel(Some(Message::DraggingChipStart))
                                 .drag_content(move || Box::new(verse))
-                                .drag_icon(move |v| {
+                                .drag_icon(move |_v| {
                                     let state: tree::State =
                                         cosmic::widget::Widget::<Message, _, _>::state(
                                             &verse_chip_wrapped,
@@ -1448,7 +1445,7 @@ impl SongEditor {
                 })
             });
 
-        let verse_order_length = verse_order_items.len();
+        let _verse_order_length = verse_order_items.len();
         let verse_order_items: Element<Message> = if self.dragging_verse_chip {
             let ending_dnd_dest = dnd_destination(
                 space::horizontal().height(19),

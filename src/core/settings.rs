@@ -54,9 +54,8 @@ impl Default for Settings {
     }
 }
 
-#[derive(
-    Clone, CosmicConfigEntry, Debug, Deserialize, Eq, PartialEq, Serialize, Default,
-)]
+#[derive(Clone, CosmicConfigEntry, Debug, Deserialize, PartialEq, Serialize, Default)]
 pub struct PersistentState {
     pub recent_files: VecDeque<PathBuf>,
+    pub presenter_zoom_level: Option<f32>,
 }

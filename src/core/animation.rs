@@ -22,7 +22,7 @@ pub struct SlideAnimation {
     easing: Easing,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Animation {
     CrossFade {
         duration: Option<Duration>,
@@ -43,17 +43,18 @@ pub enum Animation {
 }
 
 impl Animation {
+    #[must_use]
     pub fn get_animator(&self, instant: Instant) -> cosmic::iced::Animation<bool> {
         const DURATION_DEFAULT: Duration = Duration::from_millis(500);
         const EASING_DEFAULT: Easing = Easing::EaseOut;
         match self {
-            Animation::CrossFade { duration, easing }
-            | Animation::SlideUp { duration, easing }
-            | Animation::SlideLeft { duration, easing }
-            | Animation::ScrollUp { duration, easing } => {
+            Self::CrossFade { duration, easing }
+            | Self::SlideUp { duration, easing }
+            | Self::SlideLeft { duration, easing }
+            | Self::ScrollUp { duration, easing } => {
                 let mut animator = cosmic::iced::Animation::new(false);
                 if let Some(duration) = duration {
-                    animator = animator.duration(duration.clone());
+                    animator = animator.duration(*duration);
                 } else {
                     animator = animator.duration(DURATION_DEFAULT);
                 }
@@ -66,51 +67,54 @@ impl Animation {
             }
         }
     }
+    #[must_use]
     pub fn to_string(&self) -> String {
         match self {
-            Animation::CrossFade { .. } => "Cross Fade".to_string(),
-            Animation::SlideUp { .. } => "Slide Up".to_string(),
-            Animation::SlideLeft { .. } => "Slide Left".to_string(),
-            Animation::ScrollUp { .. } => "Scrolling Up Text".to_string(),
+            Self::CrossFade { .. } => "Cross Fade".to_string(),
+            Self::SlideUp { .. } => "Slide Up".to_string(),
+            Self::SlideLeft { .. } => "Slide Left".to_string(),
+            Self::ScrollUp { .. } => "Scrolling Up Text".to_string(),
         }
     }
 
-    pub fn easing(self, new_easing: Easing) -> Self {
+    #[must_use]
+    pub const fn easing(self, new_easing: Easing) -> Self {
         match self {
-            Animation::CrossFade { duration, .. } => Animation::CrossFade {
+            Self::CrossFade { duration, .. } => Self::CrossFade {
                 duration,
                 easing: Some(new_easing),
             },
-            Animation::SlideUp { duration, .. } => Animation::SlideUp {
+            Self::SlideUp { duration, .. } => Self::SlideUp {
                 duration,
                 easing: Some(new_easing),
             },
-            Animation::SlideLeft { duration, .. } => Animation::SlideLeft {
+            Self::SlideLeft { duration, .. } => Self::SlideLeft {
                 duration,
                 easing: Some(new_easing),
             },
-            Animation::ScrollUp { duration, .. } => Animation::ScrollUp {
+            Self::ScrollUp { duration, .. } => Self::ScrollUp {
                 duration,
                 easing: Some(new_easing),
             },
         }
     }
 
-    pub fn duration(self, new_duration: Duration) -> Self {
+    #[must_use]
+    pub const fn duration(self, new_duration: Duration) -> Self {
         match self {
-            Animation::CrossFade { easing, .. } => Animation::CrossFade {
+            Self::CrossFade { easing, .. } => Self::CrossFade {
                 duration: Some(new_duration),
                 easing,
             },
-            Animation::SlideUp { easing, .. } => Animation::SlideUp {
+            Self::SlideUp { easing, .. } => Self::SlideUp {
                 duration: Some(new_duration),
                 easing,
             },
-            Animation::SlideLeft { easing, .. } => Animation::SlideLeft {
+            Self::SlideLeft { easing, .. } => Self::SlideLeft {
                 duration: Some(new_duration),
                 easing,
             },
-            Animation::ScrollUp { easing, .. } => Animation::ScrollUp {
+            Self::ScrollUp { easing, .. } => Self::ScrollUp {
                 duration: Some(new_duration),
                 easing,
             },
@@ -118,7 +122,7 @@ impl Animation {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Easing {
     #[default]
     Linear,
@@ -155,39 +159,40 @@ pub enum Easing {
 }
 
 impl Easing {
-    pub fn ease(&self) -> animation::Easing {
+    #[must_use]
+    pub const fn ease(&self) -> animation::Easing {
         match self {
-            Easing::Linear => animation::Easing::Linear,
-            Easing::EaseIn => animation::Easing::EaseIn,
-            Easing::EaseOut => animation::Easing::EaseOut,
-            Easing::EaseInOut => animation::Easing::EaseInOut,
-            Easing::EaseInQuad => animation::Easing::EaseInQuad,
-            Easing::EaseOutQuad => animation::Easing::EaseOutQuad,
-            Easing::EaseInOutQuad => animation::Easing::EaseInOutQuad,
-            Easing::EaseInCubic => animation::Easing::EaseInCubic,
-            Easing::EaseOutCubic => animation::Easing::EaseOutCubic,
-            Easing::EaseInOutCubic => animation::Easing::EaseInOutCubic,
-            Easing::EaseInQuart => animation::Easing::EaseInQuart,
-            Easing::EaseOutQuart => animation::Easing::EaseOutQuart,
-            Easing::EaseInOutQuart => animation::Easing::EaseInOutQuart,
-            Easing::EaseInQuint => animation::Easing::EaseInQuint,
-            Easing::EaseOutQuint => animation::Easing::EaseOutQuint,
-            Easing::EaseInOutQuint => animation::Easing::EaseInOutQuint,
-            Easing::EaseInExpo => animation::Easing::EaseInExpo,
-            Easing::EaseOutExpo => animation::Easing::EaseOutExpo,
-            Easing::EaseInOutExpo => animation::Easing::EaseInOutExpo,
-            Easing::EaseInCirc => animation::Easing::EaseInCirc,
-            Easing::EaseOutCirc => animation::Easing::EaseOutCirc,
-            Easing::EaseInOutCirc => animation::Easing::EaseInOutCirc,
-            Easing::EaseInBack => animation::Easing::EaseInBack,
-            Easing::EaseOutBack => animation::Easing::EaseOutBack,
-            Easing::EaseInOutBack => animation::Easing::EaseInOutBack,
-            Easing::EaseInElastic => animation::Easing::EaseInElastic,
-            Easing::EaseOutElastic => animation::Easing::EaseOutElastic,
-            Easing::EaseInOutElastic => animation::Easing::EaseInOutElastic,
-            Easing::EaseInBounce => animation::Easing::EaseInBounce,
-            Easing::EaseOutBounce => animation::Easing::EaseOutBounce,
-            Easing::EaseInOutBounce => animation::Easing::EaseInOutBounce,
+            Self::Linear => animation::Easing::Linear,
+            Self::EaseIn => animation::Easing::EaseIn,
+            Self::EaseOut => animation::Easing::EaseOut,
+            Self::EaseInOut => animation::Easing::EaseInOut,
+            Self::EaseInQuad => animation::Easing::EaseInQuad,
+            Self::EaseOutQuad => animation::Easing::EaseOutQuad,
+            Self::EaseInOutQuad => animation::Easing::EaseInOutQuad,
+            Self::EaseInCubic => animation::Easing::EaseInCubic,
+            Self::EaseOutCubic => animation::Easing::EaseOutCubic,
+            Self::EaseInOutCubic => animation::Easing::EaseInOutCubic,
+            Self::EaseInQuart => animation::Easing::EaseInQuart,
+            Self::EaseOutQuart => animation::Easing::EaseOutQuart,
+            Self::EaseInOutQuart => animation::Easing::EaseInOutQuart,
+            Self::EaseInQuint => animation::Easing::EaseInQuint,
+            Self::EaseOutQuint => animation::Easing::EaseOutQuint,
+            Self::EaseInOutQuint => animation::Easing::EaseInOutQuint,
+            Self::EaseInExpo => animation::Easing::EaseInExpo,
+            Self::EaseOutExpo => animation::Easing::EaseOutExpo,
+            Self::EaseInOutExpo => animation::Easing::EaseInOutExpo,
+            Self::EaseInCirc => animation::Easing::EaseInCirc,
+            Self::EaseOutCirc => animation::Easing::EaseOutCirc,
+            Self::EaseInOutCirc => animation::Easing::EaseInOutCirc,
+            Self::EaseInBack => animation::Easing::EaseInBack,
+            Self::EaseOutBack => animation::Easing::EaseOutBack,
+            Self::EaseInOutBack => animation::Easing::EaseInOutBack,
+            Self::EaseInElastic => animation::Easing::EaseInElastic,
+            Self::EaseOutElastic => animation::Easing::EaseOutElastic,
+            Self::EaseInOutElastic => animation::Easing::EaseInOutElastic,
+            Self::EaseInBounce => animation::Easing::EaseInBounce,
+            Self::EaseOutBounce => animation::Easing::EaseOutBounce,
+            Self::EaseInOutBounce => animation::Easing::EaseInOutBounce,
         }
     }
 }

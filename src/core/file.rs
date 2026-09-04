@@ -91,20 +91,19 @@ pub fn save(
                 let fontdb = Arc::clone(fontdb);
                 font = song.font.as_ref().map(|font| {
                     let id = fontdb.query(&fontdb::Query {
-                        families: &[fontdb::Family::Name(&font)],
+                        families: &[fontdb::Family::Name(font)],
                         weight: fontdb::Weight::NORMAL,
                         stretch: fontdb::Stretch::Normal,
                         style: fontdb::Style::Normal,
                     });
-                    id.map(|id| {
+                    id.and_then(|id| {
                         fontdb.face(id).map(|font| match font.clone().source {
                             fontdb::Source::File(font_path) => Some(font_path),
                             _ => None,
                         })
                     })
                     .flatten()
-                    .flatten()
-                })
+                });
             }
             ServiceItemKind::Image(image) => {
                 background =
@@ -209,7 +208,7 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
     let dir = fs::read_dir(&path).into_diagnostic().ok()?;
     let fonts: Vec<PathBuf> = dir
         .filter_map(|file| {
-            if let Some(file) = file.ok() {
+            if let Ok(file) = file {
                 let path = file.path();
                 if match path.extension().map(|font| font.to_str().unwrap_or("")) {
                     Some("ttf" | "otf") => true,
@@ -224,7 +223,7 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
             }
         })
         .collect();
-    if fonts.len() > 0 { Some(fonts) } else { None }
+    if fonts.is_empty() { None } else { Some(fonts) }
 }
 
 #[allow(clippy::too_many_lines)]

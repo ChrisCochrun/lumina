@@ -369,6 +369,7 @@ impl Presenter {
             }
             Message::ChangePreviewSize(size) => {
                 self.preview_size = size as f32;
+                debug!(self.preview_size);
             }
             Message::ChangeFont(s) => {
                 let font_name = s.into_boxed_str();
@@ -1337,12 +1338,10 @@ pub(crate) fn slide_view<'a>(
                                     crate::core::animation::Animation::CrossFade { .. }
                                 ) {
                                     animator.interpolate(1.0, 0.0, settings.now)
+                                } else if animator.is_animating(settings.now) {
+                                    1.0
                                 } else {
-                                    if animator.is_animating(settings.now) {
-                                        1.0
-                                    } else {
-                                        0.0
-                                    }
+                                    0.0
                                 }
                             } else {
                                 1.0
@@ -1361,7 +1360,7 @@ pub(crate) fn slide_view<'a>(
                     column = column.push(space::vertical().height({
                         animator.interpolate(0.0, size.height, settings.now)
                     }));
-                };
+                }
                 stack = stack.push(
                     column
                         .apply(scrollable)

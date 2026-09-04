@@ -27,7 +27,7 @@ pub(crate) fn focus_target(
     direction: Direction,
 ) -> Task<Message> {
     let Some(target_item_id) = target_item_id else {
-        return scroll_to(scrollable_id.clone(), AbsoluteOffset::default());
+        return scroll_to(scrollable_id, AbsoluteOffset::default());
     };
 
     struct CalculateScrollToIdOffset {
@@ -42,7 +42,7 @@ pub(crate) fn focus_target(
     impl Operation<AbsoluteOffset> for CalculateScrollToIdOffset {
         fn container(&mut self, id: Option<&widget::Id>, bounds: Rectangle) {
             if Some(&self.target) == id {
-                self.target_rectangle = Some(bounds)
+                self.target_rectangle = Some(bounds);
             }
         }
 
@@ -117,14 +117,14 @@ pub(crate) fn focus_target(
     }
 
     let operation = CalculateScrollToIdOffset {
-        scrollable: scrollable_id.clone().into(),
-        target: target_item_id.clone().into(),
+        scrollable: scrollable_id.clone(),
+        target: target_item_id,
         viewport_rectangle: None,
         viewport_translation: None,
         target_rectangle: None,
         direction,
     };
 
-    let scrollable_id = scrollable_id.clone();
+    let scrollable_id = scrollable_id;
     operate(operation).then(move |offset| scroll_to(scrollable_id.clone(), offset.into()))
 }

@@ -138,7 +138,7 @@ pub enum Message {
 impl Action {
     fn chain_task(self, task: Task<Message>) -> Self {
         match self {
-            Action::Task(inner_task) => {
+            Self::Task(inner_task) => {
                 let task = inner_task.chain(task);
                 Self::Task(task)
             }
@@ -894,7 +894,7 @@ impl<'a> Library {
                             let item = DndSource::<Message, KindWrapper>::new({
                                 let mouse_area = mouse_area(visual_item);
                                 let mouse_area = mouse_area
-                                    .on_move(|point| Message::HoverPoint(point))
+                                    .on_move(Message::HoverPoint)
                                     .on_enter(Message::HoverItem(Some((
                                         model.kind, i32_index,
                                     ))))
@@ -934,7 +934,7 @@ impl<'a> Library {
                             })
                             .drag_content(move || KindWrapper((kind, i32_index)));
 
-                            self.context_menu(item.into(), kind, i32_index).into()
+                            self.context_menu(item.into(), kind, i32_index)
                         })
                 })
                 .spacing(2)
@@ -946,24 +946,22 @@ impl<'a> Library {
             let search_bar = match &model.kind {
                 LibraryKind::Song => text_input(
                     "Search...",
-                    self.song_search_query.clone().unwrap_or(String::new()),
+                    self.song_search_query.clone().unwrap_or_default(),
                 )
                 .on_input(Message::SearchLibrary),
                 LibraryKind::Video => text_input(
                     "Search...",
-                    self.video_search_query.clone().unwrap_or(String::new()),
+                    self.video_search_query.clone().unwrap_or_default(),
                 )
                 .on_input(Message::SearchLibrary),
                 LibraryKind::Image => text_input(
                     "Search...",
-                    self.image_search_query.clone().unwrap_or(String::new()),
+                    self.image_search_query.clone().unwrap_or_default(),
                 )
                 .on_input(Message::SearchLibrary),
                 LibraryKind::Presentation => text_input(
                     "Search...",
-                    self.presentation_search_query
-                        .clone()
-                        .unwrap_or(String::new()),
+                    self.presentation_search_query.clone().unwrap_or_default(),
                 )
                 .on_input(Message::SearchLibrary),
             };
