@@ -7,6 +7,7 @@ pub mod core;
 pub mod ui;
 
 use clap::{Args, Parser, Subcommand};
+use serde::{Deserialize, Serialize};
 use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
@@ -292,9 +293,10 @@ enum Message {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ViewMode {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ViewMode {
     Grid,
+    #[default]
     Row,
     Detail,
 }
@@ -365,6 +367,7 @@ impl cosmic::Application for App {
 
         let (config_handler, settings) = (input.1, input.2);
         let (state_handler, state) = (input.3, input.4);
+        let view_mode = state.view_mode;
 
         // let items = input.0.file.map_or_else(Vec::new, |file| {
         //     match read_to_string(file) {
@@ -491,7 +494,7 @@ impl cosmic::Application for App {
             state_handler,
             state,
             obs_connection: String::new(),
-            view_mode: ViewMode::Row,
+            view_mode,
             genius_token_hidden: true,
         };
 
@@ -1948,6 +1951,10 @@ impl cosmic::Application for App {
             }
             Message::ViewModeSwitch(mode) => {
                 let grid_to_row = matches!(mode, ViewMode::Row);
+                self.state.view_mode = mode;
+                if let Some(handler) = &self.state_handler && let Err(e) = handler.set("view_mode", mode) {
+                    error!("{e}");
+                }
 
                 self.view_mode = mode;
                 self.presenter.view_mode = mode;

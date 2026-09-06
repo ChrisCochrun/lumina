@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::path::PathBuf;
 
+use crate::ViewMode;
 use crate::core::model::Sort;
 
 pub const SETTINGS_VERSION: u64 = 1;
@@ -58,4 +59,5 @@ impl Default for Settings {
 pub struct PersistentState {
     pub recent_files: VecDeque<PathBuf>,
     pub presenter_zoom_level: Option<f32>,
+    pub view_mode: ViewMode,
 }
