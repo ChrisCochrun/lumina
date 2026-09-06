@@ -2,7 +2,7 @@ use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
 use crate::core::slide::Background;
 use cosmic::widget::image::Handle;
-use miette::{IntoDiagnostic, Result, miette};
+use miette::{Context, IntoDiagnostic, Result, miette};
 use std::fs::{self, File};
 use std::io::Write;
 use std::iter;
@@ -228,7 +228,9 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
 
 #[allow(clippy::too_many_lines)]
 pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
-    let mut dir = fs::read_dir(&path).into_diagnostic()?;
+    let mut dir = fs::read_dir(&path)
+        .into_diagnostic()
+        .wrap_err(format!("Couldn't load dir: {:?}", path.as_ref()))?;
     let ron_file = dir
         .find_map(|file| {
             if file.as_ref().ok()?.path().extension()?.to_str()? == "ron" {
@@ -245,7 +247,9 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         ron::de::from_str::<Vec<ServiceItem>>(&ron_string).into_diagnostic()?;
 
     for item in &mut items {
-        let dir = fs::read_dir(&path).into_diagnostic()?;
+        let dir = fs::read_dir(&path)
+            .into_diagnostic()
+            .wrap_err(format!("Couldn't load dir: {:?}", path.as_ref()))?;
         for file in dir {
             for slide in &mut item.slides {
                 if let Ok(file) = file.as_ref() {
