@@ -60,4 +60,5 @@ pub struct PersistentState {
     pub recent_files: VecDeque<PathBuf>,
     pub presenter_zoom_level: Option<f32>,
     pub view_mode: ViewMode,
+    pub library_open: bool,
 }

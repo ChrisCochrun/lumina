@@ -368,6 +368,7 @@ impl cosmic::Application for App {
         let (config_handler, settings) = (input.1, input.2);
         let (state_handler, state) = (input.3, input.4);
         let view_mode = state.view_mode;
+        let library_open = state.library_open;
 
         // let items = input.0.file.map_or_else(Vec::new, |file| {
         //     match read_to_string(file) {
@@ -467,7 +468,7 @@ impl cosmic::Application for App {
             presentation_open: false,
             cli_mode,
             library: None,
-            library_open: true,
+            library_open,
             editor_mode: None,
             song_editor,
             video_editor: VideoEditor::new(),
@@ -1295,6 +1296,10 @@ impl cosmic::Application for App {
             }
             Message::LibraryToggle => {
                 self.library_open = !self.library_open;
+                self.state.library_open = self.library_open;
+                if let Some(handler) = &self.state_handler && let Err(e) = handler.set("library_open", self.library_open) {
+                    error!("{e}");
+                }
                 Task::none()
             }
             Message::Quit => cosmic::iced::exit(),
