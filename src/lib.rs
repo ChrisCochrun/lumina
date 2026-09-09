@@ -7,7 +7,6 @@ pub mod core;
 pub mod ui;
 
 use clap::{Args, Parser, Subcommand};
-use serde::{Deserialize, Serialize};
 use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
@@ -36,6 +35,7 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
 // use lisp::parse_lisp;
@@ -454,6 +454,13 @@ impl cosmic::Application for App {
                 key: Key::Character(",".into()),
             },
             MenuAction::OpenSettings,
+        );
+        menu_keys.insert(
+            KeyBind {
+                modifiers: vec![Modifier::Ctrl, Modifier::Shift],
+                key: Key::Character("s".into()),
+            },
+            MenuAction::SaveAs,
         );
         // nav_model.activate_position(0);
         let mut app = Self {
@@ -1297,7 +1304,9 @@ impl cosmic::Application for App {
             Message::LibraryToggle => {
                 self.library_open = !self.library_open;
                 self.state.library_open = self.library_open;
-                if let Some(handler) = &self.state_handler && let Err(e) = handler.set("library_open", self.library_open) {
+                if let Some(handler) = &self.state_handler
+                    && let Err(e) = handler.set("library_open", self.library_open)
+                {
                     error!("{e}");
                 }
                 Task::none()
@@ -1957,7 +1966,9 @@ impl cosmic::Application for App {
             Message::ViewModeSwitch(mode) => {
                 let grid_to_row = matches!(mode, ViewMode::Row);
                 self.state.view_mode = mode;
-                if let Some(handler) = &self.state_handler && let Err(e) = handler.set("view_mode", mode) {
+                if let Some(handler) = &self.state_handler
+                    && let Err(e) = handler.set("view_mode", mode)
+                {
                     error!("{e}");
                 }
 

@@ -1,3 +1,4 @@
+use std::ops::Div;
 use std::time::Instant;
 
 use cosmic::iced::{
@@ -146,6 +147,34 @@ where
         let background = self.slide.background();
         if let Some(allocation) = background.image_allocation.as_ref() {
             renderer.with_layer(bounds, |renderer| {
+                let size = allocation.size();
+                let width = size.width as f32;
+                let height = size.height as f32;
+                let width_scale = width / bounds.size().width;
+                let height_scale = height / bounds.size().height;
+                let new_size = Size::new(
+                    width
+                        / if width_scale > height_scale {
+                            width_scale
+                        } else {
+                            height_scale
+                        },
+                    height
+                        / if width_scale > height_scale {
+                            width_scale
+                        } else {
+                            height_scale
+                        },
+                );
+                let center = bounds.x + bounds.width / 2.0;
+                let new_x = center - new_size.width / 2.0;
+                let alloc_bounds = Rectangle::new(
+                    Point {
+                        x: new_x,
+                        y: bounds.y,
+                    },
+                    new_size,
+                );
                 renderer.draw_image(
                     iced_core::image::Image {
                         handle: allocation.handle().clone(),
@@ -155,7 +184,7 @@ where
                         opacity,
                         snap: true,
                     },
-                    bounds,
+                    alloc_bounds,
                     clip_bounds,
                 );
             });
