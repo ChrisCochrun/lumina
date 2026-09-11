@@ -35,6 +35,7 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
@@ -1341,8 +1342,38 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::SelectServiceItem(index) => {
-                self.selected_items = vec![index];
-                Task::none()
+                let Some(modifiers) = self.modifiers_pressed else {
+                    self.selected_items = vec![index];
+                    return Task::none();
+                };
+                if modifiers.is_empty() {
+                    self.selected_items = vec![index];
+                    Task::none()
+                } else if modifiers.shift() {
+                    let Some(first_item) = self.selected_items.first() else {
+                        self.selected_items = vec![index];
+                        return Task::none();
+                    };
+                    if first_item < &index {
+                        let mut items = Vec::new();
+                        for id in *first_item..=index {
+                            items.push(id);
+                        }
+                        self.selected_items = items;
+                    } else if first_item > &index {
+                        for id in index..*first_item {
+                            self.selected_items.push(id);
+                        }
+                    }
+                    debug!("{:?}", self.selected_items);
+                    return Task::none();
+                } else if modifiers.control() {
+                    self.selected_items.push(index);
+                    return Task::none();
+                } else {
+                    self.selected_items = vec![index];
+                    Task::none()
+                }
             }
             Message::AddSelectServiceItem(index) => {
                 self.selected_items.push(index);
@@ -1522,11 +1553,23 @@ impl cosmic::Application for App {
                 Task::batch(tasks)
             }
             Message::RemoveServiceItem(index) => {
-                Arc::make_mut(&mut self.service).remove(index);
+                debug!("{}", self.selected_items.len());
+                debug!("{:?}", self.selected_items);
+                for item in self.selected_items.iter().sorted().rev() {
+                    debug!("Removing index #: {}", item);
+                    Arc::make_mut(&mut self.service).remove(*item);
+                }
                 self.presenter.update_items(self.service.clone());
+                self.selected_items = Vec::new();
+                self.context_menu = None;
                 Task::none()
             }
             Message::ContextMenuItem(index) => {
+                index.as_ref().map(|index| {
+                    if !self.selected_items.contains(index) {
+                        self.selected_items = vec![*index];
+                    }
+                });
                 self.context_menu = index;
                 self.context_point = self.hovered_point;
                 Task::none()
