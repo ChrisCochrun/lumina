@@ -6,6 +6,7 @@ use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
+use cosmic::cosmic_theme::palette::IntoColor;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
@@ -344,6 +345,7 @@ impl Presenter {
                     );
                     self.slide_action_map = Some(map);
                 }
+                return self.update(Message::CloseContextMenu);
             }
             Message::AssignSlideAction(action) => {
                 let slide_id = self.context_menu_id.expect(
@@ -360,6 +362,7 @@ impl Presenter {
                     map.insert(slide_id, vec![action]);
                     self.slide_action_map = Some(map);
                 }
+                return self.update(Message::CloseContextMenu);
             }
             Message::ChangePreviewSize(size) => {
                 self.preview_size = size as f32;
@@ -638,11 +641,44 @@ impl Presenter {
             now: self.now,
         };
 
+        let action_label: Element<Message> = self.slide_action_map.as_ref().map_or_else(
+            || Space::new().into(),
+            |map| {
+                map.get(&(item_index, slide_index)).map_or_else(
+                    || Space::new().into(),
+                    |actions| {
+                        actions
+                            .iter()
+                            .map(|action| match action {
+                                slide_actions::Action::Obs(obs_action) => {
+                                    match obs_action {
+                                        ObsAction::Scene(scene) => {
+                                            format!("OBS Scene: {}", &scene.id.name)
+                                        }
+                                        ObsAction::StartStream => {
+                                            "Start Stream".to_string()
+                                        }
+                                        ObsAction::StopStream => {
+                                            "Stop Stream".to_string()
+                                        }
+                                    }
+                                }
+                                slide_actions::Action::Other => todo!(),
+                            })
+                            .collect::<String>()
+                            .apply(text)
+                            .class(theme::Text::Accent)
+                            .into()
+                    },
+                )
+            },
+        );
+
         let slide =
             widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
 
         let delegate = mouse_area(
-            Container::new(slide)
+            Container::new(column![action_label, slide].spacing(space_xs))
                 .id(if is_current_slide {
                     self.active_slide_id.clone()
                 } else {
@@ -779,7 +815,6 @@ impl Presenter {
                         let item = self.delegate(item_index, item, slide_index, slide);
                         slides.push(item);
                     });
-                let slides_length = slides.len() as f32;
                 let row = Row::from_vec(slides)
                     .spacing(space_s)
                     .padding([0, 15, 0, 15]);
