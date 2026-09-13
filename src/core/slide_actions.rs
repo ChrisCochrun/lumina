@@ -8,21 +8,21 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum ObsAction {
-    Scene { scene: Scene },
+    Scene(Scene),
     StartStream,
     StopStream,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Action {
-    Obs { action: ObsAction },
+    Obs(ObsAction),
     Other,
 }
 
 impl ObsAction {
     pub async fn run(&self, client: Arc<Client>) -> Result<()> {
         match self {
-            Self::Scene { scene } => {
+            Self::Scene(scene) => {
                 warn!(?scene, "Changing obs scenes");
                 client
                     .scenes()
