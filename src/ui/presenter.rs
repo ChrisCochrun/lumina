@@ -311,13 +311,11 @@ impl Presenter {
                         let mut altered_actions = vec![];
                         for action in actions.iter_mut() {
                             match action {
-                                slide_actions::Action::Obs {
-                                    action: ObsAction::Scene { .. },
-                                } => altered_actions.push(slide_actions::Action::Obs {
-                                    action: ObsAction::Scene {
-                                        scene: new_scene.clone(),
-                                    },
-                                }),
+                                slide_actions::Action::Obs(ObsAction::Scene {
+                                    ..
+                                }) => altered_actions.push(slide_actions::Action::Obs(
+                                    ObsAction::Scene(new_scene.clone()),
+                                )),
                                 _ => altered_actions.push(action.to_owned()),
                             }
                         }
@@ -326,11 +324,9 @@ impl Presenter {
                     } else if map
                         .insert(
                             slide_id,
-                            vec![slide_actions::Action::Obs {
-                                action: ObsAction::Scene {
-                                    scene: new_scene.clone(),
-                                },
-                            }],
+                            vec![slide_actions::Action::Obs(ObsAction::Scene(
+                                new_scene.clone(),
+                            ))],
                         )
                         .is_none()
                     {
@@ -342,11 +338,9 @@ impl Presenter {
                     let mut map = HashMap::new();
                     map.insert(
                         slide_id,
-                        vec![slide_actions::Action::Obs {
-                            action: ObsAction::Scene {
-                                scene: new_scene.clone(),
-                            },
-                        }],
+                        vec![slide_actions::Action::Obs(ObsAction::Scene(
+                            new_scene.clone(),
+                        ))],
                     );
                     self.slide_action_map = Some(map);
                 }
@@ -620,6 +614,100 @@ impl Presenter {
         // )
     }
 
+    pub fn delegate<'a>(
+        &'a self,
+        item_index: usize,
+        item: &'a ServiceItem,
+        slide_index: usize,
+        slide: &'a Slide,
+    ) -> Element<'a, Message> {
+        let Spacing {
+            space_none,
+            space_xs,
+            space_s,
+            space_l,
+            ..
+        } = theme::spacing();
+        let is_current_slide = (item_index, slide_index)
+            == (self.current_item_index, self.current_slide_index);
+
+        let settings = crate::ui::widgets::slide::SlideSettings {
+            delegate: true,
+            hide_mouse: false,
+            animation: self.animation.as_ref(),
+            now: self.now,
+        };
+
+        let slide =
+            widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
+
+        let delegate = mouse_area(
+            Container::new(slide)
+                .id(if is_current_slide {
+                    self.active_slide_id.clone()
+                } else {
+                    Id::unique()
+                })
+                .style(move |t| {
+                    let mut style = container::Style::default();
+                    let theme = t.cosmic();
+                    let hovered = self.hovered_slide == Some((item_index, slide_index));
+                    style.background = Some(Background::Color(if is_current_slide {
+                        theme.accent.base.into()
+                    } else if hovered {
+                        theme.accent.hover.into()
+                    } else {
+                        theme.palette.neutral_3.into()
+                    }));
+                    style.border = Border::default().rounded(10.0);
+                    style.shadow = Shadow {
+                        color: Color::BLACK,
+                        offset: {
+                            if is_current_slide || hovered {
+                                Vector::new(5.0, 5.0)
+                            } else {
+                                Vector::new(0.0, 0.0)
+                            }
+                        },
+                        blur_radius: {
+                            if is_current_slide || hovered {
+                                10.0
+                            } else {
+                                0.0
+                            }
+                        },
+                    };
+                    style
+                })
+                .center_x(self.preview_size * 16.0 / 9.0)
+                .height(self.preview_size)
+                .padding(10),
+        )
+        .interaction(cosmic::iced::mouse::Interaction::Pointer)
+        .on_move(move |point| {
+            Message::HoveredSlide(Some((item_index, slide_index, point)))
+        })
+        .on_exit(Message::HoveredSlide(None))
+        .on_release(Message::ActivateSlide(item_index, slide_index))
+        .on_right_release(Message::RightClickSlide(item_index, slide_index));
+        let item = if slide_index == 0 {
+            let label = text::body(&item.title)
+                .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
+                .width(self.preview_size * 16.0 / 9.0);
+
+            column![label, delegate]
+                .align_x(Horizontal::Center)
+                .spacing(space_s)
+                .apply(container)
+        } else {
+            delegate
+                .apply(container)
+                .padding([space_l, space_none, space_none, space_none])
+        };
+        self.context_menu((item_index, slide_index), item.into())
+            .into()
+    }
+
     #[allow(clippy::too_many_lines)]
     pub fn preview_grid(&self) -> Element<Message> {
         let Spacing {
@@ -634,90 +722,8 @@ impl Presenter {
         for (item_index, item) in self.service.iter().enumerate() {
             let slides_length = item.slides.len();
             for (slide_index, slide) in item.slides.iter().enumerate() {
-                let is_current_slide = (item_index, slide_index)
-                    == (self.current_item_index, self.current_slide_index);
-
-                let settings = crate::ui::widgets::slide::SlideSettings {
-                    delegate: true,
-                    hide_mouse: false,
-                    animation: self.animation.as_ref(),
-                    now: self.now,
-                };
-
-                let slide = widgets::slide::slide(
-                    slide,
-                    None,
-                    None,
-                    None::<Element<Message>>,
-                    settings,
-                );
-
-                let delegate = mouse_area(
-                    Container::new(slide)
-                        .id(if is_current_slide {
-                            self.active_slide_id.clone()
-                        } else {
-                            Id::unique()
-                        })
-                        .style(move |t| {
-                            let mut style = container::Style::default();
-                            let theme = t.cosmic();
-                            let hovered =
-                                self.hovered_slide == Some((item_index, slide_index));
-                            style.background =
-                                Some(Background::Color(if is_current_slide {
-                                    theme.accent.base.into()
-                                } else if hovered {
-                                    theme.accent.hover.into()
-                                } else {
-                                    theme.palette.neutral_3.into()
-                                }));
-                            style.border = Border::default().rounded(10.0);
-                            style.shadow = Shadow {
-                                color: Color::BLACK,
-                                offset: {
-                                    if is_current_slide || hovered {
-                                        Vector::new(5.0, 5.0)
-                                    } else {
-                                        Vector::new(0.0, 0.0)
-                                    }
-                                },
-                                blur_radius: {
-                                    if is_current_slide || hovered {
-                                        10.0
-                                    } else {
-                                        0.0
-                                    }
-                                },
-                            };
-                            style
-                        })
-                        .center_x(self.preview_size * 16.0 / 9.0)
-                        .height(self.preview_size)
-                        .padding(10),
-                )
-                .interaction(cosmic::iced::mouse::Interaction::Pointer)
-                .on_move(move |point| {
-                    Message::HoveredSlide(Some((item_index, slide_index, point)))
-                })
-                .on_exit(Message::HoveredSlide(None))
-                .on_release(Message::ActivateSlide(item_index, slide_index))
-                .on_right_release(Message::RightClickSlide(item_index, slide_index));
-                let item = if slide_index == 0 {
-                    let label = text::body(&item.title)
-                        .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
-                        .width(self.preview_size * 16.0 / 9.0);
-
-                    column![label, delegate]
-                        .align_x(Horizontal::Center)
-                        .spacing(space_s)
-                        .apply(container)
-                } else {
-                    delegate
-                        .apply(container)
-                        .padding([space_l, space_none, space_none, space_none])
-                };
-                items.push(self.context_menu((item_index, slide_index), item.into()));
+                let item = self.delegate(item_index, item, slide_index, slide);
+                items.push(item);
 
                 items.push(
                     container(space::vertical().width(space_s))
@@ -770,107 +776,15 @@ impl Presenter {
                     .iter()
                     .enumerate()
                     .for_each(|(slide_index, slide)| {
-                        let is_current_slide = (item_index, slide_index)
-                            == (self.current_item_index, self.current_slide_index);
-
-                        let settings = crate::ui::widgets::slide::SlideSettings {
-                            delegate: true,
-                            hide_mouse: false,
-                            animation: self.animation.as_ref(),
-                            now: self.now,
-                        };
-
-                        let container = widgets::slide::slide(
-                            slide,
-                            None,
-                            None,
-                            None::<Element<Message>>,
-                            settings,
-                        );
-
-                        // let container = slide_view(
-                        //     slide,
-                        //     self.preview_video.as_ref(),
-                        //     SlideSettings {
-                        //         delegate: true,
-                        //         hide_mouse: false,
-                        //         previous_slide: None,
-                        //         animation: None,
-                        //         animator: None,
-                        //         now: self.now,
-                        //     },
-                        // );
-                        let delegate = mouse_area(
-                            Container::new(container)
-                                .id(if is_current_slide {
-                                    self.active_slide_id.clone()
-                                } else {
-                                    Id::unique()
-                                })
-                                .style(move |t| {
-                                    let mut style = container::Style::default();
-                                    let theme = t.cosmic();
-                                    let hovered = self.hovered_slide
-                                        == Some((item_index, slide_index));
-                                    style.background =
-                                        Some(Background::Color(if is_current_slide {
-                                            theme.accent.base.into()
-                                        } else if hovered {
-                                            theme.accent.hover.into()
-                                        } else {
-                                            theme.palette.neutral_3.into()
-                                        }));
-                                    style.border = Border::default().rounded(10.0);
-                                    style.shadow = Shadow {
-                                        color: Color::BLACK,
-                                        offset: {
-                                            if is_current_slide || hovered {
-                                                Vector::new(5.0, 5.0)
-                                            } else {
-                                                Vector::new(0.0, 0.0)
-                                            }
-                                        },
-                                        blur_radius: {
-                                            if is_current_slide || hovered {
-                                                10.0
-                                            } else {
-                                                0.0
-                                            }
-                                        },
-                                    };
-                                    style
-                                })
-                                .center_x(self.preview_size * 16.0 / 9.0)
-                                .height(self.preview_size)
-                                .padding(10),
-                        )
-                        .interaction(cosmic::iced::mouse::Interaction::Pointer)
-                        .on_move(move |point| {
-                            Message::HoveredSlide(Some((item_index, slide_index, point)))
-                        })
-                        .on_exit(Message::HoveredSlide(None))
-                        .on_release(Message::ActivateSlide(item_index, slide_index))
-                        .on_right_release(
-                            Message::RightClickSlide(item_index, slide_index),
-                        );
-                        let context_menu =
-                            self.context_menu((item_index, slide_index), delegate.into());
-                        slides.push(context_menu);
+                        let item = self.delegate(item_index, item, slide_index, slide);
+                        slides.push(item);
                     });
                 let slides_length = slides.len() as f32;
                 let row = Row::from_vec(slides)
                     .spacing(space_s)
                     .padding([0, 15, 0, 15]);
-                let label = text::body(item.title.clone())
-                    .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
-                    .width(self.preview_size * slides_length * 16.0 / 9.0);
-                let label_container = container(label).padding([0, 0, 0, 15]);
                 let divider = vertical::light().width(2);
-                items.push(
-                    container(column![label_container, row].spacing(space_s))
-                        .padding(space_xs)
-                        .into(),
-                );
+                items.push(container(row).padding(space_xs).into());
                 items.push(divider.into());
             });
         let scrollable = scrollable(container(Row::from_vec(items)).style(|_t| {
@@ -909,16 +823,16 @@ impl Presenter {
             let mut menu_items: Vec<Element<Message>> = vec![
                 menu_item(
                     "Start Stream",
-                    Message::AssignSlideAction(slide_actions::Action::Obs {
-                        action: ObsAction::StartStream,
-                    }),
+                    Message::AssignSlideAction(slide_actions::Action::Obs(
+                        ObsAction::StartStream,
+                    )),
                 )
                 .into(),
                 menu_item(
                     "Stop Stream",
-                    Message::AssignSlideAction(slide_actions::Action::Obs {
-                        action: ObsAction::StopStream,
-                    }),
+                    Message::AssignSlideAction(slide_actions::Action::Obs(
+                        ObsAction::StopStream,
+                    )),
                 )
                 .into(),
             ];
@@ -1017,7 +931,7 @@ impl Presenter {
         {
             for action in actions {
                 match action {
-                    slide_actions::Action::Obs { action } => {
+                    slide_actions::Action::Obs(action) => {
                         debug!("found obs slide actions");
                         if let Some(obs) = &self.obs_client {
                             let obs = Arc::clone(obs);
@@ -1212,6 +1126,7 @@ pub struct SlideSettings<'a> {
     pub animation: Option<&'a crate::core::animation::Animation>,
     pub animator: Option<&'a Animation<bool>>,
     pub now: Instant,
+    pub action: Option<&'a slide_actions::Action>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1409,7 +1324,26 @@ pub(crate) fn slide_view<'a>(
                     .scroller_width(0),
             );
         }
-        Container::new(stack).center(Length::Fill).into()
+        if let Some(action) = settings.action {
+            let action_symbol: Element<Message> = match action {
+                slide_actions::Action::Obs(obs_action) => {
+                    let obs = match obs_action {
+                        ObsAction::Scene(scene) => &scene.id.name,
+                        ObsAction::StartStream => "Start Stream",
+                        ObsAction::StopStream => "Stop Stream",
+                    };
+                    text(obs).into()
+                }
+                slide_actions::Action::Other => Space::new().into(),
+            };
+            stack
+                .push(action_symbol)
+                .apply(container)
+                .center(Length::Fill)
+                .into()
+        } else {
+            Container::new(stack).center(Length::Fill).into()
+        }
     })
     .into()
 }
