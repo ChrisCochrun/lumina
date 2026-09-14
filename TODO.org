@@ -3,6 +3,9 @@
 #+CATEGORY: dev
 
 
+* TODO [#A] Fix actions not staying with a slide when user adds more items into service
+Because actions are just mapped into a slide by a hashmap instead of the slide having the action in it's struct, we are going to have to do some reconstruction of the hashmap when items are added. Maybe, it's best to keep a linear copy of the slide indexes or even create a unique slide id for each slide and map those to the actions so they can be looked up later.
+
 * TODO [#A] Deployment pipeline and get a MVP going
 We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
