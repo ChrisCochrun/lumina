@@ -208,19 +208,17 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
     let dir = fs::read_dir(&path).into_diagnostic().ok()?;
     let fonts: Vec<PathBuf> = dir
         .filter_map(|file| {
-            if let Ok(file) = file {
+            file.map_or(None, |file| {
                 let path = file.path();
-                if match path.extension().map(|font| font.to_str().unwrap_or("")) {
-                    Some("ttf" | "otf") => true,
-                    _ => false,
-                } {
+                if matches!(
+                    path.extension().map(|font| font.to_str().unwrap_or("")),
+                    Some("ttf" | "otf")
+                ) {
                     Some(path)
                 } else {
                     None
                 }
-            } else {
-                None
-            }
+            })
         })
         .collect();
     if fonts.is_empty() { None } else { Some(fonts) }
@@ -335,7 +333,7 @@ mod test {
     use crate::core::service_items::ServiceTrait;
     use crate::core::slide::{Slide, TextAlignment};
     use crate::core::songs::{Song, VerseName};
-    use crate::ui::text_svg::text_svg_generator;
+    use crate::ui::text_svg::{TextSvg, text_svg_generator};
     use std::collections::HashMap;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -448,32 +446,33 @@ mod test {
         items.iter().try_for_each(|item| {
             if let ServiceItemKind::Song(..) = item.kind {
                 item.slides.iter().try_for_each(|slide| {
+                    let map_text_svg = |text_svg: &TextSvg| {
+                        if text_svg.handle.is_none() {
+                            return Err(String::from(
+                                "There is no handle in this song's TextSvg",
+                            ));
+                        }
+
+                        text_svg.path.as_ref().map_or_else(
+                            || {
+                                Err(String::from(
+                                    "There is no path in this song's TextSvg",
+                                ))
+                            },
+                            |path| {
+                                if path.exists() {
+                                    test_size_and_cache(path.clone())
+                                } else {
+                                    Err(String::from(
+                                        "The path in this TextSvg doesn't exist",
+                                    ))
+                                }
+                            },
+                        )
+                    };
                     slide.text_svg.as_ref().map_or_else(
                         || Err(String::from("There is no TextSvg for this song")),
-                        |text_svg| {
-                            if text_svg.handle.is_none() {
-                                return Err(String::from(
-                                    "There is no handle in this song's TextSvg",
-                                ));
-                            }
-
-                            text_svg.path.as_ref().map_or_else(
-                                || {
-                                    Err(String::from(
-                                        "There is no path in this song's TextSvg",
-                                    ))
-                                },
-                                |path| {
-                                    if path.exists() {
-                                        test_size_and_cache(path.clone())
-                                    } else {
-                                        Err(String::from(
-                                            "The path in this TextSvg doesn't exist",
-                                        ))
-                                    }
-                                },
-                            )
-                        },
+                        map_text_svg,
                     )
                 })
             } else {

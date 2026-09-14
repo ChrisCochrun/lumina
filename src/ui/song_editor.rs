@@ -395,7 +395,7 @@ impl SongEditor {
             Message::ChangeSong(song) => {
                 let mut tasks = vec![];
                 self.song = Some(song.clone());
-                self.title = song.title.clone();
+                self.title.clone_from(&song.title);
                 self.editing_verse_order = false;
                 if let Some(stroke_size) = song.stroke_size {
                     self.stroke_size = stroke_size;
@@ -439,7 +439,7 @@ impl SongEditor {
                 }
 
                 if let Some(author) = &song.author {
-                    self.author = author.clone();
+                    self.author.clone_from(author);
                 }
 
                 self.player.stop();
@@ -465,20 +465,20 @@ impl SongEditor {
                         .build()
                         .expect("There should be an audio decoder here");
 
-                    self.audio = audio.clone();
+                    self.audio.clone_from(audio);
                     self.audio_duration = source.total_duration();
                     self.player.append(source);
                     self.player.pause();
                 }
 
                 if let Some(ccli) = &song.ccli {
-                    self.ccli = ccli.clone();
+                    self.ccli.clone_from(ccli);
                 }
                 if let Some(lyrics) = &song.lyrics {
                     self.lyrics = text_editor::Content::with_text(lyrics);
                 }
                 self.background_video(song.background.as_ref());
-                self.background = song.background.clone();
+                self.background.clone_from(&song.background);
                 self.song_slides = None;
 
                 self.verses = song.verse_map.as_ref().map(|map| {
@@ -1007,7 +1007,7 @@ impl SongEditor {
                                     duration: None,
                                     easing: None,
                                 }),
-                                "Slide Left" => Some(Animation::ScrollUp {
+                                "Slide Left" => Some(Animation::SlideLeft {
                                     duration: None,
                                     easing: None,
                                 }),
@@ -1159,18 +1159,17 @@ impl SongEditor {
             .label("Slide Transition:"),
             dropdown(
                 &self.animations,
-                if let Some(animation) = self.song.as_ref().and_then(|song| {
-                    song.animation.as_ref().map(|animation| match animation {
-                        Animation::CrossFade { .. } => 1,
-                        Animation::SlideUp { .. } => 2,
-                        Animation::ScrollUp { .. } => 3,
-                        Animation::SlideLeft { .. } => 4,
+                self.song
+                    .as_ref()
+                    .and_then(|song| {
+                        song.animation.as_ref().map(|animation| match animation {
+                            Animation::CrossFade { .. } => 1,
+                            Animation::SlideUp { .. } => 2,
+                            Animation::ScrollUp { .. } => 3,
+                            Animation::SlideLeft { .. } => 4,
+                        })
                     })
-                }) {
-                    Some(animation)
-                } else {
-                    Some(0)
-                },
+                    .map_or(Some(0), |animation| Some(animation)),
                 Message::SelectAnimation
             )
             .gap(5.0),

@@ -1348,7 +1348,6 @@ impl cosmic::Application for App {
                 };
                 if modifiers.is_empty() {
                     self.selected_items = vec![index];
-                    Task::none()
                 } else if modifiers.shift() {
                     let Some(first_item) = self.selected_items.first() else {
                         self.selected_items = vec![index];
@@ -1366,14 +1365,12 @@ impl cosmic::Application for App {
                         }
                     }
                     debug!("{:?}", self.selected_items);
-                    Task::none()
                 } else if modifiers.control() {
                     self.selected_items.push(index);
-                    Task::none()
                 } else {
                     self.selected_items = vec![index];
-                    Task::none()
                 }
+                Task::none()
             }
             Message::AddSelectServiceItem(index) => {
                 self.selected_items.push(index);
@@ -1502,8 +1499,7 @@ impl cosmic::Application for App {
             Message::AddServiceItemKind(index, item) => {
                 let item_index = item.0.1;
                 let kind = item.0.0;
-                let item;
-                match kind {
+                let item = match kind {
                     core::model::LibraryKind::Song => {
                         let Some(library) = self.library.as_mut() else {
                             return Task::none();
@@ -1511,7 +1507,7 @@ impl cosmic::Application for App {
                         let Some(song) = library.get_song(item_index) else {
                             return Task::none();
                         };
-                        item = song.to_service_item();
+                        song.to_service_item()
                     }
                     core::model::LibraryKind::Video => {
                         let Some(library) = self.library.as_mut() else {
@@ -1520,7 +1516,7 @@ impl cosmic::Application for App {
                         let Some(video) = library.get_video(item_index) else {
                             return Task::none();
                         };
-                        item = video.to_service_item();
+                        video.to_service_item()
                     }
                     core::model::LibraryKind::Image => {
                         let Some(library) = self.library.as_mut() else {
@@ -1529,7 +1525,7 @@ impl cosmic::Application for App {
                         let Some(image) = library.get_image(item_index) else {
                             return Task::none();
                         };
-                        item = image.to_service_item();
+                        image.to_service_item()
                     }
                     core::model::LibraryKind::Presentation => {
                         let Some(library) = self.library.as_mut() else {
@@ -1539,9 +1535,9 @@ impl cosmic::Application for App {
                         else {
                             return Task::none();
                         };
-                        item = presentation.to_service_item();
+                        presentation.to_service_item()
                     }
-                }
+                };
                 self.update(Message::AddServiceItem(index, item))
             }
             Message::AddServiceItemsFiles(index, items) => {
@@ -1565,11 +1561,11 @@ impl cosmic::Application for App {
                 Task::none()
             }
             Message::ContextMenuItem(index) => {
-                index.as_ref().map(|index| {
-                    if !self.selected_items.contains(index) {
-                        self.selected_items = vec![*index];
-                    }
-                });
+                if let Some(index) = &index
+                    && !self.selected_items.contains(index)
+                {
+                    self.selected_items = vec![*index];
+                }
                 self.context_menu = index;
                 self.context_point = self.hovered_point;
                 Task::none()
@@ -1803,12 +1799,17 @@ impl cosmic::Application for App {
                                 Task::perform(
                                     async move { file::find_fonts(dir_for_fonts) },
                                     |res| {
-                                        if let Some(fonts) = res {
-                                            cosmic::Action::App(Message::LoadFonts(fonts))
-                                        } else {
-                                            info!("There were no fonts");
-                                            cosmic::Action::None
-                                        }
+                                        res.map_or_else(
+                                            || {
+                                                info!("There were no fonst");
+                                                cosmic::Action::None
+                                            },
+                                            |fonts| {
+                                                cosmic::Action::App(Message::LoadFonts(
+                                                    fonts,
+                                                ))
+                                            },
+                                        )
                                     },
                                 ),
                                 Task::perform(async move { file::load(&dir) }, |res| {
@@ -2096,11 +2097,11 @@ impl cosmic::Application for App {
                     .on_press(Message::Present(presenter::Message::PlayPauseVideo))
             },
         );
-        let video_position = if let Some(video) = &self.presenter.preview_video {
-            video.position().as_secs_f64()
-        } else {
-            0.0
-        };
+        let video_position = self
+            .presenter
+            .preview_video
+            .as_ref()
+            .map_or(0.0, |video| video.position().as_secs_f64());
 
         let mut slide_preview = column![
             responsive(|size| {

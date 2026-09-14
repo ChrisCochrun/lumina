@@ -37,6 +37,7 @@ where
 
 #[allow(missing_debug_implementations)]
 #[allow(dead_code)]
+#[allow(clippy::struct_field_names)]
 pub struct Slide<'a, Message, Theme, Renderer>
 where
     Renderer: PrimitiveRenderer + iced_core::Renderer + iced_core::image::Renderer,
@@ -216,11 +217,9 @@ where
         + cosmic::iced::advanced::image::Renderer<Handle = Handle>,
 {
     fn children(&self) -> Vec<Tree> {
-        if let Some(video) = &self.video {
-            vec![Tree::new(video)]
-        } else {
-            Vec::new()
-        }
+        self.video
+            .as_ref()
+            .map_or_else(|| Vec::new(), |video| vec![Tree::new(video)])
     }
 
     fn diff(&mut self, tree: &mut Tree) {
@@ -322,20 +321,21 @@ where
         //     .next()
         //     .expect("There should always be a child");
 
-        if let Some(video) = &self.video {
-            video.as_widget().mouse_interaction(
-                &tree.children[0],
-                layout,
-                cursor_position,
-                viewport,
-                renderer,
-            )
-        } else {
-            mouse::Interaction::None
-        }
+        self.video
+            .as_ref()
+            .map_or(mouse::Interaction::None, |video| {
+                video.as_widget().mouse_interaction(
+                    &tree.children[0],
+                    layout,
+                    cursor_position,
+                    viewport,
+                    renderer,
+                )
+            })
     }
 
     #[inline(always)]
+    #[allow(clippy::float_cmp)]
     fn draw(
         &self,
         tree: &Tree,
@@ -355,7 +355,7 @@ where
         let clip_bounds = layout
             .bounds()
             .intersection(viewport)
-            .unwrap_or(layout.bounds());
+            .unwrap_or_else(|| layout.bounds());
         let background = self.slide.background();
 
         if self.video.is_none() {

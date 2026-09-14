@@ -125,6 +125,5 @@ pub(crate) fn focus_target(
         direction,
     };
 
-    let scrollable_id = scrollable_id;
     operate(operation).then(move |offset| scroll_to(scrollable_id.clone(), offset.into()))
 }

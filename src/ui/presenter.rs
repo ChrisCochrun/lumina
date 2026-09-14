@@ -10,16 +10,14 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{Direction, Scrollbar};
-use cosmic::iced::widget::stack;
 use cosmic::iced::{
     Animation, Background, Border, Color, ContentFit, Font, Length, Point, Shadow, Vector,
 };
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
 use cosmic::widget::{
-    Container, Id, JustifyContent, Row, Space, column, container, flex_row,
-    image as cosmic_image, menu, mouse_area, popover, responsive, scrollable, space,
-    text,
+    Container, Id, JustifyContent, Row, column, container, flex_row, menu, mouse_area,
+    popover, scrollable, space, text,
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
@@ -37,7 +35,6 @@ use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::scroll_operations::{self, focus_target};
-use crate::ui::widgets::loaded_image::loaded_image;
 use crate::ui::widgets::slide::AnimationState;
 use crate::ui::widgets::{self, slide::slide};
 use crate::{BackgroundKind, ViewMode};
@@ -536,21 +533,21 @@ impl Presenter {
             settings,
         )
         .animate({
-            if let Some(animator) = &self.animator {
-                let progress = animator.interpolate(0.0, 1.0, self.now);
-                let prev_progress = animator.interpolate(1.0, 0.0, self.now);
-                if progress >= 1.0 {
-                    AnimationState::Idle
-                } else {
-                    AnimationState::Running {
-                        direction: crate::ui::widgets::slide::Direction::Forward,
-                        new_slide_progress: progress,
-                        prev_slide_progress: prev_progress,
+            self.animator
+                .as_ref()
+                .map_or(AnimationState::Idle, |animator| {
+                    let progress = animator.interpolate(0.0, 1.0, self.now);
+                    let prev_progress = animator.interpolate(1.0, 0.0, self.now);
+                    if progress >= 1.0 {
+                        AnimationState::Idle
+                    } else {
+                        AnimationState::Running {
+                            direction: crate::ui::widgets::slide::Direction::Forward,
+                            new_slide_progress: progress,
+                            prev_slide_progress: prev_progress,
+                        }
                     }
-                }
-            } else {
-                AnimationState::Idle
-            }
+                })
         })
         .into()
     }
@@ -584,21 +581,21 @@ impl Presenter {
             settings,
         )
         .animate({
-            if let Some(animator) = &self.animator {
-                let progress = animator.interpolate(0.0, 1.0, self.now);
-                let prev_progress = animator.interpolate(1.0, 0.0, self.now);
-                if progress >= 1.0 {
-                    AnimationState::Idle
-                } else {
-                    AnimationState::Running {
-                        direction: crate::ui::widgets::slide::Direction::Forward,
-                        new_slide_progress: progress,
-                        prev_slide_progress: prev_progress,
+            self.animator
+                .as_ref()
+                .map_or(AnimationState::Idle, |animator| {
+                    let progress = animator.interpolate(0.0, 1.0, self.now);
+                    let prev_progress = animator.interpolate(1.0, 0.0, self.now);
+                    if progress >= 1.0 {
+                        AnimationState::Idle
+                    } else {
+                        AnimationState::Running {
+                            direction: crate::ui::widgets::slide::Direction::Forward,
+                            new_slide_progress: progress,
+                            prev_slide_progress: prev_progress,
+                        }
                     }
-                }
-            } else {
-                AnimationState::Idle
-            }
+                })
         })
         .into()
 
@@ -622,15 +619,15 @@ impl Presenter {
         item: &'a ServiceItem,
         slide_index: usize,
         slide: &'a Slide,
-        grid_mode: bool,
+        _grid_mode: bool,
     ) -> Element<'a, Message> {
         let Spacing {
             space_none,
             space_xxs,
             space_xs,
             space_s,
-            space_m,
-            space_l,
+            space_m: _,
+            space_l: _,
             space_xl,
             ..
         } = theme::spacing();
@@ -651,7 +648,7 @@ impl Presenter {
         let mut slide_column = column![
             slide
                 .apply(container)
-                .height(self.preview_size)
+                .height(slide_height)
                 .width(slide_width)
         ]
         .spacing(space_xxs)
@@ -685,7 +682,7 @@ impl Presenter {
                     .class(theme::Container::Tooltip)
                     .padding([space_xxs, space_xs, space_xxs, space_xs]),
             );
-        };
+        }
 
         let delegate = mouse_area(
             Container::new(slide_column)
@@ -757,16 +754,16 @@ impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn preview_grid(&self) -> Element<Message> {
         let Spacing {
-            space_none,
+            space_none: _,
             space_xs,
-            space_s,
+            space_s: _,
             space_l: _,
             ..
         } = theme::spacing();
         // let mut grid = grid(vec![]).spacing(space_m);
         let mut items = vec![];
         for (item_index, item) in self.service.iter().enumerate() {
-            let slides_length = item.slides.len();
+            let _slides_length = item.slides.len();
             for (slide_index, slide) in item.slides.iter().enumerate() {
                 let item = self.delegate(item_index, item, slide_index, slide, true);
                 items.push(item);
@@ -810,8 +807,8 @@ impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
         let Spacing {
-            space_none,
-            space_xs,
+            space_none: _,
+            space_xs: _,
             space_s,
             ..
         } = theme::spacing();
@@ -1083,24 +1080,11 @@ impl Presenter {
         }
 
         let mut tasks = vec![];
-        #[allow(clippy::cast_precision_loss)]
-        match self.view_mode {
-            ViewMode::Grid => {
-                tasks.push(focus_target(
-                    self.scroll_id.clone(),
-                    Some(self.active_slide_id.clone()),
-                    self.direction_of_slide_change.clone(),
-                ));
-            }
-            ViewMode::Row => {
-                tasks.push(focus_target(
-                    self.scroll_id.clone(),
-                    Some(self.active_slide_id.clone()),
-                    self.direction_of_slide_change.clone(),
-                ));
-            }
-            ViewMode::Detail => todo!(),
-        };
+        tasks.push(focus_target(
+            self.scroll_id.clone(),
+            Some(self.active_slide_id.clone()),
+            self.direction_of_slide_change.clone(),
+        ));
 
         if self.slide_action_map.is_some() {
             debug!("Found slide actions, running them");

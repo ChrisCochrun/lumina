@@ -374,7 +374,7 @@ mod test {
 
     #[tokio::test]
     async fn genius() -> Result<(), String> {
-        let song = OnlineSong {
+        let _song = OnlineSong {
             lyrics: String::new(),
             title: "Death Was Arrested".to_string(),
             author: "North Point Worship (Ft. Seth Condrey)".to_string(),
@@ -463,7 +463,7 @@ mod test {
         let song = Song::from(song);
         if let Some(verse_map) = song.verse_map.as_ref() {
             if verse_map.is_empty() {
-                return Err(format!("VerseMap wasn't built right likely: {song:?}",));
+                return Err(format!("VerseMap wasn't built right likely: {song:?}"));
             }
         } else {
             return Err(String::from("There is no VerseMap in this song"));

@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    fmt::Display,
+    time::{Duration, Instant},
+};
 
 use cosmic::iced::{Point, Rectangle, Size, animation};
 use serde::{
@@ -42,6 +45,17 @@ pub enum Animation {
     },
 }
 
+impl Display for Animation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CrossFade { .. } => f.write_str("Cross Fade"),
+            Self::SlideUp { .. } => f.write_str("Slide Up"),
+            Self::SlideLeft { .. } => f.write_str("Slide Left"),
+            Self::ScrollUp { .. } => f.write_str("Scrolling Up Text"),
+        }
+    }
+}
+
 impl Animation {
     #[must_use]
     pub fn get_animator(&self, instant: Instant) -> cosmic::iced::Animation<bool> {
@@ -65,15 +79,6 @@ impl Animation {
                 }
                 animator.go(true, instant)
             }
-        }
-    }
-    #[must_use]
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::CrossFade { .. } => "Cross Fade".to_string(),
-            Self::SlideUp { .. } => "Slide Up".to_string(),
-            Self::SlideLeft { .. } => "Slide Left".to_string(),
-            Self::ScrollUp { .. } => "Scrolling Up Text".to_string(),
         }
     }
 

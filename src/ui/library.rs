@@ -849,41 +849,34 @@ impl<'a> Library {
                         .enumerate()
                         .filter(|(_, item)| match &model.kind {
                             LibraryKind::Song => {
-                                if let Some(search) = &self.song_search_query {
+                                self.song_search_query.as_ref().is_none_or(|search| {
                                     item.title()
                                         .to_lowercase()
                                         .contains(&search.to_lowercase())
-                                } else {
-                                    true
-                                }
+                                })
                             }
                             LibraryKind::Video => {
-                                if let Some(search) = &self.video_search_query {
+                                self.video_search_query.as_ref().is_none_or(|search| {
                                     item.title()
                                         .to_lowercase()
                                         .contains(&search.to_lowercase())
-                                } else {
-                                    true
-                                }
+                                })
                             }
                             LibraryKind::Image => {
-                                if let Some(search) = &self.image_search_query {
+                                self.image_search_query.as_ref().is_none_or(|search| {
                                     item.title()
                                         .to_lowercase()
                                         .contains(&search.to_lowercase())
-                                } else {
-                                    true
-                                }
+                                })
                             }
-                            LibraryKind::Presentation => {
-                                if let Some(search) = &self.presentation_search_query {
+                            LibraryKind::Presentation => self
+                                .presentation_search_query
+                                .as_ref()
+                                .is_none_or(|search| {
                                     item.title()
                                         .to_lowercase()
                                         .contains(&search.to_lowercase())
-                                } else {
-                                    true
-                                }
-                            }
+                                }),
                         })
                         .map(|(index, item)| {
                             let i32_index =
@@ -991,6 +984,8 @@ impl<'a> Library {
     where
         T: Content,
     {
+        const RIGHT_ICON: &[u8] = include_bytes!("../../res/icons/caret-right.svg");
+
         let cosmic::cosmic_theme::Spacing {
             space_xxs, space_s, ..
         } = theme::spacing();
@@ -1032,8 +1027,6 @@ impl<'a> Library {
         .align_left(Length::Fill);
 
         let texts = column([text.into(), subtext.into()]);
-
-        const RIGHT_ICON: &[u8] = include_bytes!("../../res/icons/caret-right.svg");
 
         let add_button = button::icon(icon::from_svg_bytes(RIGHT_ICON).symbolic(true))
             .on_press(Message::ToService((

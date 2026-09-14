@@ -12,6 +12,7 @@ use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Local};
 use sqlx::{AssertSqlSafe, Decode, SqliteConnection, SqlitePool, query, query_as};
+use std::cmp::Reverse;
 use std::mem::replace;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -400,7 +401,7 @@ mod test {
                 assert_ne!(&new_video, video_model.find(|v| v.id == 0).expect(""));
             }
             Err(e) => {
-                panic!("There was an error adding the video: {e}",)
+                panic!("There was an error adding the video: {e}")
             }
         }
     }

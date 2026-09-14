@@ -379,7 +379,7 @@ mod test {
                 assert_ne!(&new_image, image_model.find(|i| i.id == 0).expect(""));
             }
             Err(e) => {
-                panic!("There was an error adding the image: {e:?}",)
+                panic!("There was an error adding the image: {e:?}")
             }
         }
     }
