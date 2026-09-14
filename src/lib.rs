@@ -526,7 +526,7 @@ impl cosmic::Application for App {
         }
         if let Some(size) = app.state.presenter_zoom_level {
             batch.push(app.update(Message::Present(
-                presenter::Message::ChangePreviewSize(size as f64),
+                presenter::Message::ChangePreviewSize(f64::from(size)),
             )));
         }
         // batch.push(app.add_service(items, Arc::clone(&fontdb)));
@@ -1366,10 +1366,10 @@ impl cosmic::Application for App {
                         }
                     }
                     debug!("{:?}", self.selected_items);
-                    return Task::none();
+                    Task::none()
                 } else if modifiers.control() {
                     self.selected_items.push(index);
-                    return Task::none();
+                    Task::none()
                 } else {
                     self.selected_items = vec![index];
                     Task::none()
@@ -1552,7 +1552,7 @@ impl cosmic::Application for App {
                 }
                 Task::batch(tasks)
             }
-            Message::RemoveServiceItem(index) => {
+            Message::RemoveServiceItem(_index) => {
                 debug!("{}", self.selected_items.len());
                 debug!("{:?}", self.selected_items);
                 for item in self.selected_items.iter().sorted().rev() {
@@ -2185,9 +2185,9 @@ impl cosmic::Application for App {
                     Container::new(horizontal())
                 } else {
                     Container::new(self.presenter.preview_bar().map(Message::Present))
-                        .clip(true)
+                        // .clip(true)
                         .width(Length::Fill)
-                        .center_y(200)
+                        .padding(space_s)
                 }
             } else {
                 Container::new(horizontal())

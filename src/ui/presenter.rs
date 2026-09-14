@@ -6,8 +6,7 @@ use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
-use cosmic::cosmic_theme::palette::IntoColor;
-use cosmic::iced::alignment::Horizontal;
+use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{Direction, Scrollbar};
@@ -623,12 +622,16 @@ impl Presenter {
         item: &'a ServiceItem,
         slide_index: usize,
         slide: &'a Slide,
+        grid_mode: bool,
     ) -> Element<'a, Message> {
         let Spacing {
             space_none,
+            space_xxs,
             space_xs,
             space_s,
+            space_m,
             space_l,
+            space_xl,
             ..
         } = theme::spacing();
         let is_current_slide = (item_index, slide_index)
@@ -640,45 +643,52 @@ impl Presenter {
             animation: self.animation.as_ref(),
             now: self.now,
         };
-
-        let action_label: Element<Message> = self.slide_action_map.as_ref().map_or_else(
-            || Space::new().into(),
-            |map| {
-                map.get(&(item_index, slide_index)).map_or_else(
-                    || Space::new().into(),
-                    |actions| {
-                        actions
-                            .iter()
-                            .map(|action| match action {
-                                slide_actions::Action::Obs(obs_action) => {
-                                    match obs_action {
-                                        ObsAction::Scene(scene) => {
-                                            format!("OBS Scene: {}", &scene.id.name)
-                                        }
-                                        ObsAction::StartStream => {
-                                            "Start Stream".to_string()
-                                        }
-                                        ObsAction::StopStream => {
-                                            "Stop Stream".to_string()
-                                        }
-                                    }
-                                }
-                                slide_actions::Action::Other => todo!(),
-                            })
-                            .collect::<String>()
-                            .apply(text)
-                            .class(theme::Text::Accent)
-                            .into()
-                    },
-                )
-            },
-        );
-
         let slide =
             widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
+        let slide_height = self.preview_size;
+        let slide_width = self.preview_size * 16.0 / 9.0;
+
+        let mut slide_column = column![
+            slide
+                .apply(container)
+                .height(self.preview_size)
+                .width(slide_width)
+        ]
+        .spacing(space_xxs)
+        .align_x(Horizontal::Center);
+
+        if let Some(map) = &self.slide_action_map
+            && let Some(actions) = map.get(&(item_index, slide_index))
+        {
+            let color =
+                cosmic::iced::Color::from(theme::active().cosmic().palette.bright_green);
+
+            slide_column = slide_column.push(
+                actions
+                    .iter()
+                    .map(|action| match action {
+                        slide_actions::Action::Obs(obs_action) => match obs_action {
+                            ObsAction::Scene(scene) => {
+                                format!("OBS Scene: {}", &scene.id.name)
+                            }
+                            ObsAction::StartStream => "Start Stream".to_string(),
+                            ObsAction::StopStream => "Stop Stream".to_string(),
+                        },
+                        slide_actions::Action::Other => todo!(),
+                    })
+                    .collect::<String>()
+                    .apply(text)
+                    .class(theme::Text::Color(color))
+                    .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
+                    .apply(container)
+                    .width(slide_width)
+                    .class(theme::Container::Tooltip)
+                    .padding([space_xxs, space_xs, space_xxs, space_xs]),
+            );
+        };
 
         let delegate = mouse_area(
-            Container::new(column![action_label, slide].spacing(space_xs))
+            Container::new(slide_column)
                 .id(if is_current_slide {
                     self.active_slide_id.clone()
                 } else {
@@ -695,7 +705,8 @@ impl Presenter {
                     } else {
                         theme.palette.neutral_3.into()
                     }));
-                    style.border = Border::default().rounded(10.0);
+                    style.border =
+                        Border::default().rounded(theme::active().cosmic().radius_s());
                     style.shadow = Shadow {
                         color: Color::BLACK,
                         offset: {
@@ -715,9 +726,9 @@ impl Presenter {
                     };
                     style
                 })
-                .center_x(self.preview_size * 16.0 / 9.0)
-                .height(self.preview_size)
-                .padding(10),
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
+                .padding(space_xs),
         )
         .interaction(cosmic::iced::mouse::Interaction::Pointer)
         .on_move(move |point| {
@@ -729,7 +740,7 @@ impl Presenter {
         let item = if slide_index == 0 {
             let label = text::body(&item.title)
                 .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
-                .width(self.preview_size * 16.0 / 9.0);
+                .width(slide_width);
 
             column![label, delegate]
                 .align_x(Horizontal::Center)
@@ -738,10 +749,9 @@ impl Presenter {
         } else {
             delegate
                 .apply(container)
-                .padding([space_l, space_none, space_none, space_none])
+                .padding([space_xl, space_none, space_none, space_none])
         };
         self.context_menu((item_index, slide_index), item.into())
-            .into()
     }
 
     #[allow(clippy::too_many_lines)]
@@ -750,7 +760,7 @@ impl Presenter {
             space_none,
             space_xs,
             space_s,
-            space_l,
+            space_l: _,
             ..
         } = theme::spacing();
         // let mut grid = grid(vec![]).spacing(space_m);
@@ -758,19 +768,19 @@ impl Presenter {
         for (item_index, item) in self.service.iter().enumerate() {
             let slides_length = item.slides.len();
             for (slide_index, slide) in item.slides.iter().enumerate() {
-                let item = self.delegate(item_index, item, slide_index, slide);
+                let item = self.delegate(item_index, item, slide_index, slide, true);
                 items.push(item);
 
-                items.push(
-                    container(space::vertical().width(space_s))
-                        .class(if slide_index + 1 == slides_length {
-                            theme::Container::Card
-                        } else {
-                            theme::Container::WindowBackground
-                        })
-                        .padding([space_none, space_xs, space_none, space_xs])
-                        .into(),
-                );
+                // items.push(
+                //     container(space::vertical().width(space_s))
+                //         .class(if slide_index + 1 == slides_length {
+                //             theme::Container::Card
+                //         } else {
+                //             theme::Container::WindowBackground
+                //         })
+                //         .padding([space_none, space_xs, space_none, space_xs])
+                //         .into(),
+                // );
             }
         }
         let scrollable = scrollable(
@@ -778,9 +788,9 @@ impl Presenter {
                 flex_row(items)
                     .justify_content(Some(JustifyContent::FlexStart))
                     .align_items(cosmic::iced::Alignment::Center)
-                    .justify_items(cosmic::iced::Alignment::End)
-                    .column_spacing(space_s)
-                    .row_spacing(space_s),
+                    // .justify_items(cosmic::iced::Alignment::End)
+                    .column_spacing(space_xs)
+                    .row_spacing(space_xs),
             )
             .style(|_t| {
                 let style = container::Style::default();
@@ -800,7 +810,10 @@ impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn preview_bar(&self) -> Element<Message> {
         let Spacing {
-            space_xs, space_s, ..
+            space_none,
+            space_xs,
+            space_s,
+            ..
         } = theme::spacing();
         let mut items = vec![];
         self.service
@@ -812,14 +825,15 @@ impl Presenter {
                     .iter()
                     .enumerate()
                     .for_each(|(slide_index, slide)| {
-                        let item = self.delegate(item_index, item, slide_index, slide);
+                        let item =
+                            self.delegate(item_index, item, slide_index, slide, false);
                         slides.push(item);
                     });
                 let row = Row::from_vec(slides)
                     .spacing(space_s)
-                    .padding([0, 15, 0, 15]);
+                    .padding([space_s, space_s, space_s, space_s]);
                 let divider = vertical::light().width(2);
-                items.push(container(row).padding(space_xs).into());
+                items.push(container(row).padding(space_s).into());
                 items.push(divider.into());
             });
         let scrollable = scrollable(container(Row::from_vec(items)).style(|_t| {
@@ -827,7 +841,8 @@ impl Presenter {
             style.border(Border::default().width(2))
         }))
         .direction(Direction::Horizontal(Scrollbar::new()))
-        .height(Length::Fill)
+        .scrollbar_padding(space_s)
+        // .height(Length::Fill)
         // .width(Length::Fill)
         .id(self.scroll_id.clone());
         scrollable.into()
