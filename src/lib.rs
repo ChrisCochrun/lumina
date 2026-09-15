@@ -1781,9 +1781,10 @@ impl cosmic::Application for App {
                     return Task::none();
                 };
                 for font in dir {
-                    if let Err(e) = fontdb.load_font_file(font) {
+                    if let Err(e) = fontdb.load_font_file(&font) {
                         error!(?e);
                     }
+                    debug!("Loaded font: {font:?}");
                 }
                 Task::none()
             }
