@@ -30,7 +30,7 @@ use url::Url;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
-use crate::core::slide::Slide;
+use crate::core::slide::{Slide, SlideId};
 use crate::core::slide_actions::{self, ObsAction};
 use crate::ui::gst_video::{self, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
@@ -65,7 +65,7 @@ pub(crate) struct Presenter {
     scroll_id: Id,
     active_slide_id: Id,
     current_font: Font,
-    slide_action_map: Option<HashMap<(usize, usize), Vec<slide_actions::Action>>>,
+    slide_action_map: Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
     context_menu_id: Option<(usize, usize)>,
     context_point: Point,
@@ -295,9 +295,19 @@ impl Presenter {
                 self.obs_scenes = Some(scenes);
             }
             Message::AssignObsScene(scene_index) => {
-                let slide_id = self.context_menu_id.expect(
+                let slide_pos = self.context_menu_id.expect(
                     "In this match we should always already have a context menu id",
                 );
+
+                let Some(slide_id) = self
+                    .service
+                    .get(slide_pos.0)
+                    .and_then(|item| item.slides.get(slide_pos.1))
+                    .map(|slide| &slide.id)
+                else {
+                    error!("Couldn't find slide");
+                    return Action::None;
+                };
                 let Some(scenes) = &self.obs_scenes else {
                     return Action::None;
                 };
@@ -320,7 +330,7 @@ impl Presenter {
                         debug!("updating the obs scene {:?}", new_scene);
                     } else if map
                         .insert(
-                            slide_id,
+                            slide_id.clone(),
                             vec![slide_actions::Action::Obs(ObsAction::Scene(
                                 new_scene.clone(),
                             ))],
@@ -334,7 +344,7 @@ impl Presenter {
                 } else {
                     let mut map = HashMap::new();
                     map.insert(
-                        slide_id,
+                        slide_id.clone(),
                         vec![slide_actions::Action::Obs(ObsAction::Scene(
                             new_scene.clone(),
                         ))],
@@ -344,18 +354,29 @@ impl Presenter {
                 return self.update(Message::CloseContextMenu);
             }
             Message::AssignSlideAction(action) => {
-                let slide_id = self.context_menu_id.expect(
+                let slide_pos = self.context_menu_id.expect(
                     "In this match we should always already have a context menu id",
                 );
+
+                let Some(slide_id) = self
+                    .service
+                    .get(slide_pos.0)
+                    .and_then(|item| item.slides.get(slide_pos.1))
+                    .map(|slide| &slide.id)
+                else {
+                    error!("Couldn't find slide");
+                    return Action::None;
+                };
+
                 if let Some(map) = self.slide_action_map.as_mut() {
                     if let Some(actions) = map.get_mut(&slide_id) {
                         actions.push(action);
                     } else {
-                        map.insert(slide_id, vec![action]);
+                        map.insert(slide_id.clone(), vec![action]);
                     }
                 } else {
                     let mut map = HashMap::new();
-                    map.insert(slide_id, vec![action]);
+                    map.insert(slide_id.clone(), vec![action]);
                     self.slide_action_map = Some(map);
                 }
                 return self.update(Message::CloseContextMenu);
@@ -640,13 +661,13 @@ impl Presenter {
             animation: self.animation.as_ref(),
             now: self.now,
         };
-        let slide =
+        let slide_element =
             widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
         let slide_height = self.preview_size;
         let slide_width = self.preview_size * 16.0 / 9.0;
 
         let mut slide_column = column![
-            slide
+            slide_element
                 .apply(container)
                 .height(slide_height)
                 .width(slide_width)
@@ -655,7 +676,7 @@ impl Presenter {
         .align_x(Horizontal::Center);
 
         if let Some(map) = &self.slide_action_map
-            && let Some(actions) = map.get(&(item_index, slide_index))
+            && let Some(actions) = map.get(&slide.id)
         {
             let color =
                 cosmic::iced::Color::from(theme::active().cosmic().palette.bright_green);
@@ -973,8 +994,7 @@ impl Presenter {
         let mut tasks = vec![];
 
         if let Some(map) = &self.slide_action_map
-            && let Some(actions) =
-                map.get(&(self.current_item_index, self.current_slide_index))
+            && let Some(actions) = map.get(&self.current_slide.id)
         {
             for action in actions {
                 match action {

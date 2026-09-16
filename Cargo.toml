@@ -57,6 +57,7 @@ nom = "8.0.0"
 tokio-stream = "0.1.18"
 fontdb = "0.23.0"
 youtube_dl = { version = "0.10.0", features = ["downloader-native-tls", "tokio"] }
+uuid = { version = "1.26.1", features = ["v4"] }
 # iced_anim = { path = "../iced_anim/iced_anim", features = ["derive"] }
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }

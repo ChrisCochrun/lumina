@@ -346,7 +346,7 @@ impl Service {
             .collect::<Vec<Slide>>();
         let mut final_slides = vec![];
         for (index, mut slide) in slides.into_iter().enumerate() {
-            slide.set_index(i32::try_from(index).into_diagnostic()?);
+            slide.set_id(uuid::Uuid::new_v4());
             final_slides.push(slide);
         }
         Ok(final_slides)

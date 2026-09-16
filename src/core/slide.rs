@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use tracing::error;
+use uuid::Uuid;
 
 use crate::ui::gst_video;
 use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};
@@ -19,7 +20,7 @@ use super::songs::Song;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Slide {
-    id: i32,
+    pub id: SlideId,
     pub(crate) background: Background,
     #[serde(skip)]
     pub(crate) thumbnail: Option<Allocation>,
@@ -39,6 +40,11 @@ pub struct Slide {
     #[serde(skip)]
     pdf_page: Option<Handle>,
 }
+
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash,
+)]
+pub struct SlideId(Uuid);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BackgroundKind {
@@ -394,8 +400,8 @@ impl Slide {
         Ok(slides)
     }
 
-    pub(crate) const fn set_index(&mut self, index: i32) {
-        self.id = index;
+    pub(crate) const fn set_id(&mut self, id: Uuid) {
+        self.id = SlideId(id);
     }
 
     // pub fn slides_from_item(item: &ServiceItem) -> Result<Vec<Self>> {
