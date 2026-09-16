@@ -19,6 +19,9 @@ I think this has something to do with the pdf rendering not starting up yet when
 
 Maybe this isn't even a real blocker for using this at church. Just need it to build.
 
+* TODO [#A] Add a migration/manifest of file format for saving and loading
+In order to be able to update the structure of the types I will need to add a manifest or something to track the version of save files and then allow them to be updated to the new types on load. This should be done before V1 so that new versions of Lumina do not fail to load save files as the app grows.
+
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
