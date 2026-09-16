@@ -20,6 +20,8 @@ use super::songs::Song;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Slide {
+    // This is not skipped so we can load back the slide_actions
+    // that get mapped to it.
     pub id: SlideId,
     pub(crate) background: Background,
     #[serde(skip)]
@@ -705,7 +707,9 @@ impl SlideBuilder {
         let Some(video_end_time) = self.video_end_time else {
             return Err(miette!("No video_end_time"));
         };
+        let id = SlideId(Uuid::new_v4());
         Ok(Slide {
+            id,
             background,
             text,
             font: self.font,

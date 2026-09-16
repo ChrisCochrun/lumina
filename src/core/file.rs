@@ -241,8 +241,11 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
 
     let ron_string = fs::read_to_string(ron_file).into_diagnostic()?;
 
-    let mut items =
-        ron::de::from_str::<Vec<ServiceItem>>(&ron_string).into_diagnostic()?;
+    let mut items = ron::de::from_str::<Vec<ServiceItem>>(&ron_string)
+        .into_diagnostic()
+        .with_context(
+            || "Service Items or Slides structure may have been updated and the save file needs to be rebuilt",
+        )?;
 
     for item in &mut items {
         let dir = fs::read_dir(&path)
