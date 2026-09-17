@@ -1169,7 +1169,7 @@ impl SongEditor {
                             Animation::SlideLeft { .. } => 4,
                         })
                     })
-                    .map_or(Some(0), |animation| Some(animation)),
+                    .map_or(Some(0), Some),
                 Message::SelectAnimation
             )
             .gap(5.0),

@@ -314,7 +314,7 @@ impl Presenter {
                 let new_scene = &scenes[scene_index];
                 debug!(?scenes, ?new_scene, "updating obs actions");
                 if let Some(map) = self.slide_action_map.as_mut() {
-                    if let Some(actions) = map.get_mut(&slide_id) {
+                    if let Some(actions) = map.get_mut(slide_id) {
                         let mut altered_actions = vec![];
                         for action in actions.iter_mut() {
                             match action {
@@ -369,7 +369,7 @@ impl Presenter {
                 };
 
                 if let Some(map) = self.slide_action_map.as_mut() {
-                    if let Some(actions) = map.get_mut(&slide_id) {
+                    if let Some(actions) = map.get_mut(slide_id) {
                         actions.push(action);
                     } else {
                         map.insert(slide_id.clone(), vec![action]);
@@ -634,6 +634,7 @@ impl Presenter {
         // )
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn delegate<'a>(
         &'a self,
         item_index: usize,

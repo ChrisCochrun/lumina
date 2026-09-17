@@ -633,16 +633,16 @@ impl cosmic::Application for App {
 
         let row = row![
             tooltip(
-                button::custom(
-                    row![
-                        Container::new(
-                            icon::from_svg_bytes(SEARCH_ICON).symbolic(true).icon()
-                        )
+                row![
+                    icon::from_svg_bytes(SEARCH_ICON)
+                        .symbolic(true)
+                        .icon()
+                        .apply(container)
                         .center_y(Length::Fill),
-                        text::body("Search")
-                    ]
-                    .spacing(5),
-                )
+                    text::body("Search")
+                ]
+                .spacing(5)
+                .apply(button::custom)
                 .class(cosmic::theme::style::Button::HeaderBar)
                 .on_press(Message::SearchFocus),
                 "Search Library",
@@ -711,6 +711,7 @@ impl cosmic::Application for App {
         vec![row]
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn footer(&self) -> Option<Element<Self::Message>> {
         let cosmic::cosmic_theme::Spacing {
             space_s: _,

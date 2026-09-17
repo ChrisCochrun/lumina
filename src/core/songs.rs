@@ -705,10 +705,11 @@ impl Model<Song> {
     pub fn sort(&mut self) {
         match self.sorting_method {
             Sort::AccessTime(SortDirection::Descending) => {
-                self.items.sort_by(|a, b| b.accessed_at.cmp(&a.accessed_at));
+                self.items
+                    .sort_by_key(|song| std::cmp::Reverse(song.accessed_at));
             }
             Sort::AccessTime(SortDirection::Ascending) => {
-                self.items.sort_by_key(|a| a.accessed_at);
+                self.items.sort_by_key(|song| song.accessed_at);
             }
             Sort::Title(SortDirection::Descending) => {
                 self.items.sort_by(|a, b| b.title.cmp(&a.title));
@@ -717,10 +718,11 @@ impl Model<Song> {
                 self.items.sort_by(|a, b| a.title.cmp(&b.title));
             }
             Sort::CreatedTime(SortDirection::Descending) => {
-                self.items.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                self.items
+                    .sort_by_key(|song| std::cmp::Reverse(song.created_at));
             }
             Sort::CreatedTime(SortDirection::Ascending) => {
-                self.items.sort_by_key(|a| a.created_at);
+                self.items.sort_by_key(|song| song.created_at);
             }
             Sort::Secondary(SortDirection::Descending) => {
                 self.items.sort_by(|a, b| b.author.cmp(&a.author));

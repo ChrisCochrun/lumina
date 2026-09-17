@@ -228,7 +228,7 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
 pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
     let mut dir = fs::read_dir(&path)
         .into_diagnostic()
-        .wrap_err(format!("Couldn't load dir: {:?}", path.as_ref()))?;
+        .wrap_err(format!("Couldn't load dir: {}", path.as_ref().display()))?;
     let ron_file = dir
         .find_map(|file| {
             if file.as_ref().ok()?.path().extension()?.to_str()? == "ron" {
@@ -250,7 +250,7 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
     for item in &mut items {
         let dir = fs::read_dir(&path)
             .into_diagnostic()
-            .wrap_err(format!("Couldn't load dir: {:?}", path.as_ref()))?;
+            .wrap_err(format!("Couldn't load dir: {}", path.as_ref().display()))?;
         for file in dir {
             for slide in &mut item.slides {
                 if let Ok(file) = file.as_ref() {

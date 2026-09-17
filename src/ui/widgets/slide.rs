@@ -130,7 +130,9 @@ where
         self
     }
 
-    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::cast_precision_loss)]
+    #[inline]
     fn draw_background(
         &self,
         _tree: &Tree,
@@ -219,7 +221,7 @@ where
     fn children(&self) -> Vec<Tree> {
         self.video
             .as_ref()
-            .map_or_else(|| Vec::new(), |video| vec![Tree::new(video)])
+            .map_or_else(Vec::new, |video| vec![Tree::new(video)])
     }
 
     fn diff(&mut self, tree: &mut Tree) {
@@ -235,7 +237,8 @@ where
         }
     }
 
-    #[inline(always)]
+    #[allow(clippy::cast_precision_loss)]
+    #[inline]
     fn layout(
         &mut self,
         _tree: &mut Tree,
@@ -334,8 +337,8 @@ where
             })
     }
 
-    #[inline(always)]
     #[allow(clippy::float_cmp)]
+    #[inline]
     fn draw(
         &self,
         tree: &Tree,

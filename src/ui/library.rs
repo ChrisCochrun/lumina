@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -10,7 +9,7 @@ use cosmic::iced::core::widget::tree::State as TreeState;
 use cosmic::iced::keyboard::Modifiers;
 use cosmic::iced::widget::{column, row as rowm, text as textm};
 use cosmic::iced::{Background, Border, Color, Length, Point};
-use cosmic::widget::menu::{self, Action as MenuAction};
+use cosmic::widget::menu;
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
@@ -48,7 +47,6 @@ pub struct Library {
     hovered_item: Option<(LibraryKind, i32)>,
     editing_item: Option<(LibraryKind, i32)>,
     db: Arc<SqlitePool>,
-    menu_keys: std::collections::HashMap<menu::KeyBind, MenuMessage>,
     context_menu: Option<i32>,
     modifiers_pressed: Option<Modifiers>,
     state: State,
@@ -65,23 +63,6 @@ pub struct Library {
 enum State {
     AddingVideo,
     Idle,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-enum MenuMessage {
-    Delete,
-    Open,
-}
-
-impl MenuAction for MenuMessage {
-    type Message = Message;
-
-    fn message(&self) -> Self::Message {
-        match self {
-            Self::Delete => Message::DeleteItem,
-            Self::Open => Message::OpenContextItem,
-        }
-    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -172,7 +153,6 @@ impl<'a> Library {
             hovered_item: None,
             editing_item: None,
             db,
-            menu_keys: HashMap::new(),
             context_menu: None,
             modifiers_pressed: None,
             state: State::Idle,
