@@ -21,9 +21,6 @@ I think this has something to do with the pdf rendering not starting up yet when
 
 Maybe this isn't even a real blocker for using this at church. Just need it to build.
 
-* TODO [#A] Add a migration/manifest of file format for saving and loading
-In order to be able to update the structure of the types I will need to add a manifest or something to track the version of save files and then allow them to be updated to the new types on load. This should be done before V1 so that new versions of Lumina do not fail to load save files as the app grows.
-
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
@@ -95,6 +92,12 @@ Since strings are allocated on the heap, I've changed how to construct the svg s
 * TODO Make better tooltips for items in libraries and in the service list.
 
 Some ideas for this, include a basic tooltip to show the full title of the item and maybe a little extra metadata. But after a certain time out period, maybe we can show a thumbnail version of some items, like thumbnails of the videos and thumbnails of the images, so you can preview it without opening it.
+
+* DONE [#A] Add a migration/manifest of file format for saving and loading
+CLOSED: [2026-09-21 Mon 13:18]
+In order to be able to update the structure of the types I will need to add a manifest or something to track the version of save files and then allow them to be updated to the new types on load. This should be done before V1 so that new versions of Lumina do not fail to load save files as the app grows.
+
+Instead of adding a file that describes the format we are saving in, since we are using rust and ron, we can just wrap the serviceitem and slide types in versioned enums that mimic the history of types. V1 will be what we have now, but over time, we can change the layout of the structs and each enum variant can just track the next version, then to serialize and deserialize the main type, we simply use the enum as the actual serializer and deserializer and just convert before or after the serialization. This means we only need to add a new version on each change and rust's compiler will ensure we are adding each conversion the way that we should.
 
 * DONE [#A] Make loading not block the UI
 CLOSED: [2026-06-23 Tue 10:19]

@@ -18,29 +18,27 @@ use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};
 
 use super::songs::Song;
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Slide {
     // This is not skipped so we can load back the slide_actions
     // that get mapped to it.
-    pub id: SlideId,
+    pub(crate) id: SlideId,
     pub(crate) background: Background,
-    #[serde(skip)]
     pub(crate) thumbnail: Option<Allocation>,
-    text: String,
-    font: Option<Font>,
-    font_size: i32,
-    stroke: Option<Stroke>,
-    shadow: Option<Shadow>,
-    text_alignment: TextAlignment,
-    text_color: Option<Color>,
-    audio: Option<PathBuf>,
-    video_loop: bool,
-    video_start_time: f32,
-    video_end_time: f32,
-    pdf_index: u32,
-    pub text_svg: Option<TextSvg>,
-    #[serde(skip)]
-    pdf_page: Option<Handle>,
+    pub(crate) text: String,
+    pub(crate) font: Option<Font>,
+    pub(crate) font_size: i32,
+    pub(crate) stroke: Option<Stroke>,
+    pub(crate) shadow: Option<Shadow>,
+    pub(crate) text_alignment: TextAlignment,
+    pub(crate) text_color: Option<Color>,
+    pub(crate) audio: Option<PathBuf>,
+    pub(crate) video_loop: bool,
+    pub(crate) video_start_time: f32,
+    pub(crate) video_end_time: f32,
+    pub(crate) pdf_index: u32,
+    pub(crate) text_svg: Option<TextSvg>,
+    pub(crate) pdf_page: Option<Handle>,
 }
 
 #[derive(

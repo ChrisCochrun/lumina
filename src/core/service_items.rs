@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use crisp::types::{Keyword, Symbol, Value};
 use miette::{IntoDiagnostic, Result, miette};
-use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 use crate::Slide;
@@ -19,7 +18,7 @@ use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ServiceItem {
     pub id: i32,
     pub title: String,
