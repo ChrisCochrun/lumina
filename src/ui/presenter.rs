@@ -620,6 +620,8 @@ impl Presenter {
                     }
                 })
         })
+        .apply(container)
+        .center(Length::Fill)
         .into()
 
         // slide_view(
