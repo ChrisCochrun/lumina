@@ -318,7 +318,9 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                         if Some(file_name.as_os_str()) == presentation.path.file_name() {
                             presentation.path = file.path();
                         }
-                    }
+                    };
+
+                    item.slides = item.to_slides()?;
                 }
                 ServiceItemKind::Content(_slide) => todo!(),
             }

@@ -21,6 +21,8 @@ I think this has something to do with the pdf rendering not starting up yet when
 
 Maybe this isn't even a real blocker for using this at church. Just need it to build.
 
+I have found a fix that will work for now, but it causes loading to take a long time when there are pdf files in there.
+
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
