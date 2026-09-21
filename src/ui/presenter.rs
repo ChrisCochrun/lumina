@@ -570,6 +570,8 @@ impl Presenter {
                     }
                 })
         })
+        .apply(container)
+        .center(Length::Fill)
         .into()
     }
 

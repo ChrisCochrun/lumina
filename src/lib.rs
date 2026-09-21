@@ -2453,6 +2453,9 @@ where
             (Key::Character(k), Modifiers::CTRL) if k == *"k" || k == *"f" => {
                 self.update(Message::SearchFocus)
             }
+            (Key::Character(k), Modifiers::CTRL) if k == *"p" => {
+                self.update(Message::OpenWindow)
+            }
             (Key::Character(k), _) if k == *"/" => self.update(Message::SearchFocus),
             (Key::Named(iced::keyboard::key::Named::ArrowRight), _) => {
                 if self.editor_mode.is_none() {

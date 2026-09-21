@@ -168,15 +168,12 @@ where
                             height_scale
                         },
                 );
-                let center = bounds.x + bounds.width / 2.0;
-                let new_x = center - new_size.width / 2.0;
-                let alloc_bounds = Rectangle::new(
-                    Point {
-                        x: new_x,
-                        y: bounds.y,
-                    },
-                    new_size,
-                );
+                let center_x = bounds.x + bounds.width / 2.0;
+                let new_x = center_x - new_size.width / 2.0;
+                let center_y = bounds.y + bounds.height / 2.0;
+                let new_y = center_y - new_size.height / 2.0;
+                let alloc_bounds = Rectangle::new(Point { x: new_x, y: new_y }, new_size);
+
                 renderer.draw_image(
                     iced_core::image::Image {
                         handle: allocation.handle().clone(),
@@ -191,21 +188,63 @@ where
                 );
             });
         } else if let Some(handle) = &background.image_handle {
-            let _ = renderer.load_image(handle);
-            renderer.with_layer(bounds, |renderer| {
-                renderer.draw_image(
-                    iced_core::image::Image {
-                        handle: handle.clone(),
-                        filter_method: iced_core::image::FilterMethod::Nearest,
-                        rotation: iced_core::Radians(0.0),
-                        border_radius: Radius::new(0.0),
-                        opacity,
-                        snap: true,
-                    },
-                    bounds,
-                    clip_bounds,
-                );
-            });
+            if let Ok(allocation) = renderer.load_image(handle) {
+                renderer.with_layer(bounds, |renderer| {
+                    let size = allocation.size();
+                    let width = size.width as f32;
+                    let height = size.height as f32;
+                    let width_scale = width / bounds.size().width;
+                    let height_scale = height / bounds.size().height;
+                    let new_size = Size::new(
+                        width
+                            / if width_scale > height_scale {
+                                width_scale
+                            } else {
+                                height_scale
+                            },
+                        height
+                            / if width_scale > height_scale {
+                                width_scale
+                            } else {
+                                height_scale
+                            },
+                    );
+                    let center_x = bounds.x + bounds.width / 2.0;
+                    let new_x = center_x - new_size.width / 2.0;
+                    let center_y = bounds.y + bounds.height / 2.0;
+                    let new_y = center_y - new_size.height / 2.0;
+                    let alloc_bounds =
+                        Rectangle::new(Point { x: new_x, y: new_y }, new_size);
+
+                    renderer.draw_image(
+                        iced_core::image::Image {
+                            handle: allocation.handle().clone(),
+                            filter_method: iced_core::image::FilterMethod::Nearest,
+                            rotation: iced_core::Radians(0.0),
+                            border_radius: Radius::new(0.0),
+                            opacity,
+                            snap: true,
+                        },
+                        alloc_bounds,
+                        clip_bounds,
+                    );
+                });
+            } else {
+                renderer.with_layer(bounds, |renderer| {
+                    renderer.draw_image(
+                        iced_core::image::Image {
+                            handle: handle.clone(),
+                            filter_method: iced_core::image::FilterMethod::Nearest,
+                            rotation: iced_core::Radians(0.0),
+                            border_radius: Radius::new(0.0),
+                            opacity,
+                            snap: true,
+                        },
+                        bounds,
+                        clip_bounds,
+                    );
+                });
+            }
         }
     }
 }
