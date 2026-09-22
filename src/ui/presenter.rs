@@ -623,19 +623,6 @@ impl Presenter {
         .apply(container)
         .center(Length::Fill)
         .into()
-
-        // slide_view(
-        //     &self.current_slide,
-        //     self.preview_video.as_ref(),
-        //     SlideSettings {
-        //         delegate: false,
-        //         hide_mouse: false,
-        //         previous_slide: self.old_slide.as_ref(),
-        //         animation: self.animation.as_ref(),
-        //         animator: self.animator.as_ref(),
-        //         now: self.now,
-        //     },
-        // )
     }
 
     #[allow(clippy::too_many_lines)]
