@@ -65,7 +65,7 @@ pub(crate) struct Presenter {
     scroll_id: Id,
     active_slide_id: Id,
     current_font: Font,
-    slide_action_map: Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
+    pub slide_action_map: Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
     context_menu_id: Option<(usize, usize)>,
     context_point: Point,
@@ -109,7 +109,7 @@ pub(crate) enum Message {
     UpdateObsScenes(Vec<Scene>),
     #[debug("AddObsClient")]
     AddObsClient(Arc<Client>),
-    AssignSlideAction(slide_actions::Action),
+    AssignSlideAction((SlideId, slide_actions::Action)),
     PlayPauseVideo,
     CloseContextMenu,
     ChangePreviewSize(f64),
@@ -353,23 +353,23 @@ impl Presenter {
                 }
                 return self.update(Message::CloseContextMenu);
             }
-            Message::AssignSlideAction(action) => {
-                let slide_pos = self.context_menu_id.expect(
-                    "In this match we should always already have a context menu id",
-                );
+            Message::AssignSlideAction((slide_id, action)) => {
+                // let slide_pos = self.context_menu_id.expect(
+                //     "In this match we should always already have a context menu id",
+                // );
 
-                let Some(slide_id) = self
-                    .service
-                    .get(slide_pos.0)
-                    .and_then(|item| item.slides.get(slide_pos.1))
-                    .map(|slide| &slide.id)
-                else {
-                    error!("Couldn't find slide");
-                    return Action::None;
-                };
+                // let Some(slide_id) = self
+                //     .service
+                //     .get(slide_pos.0)
+                //     .and_then(|item| item.slides.get(slide_pos.1))
+                //     .map(|slide| &slide.id)
+                // else {
+                //     error!("Couldn't find slide");
+                //     return Action::None;
+                // };
 
                 if let Some(map) = self.slide_action_map.as_mut() {
-                    if let Some(actions) = map.get_mut(slide_id) {
+                    if let Some(actions) = map.get_mut(&slide_id) {
                         actions.push(action);
                     } else {
                         map.insert(slide_id.clone(), vec![action]);
@@ -863,9 +863,13 @@ impl Presenter {
         id: (usize, usize),
         items: Element<'a, Message>,
     ) -> Element<'a, Message> {
-        if self
-            .context_menu_id
-            .is_some_and(|context_id| context_id == id)
+        if let Some(context_id) = self.context_menu_id
+            && context_id == id
+            && let Some(slide_id) = self
+                .service
+                .get(context_id.0)
+                .and_then(|item| item.slides.get(context_id.1))
+                .map(|slide| &slide.id)
         {
             let menu_item = |label, message| {
                 menu::menu_button(vec![text(label).into(), space::horizontal().into()])
@@ -883,15 +887,17 @@ impl Presenter {
             let mut menu_items: Vec<Element<Message>> = vec![
                 menu_item(
                     "Start Stream",
-                    Message::AssignSlideAction(slide_actions::Action::Obs(
-                        ObsAction::StartStream,
+                    Message::AssignSlideAction((
+                        slide_id.clone(),
+                        slide_actions::Action::Obs(ObsAction::StartStream),
                     )),
                 )
                 .into(),
                 menu_item(
                     "Stop Stream",
-                    Message::AssignSlideAction(slide_actions::Action::Obs(
-                        ObsAction::StopStream,
+                    Message::AssignSlideAction((
+                        slide_id.clone(),
+                        slide_actions::Action::Obs(ObsAction::StopStream),
                     )),
                 )
                 .into(),

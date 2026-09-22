@@ -65,6 +65,9 @@ use ui::text_svg::{self};
 use ui::video_editor::{self, VideoEditor};
 use ui::widgets::draggable;
 
+use crate::core::slide::SlideId;
+use crate::core::slide_actions;
+
 #[derive(Debug, Parser)]
 #[command(name = "lumina", version, about = "A church presentation app")]
 struct Cli {
@@ -270,7 +273,12 @@ enum Message {
     New,
     Open,
     OpenFile(PathBuf),
-    OpenLoadItems(Vec<ServiceItem>),
+    OpenLoadItems(
+        (
+            Vec<ServiceItem>,
+            Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
+        ),
+    ),
     Save,
     SaveAsDialog,
     SaveAs(PathBuf),
@@ -289,6 +297,7 @@ enum Message {
     ContextPoint(Point),
     AddSlideTextToItem(usize, usize, Slide),
     LoadedOpenItem(usize),
+    LoadActionMap(Option<HashMap<SlideId, Vec<slide_actions::Action>>>),
     HideLoadingBar,
     LoadFonts(Vec<PathBuf>),
 }
@@ -1834,7 +1843,7 @@ impl cosmic::Application for App {
                     },
                 )
             }
-            Message::OpenLoadItems(items) => {
+            Message::OpenLoadItems((items, map)) => {
                 self.loading_state = LoadingState::Loading {
                     total_items: items.len(),
                     current_item: 0,
@@ -1852,6 +1861,7 @@ impl cosmic::Application for App {
                         )));
                     }
                 });
+                debug!("Map: {:?}", map);
 
                 Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
                     .then(|action| {
@@ -1868,6 +1878,12 @@ impl cosmic::Application for App {
                             Task::none()
                         }
                     })
+                    .chain(Task::done(cosmic::Action::App(Message::LoadActionMap(map))))
+            }
+            Message::LoadActionMap(map) => {
+                self.presenter.slide_action_map = map;
+                debug!("{:?}", self.presenter.slide_action_map);
+                Task::none()
             }
             Message::LoadedOpenItem(item) => {
                 let mut task = Task::none();
@@ -1919,8 +1935,10 @@ impl cosmic::Application for App {
                     .expect("Since we are saving we should have given a name by now")
                     .to_owned();
                 let fontdb = Arc::clone(&self.fontdb);
+                let action_map = self.presenter.slide_action_map.clone();
+                debug!("Action Map: {:?}", action_map);
                 Task::perform(
-                    async move { file::save(&service, file, true, &fontdb) },
+                    async move { file::save(&service, action_map, file, true, &fontdb) },
                     move |res| match res {
                         Ok(()) => {
                             tracing::info!("saving file to: {:?}", file_name);

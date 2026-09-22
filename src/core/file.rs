@@ -1,8 +1,10 @@
 use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
-use crate::core::slide::Background;
+use crate::core::slide::{Background, SlideId};
+use crate::core::slide_actions;
 use cosmic::widget::image::Handle;
 use miette::{Context, IntoDiagnostic, Result, miette};
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;
 use std::iter;
@@ -15,6 +17,7 @@ use zstd::{Decoder, Encoder};
 #[allow(clippy::too_many_lines)]
 pub fn save(
     list: &Arc<Vec<ServiceItem>>,
+    action_map: Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
     path: impl AsRef<Path>,
     overwrite: bool,
     fontdb: &Arc<fontdb::Database>,
@@ -24,8 +27,10 @@ pub fn save(
         fs::remove_file(path).into_diagnostic()?;
     }
     let save_file = File::create(path).into_diagnostic()?;
-    let ron_pretty = ron::ser::PrettyConfig::default();
-    let ron = ron::ser::to_string_pretty(&list, ron_pretty).into_diagnostic()?;
+    let ron_pretty = ron::ser::PrettyConfig::default().struct_names(true);
+    let ron = ron::ser::to_string_pretty(&list, ron_pretty.clone()).into_diagnostic()?;
+    let ron_map =
+        ron::ser::to_string_pretty(&action_map, ron_pretty).into_diagnostic()?;
 
     let encoder = Encoder::new(save_file, 3)
         .expect("file encoder shouldn't fail")
@@ -39,6 +44,7 @@ pub fn save(
     s.insert_str(0, "temp_");
     temp_dir.push(s);
     fs::create_dir_all(&temp_dir).into_diagnostic()?;
+
     let service_file = temp_dir.join("serviceitems.ron");
     debug!(?service_file);
     fs::File::create(&service_file).into_diagnostic()?;
@@ -60,6 +66,36 @@ pub fn save(
             match tar.append_file("serviceitems.ron", &mut f) {
                 Ok(()) => {
                     debug!("should have added serviceitems.ron to the file");
+                }
+                Err(e) => {
+                    error!(?e);
+                    return Err(miette!("PROBS: {e}"));
+                }
+            }
+        }
+        Err(e) => {
+            error!("There were problems making a file i guess: {e}");
+            return Err(miette!("There was a problem: {e}"));
+        }
+    }
+
+    let action_file = temp_dir.join("action_map.ron");
+    debug!(?action_file);
+    fs::File::create(&action_file).into_diagnostic()?;
+    match fs::File::options().read(true).write(true).open(action_file) {
+        Ok(mut f) => {
+            match f.write(ron_map.as_bytes()) {
+                Ok(size) => {
+                    debug!(size);
+                }
+                Err(e) => {
+                    error!(?e);
+                    return Err(miette!("PROBS: {e}"));
+                }
+            }
+            match tar.append_file("action_map.ron", &mut f) {
+                Ok(()) => {
+                    debug!("should have added action_map.ron to the file");
                 }
                 Err(e) => {
                     error!(?e);
@@ -225,13 +261,24 @@ pub fn find_fonts(path: impl AsRef<Path>) -> Option<Vec<PathBuf>> {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
+pub fn load(
+    path: impl AsRef<Path>,
+) -> Result<(
+    Vec<ServiceItem>,
+    Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
+)> {
     let mut dir = fs::read_dir(&path)
         .into_diagnostic()
         .wrap_err(format!("Couldn't load dir: {}", path.as_ref().display()))?;
     let ron_file = dir
         .find_map(|file| {
-            if file.as_ref().ok()?.path().extension()?.to_str()? == "ron" {
+            if file
+                .as_ref()
+                .ok()?
+                .path()
+                .to_string_lossy()
+                .contains("serviceitems")
+            {
                 Some(file.ok()?.path())
             } else {
                 None
@@ -240,6 +287,28 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
         .expect("Should have a ron file");
 
     let ron_string = fs::read_to_string(ron_file).into_diagnostic()?;
+    let map = if let Some(action_file) = dir.find_map(|file| {
+        if file
+            .as_ref()
+            .ok()?
+            .path()
+            .to_string_lossy()
+            .contains("action_map")
+        {
+            Some(file.ok()?.path())
+        } else {
+            None
+        }
+    }) && let Ok(action_string) = fs::read_to_string(action_file)
+        && let Ok(map) = ron::de::from_str::<
+            Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
+        >(&action_string)
+    {
+        map
+    } else {
+        None
+    };
+    debug!("Map file: {:?}", map);
 
     let mut items = ron::de::from_str::<Vec<ServiceItem>>(&ron_string)
         .into_diagnostic()
@@ -319,14 +388,16 @@ pub fn load(path: impl AsRef<Path>) -> Result<Vec<ServiceItem>> {
                             presentation.path = file.path();
                         }
                     };
-
-                    item.slides = item.to_slides()?;
                 }
                 ServiceItemKind::Content(_slide) => todo!(),
             }
         }
+
+        if matches!(item.kind, ServiceItemKind::Presentation(_)) {
+            item.slides = item.to_slides()?;
+        }
     }
-    Ok(items)
+    Ok((items, map))
 }
 
 #[cfg(test)]
@@ -414,7 +485,7 @@ mod test {
         let path = PathBuf::from("./test.pres");
         let result = load(&path);
         match result {
-            Ok(items) => {
+            Ok((items, _map)) => {
                 assert!(!items.is_empty());
                 // assert_eq!(items, get_items());
                 let cache_dir = cache_dir();
@@ -550,7 +621,7 @@ mod test {
         let mut db = fontdb::Database::new();
         db.load_system_fonts();
         let fontdb = Arc::new(db);
-        match save(&Arc::new(list), &path, true, &fontdb) {
+        match save(&Arc::new(list), None, &path, true, &fontdb) {
             Ok(()) => {
                 assert!(path.is_file());
                 let Ok(file) = fs::File::open(path) else {

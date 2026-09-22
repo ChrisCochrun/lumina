@@ -7,14 +7,14 @@ use obws::responses::scenes::Scene;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum ObsAction {
+pub enum ObsAction {
     Scene(Scene),
     StartStream,
     StopStream,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum Action {
+pub enum Action {
     Obs(ObsAction),
     Other,
 }
