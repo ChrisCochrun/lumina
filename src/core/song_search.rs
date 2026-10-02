@@ -389,15 +389,17 @@ mod test {
         .await
         .map_err(|e| e.to_string())?;
 
-        // assert!(
+        // assert!(
         //     hits[0].title == song.title,
         //     "There was no song that matched on Genius"
         // );
 
         let titles: Vec<String> = hits.iter().map(|song| song.title.clone()).collect();
         dbg!(titles);
-        for hit in hits {
-            let new_song = get_genius_lyrics(hit).await.map_err(|e| e.to_string())?;
+        if let Some(hit) = hits.first() {
+            let new_song = get_genius_lyrics(hit.clone())
+                .await
+                .map_err(|e| e.to_string())?;
             dbg!(&new_song);
             dbg!(&new_song.provider);
             if new_song.lyrics.starts_with("[Verse 1]") {

@@ -1471,7 +1471,7 @@ You saved my soul"
             ccli: None,
             audio: Some("file:///home/chris/music/North Point InsideOut/Nothing Ordinary, Pt. 1 (Live)/05 Death Was Arrested (feat. Seth Condrey).mp3".into()),
             verse_order: Some(vec!["Some([Chorus(number:1),Intro(number:1),Other(number:99),Bridge(number:1),Verse(number:4),Verse(number:2),Verse(number:3),Verse(number:1)])".to_string()]),
-            background: Some(Background::try_from("file:///home/chris/nc/tfc/openlp/Flood/motions/Ocean_Floor_HD.mp4").expect("Error getting background from known file")),
+            background: Some(Background::try_from("file:///home/chris/nc/tfc/presentations/mb/Blue Soda.mp4").expect("Error getting background from known file")),
             text_alignment: Some(TextAlignment::MiddleCenter),
             font: Some("Quicksand Bold".to_string()),
             font_size: Some(80),

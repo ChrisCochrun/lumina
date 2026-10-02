@@ -1,6 +1,6 @@
 [
-    (
-        id: 0,
+    V1(
+        id: SlideId("1d7d0d25-1067-4e18-96a3-110668133fa4"),
         background: Background(
             path: "~/pics/frodo.jpg",
             kind: Image
@@ -22,8 +22,8 @@
         pdf_index: 0,
     ),
 
-    (
-        id: 0,
+    V1(
+        id: SlideId("1d7d0d25-1067-4e18-96a3-110668133fa4"),
         background: Background(
             path: "~/vids/test/chosensmol.mp4",
             kind: Video

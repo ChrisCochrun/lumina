@@ -11,7 +11,8 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 
 ??????? Don't know if this is still broke or not.....
 
-* TODO [#A] Fix loading file with pdf not showing the pdf properly
+* DONE [#A] Fix loading file with pdf not showing the pdf properly
+CLOSED: [2026-10-02 Fri 10:59]
 I think this has something to do with the pdf rendering not starting up yet when loading from a file? Like maybe a hook i missed?
 
 Maybe this isn't even a real blocker for using this at church. Just need it to build.
