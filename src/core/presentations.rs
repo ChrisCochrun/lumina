@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, error};
 
-use crate::core::model::{Sort, SortDirection};
+use crate::core::model::{CheckItem, Sort, SortDirection};
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -295,6 +295,21 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
+    pub fn check_item(&self, presentation: &Presentation) -> CheckItem {
+        if self.items.contains(presentation) {
+            CheckItem::Yes
+        } else {
+            if let Some(found_presentation) = self
+                .items
+                .iter()
+                .find(|inner| inner.title == presentation.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
+        }
+    }
     pub async fn new_presentation_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],

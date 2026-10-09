@@ -1,4 +1,4 @@
-use crate::core::model::{Sort, SortDirection};
+use crate::core::model::{CheckItem, Sort, SortDirection};
 use crate::{Background, Slide, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -154,6 +154,19 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
+    pub fn check_item(&self, image: &Image) -> CheckItem {
+        if self.items.contains(image) {
+            CheckItem::Yes
+        } else {
+            if let Some(found_image) =
+                self.items.iter().find(|inner| inner.title == image.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
+        }
+    }
     pub async fn new_image_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],

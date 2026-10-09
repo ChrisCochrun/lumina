@@ -17,6 +17,13 @@ pub struct Model<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize)]
+pub enum CheckItem {
+    Yes,
+    No,
+    Maybe,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize, Deserialize)]
 pub enum LibraryKind {
     Song,
     Video,

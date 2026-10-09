@@ -20,7 +20,7 @@ use tracing::{debug, error};
 use crate::core::animation::Animation;
 use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{LibraryKind, Model, Sort, SortDirection};
+use crate::core::model::{CheckItem, LibraryKind, Model, Sort, SortDirection};
 use crate::core::service_items::ServiceTrait;
 use crate::core::slide::{self, Background, TextAlignment};
 use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
@@ -665,6 +665,19 @@ pub async fn get_song_from_db(id: i32, db: Arc<SqlitePool>) -> Result<Song> {
 }
 
 impl Model<Song> {
+    pub fn check_item(&self, song: &Song) -> CheckItem {
+        if self.items.contains(song) {
+            CheckItem::Yes
+        } else {
+            if let Some(found_song) =
+                self.items.iter().find(|inner| inner.title == song.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
+        }
+    }
     pub async fn new_song_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],

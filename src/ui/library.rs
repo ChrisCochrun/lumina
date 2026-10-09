@@ -28,7 +28,9 @@ use tracing::{debug, error, warn};
 use crate::core::content::Content;
 use crate::core::images::{self, Image};
 use crate::core::kinds::ServiceItemKind;
-use crate::core::model::{KindWrapper, LibraryKind, Model, Sort, SortDirection};
+use crate::core::model::{
+    CheckItem, KindWrapper, LibraryKind, Model, Sort, SortDirection,
+};
 use crate::core::presentations::{self, Presentation};
 use crate::core::service_items::ServiceItem;
 use crate::core::songs::{self, Song, insert_song};
@@ -57,6 +59,10 @@ pub struct Library {
     image_search_query: Option<String>,
     video_search_query: Option<String>,
     presentation_search_query: Option<String>,
+    potential_songs: Option<Vec<Song>>,
+    potential_videos: Option<Vec<Video>>,
+    potential_images: Option<Vec<Image>>,
+    potential_presentations: Option<Vec<Presentation>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -163,6 +169,10 @@ impl<'a> Library {
             image_search_query: None,
             video_search_query: None,
             presentation_search_query: None,
+            potential_songs: None,
+            potential_videos: None,
+            potential_images: None,
+            potential_presentations: None,
         }
     }
 
@@ -1423,6 +1433,18 @@ impl<'a> Library {
         }
 
         Action::Task(Task::batch(tasks).chain(after_task))
+    }
+
+    pub fn item_in_library(&self, service_item: &ServiceItem) -> CheckItem {
+        match &service_item.kind {
+            ServiceItemKind::Song(song) => self.song_library.check_item(&song),
+            ServiceItemKind::Video(video) => self.video_library.check_item(&video),
+            ServiceItemKind::Image(image) => self.image_library.check_item(&image),
+            ServiceItemKind::Presentation(presentation) => {
+                self.presentation_library.check_item(&presentation)
+            }
+            ServiceItemKind::Content(slide) => todo!(),
+        }
     }
 }
 

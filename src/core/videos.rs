@@ -1,4 +1,4 @@
-use crate::core::model::{Sort, SortDirection};
+use crate::core::model::{CheckItem, Sort, SortDirection};
 use crate::{Background, SlideBuilder, TextAlignment};
 
 use super::content::Content;
@@ -180,6 +180,19 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
+    pub fn check_item(&self, video: &Video) -> CheckItem {
+        if self.items.contains(video) {
+            CheckItem::Yes
+        } else {
+            if let Some(found_video) =
+                self.items.iter().find(|inner| inner.title == video.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
+        }
+    }
     pub async fn new_video_model(db: Arc<SqlitePool>) -> Self {
         let mut model = Self {
             items: vec![],

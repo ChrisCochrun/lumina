@@ -1414,6 +1414,17 @@ impl cosmic::Application for App {
             }
             Message::AddServiceItem(index, item) => {
                 let mut tasks = Vec::new();
+                if let Some(library) = &self.library {
+                    match library.item_in_library(&item) {
+                        core::model::CheckItem::Yes => (),
+                        core::model::CheckItem::No => todo!(
+                            "Needs to be checked by user if they want it in the library"
+                        ),
+                        core::model::CheckItem::Maybe => todo!(
+                            "Needs to be checked if the item is actually in library"
+                        ),
+                    }
+                }
                 if matches!(item.kind, ServiceItemKind::Song(_)) {
                     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
                     let item_index = index;
