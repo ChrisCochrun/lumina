@@ -11,14 +11,6 @@ Sometimes a song imported from Genius will have extra junk that was in the middl
 
 ??????? Don't know if this is still broke or not.....
 
-* DONE [#A] Fix loading file with pdf not showing the pdf properly
-CLOSED: [2026-10-02 Fri 10:59]
-I think this has something to do with the pdf rendering not starting up yet when loading from a file? Like maybe a hook i missed?
-
-Maybe this isn't even a real blocker for using this at church. Just need it to build.
-
-I have found a fix that will work for now, but it causes loading to take a long time when there are pdf files in there.
-
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
@@ -90,6 +82,14 @@ I bet this is tricking up the loading mechanism. Loading only grabs all the back
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later, and I believe that fix will come in the form of a multi-channel signed distance field wgpu rendered text eventually. We can work on this much later though.
 
 * TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
+
+* DONE [#A] Fix loading file with pdf not showing the pdf properly
+CLOSED: [2026-10-02 Fri 10:59]
+I think this has something to do with the pdf rendering not starting up yet when loading from a file? Like maybe a hook i missed?
+
+Maybe this isn't even a real blocker for using this at church. Just need it to build.
+
+I have found a fix that will work for now, but it causes loading to take a long time when there are pdf files in there.
 
 * DONE [#A] Fix actions not staying with a slide when user adds more items into service
 CLOSED: [2026-10-09 Fri 14:50]
