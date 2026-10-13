@@ -2,12 +2,13 @@
 use cosmic::cosmic_theme::palette::Srgb;
 use cosmic::iced::Size;
 use cosmic::iced::core::image::Allocation;
-use cosmic::iced::font::{Style, Weight};
+use cosmic::iced::font::{Stretch, Style, Weight};
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use image::EncodableLayout;
+use klyff::glam::Vec2;
 use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -32,6 +33,7 @@ pub struct Slide {
     pub(crate) font_size: i32,
     pub(crate) stroke: Option<Stroke>,
     pub(crate) shadow: Option<Shadow>,
+    pub text_properties: Option<TextProperties>,
     pub(crate) text_alignment: TextAlignment,
     pub(crate) text_color: Option<Color>,
     pub(crate) audio: Option<PathBuf>,
@@ -47,14 +49,15 @@ pub struct Slide {
 pub struct TextProperties {
     pub text_alignment: TextAlignment,
     pub font: Option<String>,
-    pub font_size: Option<u16>,
+    pub font_size: Option<f32>,
     pub font_weight: Option<Weight>,
     pub font_style: Option<Style>,
+    pub font_stretch: Option<Stretch>,
     pub text_color: Option<Srgb>,
-    pub stroke_size: Option<u16>,
+    pub stroke_size: Option<f32>,
     pub stroke_color: Option<Srgb>,
-    pub shadow_size: Option<u16>,
-    pub shadow_offset: Option<(i16, i16)>,
+    pub shadow_size: Option<f32>,
+    pub shadow_offset: Option<(f32, f32)>,
     pub shadow_color: Option<Srgb>,
 }
 

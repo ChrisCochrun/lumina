@@ -82,6 +82,8 @@ git = "https://github.com/wash2/iced_video_player.git"
 branch = "iced-rebase"
 features = ["wgpu"]
 
+# [patch."https://github.com/pop-os/libcosmic"]
+# iced = { path = "../iced" }
 
 # [profile.dev]
 # opt-level = 3

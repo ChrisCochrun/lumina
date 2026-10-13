@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
@@ -22,6 +22,7 @@ use cosmic::widget::{
 use cosmic::{Task, theme};
 use derive_more::Debug;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
+use klyff::cosmic_text::FontSystem;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
@@ -76,6 +77,7 @@ pub(crate) struct Presenter {
     animator: Option<Animation<bool>>,
     now: Instant,
     pub view_mode: ViewMode,
+    font_system: Arc<Mutex<FontSystem>>,
 }
 
 #[allow(dead_code)]
@@ -118,7 +120,10 @@ pub(crate) enum Message {
 
 impl Presenter {
     #[allow(clippy::too_many_lines)]
-    pub fn with_items(items: Arc<Vec<ServiceItem>>) -> Self {
+    pub fn with_items(
+        items: Arc<Vec<ServiceItem>>,
+        font_system: Arc<Mutex<FontSystem>>,
+    ) -> Self {
         let preview_video = {
             items.first().and_then(|item| {
                 item.slides.first().and_then(|slide| {
@@ -237,6 +242,7 @@ impl Presenter {
             animator: None,
             now: Instant::now(),
             view_mode: ViewMode::Row,
+            font_system,
         }
     }
 
@@ -529,6 +535,7 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
+            font_system: Arc::clone(&self.font_system),
         };
 
         let video: Option<Element<Message>> =
@@ -581,6 +588,7 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
+            font_system: Arc::clone(&self.font_system),
         };
         let video: Option<Element<Message>> = self.preview_video.as_ref().map(|video| {
             VideoPlayer::new(video)
@@ -652,6 +660,7 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
+            font_system: Arc::clone(&self.font_system),
         };
         let slide_element =
             widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
@@ -1178,13 +1187,17 @@ mod test {
     use crate::core::songs::{Song, VerseName};
 
     use super::*;
+    use klyff::cosmic_text::FontSystem;
     use pretty_assertions::assert_eq;
     use sqlx::types::chrono::Local;
 
     #[test]
     fn test_next_slide() {
         let service = test_service();
-        let mut presenter = Presenter::with_items(Arc::new(service));
+        let mut presenter = Presenter::with_items(
+            Arc::new(service),
+            Arc::new(Mutex::new(FontSystem::new())),
+        );
         presenter.update(Message::NextSlide);
         dbg!(&presenter.service);
         assert_eq!(presenter.current_item_index, 1);

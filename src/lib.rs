@@ -36,6 +36,7 @@ use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
 use itertools::Itertools;
+use klyff::cosmic_text::FontSystem;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
@@ -45,7 +46,7 @@ use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -202,6 +203,7 @@ struct App {
     search_id: cosmic::widget::Id,
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
+    font_system: Arc<Mutex<FontSystem>>,
     menu_keys: HashMap<KeyBind, MenuAction>,
     context_menu: Option<usize>,
     modifiers_pressed: Option<Modifiers>,
@@ -422,10 +424,14 @@ impl cosmic::Application for App {
         //     })
         //     .collect();
         let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
+        let font_system = Arc::new(Mutex::new(FontSystem::new()));
 
-        let presenter = Presenter::with_items(items.clone());
-        let song_editor =
-            SongEditor::new(Arc::clone(&fontdb), settings.genius_token.clone());
+        let presenter = Presenter::with_items(items.clone(), Arc::clone(&font_system));
+        let song_editor = SongEditor::new(
+            Arc::clone(&fontdb),
+            settings.genius_token.clone(),
+            Arc::clone(&font_system),
+        );
 
         // for item in items.iter() {
         //     nav_model.insert().text(item.title()).data(item.clone());
@@ -498,6 +504,7 @@ impl cosmic::Application for App {
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
+            font_system: Arc::new(Mutex::new(FontSystem::new())),
             menu_keys,
             hovered_item: None,
             hovered_dnd: None,

@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::{self};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
@@ -39,6 +39,7 @@ use dirs::font_dir;
 use fontdb;
 use iced_video_player::{Video, VideoPlayer};
 use itertools::Itertools;
+use klyff::cosmic_text::FontSystem;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error};
 
@@ -60,6 +61,7 @@ pub struct SongEditor {
     pub song: Option<Song>,
     title: String,
     font_db: Arc<fontdb::Database>,
+    font_system: Arc<Mutex<FontSystem>>,
     fonts_combo: combo_box::State<Face>,
     font_sizes: combo_box::State<String>,
     font: Option<Face>,
@@ -219,7 +221,11 @@ impl Display for Face {
 }
 
 impl SongEditor {
-    pub fn new(font_db: Arc<fontdb::Database>, genius_token: Option<String>) -> Self {
+    pub fn new(
+        font_db: Arc<fontdb::Database>,
+        genius_token: Option<String>,
+        font_system: Arc<Mutex<FontSystem>>,
+    ) -> Self {
         let fonts = font_dir();
         debug!(?fonts);
         let fonts: Vec<Face> = font_db
@@ -266,6 +272,7 @@ impl SongEditor {
         Self {
             song: None,
             font_db,
+            font_system,
             fonts_combo: combo_box::State::new(fonts),
             title: String::new(),
             font: None,
@@ -1208,6 +1215,7 @@ impl SongEditor {
                         hide_mouse: false,
                         animation: None,
                         now: Instant::now(),
+                        font_system: Arc::clone(&self.font_system),
                     };
                     let mut slide: Element<Message> =
                         container(crate::ui::widgets::slide::slide(
@@ -2337,7 +2345,11 @@ impl Default for SongEditor {
     fn default() -> Self {
         let mut fontdb = fontdb::Database::new();
         fontdb.load_system_fonts();
-        Self::new(Arc::new(fontdb), None)
+        Self::new(
+            Arc::new(fontdb),
+            None,
+            Arc::new(Mutex::new(FontSystem::new())),
+        )
     }
 }
 

@@ -16,10 +16,10 @@ use iced_wgpu::Primitive;
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::{Pipeline, Renderer as PrimitiveRenderer};
 use iced_widget::image::Handle;
-use klyff::cosmic_text::FontSystem;
+use klyff::cosmic_text::{Attrs, FontSystem, Metrics};
 use klyff::{
-    EncoderContext, StyledText, StyledTextBuilder, TextRenderer, TextureAtlas,
-    TextureAtlasDescriptor, cosmic_text,
+    EncoderContext, GlyphColoring, StyledText, StyledTextBuilder, TextRenderer,
+    TextStyle, TextureAtlas, TextureAtlasDescriptor, cosmic_text,
 };
 
 use crate::core::animation::Animation;
@@ -65,7 +65,6 @@ where
     height: Length,
     content_fit: ContentFit,
     animation_state: AnimationState,
-    text_renderer: TextPrimitive,
 }
 
 pub struct SlideSettings<'a> {
@@ -73,6 +72,7 @@ pub struct SlideSettings<'a> {
     pub hide_mouse: bool,
     pub animation: Option<&'a crate::core::animation::Animation>,
     pub now: Instant,
+    pub font_system: Arc<Mutex<FontSystem>>,
 }
 
 #[derive(PartialEq)]
@@ -110,7 +110,6 @@ where
         video: Option<impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>>,
         settings: SlideSettings<'a>,
     ) -> Self {
-        let text_renderer = TextPrimitive::new();
         Slide {
             id: Id::unique(),
             slide,
@@ -122,7 +121,6 @@ where
             height: Length::Fill,
             content_fit: ContentFit::Fill,
             animation_state: AnimationState::Idle,
-            text_renderer,
         }
     }
 
@@ -405,6 +403,129 @@ where
         cursor_position: mouse::Cursor,
         viewport: &Rectangle,
     ) {
+        let mut text_renderer =
+            TextPrimitive::new(Arc::clone(&self.settings.font_system));
+        // We might be hijacking and hacking the gooberjobbas outta this by putting this here.
+        let styled_text = if let Ok(mut font_system) = text_renderer.font_system.lock()
+            && let Some(text_props) = &self.slide.text_properties
+        {
+            let mut text = StyledTextBuilder::new(
+                klyff::Rect::from_xywh(
+                    viewport.x,
+                    viewport.y,
+                    viewport.width,
+                    viewport.height,
+                ),
+                &mut font_system,
+                Metrics::relative(text_props.font_size.unwrap_or(100.0), 1.0),
+            );
+            let content = &self.slide.text;
+            let mut attrs = Attrs::new();
+            let default_attrs = attrs.clone();
+            if let Some(style) = text_props.font_style {
+                let style = match style {
+                    iced_core::font::Style::Normal => fontdb::Style::Normal,
+                    iced_core::font::Style::Italic => fontdb::Style::Italic,
+                    iced_core::font::Style::Oblique => fontdb::Style::Oblique,
+                };
+                attrs = attrs.style(style)
+            }
+
+            if let Some(weight) = text_props.font_weight {
+                let weight = match weight {
+                    iced_core::font::Weight::Thin => fontdb::Weight::THIN,
+                    iced_core::font::Weight::ExtraLight => fontdb::Weight::EXTRA_LIGHT,
+                    iced_core::font::Weight::Light => fontdb::Weight::LIGHT,
+                    iced_core::font::Weight::Normal => fontdb::Weight::NORMAL,
+                    iced_core::font::Weight::Medium => fontdb::Weight::MEDIUM,
+                    iced_core::font::Weight::Semibold => fontdb::Weight::SEMIBOLD,
+                    iced_core::font::Weight::Bold => fontdb::Weight::BOLD,
+                    iced_core::font::Weight::ExtraBold => fontdb::Weight::EXTRA_BOLD,
+                    iced_core::font::Weight::Black => fontdb::Weight::BLACK,
+                };
+                attrs = attrs.weight(weight)
+            }
+
+            if let Some(stretch) = text_props.font_stretch {
+                let stretch = match stretch {
+                    iced_core::font::Stretch::UltraCondensed => {
+                        fontdb::Stretch::UltraCondensed
+                    }
+                    iced_core::font::Stretch::ExtraCondensed => {
+                        fontdb::Stretch::ExtraCondensed
+                    }
+                    iced_core::font::Stretch::Condensed => fontdb::Stretch::Condensed,
+                    iced_core::font::Stretch::SemiCondensed => {
+                        fontdb::Stretch::SemiCondensed
+                    }
+                    iced_core::font::Stretch::Normal => fontdb::Stretch::Normal,
+                    iced_core::font::Stretch::SemiExpanded => {
+                        fontdb::Stretch::SemiExpanded
+                    }
+                    iced_core::font::Stretch::Expanded => fontdb::Stretch::Expanded,
+                    iced_core::font::Stretch::ExtraExpanded => {
+                        fontdb::Stretch::ExtraExpanded
+                    }
+                    iced_core::font::Stretch::UltraExpanded => {
+                        fontdb::Stretch::UltraExpanded
+                    }
+                };
+                attrs = attrs.stretch(stretch)
+            }
+
+            let color = text_props.text_color.unwrap_or_default();
+            let color = klyff::Color::from_rgb(color.red, color.green, color.blue);
+            let stroke_color = text_props.stroke_color.unwrap_or_default();
+            let stroke_color = klyff::Color::from_rgb(
+                stroke_color.red,
+                stroke_color.green,
+                stroke_color.blue,
+            );
+            let stroke_width = text_props.stroke_size.unwrap_or_default();
+            let shadow_color = text_props.shadow_color.unwrap_or_default();
+            let shadow_color = klyff::GlyphColoring::Solid(klyff::Color::from_rgb(
+                shadow_color.red,
+                shadow_color.green,
+                shadow_color.blue,
+            ));
+            let shadow_direction = text_props.shadow_offset.unwrap_or_default();
+            let shadow_spread = text_props.shadow_size.unwrap_or_default();
+
+            let style = TextStyle {
+                color: GlyphColoring::Solid(color),
+                stroke_out: klyff::Outline {
+                    color: GlyphColoring::Solid(stroke_color),
+                    width: stroke_width,
+                    roundness: 1.0,
+                },
+                stroke_in: klyff::Outline {
+                    color: GlyphColoring::Solid(klyff::Color::TRANSPARENT),
+                    width: 0.0,
+                    roundness: 1.0,
+                },
+                glow_out: klyff::Glow::default(),
+                glow_in: klyff::Glow::default(),
+                shadow: klyff::Shadow {
+                    color: shadow_color,
+                    direction: klyff::glam::Vec2::new(
+                        shadow_direction.0,
+                        shadow_direction.1,
+                    ),
+                    additional_width: 0.0,
+                    spread: shadow_spread,
+                    roundness: 1.0,
+                },
+            };
+            text.push_text(content, &attrs, style);
+            Some(text.finish(&mut font_system, &default_attrs))
+        } else {
+            None
+        };
+
+        if let Some(styled_text) = styled_text {
+            text_renderer.push_text(styled_text);
+        }
+
         // let content_layout = layout
         //     .children()
         //     .next()
@@ -689,25 +810,31 @@ where
                 );
             });
         }
-        if let Some(text) = &self.slide.text_svg
-            && let Some(handle) = &text.handle
-        {
-            let _ = renderer.load_image(handle);
-            renderer.with_layer(bounds, |renderer| {
-                renderer.draw_image(
-                    iced_core::image::Image {
-                        handle: handle.clone(),
-                        filter_method: iced_core::image::FilterMethod::Nearest,
-                        rotation: iced_core::Radians(0.0),
-                        border_radius: Radius::new(0.0),
-                        opacity: current_slide_opacity,
-                        snap: true,
-                    },
-                    Rectangle::new(current_foreground_position, current_foreground_size),
-                    clip_bounds,
-                );
-            });
-        }
+        renderer.with_layer(bounds, |renderer| {
+            renderer.draw_primitive(
+                Rectangle::new(current_foreground_position, current_foreground_size),
+                text_renderer,
+            );
+        });
+        // if let Some(text) = &self.slide.text_svg
+        //     && let Some(handle) = &text.handle
+        // {
+        //     let _ = renderer.load_image(handle);
+        //     renderer.with_layer(bounds, |renderer| {
+        //         renderer.draw_image(
+        //             iced_core::image::Image {
+        //                 handle: handle.clone(),
+        //                 filter_method: iced_core::image::FilterMethod::Nearest,
+        //                 rotation: iced_core::Radians(0.0),
+        //                 border_radius: Radius::new(0.0),
+        //                 opacity: current_slide_opacity,
+        //                 snap: true,
+        //             },
+        //             Rectangle::new(current_foreground_position, current_foreground_size),
+        //             clip_bounds,
+        //         );
+        //     });
+        // }
     }
 
     // fn overlay<'b>(
@@ -783,13 +910,11 @@ pub(crate) struct TextPrimitive {
 
 impl std::fmt::Debug for TextPrimitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(f, "TextPrimitive: with {} texts", self.texts.len())
     }
 }
 
 pub struct TextPipeline {
-    device: iced_wgpu::wgpu::Device,
-    queue: iced_wgpu::wgpu::Queue,
     format: iced_wgpu::wgpu::TextureFormat,
     text_renderer: TextRenderer,
     encoder: iced_wgpu::wgpu::CommandEncoder,
@@ -805,11 +930,11 @@ impl Pipeline for TextPipeline {
     where
         Self: Sized,
     {
+        tracing::error!("{:?}", device.clone().limits());
+        let features = klyff::Features::all();
         Self {
-            device: device.clone(),
-            queue: queue.clone(),
             format,
-            text_renderer: TextRenderer::new(device, format),
+            text_renderer: TextRenderer::with_styling(features, device, format),
             encoder: device.create_command_encoder(
                 &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
             ),
@@ -819,8 +944,15 @@ impl Pipeline for TextPipeline {
 }
 
 impl TextPrimitive {
-    pub fn new() -> Self {
-        todo!()
+    pub fn new(font_system: Arc<Mutex<FontSystem>>) -> Self {
+        Self {
+            font_system,
+            texts: Vec::new(),
+        }
+    }
+
+    pub fn push_text(&mut self, text: StyledText) {
+        self.texts.push(text)
     }
 }
 
@@ -830,8 +962,8 @@ impl Primitive for TextPrimitive {
     fn prepare(
         &self,
         pipeline: &mut Self::Pipeline,
-        _device: &iced_wgpu::wgpu::Device,
-        _queue: &iced_wgpu::wgpu::Queue,
+        device: &iced_wgpu::wgpu::Device,
+        queue: &iced_wgpu::wgpu::Queue,
         bounds: &Rectangle,
         _viewport: &iced_wgpu::graphics::Viewport,
     ) {
@@ -842,8 +974,8 @@ impl Primitive for TextPrimitive {
         pipeline.text_renderer.prepare(
             EncoderContext {
                 atlas: &mut pipeline.atlas,
-                device: &pipeline.device,
-                queue: &pipeline.queue,
+                device,
+                queue,
                 cmd_encoder: &mut pipeline.encoder,
                 font_system: &mut font_system,
             },
@@ -854,8 +986,8 @@ impl Primitive for TextPrimitive {
 
     fn draw(
         &self,
-        _pipeline: &Self::Pipeline,
-        _render_pass: &mut iced_wgpu::wgpu::RenderPass<'_>,
+        pipeline: &Self::Pipeline,
+        render_pass: &mut iced_wgpu::wgpu::RenderPass<'_>,
     ) -> bool {
         false
     }
