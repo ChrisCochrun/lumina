@@ -59,10 +59,10 @@ pub struct Library {
     image_search_query: Option<String>,
     video_search_query: Option<String>,
     presentation_search_query: Option<String>,
-    potential_songs: Option<Vec<Song>>,
-    potential_videos: Option<Vec<Video>>,
-    potential_images: Option<Vec<Image>>,
-    potential_presentations: Option<Vec<Presentation>>,
+    pub potential_songs: Option<Vec<Song>>,
+    pub potential_videos: Option<Vec<Video>>,
+    pub potential_images: Option<Vec<Image>>,
+    pub potential_presentations: Option<Vec<Presentation>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

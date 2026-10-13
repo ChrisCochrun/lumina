@@ -838,12 +838,77 @@ impl cosmic::Application for App {
         let cosmic::cosmic_theme::Spacing {
             space_xxs,
             space_s,
+            space_m,
             space_l,
             space_xl,
             space_xxl,
             space_xxxl,
             ..
         } = cosmic::theme::spacing();
+        if let Some(library) = &self.library
+            && (library.potential_songs.is_some()
+                || library.potential_images.is_some()
+                || library.potential_videos.is_some()
+                || library.potential_presentations.is_some())
+        {
+            let mut potentials_column =
+                column::Column::new().spacing(space_s).padding(space_xl);
+            if let Some(potential_songs) = &library.potential_songs
+                && !potential_songs.is_empty()
+            {
+                potentials_column =
+                    potentials_column.push(text::title2("Songs not found in library"));
+                for song in potential_songs.iter() {
+                    let title = text::title3(song.title.clone());
+                    let mut extras_row: Vec<Element<Message>> = Vec::new();
+                    if let Some(author) = &song.author {
+                        let author = text::body(format!("Author: {author}"));
+                        extras_row.push(author.into());
+                    }
+                    if let Some(background) = &song.background() {
+                        let background =
+                            background.path.components().next_back().map_or("", |file| {
+                                file.as_os_str().to_str().unwrap_or("")
+                            });
+                        extras_row
+                            .push(text::body(format!("Background: {background}")).into());
+                    }
+                    let add_button = button::icon(icon::from_name("list-add-symbolic"))
+                        .on_press(Message::None);
+
+                    let song_elements =
+                        column![title, extras_row.apply(row::with_children)]
+                            .spacing(space_s)
+                            .apply(container)
+                            .padding(space_s);
+                    let card = row![song_elements, add_button]
+                        .spacing(space_m)
+                        .apply(container)
+                        .padding(space_s)
+                        .class(theme::Container::Card);
+                    potentials_column = potentials_column.push(card);
+                    // potentials_column.push()
+                }
+            }
+            // if let Some(potential_images) = &library.potential_images {
+            //     todo!("create the images portion")
+            // }
+            return Some(
+                potentials_column
+                    .apply(container)
+                    .padding(space_xxl)
+                    .max_width(800)
+                    .into(),
+            );
+            // library
+            //     .potential_videos
+            //     .and_then(|videos| todo!())
+            //     .collect();
+            // library
+            //     .potential_presentations
+            //     .and_then(|presentations| todo!())
+            //     .collect();
+        }
         if self.searching {
             let items: Vec<Element<Message>> = self
                 .search_results
@@ -1414,17 +1479,19 @@ impl cosmic::Application for App {
             }
             Message::AddServiceItem(index, item) => {
                 let mut tasks = Vec::new();
-                if let Some(library) = &self.library {
-                    match library.item_in_library(&item) {
-                        core::model::CheckItem::Yes => (),
-                        core::model::CheckItem::No => todo!(
-                            "Needs to be checked by user if they want it in the library"
-                        ),
-                        core::model::CheckItem::Maybe => todo!(
-                            "Needs to be checked if the item is actually in library"
-                        ),
-                    }
-                }
+                // if let Some(library) = &self.library {
+                //     match library.item_in_library(&item) {
+                //         core::model::CheckItem::Yes => (),
+                //         core::model::CheckItem::No => {
+                //             todo!(
+                //                 "Needs to be checked by user if they want it in the library"
+                //             )
+                //         }
+                //         core::model::CheckItem::Maybe => todo!(
+                //             "Needs to be checked if the item is actually in library"
+                //         ),
+                //     }
+                // }
                 if matches!(item.kind, ServiceItemKind::Song(_)) {
                     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
                     let item_index = index;

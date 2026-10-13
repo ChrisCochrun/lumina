@@ -5,6 +5,7 @@ pub mod images;
 pub mod kinds;
 pub mod migration;
 pub mod model;
+pub mod org;
 pub mod presentations;
 pub mod service_items;
 pub mod settings;

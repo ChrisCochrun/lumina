@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use cosmic::iced::{
@@ -10,9 +12,15 @@ use iced_core::widget::{Operation, Tree};
 use iced_core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Widget, layout, mouse, renderer,
 };
+use iced_wgpu::Primitive;
 use iced_wgpu::core::renderer::Quad;
-use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
+use iced_wgpu::primitive::{Pipeline, Renderer as PrimitiveRenderer};
 use iced_widget::image::Handle;
+use klyff::cosmic_text::FontSystem;
+use klyff::{
+    EncoderContext, StyledText, StyledTextBuilder, TextRenderer, TextureAtlas,
+    TextureAtlasDescriptor, cosmic_text,
+};
 
 use crate::core::animation::Animation;
 
@@ -29,6 +37,7 @@ where
         From<cosmic::theme::Container<'a>>,
     Renderer: PrimitiveRenderer
         + iced_core::Renderer
+        + iced_core::text::Renderer
         + iced_core::image::Renderer<Handle = Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
@@ -40,7 +49,10 @@ where
 #[allow(clippy::struct_field_names)]
 pub struct Slide<'a, Message, Theme, Renderer>
 where
-    Renderer: PrimitiveRenderer + iced_core::Renderer + iced_core::image::Renderer,
+    Renderer: PrimitiveRenderer
+        + iced_core::Renderer
+        + iced_core::image::Renderer
+        + iced_core::text::Renderer,
 {
     id: Id,
     slide: &'a crate::core::slide::Slide,
@@ -53,6 +65,7 @@ where
     height: Length,
     content_fit: ContentFit,
     animation_state: AnimationState,
+    text_renderer: TextPrimitive,
 }
 
 pub struct SlideSettings<'a> {
@@ -85,6 +98,7 @@ where
     Renderer: PrimitiveRenderer
         + iced_core::Renderer
         + iced_core::image::Renderer
+        + iced_core::text::Renderer
         + cosmic::iced::advanced::image::Renderer<Handle = Handle>,
     <Renderer as iced_core::image::Renderer>::Handle: 'a,
 {
@@ -96,6 +110,7 @@ where
         video: Option<impl Into<cosmic::iced::Element<'a, Message, Theme, Renderer>>>,
         settings: SlideSettings<'a>,
     ) -> Self {
+        let text_renderer = TextPrimitive::new();
         Slide {
             id: Id::unique(),
             slide,
@@ -107,6 +122,7 @@ where
             height: Length::Fill,
             content_fit: ContentFit::Fill,
             animation_state: AnimationState::Idle,
+            text_renderer,
         }
     }
 
@@ -254,6 +270,7 @@ impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
 where
     Renderer: iced_core::Renderer
         + iced_core::image::Renderer
+        + iced_core::text::Renderer
         + PrimitiveRenderer
         + cosmic::iced::advanced::image::Renderer<Handle = Handle>,
 {
@@ -747,6 +764,7 @@ where
     Message: 'a,
     Renderer: 'a
         + iced_core::Renderer
+        + iced_core::text::Renderer
         + PrimitiveRenderer
         + iced_core::image::Renderer<Handle = cosmic::widget::image::Handle>,
     Theme: 'a,
@@ -755,5 +773,119 @@ where
         c: Slide<'a, Message, Theme, Renderer>,
     ) -> Element<'a, Message, Theme, Renderer> {
         Self::new(c)
+    }
+}
+
+pub(crate) struct TextPrimitive {
+    font_system: Arc<Mutex<FontSystem>>,
+    texts: Vec<StyledText>,
+}
+
+impl std::fmt::Debug for TextPrimitive {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+pub struct TextPipeline {
+    device: iced_wgpu::wgpu::Device,
+    queue: iced_wgpu::wgpu::Queue,
+    format: iced_wgpu::wgpu::TextureFormat,
+    text_renderer: TextRenderer,
+    encoder: iced_wgpu::wgpu::CommandEncoder,
+    atlas: TextureAtlas,
+}
+
+impl Pipeline for TextPipeline {
+    fn new(
+        device: &iced_wgpu::wgpu::Device,
+        queue: &iced_wgpu::wgpu::Queue,
+        format: iced_wgpu::wgpu::TextureFormat,
+    ) -> Self
+    where
+        Self: Sized,
+    {
+        Self {
+            device: device.clone(),
+            queue: queue.clone(),
+            format,
+            text_renderer: TextRenderer::new(device, format),
+            encoder: device.create_command_encoder(
+                &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
+            ),
+            atlas: TextureAtlas::new(&device, TextureAtlasDescriptor::default()),
+        }
+    }
+}
+
+impl TextPrimitive {
+    pub fn new() -> Self {
+        todo!()
+    }
+}
+
+impl Primitive for TextPrimitive {
+    type Pipeline = TextPipeline;
+
+    fn prepare(
+        &self,
+        pipeline: &mut Self::Pipeline,
+        _device: &iced_wgpu::wgpu::Device,
+        _queue: &iced_wgpu::wgpu::Queue,
+        bounds: &Rectangle,
+        _viewport: &iced_wgpu::graphics::Viewport,
+    ) {
+        let new = Arc::clone(&self.font_system);
+        let Ok(mut font_system) = new.lock() else {
+            return;
+        };
+        pipeline.text_renderer.prepare(
+            EncoderContext {
+                atlas: &mut pipeline.atlas,
+                device: &pipeline.device,
+                queue: &pipeline.queue,
+                cmd_encoder: &mut pipeline.encoder,
+                font_system: &mut font_system,
+            },
+            (bounds.width as u32, bounds.height as u32),
+            &self.texts,
+        );
+    }
+
+    fn draw(
+        &self,
+        _pipeline: &Self::Pipeline,
+        _render_pass: &mut iced_wgpu::wgpu::RenderPass<'_>,
+    ) -> bool {
+        false
+    }
+
+    fn render(
+        &self,
+        pipeline: &Self::Pipeline,
+        encoder: &mut iced_wgpu::wgpu::CommandEncoder,
+        target: &iced_wgpu::wgpu::TextureView,
+        _bounds: &Rectangle<u32>,
+    ) {
+        let mut pass =
+            encoder.begin_render_pass(&iced_wgpu::wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(iced_wgpu::wgpu::RenderPassColorAttachment {
+                    view: target,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: iced_wgpu::wgpu::Operations {
+                        load: iced_wgpu::wgpu::LoadOp::Clear(
+                            iced_wgpu::wgpu::Color::BLACK,
+                        ),
+                        store: iced_wgpu::wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+        pipeline.text_renderer.render(&mut pass, &pipeline.atlas);
     }
 }

@@ -26,8 +26,7 @@ pub fn slide_text(text: impl AsRef<str>) -> SlideText {
     SlideText::new(text)
 }
 
-impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for SlideText
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer> for SlideText
 where
     Message: Clone,
     Renderer: PrimitiveRenderer,
@@ -45,10 +44,7 @@ where
         _renderer: &Renderer,
         _limits: &layout::Limits,
     ) -> layout::Node {
-        layout::Node::new(Size::new(
-            self.font_size * 2.0,
-            self.font_size * 2.0,
-        ))
+        layout::Node::new(Size::new(self.font_size * 2.0, self.font_size * 2.0))
     }
 
     fn draw(
@@ -61,8 +57,7 @@ where
         _cursor: mouse::Cursor,
         _viewport: &Rectangle,
     ) {
-        renderer
-            .draw_primitive(layout.bounds(), TextPrimitive::new());
+        renderer.draw_primitive(layout.bounds(), TextPrimitive::new());
         renderer.fill_quad(
             renderer::Quad {
                 bounds: layout.bounds(),
@@ -108,7 +103,7 @@ impl Primitive for TextPrimitive {
         _bounds: &Rectangle,
         _viewport: &cosmic::iced_wgpu::graphics::Viewport,
     ) {
-        todo!()
+        
     }
 
     fn render(

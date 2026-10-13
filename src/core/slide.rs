@@ -1,6 +1,8 @@
 #![allow(clippy::similar_names, unused)]
+use cosmic::cosmic_theme::palette::Srgb;
 use cosmic::iced::Size;
 use cosmic::iced::core::image::Allocation;
+use cosmic::iced::font::{Style, Weight};
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
@@ -39,6 +41,21 @@ pub struct Slide {
     pub(crate) pdf_index: u32,
     pub(crate) text_svg: Option<TextSvg>,
     pub(crate) pdf_page: Option<Handle>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct TextProperties {
+    pub text_alignment: TextAlignment,
+    pub font: Option<String>,
+    pub font_size: Option<u16>,
+    pub font_weight: Option<Weight>,
+    pub font_style: Option<Style>,
+    pub text_color: Option<Srgb>,
+    pub stroke_size: Option<u16>,
+    pub stroke_color: Option<Srgb>,
+    pub shadow_size: Option<u16>,
+    pub shadow_offset: Option<(i16, i16)>,
+    pub shadow_color: Option<Srgb>,
 }
 
 #[derive(
