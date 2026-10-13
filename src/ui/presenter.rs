@@ -542,8 +542,8 @@ impl Presenter {
             self.presentation_video.as_ref().map(|video| {
                 VideoPlayer::new(video)
                     .mouse_hidden(settings.hide_mouse)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
+                    .width(iced_core::Length::Fill)
+                    .height(iced_core::Length::Fill)
                     .on_end_of_stream(Message::EndVideo)
                     .on_new_frame(Message::VideoFrame)
                     .on_missing_plugin(Message::MissingPlugin)
