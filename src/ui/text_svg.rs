@@ -81,8 +81,8 @@ pub struct Shadow {
 
 #[derive(Clone, Debug, Default, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Stroke {
-    size: u16,
-    color: Color,
+    pub size: u16,
+    pub color: Color,
 }
 
 pub enum Message {
@@ -90,7 +90,7 @@ pub enum Message {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Color(Srgb);
+pub struct Color(pub Srgb);
 
 impl From<cosmic::font::Font> for Font {
     fn from(value: cosmic::font::Font) -> Self {

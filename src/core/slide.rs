@@ -89,6 +89,22 @@ pub enum TextAlignment {
     BottomRight,
 }
 
+impl From<TextAlignment> for klyff::cosmic_text::Align {
+    fn from(value: TextAlignment) -> Self {
+        match value {
+            TextAlignment::TopLeft => klyff::cosmic_text::Align::Left,
+            TextAlignment::TopCenter => klyff::cosmic_text::Align::Center,
+            TextAlignment::TopRight => klyff::cosmic_text::Align::Right,
+            TextAlignment::MiddleLeft => klyff::cosmic_text::Align::Left,
+            TextAlignment::MiddleCenter => klyff::cosmic_text::Align::Center,
+            TextAlignment::MiddleRight => klyff::cosmic_text::Align::Right,
+            TextAlignment::BottomLeft => klyff::cosmic_text::Align::Left,
+            TextAlignment::BottomCenter => klyff::cosmic_text::Align::Center,
+            TextAlignment::BottomRight => klyff::cosmic_text::Align::Right,
+        }
+    }
+}
+
 impl From<Value> for TextAlignment {
     fn from(value: Value) -> Self {
         Self::from(&value)
@@ -725,11 +741,29 @@ impl SlideBuilder {
         let Some(video_end_time) = self.video_end_time else {
             return Err(miette!("No video_end_time"));
         };
+        let text_properties = TextProperties {
+            text_alignment,
+            font: self.font.as_ref().map(|font| font.get_name()),
+            font_size: self.font_size.map(|size| size as f32),
+            font_weight: None,
+            font_style: None,
+            font_stretch: None,
+            text_color: self.text_color.as_ref().map(|color| color.0),
+            stroke_size: self.stroke.as_ref().map(|stroke| stroke.size as f32),
+            stroke_color: self.stroke.as_ref().map(|stroke| stroke.color.0),
+            shadow_size: self.shadow.as_ref().map(|shadow| shadow.spread as f32),
+            shadow_offset: self
+                .shadow
+                .as_ref()
+                .map(|shadow| (shadow.offset_x as f32, shadow.offset_y as f32)),
+            shadow_color: self.shadow.as_ref().map(|shadow| shadow.color.0),
+        };
         let id = SlideId(Uuid::new_v4());
         Ok(Slide {
             id,
             background,
             text,
+            text_properties: Some(text_properties),
             font: self.font,
             font_size,
             text_alignment,
