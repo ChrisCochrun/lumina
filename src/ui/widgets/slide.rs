@@ -695,11 +695,16 @@ where
         if self.slide.text.len() > 0 {
             let text = &self.slide.text;
             let mut text_renderer =
-                TextPrimitive::new(Arc::clone(&self.settings.font_system));
+                TextPrimitive::new(Arc::clone(&self.settings.font_system), &clip_bounds);
             let text_props = self.slide.text_properties.clone().unwrap_or_default();
             text_renderer.build_text(&self.slide.text, &text_props, &bounds, &viewport);
 
-            renderer.with_layer(bounds, |renderer| {
+            //             if &self.slide.text
+            //                 == r#"Haha
+            // Ayy"# {
+            //                 tracing::warn!("Bounds={bounds:?}, clip={clip_bounds:?}");
+            //             }
+            renderer.with_layer(clip_bounds, |renderer| {
                 renderer.draw_primitive(
                     Rectangle::new(current_foreground_position, current_foreground_size),
                     text_renderer,
@@ -752,6 +757,7 @@ pub(crate) struct TextPrimitive {
     font_system: Arc<Mutex<FontSystem>>,
     texts: Mutex<Vec<StyledTextBuilder>>,
     text_renderer: Mutex<Option<TextRenderer>>,
+    clip_bounds: Rectangle,
 }
 
 impl std::fmt::Debug for TextPrimitive {
@@ -786,11 +792,12 @@ impl Pipeline for TextPipeline {
 }
 
 impl TextPrimitive {
-    pub fn new(font_system: Arc<Mutex<FontSystem>>) -> Self {
+    pub fn new(font_system: Arc<Mutex<FontSystem>>, clip_bounds: &Rectangle) -> Self {
         Self {
             font_system,
             texts: Mutex::new(Vec::new()),
             text_renderer: Mutex::new(None),
+            clip_bounds: clip_bounds.clone(),
         }
     }
 
@@ -815,7 +822,8 @@ impl TextPrimitive {
             // );
             // tracing::warn!("{text_props:?}");
             let scale = bounds.width / viewport.width;
-            let metrics = Metrics::relative(text_props.font_size.unwrap_or(100.0), 1.2);
+            let metrics =
+                Metrics::relative(text_props.font_size.unwrap_or(100.0) * scale, 1.2);
             let mut attrs = Attrs::new()
                 .family(
                     text_props
@@ -976,9 +984,6 @@ impl Primitive for TextPrimitive {
                 &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
             );
 
-        let scale = bounds.size().width / viewport.logical_size().width;
-        let width = viewport.logical_size().width;
-        let height = viewport.logical_size().height;
         let builders = {
             let Ok(mut texts) = self.texts.lock() else {
                 return;
@@ -1002,7 +1007,7 @@ impl Primitive for TextPrimitive {
                 cmd_encoder: &mut encoder,
                 font_system: &mut font_system,
             },
-            ((bounds.width) as u32, (bounds.height) as u32),
+            (bounds.width as u32, bounds.height as u32),
             &texts,
         );
         queue.submit(std::iter::once(encoder.finish()));
