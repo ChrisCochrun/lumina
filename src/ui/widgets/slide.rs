@@ -408,11 +408,6 @@ where
     ) {
         let bounds = layout.bounds();
 
-        let mut text_renderer =
-            TextPrimitive::new(Arc::clone(&self.settings.font_system));
-        let text_props = self.slide.text_properties.clone().unwrap_or_default();
-        text_renderer.build_text(&self.slide.text, &text_props, &bounds);
-
         // let content_layout = layout
         //     .children()
         //     .next()
@@ -697,10 +692,21 @@ where
             });
         }
 
-        renderer.with_layer(bounds, |renderer| {
-            renderer.draw_primitive(bounds, text_renderer);
-        });
-        tracing::warn!("SLIDE DRAW: bounds={bounds:?}, viewport={viewport:?}");
+        if self.slide.text.len() > 0 {
+            let text = &self.slide.text;
+            let mut text_renderer =
+                TextPrimitive::new(Arc::clone(&self.settings.font_system));
+            let text_props = self.slide.text_properties.clone().unwrap_or_default();
+            text_renderer.build_text(&self.slide.text, &text_props, &bounds);
+
+            renderer.with_layer(bounds, |renderer| {
+                renderer.draw_primitive(
+                    Rectangle::new(current_foreground_position, current_foreground_size),
+                    text_renderer,
+                );
+            });
+            // tracing::warn!(text, "SLIDE DRAW: bounds={bounds:?}, viewport={viewport:?}");
+        }
         // if let Some(text) = &self.slide.text_svg
         //     && let Some(handle) = &text.handle
         // {
@@ -745,6 +751,7 @@ where
 pub(crate) struct TextPrimitive {
     font_system: Arc<Mutex<FontSystem>>,
     texts: Mutex<Vec<StyledTextBuilder>>,
+    text_renderer: Mutex<Option<TextRenderer>>,
 }
 
 impl std::fmt::Debug for TextPrimitive {
@@ -758,7 +765,6 @@ impl std::fmt::Debug for TextPrimitive {
 
 pub struct TextPipeline {
     format: iced_wgpu::wgpu::TextureFormat,
-    text_renderer: TextRenderer,
     atlas: TextureAtlas,
 }
 
@@ -772,10 +778,8 @@ impl Pipeline for TextPipeline {
         Self: Sized,
     {
         tracing::error!("{:?}", device.clone().limits());
-        let features = klyff::Features::all();
         Self {
             format,
-            text_renderer: TextRenderer::with_styling(features, device, format),
             atlas: TextureAtlas::new(&device, TextureAtlasDescriptor::default()),
         }
     }
@@ -786,6 +790,7 @@ impl TextPrimitive {
         Self {
             font_system,
             texts: Mutex::new(Vec::new()),
+            text_renderer: Mutex::new(None),
         }
     }
 
@@ -942,6 +947,14 @@ impl Primitive for TextPrimitive {
         bounds: &Rectangle,
         viewport: &iced_wgpu::graphics::Viewport,
     ) {
+        let Ok(mut renderer_mutex) = self.text_renderer.lock() else {
+            return;
+        };
+        let renderer = renderer_mutex.get_or_insert_with(|| {
+            let features = klyff::Features::all();
+            TextRenderer::with_styling(features, device, pipeline.format)
+        });
+
         let new = Arc::clone(&self.font_system);
         let Ok(mut font_system) = new.lock() else {
             tracing::error!("Couldn't use font system");
@@ -973,7 +986,8 @@ impl Primitive for TextPrimitive {
                 text.finish(&mut font_system)
             })
             .collect::<Vec<StyledText>>();
-        pipeline.text_renderer.prepare(
+        tracing::debug!("{texts:?}");
+        renderer.prepare(
             EncoderContext {
                 atlas: &mut pipeline.atlas,
                 device,
@@ -992,8 +1006,16 @@ impl Primitive for TextPrimitive {
         pipeline: &Self::Pipeline,
         render_pass: &mut iced_wgpu::wgpu::RenderPass<'_>,
     ) -> bool {
-        pipeline.text_renderer.render(render_pass, &pipeline.atlas);
-        true
+        // tracing::warn!("{render_pass:?}");
+        let Ok(renderer) = self.text_renderer.lock() else {
+            return false;
+        };
+        if let Some(renderer) = renderer.as_ref() {
+            renderer.render(render_pass, &pipeline.atlas);
+            true
+        } else {
+            false
+        }
     }
 
     fn render(
