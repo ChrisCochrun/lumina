@@ -697,7 +697,7 @@ where
             let mut text_renderer =
                 TextPrimitive::new(Arc::clone(&self.settings.font_system));
             let text_props = self.slide.text_properties.clone().unwrap_or_default();
-            text_renderer.build_text(&self.slide.text, &text_props, &bounds);
+            text_renderer.build_text(&self.slide.text, &text_props, &bounds, &viewport);
 
             renderer.with_layer(bounds, |renderer| {
                 renderer.draw_primitive(
@@ -806,12 +806,16 @@ impl TextPrimitive {
         text: impl AsRef<str>,
         text_props: &TextProperties,
         bounds: &Rectangle,
+        viewport: &Rectangle,
     ) {
         let styled_text = if let Ok(mut font_system) = self.font_system.lock() {
-            tracing::warn!("BUILD TEXT: bounds={bounds:?}, text={:?}", text.as_ref(),);
+            // tracing::warn!(
+            //     "BUILD TEXT: bounds={bounds:?}, viewport={viewport:?}, text={:?}",
+            //     text.as_ref(),
+            // );
             // tracing::warn!("{text_props:?}");
-            let metrics =
-                Metrics::relative(text_props.font_size.unwrap_or(100.0) * 1.5, 1.2);
+            let scale = bounds.width / viewport.width;
+            let metrics = Metrics::relative(text_props.font_size.unwrap_or(100.0), 1.2);
             let mut attrs = Attrs::new()
                 .family(
                     text_props
@@ -921,6 +925,7 @@ impl TextPrimitive {
                     roundness: 1.0,
                 },
             };
+            // let attrs = Attrs::new();
             text_builder.set_align(Some(text_props.text_alignment.into()));
             text_builder.push_text(text.as_ref(), &attrs, style);
             // tracing::warn!("RUNNING");
@@ -960,18 +965,20 @@ impl Primitive for TextPrimitive {
             tracing::error!("Couldn't use font system");
             return;
         };
-        tracing::warn!(
-            "TEXT PREPARE: bounds={bounds:?}, viewport physical={:?}, logical={:?}, scale={}",
-            viewport.physical_size(),
-            viewport.logical_size(),
-            viewport.scale_factor(),
-        );
+        // tracing::warn!(
+        //     "TEXT PREPARE: bounds={bounds:?}, viewport physical={:?}, logical={:?}, scale={}",
+        //     viewport.physical_size(),
+        //     viewport.logical_size(),
+        //     viewport.scale_factor(),
+        // );
         let mut encoder =
             device.create_command_encoder(
                 &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
             );
 
         let scale = bounds.size().width / viewport.logical_size().width;
+        let width = viewport.logical_size().width;
+        let height = viewport.logical_size().height;
         let builders = {
             let Ok(mut texts) = self.texts.lock() else {
                 return;
@@ -982,11 +989,11 @@ impl Primitive for TextPrimitive {
         let texts = builders
             .into_iter()
             .map(|mut text| {
-                text.set_scale(scale as f32);
+                // text.set_scale(scale as f32);
                 text.finish(&mut font_system)
             })
             .collect::<Vec<StyledText>>();
-        tracing::debug!("{texts:?}");
+        // tracing::debug!("{texts:?}");
         renderer.prepare(
             EncoderContext {
                 atlas: &mut pipeline.atlas,
@@ -995,7 +1002,7 @@ impl Primitive for TextPrimitive {
                 cmd_encoder: &mut encoder,
                 font_system: &mut font_system,
             },
-            (bounds.width as u32, bounds.height as u32),
+            ((bounds.width) as u32, (bounds.height) as u32),
             &texts,
         );
         queue.submit(std::iter::once(encoder.finish()));
