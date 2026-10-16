@@ -25,7 +25,7 @@ use klyff::{
 };
 
 use crate::core::animation::Animation;
-use crate::core::slide::TextProperties;
+use crate::core::slide::{TextAlignment, TextProperties};
 
 pub fn slide<'a, Message: 'static, Theme, Renderer>(
     slide: &'a crate::core::slide::Slide,
@@ -468,6 +468,11 @@ where
             Point::new(viewport.x - viewport.width, viewport.y - viewport.height),
         );
 
+        // let (mut prev_foreground_position,) = (Point::new(
+        //     viewport.x - viewport.width,
+        //     viewport.y - viewport.height,
+        // ),);
+
         if let AnimationState::Running {
             direction: _,
             new_slide_progress,
@@ -693,44 +698,51 @@ where
         }
 
         if self.slide.text.len() > 0 {
-            let text = &self.slide.text;
             let mut text_renderer =
                 TextPrimitive::new(Arc::clone(&self.settings.font_system), &clip_bounds);
             let text_props = self.slide.text_properties.clone().unwrap_or_default();
             text_renderer.build_text(&self.slide.text, &text_props, &bounds, &viewport);
 
-            //             if &self.slide.text
-            //                 == r#"Haha
-            // Ayy"# {
-            //                 tracing::warn!("Bounds={bounds:?}, clip={clip_bounds:?}");
-            //             }
+            let pre_vertical_alignment_bounds =
+                Rectangle::new(current_foreground_position, current_foreground_size);
+            let final_y = match self.slide.text_alignment {
+                TextAlignment::TopLeft
+                | TextAlignment::TopCenter
+                | TextAlignment::TopRight => pre_vertical_alignment_bounds.y,
+                TextAlignment::MiddleLeft
+                | TextAlignment::MiddleCenter
+                | TextAlignment::MiddleRight => {
+                    let half_text_height =
+                        text_renderer.texts.first().map_or(0.0, |text| {
+                            text.buffer()
+                                .layout_runs()
+                                .map(|run| run.line_height)
+                                .sum::<f32>()
+                                / 2.0
+                        });
+                    pre_vertical_alignment_bounds.center_y() - half_text_height
+                }
+                TextAlignment::BottomLeft
+                | TextAlignment::BottomCenter
+                | TextAlignment::BottomRight => {
+                    let text_height = text_renderer.texts.first().map_or(0.0, |text| {
+                        text.buffer()
+                            .layout_runs()
+                            .map(|run| run.line_height)
+                            .sum::<f32>()
+                    });
+                    pre_vertical_alignment_bounds.y + pre_vertical_alignment_bounds.height
+                        - text_height
+                }
+            };
+            let final_bounds = Rectangle::new(
+                Point::new(current_foreground_position.x, final_y),
+                current_foreground_size,
+            );
             renderer.with_layer(clip_bounds, |renderer| {
-                renderer.draw_primitive(
-                    Rectangle::new(current_foreground_position, current_foreground_size),
-                    text_renderer,
-                );
+                renderer.draw_primitive(final_bounds, text_renderer);
             });
-            // tracing::warn!(text, "SLIDE DRAW: bounds={bounds:?}, viewport={viewport:?}");
         }
-        // if let Some(text) = &self.slide.text_svg
-        //     && let Some(handle) = &text.handle
-        // {
-        //     let _ = renderer.load_image(handle);
-        //     renderer.with_layer(bounds, |renderer| {
-        //         renderer.draw_image(
-        //             iced_core::image::Image {
-        //                 handle: handle.clone(),
-        //                 filter_method: iced_core::image::FilterMethod::Nearest,
-        //                 rotation: iced_core::Radians(0.0),
-        //                 border_radius: Radius::new(0.0),
-        //                 opacity: current_slide_opacity,
-        //                 snap: true,
-        //             },
-        //             Rectangle::new(current_foreground_position, current_foreground_size),
-        //             clip_bounds,
-        //         );
-        //     });
-        // }
     }
 }
 
@@ -755,17 +767,14 @@ where
 
 pub(crate) struct TextPrimitive {
     font_system: Arc<Mutex<FontSystem>>,
-    texts: Mutex<Vec<StyledTextBuilder>>,
+    texts: Vec<StyledText>,
     text_renderer: Mutex<Option<TextRenderer>>,
     clip_bounds: Rectangle,
 }
 
 impl std::fmt::Debug for TextPrimitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Ok(texts) = self.texts.lock() else {
-            return Err(std::fmt::Error::default());
-        };
-        write!(f, "TextPrimitive: with {}", texts.len())
+        write!(f, "TextPrimitive: with {}", self.texts.len())
     }
 }
 
@@ -795,17 +804,14 @@ impl TextPrimitive {
     pub fn new(font_system: Arc<Mutex<FontSystem>>, clip_bounds: &Rectangle) -> Self {
         Self {
             font_system,
-            texts: Mutex::new(Vec::new()),
+            texts: Vec::new(),
             text_renderer: Mutex::new(None),
             clip_bounds: clip_bounds.clone(),
         }
     }
 
-    pub fn push_text(&mut self, text: StyledTextBuilder) {
-        let Ok(mut texts) = self.texts.lock() else {
-            return;
-        };
-        texts.push(text)
+    pub fn push_text(&mut self, text: StyledText) {
+        self.texts.push(text)
     }
 
     pub fn build_text(
@@ -928,8 +934,8 @@ impl TextPrimitive {
                         shadow_direction.0,
                         shadow_direction.1,
                     ),
-                    additional_width: 0.0,
-                    spread: shadow_spread,
+                    additional_width: shadow_spread,
+                    spread: 0.0,
                     roundness: 1.0,
                 },
             };
@@ -937,14 +943,13 @@ impl TextPrimitive {
             text_builder.set_align(Some(text_props.text_alignment.into()));
             text_builder.push_text(text.as_ref(), &attrs, style);
             // tracing::warn!("RUNNING");
-            Some(text_builder)
+            Some(text_builder.finish(&mut font_system))
         } else {
             None
         };
 
         if let Some(styled_text) = styled_text {
-            // tracing::debug!("{styled_text:?}");
-            self.push_text(styled_text);
+            self.push_text(styled_text)
         }
     }
 }
@@ -984,20 +989,6 @@ impl Primitive for TextPrimitive {
                 &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
             );
 
-        let builders = {
-            let Ok(mut texts) = self.texts.lock() else {
-                return;
-            };
-            std::mem::take(&mut *texts)
-        };
-
-        let texts = builders
-            .into_iter()
-            .map(|mut text| {
-                // text.set_scale(scale as f32);
-                text.finish(&mut font_system)
-            })
-            .collect::<Vec<StyledText>>();
         // tracing::debug!("{texts:?}");
         renderer.prepare(
             EncoderContext {
@@ -1008,7 +999,7 @@ impl Primitive for TextPrimitive {
                 font_system: &mut font_system,
             },
             (bounds.width as u32, bounds.height as u32),
-            &texts,
+            &self.texts,
         );
         queue.submit(std::iter::once(encoder.finish()));
     }

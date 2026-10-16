@@ -2207,7 +2207,7 @@ impl SongEditor {
         // I think this implementation is faster
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
-            let font_db = Arc::clone(&self.font_db);
+            // let font_db = Arc::clone(&self.font_db);
             if let Some(handle) = &self.update_slide_handle {
                 handle.abort();
             }
@@ -2216,8 +2216,8 @@ impl SongEditor {
 
             std::thread::spawn(move || {
                 for (index, slide) in slides.into_iter().enumerate() {
-                    let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
-                        .unwrap_or(slide);
+                    // let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
+                    //     .unwrap_or(slide);
                     let _ = tx.send(Message::UpdateSlide((index, slide)));
                 }
             });
