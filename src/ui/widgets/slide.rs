@@ -827,9 +827,9 @@ impl TextPrimitive {
             //     text.as_ref(),
             // );
             // tracing::warn!("{text_props:?}");
-            let scale = bounds.width / viewport.width;
+            let scale = bounds.width / 1920.0;
             let metrics =
-                Metrics::relative(text_props.font_size.unwrap_or(100.0) * scale, 1.2);
+                Metrics::relative(text_props.font_size.unwrap_or(100.0) * scale, 1.3);
             let mut attrs = Attrs::new()
                 .family(
                     text_props
@@ -912,13 +912,13 @@ impl TextPrimitive {
                 shadow_color.blue,
             ));
             let shadow_direction = text_props.shadow_offset.unwrap_or_default();
-            let shadow_spread = text_props.shadow_size.unwrap_or_default();
+            let shadow_size = text_props.shadow_size.unwrap_or_default();
 
             let style = TextStyle {
                 color: GlyphColoring::Solid(color),
                 stroke_out: klyff::Outline {
                     color: GlyphColoring::Solid(stroke_color),
-                    width: stroke_width,
+                    width: stroke_width * scale * 2.0,
                     roundness: 1.0,
                 },
                 stroke_in: klyff::Outline {
@@ -934,8 +934,8 @@ impl TextPrimitive {
                         shadow_direction.0,
                         shadow_direction.1,
                     ),
-                    additional_width: shadow_spread,
-                    spread: 0.0,
+                    additional_width: shadow_size * scale * 2.0,
+                    spread: 0.3,
                     roundness: 1.0,
                 },
             };
