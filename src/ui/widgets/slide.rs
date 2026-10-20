@@ -713,7 +713,7 @@ where
                 | TextAlignment::MiddleCenter
                 | TextAlignment::MiddleRight => {
                     let half_text_height =
-                        text_renderer.texts.first().map_or(0.0, |text| {
+                        text_renderer.text.as_ref().map_or(0.0, |text| {
                             text.buffer()
                                 .layout_runs()
                                 .map(|run| run.line_height)
@@ -725,7 +725,7 @@ where
                 TextAlignment::BottomLeft
                 | TextAlignment::BottomCenter
                 | TextAlignment::BottomRight => {
-                    let text_height = text_renderer.texts.first().map_or(0.0, |text| {
+                    let text_height = text_renderer.text.as_ref().map_or(0.0, |text| {
                         text.buffer()
                             .layout_runs()
                             .map(|run| run.line_height)
@@ -767,14 +767,14 @@ where
 
 pub(crate) struct TextPrimitive {
     font_system: Arc<Mutex<FontSystem>>,
-    texts: Vec<StyledText>,
+    text: Option<StyledText>,
     text_renderer: Mutex<Option<TextRenderer>>,
     clip_bounds: Rectangle,
 }
 
 impl std::fmt::Debug for TextPrimitive {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TextPrimitive: with {}", self.texts.len())
+        write!(f, "TextPrimitive: with {:?}", self.text)
     }
 }
 
@@ -804,15 +804,15 @@ impl TextPrimitive {
     pub fn new(font_system: Arc<Mutex<FontSystem>>, clip_bounds: &Rectangle) -> Self {
         Self {
             font_system,
-            texts: Vec::new(),
+            text: None,
             text_renderer: Mutex::new(None),
             clip_bounds: clip_bounds.clone(),
         }
     }
 
-    pub fn push_text(&mut self, text: StyledText) {
-        self.texts.push(text)
-    }
+    // pub fn push_text(&mut self, text: StyledText) {
+    //     self.texts.push(text)
+    // }
 
     pub fn build_text(
         &mut self,
@@ -828,8 +828,16 @@ impl TextPrimitive {
             // );
             // tracing::warn!("{text_props:?}");
             let scale = bounds.width / 1920.0;
-            let metrics =
-                Metrics::relative(text_props.font_size.unwrap_or(100.0) * scale, 1.3);
+            // Guard against font_size not being set. This prevents an assertion
+            // panic in cosmic_text
+            let font_size = text_props.font_size.unwrap_or(100.0);
+            let font_size = if font_size == 0.0 {
+                100.0 * scale
+            } else {
+                font_size * scale
+            };
+            let metrics = Metrics::relative(font_size, 1.3);
+
             let mut attrs = Attrs::new()
                 .family(
                     text_props
@@ -949,7 +957,7 @@ impl TextPrimitive {
         };
 
         if let Some(styled_text) = styled_text {
-            self.push_text(styled_text)
+            self.text = Some(styled_text)
         }
     }
 }
@@ -999,7 +1007,7 @@ impl Primitive for TextPrimitive {
                 font_system: &mut font_system,
             },
             (bounds.width as u32, bounds.height as u32),
-            &self.texts,
+            &self.text.as_slice(),
         );
         queue.submit(std::iter::once(encoder.finish()));
     }
