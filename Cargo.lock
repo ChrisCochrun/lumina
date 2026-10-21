@@ -4209,7 +4209,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 [[package]]
 name = "klyff"
 version = "0.2.0"
-source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#b9cb9ea805dc195aaafc703148fe43548f2967a4"
+source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#7d7c2157babdaaf63f847c541e17211f75cd010d"
 dependencies = [
  "bitflags 2.11.1",
  "bytemuck",
@@ -4228,12 +4228,14 @@ dependencies = [
 [[package]]
 name = "klyff_msdf"
 version = "0.2.0"
-source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#b9cb9ea805dc195aaafc703148fe43548f2967a4"
+source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#7d7c2157babdaaf63f847c541e17211f75cd010d"
 dependencies = [
  "bytemuck",
  "glam 0.31.1",
  "profiling",
  "skrifa",
+ "tracing",
+ "tracing-subscriber",
  "wgpu",
 ]
 
