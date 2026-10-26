@@ -64,8 +64,9 @@ impl Default for Glow {
 pub struct Shadow {
     pub color: GlyphColoring,
     pub direction: [f32; 2],
-    pub additional_width: f32,
+    pub width: f32,
     pub spread: f32,
+    pub softness: f32,
     pub roundness: f32,
 }
 impl Default for Shadow {
@@ -73,8 +74,9 @@ impl Default for Shadow {
         Self {
             color: GlyphColoring::Solid(Color::TRANSPARENT),
             direction: [0., 0.],
-            additional_width: 0.,
+            width: 0.,
             spread: 0.,
+            softness: 0.,
             roundness: 0.,
         }
     }
@@ -188,9 +190,11 @@ impl TextStyle {
             },
             shadow: Shadow {
                 direction: [self.shadow.direction[0] * f, self.shadow.direction[1] * f],
-                additional_width: self.shadow.additional_width * f,
+                width: self.shadow.width * f,
+                softness: self.shadow.softness * f,
                 spread: self.shadow.spread,
-                ..self.shadow
+                roundness: self.shadow.roundness,
+                color: self.shadow.color,
             },
             ..self
         }
@@ -239,18 +243,32 @@ impl TextStyle {
                 params: [
                     self.shadow.direction[0],
                     self.shadow.direction[1],
-                    self.shadow.additional_width.max(0.),
-                    self.shadow.spread.clamp(0., 1.),
+                    self.shadow.width.max(0.0),
+                    self.shadow.spread.clamp(0.0, 1.0),
                 ],
-                extra: [self.shadow.roundness.clamp(0., 1.), 0., 0., 0.],
+                extra: [
+                    self.shadow.roundness.clamp(0.0, 1.0),
+                    self.shadow.softness.max(0.0),
+                    0.0,
+                    0.0,
+                ],
             },
         }
     }
     pub fn required_padding(self) -> f32 {
-        let glow = self.stroke_out.width.max(0.) + self.glow_out.width.max(0.);
-        let shadow = self.shadow.direction[0].hypot(self.shadow.direction[1])
-            + self.shadow.additional_width.max(0.);
-        glow.max(shadow)
+        let outer_stroke_and_glow =
+            self.stroke_out.width.max(0.0) + self.glow_out.width.max(0.0);
+
+        let shadow_width = self.shadow.width.max(0.0);
+
+        let shadow_softness =
+            self.shadow.softness.max(0.0) * (1.0 - self.shadow.spread.clamp(0.0, 1.0));
+
+        let shadow_offset = self.shadow.direction[0].hypot(self.shadow.direction[1]);
+
+        let shadow_extent = shadow_offset + shadow_width + 0.5 * shadow_softness;
+
+        outer_stroke_and_glow.max(shadow_extent)
     }
 }
 #[cfg(test)]
@@ -269,12 +287,42 @@ mod tests {
         let s = TextStyle {
             shadow: Shadow {
                 direction: [3., 4.],
-                additional_width: 12.,
+                width: 12.,
                 spread: 0.3,
                 ..Shadow::default()
             },
             ..TextStyle::default()
         };
         assert!((s.required_padding() - 17.).abs() < 0.0001);
+    }
+    #[test]
+    fn soft_shadow_without_expansion_has_padding() {
+        let style = TextStyle {
+            shadow: Shadow {
+                direction: [0.0, 0.0],
+                width: 0.0,
+                softness: 40.0,
+                spread: 0.0,
+                ..Shadow::default()
+            },
+            ..TextStyle::default()
+        };
+
+        assert_eq!(style.required_padding(), 20.0);
+    }
+
+    #[test]
+    fn hard_shadow_does_not_expand_soft_transition() {
+        let style = TextStyle {
+            shadow: Shadow {
+                width: 10.0,
+                softness: 40.0,
+                spread: 1.0,
+                ..Shadow::default()
+            },
+            ..TextStyle::default()
+        };
+
+        assert_eq!(style.required_padding(), 10.0);
     }
 }

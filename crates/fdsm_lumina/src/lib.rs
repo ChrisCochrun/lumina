@@ -16,5 +16,7 @@ pub mod iced_adapter;
 mod renderer;
 pub mod style;
 mod text;
-pub use renderer::{PreparedText, RenderError, RendererConfig, TextRenderer};
+pub use renderer::{
+    PreparedText, RenderError, RenderLayer, RendererConfig, TextRenderer,
+};
 pub use text::{StyledText, StyledTextBuilder, TextRegion};

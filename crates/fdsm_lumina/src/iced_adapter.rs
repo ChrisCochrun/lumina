@@ -64,13 +64,11 @@ impl Primitive for FdsmTextPrimitive {
         viewport: &Viewport,
     ) {
         let Ok(mut prepared) = self.prepared.lock() else {
-            tracing::error!(target: "fdsm", "Couldn't lock prepared text vec");
             return;
         };
         // On failure, leave no stale draw data from a previous preparation.
         prepared.clear();
         let Ok(font_system) = self.font_system.lock() else {
-            tracing::error!(target: "fdsm", "Couldn't lock font_system");
             return;
         };
         let sf = viewport.scale_factor() as f32;
@@ -92,20 +90,18 @@ impl Primitive for FdsmTextPrimitive {
             ) {
                 Ok(Some(item)) => prepared.push(item),
                 Ok(None) => {}
-                Err(err) => {
-                    tracing::error!(target = "fdsm", "fdsm-iced-renderer prepare: {err}")
-                }
+                Err(err) => eprintln!("fdsm-iced-renderer prepare: {err}"),
             }
         }
     }
     fn draw(&self, pipeline: &FdsmTextPipeline, pass: &mut wgpu::RenderPass<'_>) -> bool {
         let Ok(items) = self.prepared.lock() else {
-            tracing::error!(target: "fdsm", "Couldn't lock prepared text vec");
             return true;
         };
-        for prepared in items.iter() {
-            pipeline.renderer.render(pass, prepared);
-        }
+        // One call orders all prepared texts by effect layer. Drawing four
+        // passes per item instead would let later glyphs' glows/strokes cover
+        // earlier glyph bodies when letter spacing is tightened.
+        pipeline.renderer.render_group(pass, items.as_slice());
         true
     }
 }

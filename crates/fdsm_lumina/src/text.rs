@@ -59,6 +59,7 @@ pub struct StyledText {
     pub scale: f32,
     pub gradient_region: Option<GradientRegion>,
     pub measured_height: f32,
+    pub vertical_offset: f32,
 }
 impl StyledText {
     pub fn height(&self) -> f32 {
@@ -69,6 +70,10 @@ impl StyledText {
     }
     pub fn styles(&self) -> impl Iterator<Item = &TextStyle> {
         self.styles.iter()
+    }
+
+    pub fn set_vertical_offset(&mut self, offset: f32) {
+        self.vertical_offset = offset;
     }
 }
 struct Span {
@@ -174,6 +179,7 @@ impl StyledTextBuilder {
             (Some(first), Some(last)) => (last.top + last.height - first.top).max(0.),
             _ => 0.,
         };
+
         StyledText {
             lines,
             styles: if self.styles.is_empty() {
@@ -185,6 +191,7 @@ impl StyledTextBuilder {
             scale: self.scale,
             gradient_region: self.gradient_region,
             measured_height,
+            vertical_offset: 0.0,
         }
     }
 }
