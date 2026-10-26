@@ -1575,24 +1575,29 @@ impl SongEditor {
     }
 
     fn toolbar(&self) -> Element<Message> {
-        const OUTLINE_ICON: &[u8] = include_bytes!("../../res/icons/text-outline.svg");
-        const SHADOW_ICON: &[u8] = include_bytes!("../../res/icons/shadow.svg");
-        const ALIGN_ICON: &[u8] = include_bytes!("../../res/icons/align-on-canvas.svg");
+        const OUTLINE_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/text-outline.svg");
+        const SHADOW_ICON: &[u8] = include_bytes!("../../../../res/icons/shadow.svg");
+        const ALIGN_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/align-on-canvas.svg");
         const BB_TL_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_top_left.svg");
-        const BB_TC_ICON: &[u8] = include_bytes!("../../res/icons/boundingbox_top.svg");
+            include_bytes!("../../../../res/icons/boundingbox_top_left.svg");
+        const BB_TC_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/boundingbox_top.svg");
         const BB_TR_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_top_right.svg");
-        const BB_ML_ICON: &[u8] = include_bytes!("../../res/icons/boundingbox_left.svg");
+            include_bytes!("../../../../res/icons/boundingbox_top_right.svg");
+        const BB_ML_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/boundingbox_left.svg");
         const BB_MC_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_center.svg");
-        const BB_MR_ICON: &[u8] = include_bytes!("../../res/icons/boundingbox_right.svg");
+            include_bytes!("../../../../res/icons/boundingbox_center.svg");
+        const BB_MR_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/boundingbox_right.svg");
         const BB_BL_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_bottom_left.svg");
+            include_bytes!("../../../../res/icons/boundingbox_bottom_left.svg");
         const BB_BC_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_bottom.svg");
+            include_bytes!("../../../../res/icons/boundingbox_bottom.svg");
         const BB_BR_ICON: &[u8] =
-            include_bytes!("../../res/icons/boundingbox_bottom_right.svg");
+            include_bytes!("../../../../res/icons/boundingbox_bottom_right.svg");
 
         let cosmic::cosmic_theme::Spacing {
             space_none,

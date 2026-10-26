@@ -1,0 +1,20 @@
+[package]
+name = "fdsm_lumina"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "MSDF Font Rendering primitive for wgpu and libcosmic"
+
+[dependencies]
+bytemuck = { version = "1.23", features = ["derive"] }
+fdsm-skrifa = { workspace = true }
+fdsm = { workspace = true }
+skrifa = { workspace = true }
+image = { workspace = true }
+nalgebra = "0.34.1"
+notosans = "0.1.0"
+pollster = "0.4.0"
+wgpu = "28.0.0"
+winit = "0.30.12"
+fontdb = { version = "0.23", default-features = false }
+cosmic-text = { version = "0.17.1", default-features = false, features = ["std", "sys-locale"] }

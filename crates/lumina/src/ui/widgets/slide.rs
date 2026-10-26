@@ -1,8 +1,7 @@
-use std::cell::RefCell;
-use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+// use crate::graphics::text;
 use cosmic::iced::{
     Border, Color, ContentFit, Point, Radius, Shadow, Size, core as iced_core,
     widget as iced_widget,

@@ -1,0 +1,4154 @@
+* First response
+:PROPERTIES:
+:CUSTOM_ID: first-response
+:END:
+I reviewed the entire =presenter.rs= module and compared its structure against the current libcosmic architecture. The biggest issue is not that the code is “bad”; it is that =Presenter= has gradually become *the presentation model, navigation controller, media controller, animation controller, OBS integration, thumbnail view-model, and part of the slide renderer all at once*.
+
+That is workable while the application is small, but it will make several of the features you want for Lumina substantially harder to add.
+
+libcosmic is explicitly structured around MVU: persistent application state, a =view= that constructs stateless widgets from that state, and an =update= function that changes state and launches tasks. It also explicitly encourages composed widgets to have their own =view=/=update= functions. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]]) Your presenter is already very close to this pattern, but it has several distinct state machines embedded inside one model.
+
+** 1. The biggest architectural change I would make
+:PROPERTIES:
+:CUSTOM_ID: the-biggest-architectural-change-i-would-make
+:END:
+I would change the conceptual structure from:
+
+#+begin_src text
+Presenter
+ ├── service
+ ├── current slide
+ ├── next slide
+ ├── previous slide
+ ├── video
+ ├── audio
+ ├── OBS
+ ├── animations
+ ├── hover state
+ ├── context menu
+ ├── scrolling
+ ├── preview layout
+ └── slide rendering
+#+end_src
+
+to something closer to:
+
+#+begin_src text
+Presenter
+ ├── PresentationState
+ │    ├── service
+ │    └── active position
+ │
+ ├── Navigator
+ │    ├── next()
+ │    ├── previous()
+ │    ├── first()
+ │    └── last()
+ │
+ ├── TransitionState
+ │    ├── previous
+ │    ├── current
+ │    └── animation
+ │
+ ├── MediaController
+ │    ├── video
+ │    └── audio
+ │
+ ├── ActionController
+ │    └── slide actions
+ │
+ ├── ObsController
+ │    └── OBS connection/scenes
+ │
+ └── PresenterUi
+      ├── hovered slide
+      ├── context menu
+      ├── scroll state
+      ├── preview size
+      └── view mode
+#+end_src
+
+You don't necessarily need all of these as separate Rust files immediately. The important thing is to establish the *conceptual boundaries* first.
+
+This fits libcosmic particularly well because composed widgets/types are intended to have their own view/update behavior rather than forcing everything into the root application. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+* 2. Your most important state problem: =current_slide= duplicates your source of truth
+:PROPERTIES:
+:CUSTOM_ID: your-most-important-state-problem-current_slide-duplicates-your-source-of-truth
+:END:
+Currently you have:
+
+#+begin_src rust
+pub current_item_index: usize,
+pub current_slide_index: usize,
+pub current_slide: Slide,
+#+end_src
+
+The first two identify the slide, while the third contains another copy of the slide.
+
+That means you have three pieces of state representing one concept.
+
+For example:
+
+#+begin_src rust
+current_item_index = 2
+current_slide_index = 4
+current_slide = ...
+#+end_src
+
+There is no type-level guarantee that =current_slide= is actually:
+
+#+begin_src rust
+service[2].slides[4]
+#+end_src
+
+You currently maintain that invariant manually in =change_slide()=.
+
+That becomes increasingly dangerous as editing features are added.
+
+*** I would make position the canonical state
+:PROPERTIES:
+:CUSTOM_ID: i-would-make-position-the-canonical-state
+:END:
+Something like:
+
+#+begin_src rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+pub struct PresentationState {
+    pub service: Arc<Vec<ServiceItem>>,
+    pub position: Option<SlidePosition>,
+}
+#+end_src
+
+and:
+
+#+begin_src rust
+impl PresentationState {
+    pub fn current_slide(&self) -> Option<&Slide> {
+        let position = self.position?;
+
+        self.service
+            .get(position.item)?
+            .slides
+            .get(position.slide)
+    }
+}
+#+end_src
+
+Now there is exactly one authoritative answer to:
+
+#+begin_quote
+Which slide am I presenting?
+#+end_quote
+
+The slide itself is derived.
+
+This becomes particularly important once you start implementing editing/reordering.
+
+--------------
+
+* 3. I would go one step further: use a =SlideId=
+:PROPERTIES:
+:CUSTOM_ID: i-would-go-one-step-further-use-a-slideid
+:END:
+Your =(usize, usize)= appears everywhere:
+
+#+begin_src rust
+Option<(usize, usize)>
+HashMap<(usize, usize), Vec<Action>>
+HoveredSlide(Option<(usize, usize, Point)>)
+RightClickSlide(usize, usize)
+ActivateSlide(usize, usize)
+#+end_src
+
+This is a sign that the tuple has become a domain concept.
+
+Give it a name.
+
+For example:
+
+#+begin_src rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+HashMap<SlidePosition, Vec<Action>>
+#+end_src
+
+and:
+
+#+begin_src rust
+ActivateSlide(SlidePosition)
+#+end_src
+
+This immediately makes the code easier to understand.
+
+Even better, if your =Slide= has a persistent database ID, use that for things like slide actions:
+
+#+begin_src rust
+HashMap<SlideId, Vec<Action>>
+#+end_src
+
+while using =SlidePosition= only for navigation.
+
+That distinction is extremely valuable:
+
+#+begin_src text
+SlidePosition
+    "where is this slide in the service?"
+
+SlideId
+    "which slide is this?"
+#+end_src
+
+If the user reorders slides, the position changes but the ID doesn't.
+
+That becomes important for:
+
+- slide actions
+- transitions
+- notes
+- metadata
+- presenter notes
+- linked media
+- undo/redo
+- persistence
+- collaboration eventually
+
+--------------
+
+* 4. =next_slide()= currently has an edge-case bug
+:PROPERTIES:
+:CUSTOM_ID: next_slide-currently-has-an-edge-case-bug
+:END:
+This is worth fixing now.
+
+You have:
+
+#+begin_src rust
+if self.service
+    .get(self.current_item_index)
+    .is_some_and(|i| i.slides.len() == self.current_slide_index + 1)
+{
+    return Some((self.current_item_index + 1, 0));
+}
+#+end_src
+
+If you're on the final slide of the final service item, this returns:
+
+#+begin_src rust
+(Some(service.len(), 0))
+#+end_src
+
+which is invalid.
+
+=ActivateSlide= then simply fails to find the slide.
+
+It doesn't crash, but navigation has an invalid intermediate state.
+
+Likewise:
+
+#+begin_src rust
+previous_slide()
+#+end_src
+
+does:
+
+#+begin_src rust
+i.slides.len() - 1
+#+end_src
+
+which can underflow if you ever have an empty =ServiceItem=.
+
+I'd centralize all of this in =Navigator=.
+
+For example conceptually:
+
+#+begin_src rust
+pub enum Navigation {
+    Previous,
+    Next,
+}
+#+end_src
+
+with:
+
+#+begin_src rust
+pub struct Navigator<'a> {
+    service: &'a [ServiceItem],
+}
+#+end_src
+
+Then all navigation semantics live in one place.
+
+This gives you a very natural place later for:
+
+#+begin_src rust
+next()
+previous()
+first()
+last()
+next_item()
+previous_item()
+next_unplayed()
+next_section()
+#+end_src
+
+--------------
+
+* 5. I would introduce a flattened slide sequence
+:PROPERTIES:
+:CUSTOM_ID: i-would-introduce-a-flattened-slide-sequence
+:END:
+Your data model is hierarchical:
+
+#+begin_src text
+Service
+ ├── ServiceItem
+ │    ├── Slide
+ │    ├── Slide
+ │    └── Slide
+ │
+ ├── ServiceItem
+ │    ├── Slide
+ │    └── Slide
+#+end_src
+
+That's good for editing.
+
+But navigation doesn't really care about that hierarchy.
+
+It wants:
+
+#+begin_src text
+0 → slide
+1 → slide
+2 → slide
+3 → slide
+4 → slide
+#+end_src
+
+You could maintain a lightweight index:
+
+#+begin_src rust
+pub struct SlideRef {
+    pub item_index: usize,
+    pub slide_index: usize,
+}
+#+end_src
+
+and:
+
+#+begin_src rust
+Vec<SlideRef>
+#+end_src
+
+Then navigation becomes trivial.
+
+More importantly, this opens the door to features like:
+
+#+begin_src rust
+navigator.next()
+navigator.previous()
+navigator.current()
+navigator.position()
+navigator.total()
+navigator.is_first()
+navigator.is_last()
+#+end_src
+
+Your current =total_slides= becomes unnecessary because it can be derived from the index.
+
+This also gives you a natural abstraction for presentation modes later:
+
+#+begin_src rust
+NavigationMode::All
+NavigationMode::CurrentItem
+NavigationMode::Song
+NavigationMode::Manual
+#+end_src
+
+--------------
+
+* 6. =change_slide()= is doing far too much
+:PROPERTIES:
+:CUSTOM_ID: change_slide-is-doing-far-too-much
+:END:
+This is the biggest individual method in the file.
+
+It currently does all of this:
+
+1. Logs slide information.
+2. Compares backgrounds.
+3. Changes font.
+4. Saves the old slide.
+5. Changes current slide.
+6. Reinitializes video.
+7. Determines animation.
+8. Calculates next slide.
+9. Starts animation.
+10. Scrolls the thumbnail view.
+11. Runs slide actions.
+12. Changes audio.
+13. Opens audio files.
+14. Decodes audio.
+15. Starts playback.
+16. Constructs tasks.
+
+That is a whole application state transition.
+
+I would split it into something like:
+
+#+begin_src rust
+fn activate_slide(&mut self, position: SlidePosition) -> Task<Message>
+#+end_src
+
+which orchestrates:
+
+#+begin_src rust
+self.transition.activate(...)
+self.media.activate(...)
+self.actions.activate(...)
+self.ui.focus(...)
+#+end_src
+
+Conceptually:
+
+#+begin_src rust
+fn activate_slide(&mut self, position: SlidePosition) -> Task<Message> {
+    let Some(slide) = self.presentation.slide(position).cloned() else {
+        return Task::none();
+    };
+
+    let transition = self.transition.activate(slide.clone());
+
+    let media_task = self.media.activate(&slide);
+
+    let action_task = self.actions.activate(position);
+
+    let focus_task = self.ui.focus(position);
+
+    Task::batch([
+        transition,
+        media_task,
+        action_task,
+        focus_task,
+    ])
+}
+#+end_src
+
+That would make the presenter dramatically easier to reason about.
+
+--------------
+
+* 7. Your =Message= enum is mixing several different domains
+:PROPERTIES:
+:CUSTOM_ID: your-message-enum-is-mixing-several-different-domains
+:END:
+Right now:
+
+#+begin_src rust
+pub enum Message {
+    NextSlide,
+    PrevSlide,
+    ActivateSlide(...),
+
+    EndVideo,
+    StartVideo,
+    VideoPos(...),
+    VideoFrame,
+    MissingPlugin(...),
+
+    HoveredSlide(...),
+    ChangeFont(...),
+
+    RightClickSlide(...),
+    AssignObsScene(...),
+    UpdateObsScenes(...),
+    AddObsClient(...),
+
+    AssignSlideAction(...),
+
+    ChangePreviewSize(...),
+    Tick(...),
+}
+#+end_src
+
+This works, but as Lumina grows this will become hundreds of variants.
+
+I'd introduce nested messages.
+
+For example:
+
+#+begin_src rust
+pub enum Message {
+    Navigation(NavigationMessage),
+    Media(MediaMessage),
+    Actions(ActionMessage),
+    Obs(ObsMessage),
+    Ui(UiMessage),
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+pub enum NavigationMessage {
+    Next,
+    Previous,
+    Activate(SlidePosition),
+}
+#+end_src
+
+#+begin_src rust
+pub enum MediaMessage {
+    Play,
+    Pause,
+    Seek(Duration),
+    Frame,
+    Ended,
+    MissingPlugin(...),
+}
+#+end_src
+
+and so on.
+
+Your root update becomes much more readable:
+
+#+begin_src rust
+match message {
+    Message::Navigation(message) => self.navigation.update(message),
+    Message::Media(message) => self.media.update(message),
+    Message::Actions(message) => self.actions.update(message),
+    Message::Obs(message) => self.obs.update(message),
+    Message::Ui(message) => self.ui.update(message),
+}
+#+end_src
+
+This is very much in the spirit of libcosmic's MVU architecture, where messages drive state changes and tasks produce further messages. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+* 8. OBS should definitely be separated
+:PROPERTIES:
+:CUSTOM_ID: obs-should-definitely-be-separated
+:END:
+Currently =Presenter= knows about:
+
+#+begin_src rust
+obws::Client
+Scene
+ObsAction
+slide_action_map
+#+end_src
+
+and directly manipulates them.
+
+I'd create:
+
+#+begin_src rust
+pub struct ObsController {
+    client: Option<Arc<Client>>,
+    scenes: Vec<Scene>,
+}
+#+end_src
+
+and perhaps:
+
+#+begin_src rust
+pub enum ObsMessage {
+    Connect(Arc<Client>),
+    RefreshScenes,
+    ScenesLoaded(Vec<Scene>),
+    Run(ObsAction),
+}
+#+end_src
+
+Then Presenter doesn't need to understand OBS at all.
+
+It only needs:
+
+#+begin_src rust
+self.actions.run(position)
+#+end_src
+
+This is especially important because you eventually have an obvious feature:
+
+#+begin_quote
+"When slide X becomes active, perform these actions."
+#+end_quote
+
+That's an *action system*, not an OBS feature.
+
+OBS is merely one action backend.
+
+Your architecture could eventually support:
+
+#+begin_src rust
+SlideAction
+ ├── Obs(...)
+ ├── Audio(...)
+ ├── Video(...)
+ ├── Lighting(...)
+ ├── HTTP(...)
+ ├── MIDI(...)
+ └── Custom(...)
+#+end_src
+
+That is a much more powerful foundation.
+
+--------------
+
+* 9. Your slide action system is already pointing toward a better architecture
+:PROPERTIES:
+:CUSTOM_ID: your-slide-action-system-is-already-pointing-toward-a-better-architecture
+:END:
+You currently have:
+
+#+begin_src rust
+HashMap<(usize, usize), Vec<slide_actions::Action>>
+#+end_src
+
+That's basically:
+
+#+begin_src text
+Slide → Actions
+#+end_src
+
+I'd promote that into an actual domain object:
+
+#+begin_src rust
+pub struct SlideActions {
+    actions: HashMap<SlideId, Vec<Action>>,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+impl SlideActions {
+    pub fn actions_for(&self, slide: SlideId) -> &[Action];
+    pub fn add(&mut self, slide: SlideId, action: Action);
+    pub fn remove(...);
+    pub fn run(...);
+}
+#+end_src
+
+That gives you an actual feature subsystem instead of a HashMap embedded inside Presenter.
+
+It also makes persistence much easier later.
+
+--------------
+
+* 10. The media subsystem should be separated even more aggressively
+:PROPERTIES:
+:CUSTOM_ID: the-media-subsystem-should-be-separated-even-more-aggressively
+:END:
+These fields:
+
+#+begin_src rust
+presentation_video: Option<Video>,
+preview_video: Option<Video>,
+video_position: f64,
+
+audio: Option<PathBuf>,
+audio_duration: Option<Duration>,
+audio_position: Option<Duration>,
+
+sink: (Arc<MixerDeviceSink>, Arc<Player>),
+#+end_src
+
+are a completely separate state machine.
+
+I'd create something like:
+
+#+begin_src rust
+pub struct MediaState {
+    pub video: VideoState,
+    pub audio: AudioState,
+}
+#+end_src
+
+with:
+
+#+begin_src rust
+pub struct VideoState {
+    preview: Option<Video>,
+    presentation: Option<Video>,
+    position: Duration,
+    playing: bool,
+}
+#+end_src
+
+and:
+
+#+begin_src rust
+pub struct AudioState {
+    source: Option<PathBuf>,
+    duration: Option<Duration>,
+    position: Duration,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+MediaMessage::Play
+MediaMessage::Pause
+MediaMessage::Seek(...)
+MediaMessage::Ended
+#+end_src
+
+This makes future features much easier:
+
+- video pause/resume
+- seek
+- loop
+- playback speed
+- audio fade
+- volume
+- independent preview/presentation playback
+- transition audio
+- media preloading
+
+--------------
+
+* 11. You are currently creating two video pipelines
+:PROPERTIES:
+:CUSTOM_ID: you-are-currently-creating-two-video-pipelines
+:END:
+=reset_video()= creates:
+
+#+begin_src text
+preview_video
+presentation_video
+#+end_src
+
+with different framerates and mute settings.
+
+That is reasonable.
+
+But the lifetime management is tightly coupled to slide changes.
+
+A better abstraction would be:
+
+#+begin_src rust
+MediaController::load_background(&Background)
+#+end_src
+
+which handles:
+
+#+begin_src text
+Image
+Video
+PDF
+HTML
+#+end_src
+
+rather than Presenter knowing that video backgrounds require GStreamer.
+
+Then eventually:
+
+#+begin_src rust
+BackgroundRenderer
+#+end_src
+
+can decide:
+
+#+begin_src rust
+BackgroundKind::Image
+BackgroundKind::Video
+BackgroundKind::Pdf
+BackgroundKind::Html
+#+end_src
+
+That will be particularly useful given your eventual goal of richer slide rendering.
+
+--------------
+
+* 12. =view()= and =view_preview()= are almost identical
+:PROPERTIES:
+:CUSTOM_ID: view-and-view_preview-are-almost-identical
+:END:
+These two methods:
+
+#+begin_src rust
+pub fn view(&self)
+pub fn view_preview(&self)
+#+end_src
+
+are essentially copies.
+
+That's a strong indication that your slide rendering function needs a more explicit concept of *render target*.
+
+Something like:
+
+#+begin_src rust
+pub enum RenderTarget {
+    Presentation,
+    Preview,
+    Thumbnail,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+pub struct SlideRenderContext<'a> {
+    pub target: RenderTarget,
+    pub animation: ...,
+    pub now: Instant,
+}
+#+end_src
+
+and:
+
+#+begin_src rust
+slide(&self.current_slide, context)
+#+end_src
+
+Instead of having =delegate: bool= scattered around.
+
+Currently:
+
+#+begin_src rust
+delegate: false
+#+end_src
+
+and:
+
+#+begin_src rust
+delegate: true
+#+end_src
+
+doesn't communicate what "delegate" actually means.
+
+I would rename it.
+
+Probably:
+
+#+begin_src rust
+RenderTarget::Thumbnail
+#+end_src
+
+is much clearer.
+
+--------------
+
+* 13. =SlideSettings= is carrying too many unrelated concepts
+:PROPERTIES:
+:CUSTOM_ID: slidesettings-is-carrying-too-many-unrelated-concepts
+:END:
+Currently:
+
+#+begin_src rust
+pub struct SlideSettings<'a> {
+    pub delegate: bool,
+    pub hide_mouse: bool,
+    pub previous_slide: Option<&'a Slide>,
+    pub animation: Option<&'a Animation>,
+    pub animator: Option<&'a Animation<bool>>,
+    pub now: Instant,
+    pub action: Option<&'a slide_actions::Action>,
+}
+#+end_src
+
+This is really three things:
+
+#+begin_src text
+Rendering
+ ├── target
+ └── hide_mouse
+
+Transition
+ ├── previous_slide
+ ├── animation
+ ├── animator
+ └── now
+
+Action overlay
+ └── action
+#+end_src
+
+I'd separate them:
+
+#+begin_src rust
+pub struct SlideRenderSettings {
+    pub target: RenderTarget,
+    pub hide_mouse: bool,
+}
+#+end_src
+
+#+begin_src rust
+pub struct Transition<'a> {
+    pub previous: Option<&'a Slide>,
+    pub animation: Option<&'a Animation>,
+    pub animator: Option<&'a Animation<bool>>,
+    pub now: Instant,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+pub struct SlideViewContext<'a> {
+    pub render: SlideRenderSettings,
+    pub transition: Option<Transition<'a>>,
+}
+#+end_src
+
+Much easier to understand.
+
+--------------
+
+* 14. =slide_view()= should probably become its own component
+:PROPERTIES:
+:CUSTOM_ID: slide_view-should-probably-become-its-own-component
+:END:
+This is one of the places where libcosmic's architecture is particularly relevant.
+
+The libcosmic documentation explicitly describes composed widgets as a normal pattern: give a custom type its own =view= and =update=, then compose it into the application. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+Your:
+
+#+begin_src rust
+slide_view()
+#+end_src
+
+has already become effectively a custom widget.
+
+It handles:
+
+- responsive layout
+- aspect ratio
+- background rendering
+- video
+- PDF
+- images
+- SVG text
+- transitions
+- scrolling
+- action overlays
+
+I'd seriously consider making this something like:
+
+#+begin_src rust
+pub struct SlideView<'a> {
+    slide: &'a Slide,
+    ...
+}
+#+end_src
+
+with:
+
+#+begin_src rust
+impl SlideView<'_> {
+    pub fn view(self) -> Element<'a, Message>
+}
+#+end_src
+
+Or, if it eventually needs interaction:
+
+#+begin_src rust
+pub struct SlideView {
+    state: SlideViewState,
+}
+#+end_src
+
+The =advanced= API exists specifically for custom widgets and gives you access to custom widget behavior, overlays, layout, renderer, etc. ([[https://pop-os.github.io/libcosmic/cosmic/iced/advanced/index.html][Pop!_OS]])
+
+I wouldn't jump to an advanced =Widget= implementation yet, though. A composed widget is probably enough for the current slide renderer.
+
+--------------
+
+* 15. There is a significant memory leak in =ChangeFont=
+:PROPERTIES:
+:CUSTOM_ID: there-is-a-significant-memory-leak-in-changefont
+:END:
+This:
+
+#+begin_src rust
+let font_name = s.into_boxed_str();
+let family = Family::Name(Box::leak(font_name));
+#+end_src
+
+leaks the string every time the font changes.
+
+Because =Font= apparently requires a ='static= string here, you're deliberately leaking it.
+
+If the user changes fonts repeatedly, those allocations never disappear.
+
+I would investigate whether libcosmic/Iced's =Font= representation allows an owned/static font identifier without leaking, or cache the leaked strings.
+
+For example, a font cache could ensure each font name is leaked only once.
+
+At minimum, this should not happen on every =ChangeFont=.
+
+--------------
+
+* 16. =with_items()= is doing too much initialization
+:PROPERTIES:
+:CUSTOM_ID: with_items-is-doing-too-much-initialization
+:END:
+The constructor:
+
+#+begin_src rust
+pub fn with_items(...)
+#+end_src
+
+creates:
+
+- preview video
+- presentation video
+- audio device
+- audio player
+- image loader
+- IDs
+- animation state
+- navigation state
+
+It also assumes there is a first slide.
+
+This makes construction expensive and difficult to test.
+
+I'd prefer:
+
+#+begin_src rust
+Presenter::new(...)
+#+end_src
+
+to initialize pure state, and then asynchronous/media initialization happens through messages/tasks.
+
+For example:
+
+#+begin_src text
+Presenter::new(service)
+       ↓
+Loaded
+       ↓
+Activate(first slide)
+       ↓
+Load media
+#+end_src
+
+This fits libcosmic's model much better because tasks are explicitly intended for asynchronous/background work. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+* 17. Don't initialize the audio device just because Presenter exists
+:PROPERTIES:
+:CUSTOM_ID: dont-initialize-the-audio-device-just-because-presenter-exists
+:END:
+This:
+
+#+begin_src rust
+DeviceSinkBuilder::open_default_sink()
+    .expect("Can't open default rodio stream");
+#+end_src
+
+means constructing the presenter can fail the entire application if the audio device isn't available.
+
+That's especially undesirable for a church presentation application because:
+
+#+begin_src text
+No audio device
+#+end_src
+
+should not mean:
+
+#+begin_src text
+Lumina cannot display slides.
+#+end_src
+
+I'd make audio an optional subsystem:
+
+#+begin_src rust
+audio: Option<AudioController>
+#+end_src
+
+and report an error through your normal application error mechanism.
+
+Same general principle applies to video.
+
+--------------
+
+* 18. =expect()= is too aggressive for presentation media
+:PROPERTIES:
+:CUSTOM_ID: expect-is-too-aggressive-for-presentation-media
+:END:
+There are several:
+
+#+begin_src rust
+expect("There should be a video file here")
+#+end_src
+
+and:
+
+#+begin_src rust
+expect("There should be an audio file here")
+#+end_src
+
+These are exactly the kinds of assumptions a presentation application shouldn't make.
+
+Files disappear.
+
+USB drives disconnect.
+
+Network mounts disappear.
+
+Media gets renamed.
+
+Permissions change.
+
+The presentation should degrade gracefully:
+
+#+begin_src text
+Slide still displays
+      ↓
+media failed
+      ↓
+show warning
+#+end_src
+
+rather than:
+
+#+begin_src text
+media failed
+      ↓
+panic
+      ↓
+presentation stops
+#+end_src
+
+--------------
+
+* 19. =update_items()= needs to reconcile state
+:PROPERTIES:
+:CUSTOM_ID: update_items-needs-to-reconcile-state
+:END:
+Currently:
+
+#+begin_src rust
+pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
+    let total_slides = ...
+    self.service = items;
+    self.total_slides = total_slides;
+}
+#+end_src
+
+This can leave:
+
+#+begin_src rust
+current_item_index
+current_slide_index
+current_slide
+next_slide
+old_slide
+#+end_src
+
+pointing at things that no longer exist.
+
+This is particularly important once the editor modifies the service while Presenter is alive.
+
+I'd make replacing the service an explicit operation:
+
+#+begin_src rust
+pub fn replace_service(&mut self, service: Arc<Service>) -> Task<Message>
+#+end_src
+
+that performs:
+
+#+begin_src text
+replace service
+ ↓
+rebuild navigation index
+ ↓
+validate current position
+ ↓
+resolve current slide
+ ↓
+update transition
+ ↓
+update media
+ ↓
+update actions
+#+end_src
+
+--------------
+
+* 20. Your current model is very close to supporting a much better feature: "presentation session"
+:PROPERTIES:
+:CUSTOM_ID: your-current-model-is-very-close-to-supporting-a-much-better-feature-presentation-session
+:END:
+I think this is the abstraction you are actually missing.
+
+Instead of Presenter being the presentation itself, I'd introduce:
+
+#+begin_src rust
+pub struct PresentationSession {
+    pub service: Arc<Vec<ServiceItem>>,
+    pub position: SlidePosition,
+    pub transition: TransitionState,
+    pub playback: PlaybackState,
+}
+#+end_src
+
+The session means:
+
+#+begin_quote
+"This is what is currently being presented."
+#+end_quote
+
+Then the UI can have multiple consumers:
+
+#+begin_src text
+PresentationSession
+       │
+       ├── Main presentation
+       │
+       ├── Local preview
+       │
+       ├── Thumbnail strip
+       │
+       ├── Presenter view
+       │
+       └── External output
+#+end_src
+
+This is a major distinction.
+
+Right now your presenter state is implicitly tied to the UI.
+
+Eventually you probably want:
+
+#+begin_src text
+same presentation state
+        ↓
+ ┌──────────────┬──────────────┬──────────────┐
+ │              │              │              │
+Preview       Output       Presenter      Thumbnail
+#+end_src
+
+That becomes much easier if the session is independent.
+
+--------------
+
+* 21. I would also distinguish "current", "preview", and "next"
+:PROPERTIES:
+:CUSTOM_ID: i-would-also-distinguish-current-preview-and-next
+:END:
+Church presentation software eventually tends to have concepts like:
+
+#+begin_src text
+LIVE
+NEXT
+PREVIEW
+#+end_src
+
+Your current:
+
+#+begin_src rust
+current_slide
+next_slide
+old_slide
+#+end_src
+
+doesn't quite express this.
+
+I would think about:
+
+#+begin_src rust
+pub struct PresentationState {
+    pub live: SlidePosition,
+    pub queued: Option<SlidePosition>,
+}
+#+end_src
+
+while transition state separately tracks:
+
+#+begin_src rust
+pub struct TransitionState {
+    pub from: Option<SlidePosition>,
+    pub to: SlidePosition,
+    pub progress: f32,
+}
+#+end_src
+
+That distinction becomes very powerful.
+
+For example:
+
+#+begin_src text
+LIVE:     Song / Chorus 2
+NEXT:     Song / Chorus 3
+PREVIEW:  Song / Bridge
+#+end_src
+
+Now you can implement a proper presenter monitor later without changing the underlying model.
+
+--------------
+
+* 22. =Instant= / =Tick= should probably be isolated
+:PROPERTIES:
+:CUSTOM_ID: instant-tick-should-probably-be-isolated
+:END:
+You currently have:
+
+#+begin_src rust
+now: Instant
+#+end_src
+
+and:
+
+#+begin_src rust
+Message::Tick(Instant)
+#+end_src
+
+and then the entire Presenter receives ticks.
+
+That means your entire presenter is effectively participating in an animation clock.
+
+I'd isolate that to the transition/animation component.
+
+Conceptually:
+
+#+begin_src rust
+TransitionState {
+    started_at: Instant,
+    ...
+}
+#+end_src
+
+and the root application can subscribe to animation ticks only while a transition is active.
+
+libcosmic supports subscriptions that can be started/stopped based on application state, which is useful for exactly this kind of state-dependent event stream. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+Instead of:
+
+#+begin_src text
+Presenter always receives Tick
+#+end_src
+
+you could eventually have:
+
+#+begin_src text
+No animation
+    → no tick subscription
+
+Animation active
+    → animation subscription
+
+Animation finished
+    → subscription stops
+#+end_src
+
+That is cleaner and potentially cheaper.
+
+--------------
+
+* 23. The preview grid and preview bar should be a separate UI component
+:PROPERTIES:
+:CUSTOM_ID: the-preview-grid-and-preview-bar-should-be-a-separate-ui-component
+:END:
+These:
+
+#+begin_src rust
+preview_grid()
+preview_bar()
+delegate()
+context_menu()
+#+end_src
+
+are UI-specific concerns.
+
+I'd move them into something like:
+
+#+begin_src text
+ui/
+    presenter/
+        presenter_view.rs
+        slide_navigator.rs
+        slide_thumbnail.rs
+        slide_context_menu.rs
+#+end_src
+
+The Presenter then exposes information:
+
+#+begin_src rust
+current_position()
+slides()
+actions_for()
+#+end_src
+
+rather than constructing thumbnail UI itself.
+
+This also makes the eventual slide editor easier because the thumbnail component can be reused.
+
+--------------
+
+* 24. =delegate()= is actually a very useful concept --- but it is doing too much
+:PROPERTIES:
+:CUSTOM_ID: delegate-is-actually-a-very-useful-concept-but-it-is-doing-too-much
+:END:
+The method:
+
+#+begin_src rust
+pub fn delegate(...)
+#+end_src
+
+is simultaneously:
+
+- rendering the slide
+- rendering action labels
+- identifying the current slide
+- handling hover
+- handling click
+- handling right-click
+- styling selected state
+- managing focus IDs
+- creating context menus
+
+I'd split it:
+
+#+begin_src text
+SlideThumbnail
+    ├── Slide rendering
+    ├── Selection styling
+    └── Interaction
+
+SlideContextMenu
+    └── Context actions
+#+end_src
+
+Then =delegate()= disappears.
+
+--------------
+
+* 25. You can make the state much more understandable with explicit enums
+:PROPERTIES:
+:CUSTOM_ID: you-can-make-the-state-much-more-understandable-with-explicit-enums
+:END:
+Several fields currently use =Option<T>= to represent state machines.
+
+For example:
+
+#+begin_src rust
+animation: Option<Animation>
+animator: Option<Animation<bool>>
+#+end_src
+
+could become:
+
+#+begin_src rust
+pub enum TransitionState {
+    None,
+
+    Running {
+        animation: Animation,
+        started_at: Instant,
+    },
+}
+#+end_src
+
+Likewise media:
+
+#+begin_src rust
+pub enum VideoState {
+    None,
+    Loading,
+    Ready {
+        video: Video,
+    },
+    Error(String),
+}
+#+end_src
+
+This is much more expressive than:
+
+#+begin_src rust
+Option<Video>
+#+end_src
+
+because =None= currently means multiple things:
+
+#+begin_src text
+not a video
+not loaded
+failed
+being replaced
+no file
+#+end_src
+
+Enums give you room to add features without creating boolean/Option combinations.
+
+--------------
+
+* 26. One particularly important change for future features: separate domain state from runtime state
+:PROPERTIES:
+:CUSTOM_ID: one-particularly-important-change-for-future-features-separate-domain-state-from-runtime-state
+:END:
+I'd make this distinction very explicit.
+
+*** Domain/persistent state
+:PROPERTIES:
+:CUSTOM_ID: domainpersistent-state
+:END:
+Things that should eventually be saved to your presentation:
+
+#+begin_src text
+Service
+ServiceItem
+Slide
+SlideId
+SlideActions
+Transition configuration
+Media paths
+#+end_src
+
+*** Runtime state
+:PROPERTIES:
+:CUSTOM_ID: runtime-state
+:END:
+Things that should not be serialized:
+
+#+begin_src text
+GStreamer Video
+rodio Player
+OBS Client
+hovered slide
+scroll ID
+widget IDs
+Instant
+Animation<bool>
+mouse position
+#+end_src
+
+Currently these are all living together in =Presenter=.
+
+That's going to become painful when you implement saving/loading.
+
+You want to eventually be able to say:
+
+#+begin_src rust
+presentation.save()
+#+end_src
+
+without having to think about:
+
+#+begin_src rust
+Video
+Player
+Client
+Id
+Instant
+#+end_src
+
+--------------
+
+* 27. I would make =Presenter= much smaller
+:PROPERTIES:
+:CUSTOM_ID: i-would-make-presenter-much-smaller
+:END:
+Ultimately, I would aim for something roughly like:
+
+#+begin_src rust
+pub struct Presenter {
+    presentation: PresentationState,
+    navigation: Navigator,
+    transition: TransitionState,
+    media: MediaController,
+    actions: ActionController,
+    obs: ObsController,
+    ui: PresenterUiState,
+}
+#+end_src
+
+And then:
+
+#+begin_src rust
+impl Presenter {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::Navigation(msg) => self.navigation.update(...),
+            Message::Media(msg) => self.media.update(...),
+            Message::Transition(msg) => self.transition.update(...),
+            Message::Actions(msg) => self.actions.update(...),
+            Message::Obs(msg) => self.obs.update(...),
+            Message::Ui(msg) => self.ui.update(...),
+        }
+    }
+}
+#+end_src
+
+That is substantially easier to read than the current 500-line =update()= plus 300-line rendering subsystem.
+
+--------------
+
+* 28. What I would /not/ do
+:PROPERTIES:
+:CUSTOM_ID: what-i-would-not-do
+:END:
+I would *not* immediately turn everything into custom =advanced::Widget= implementations.
+
+The advanced libcosmic API exists for custom widgets, layout, overlays, renderer access, etc. ([[https://pop-os.github.io/libcosmic/cosmic/iced/advanced/index.html][Pop!_OS]]) But most of your current components can remain ordinary composed widgets.
+
+I'd use:
+
+#+begin_src text
+ordinary Rust component
+        ↓
+view()
+update()
+#+end_src
+
+for:
+
+- Presenter
+- Navigator
+- SlideThumbnail
+- PresenterView
+- ContextMenu
+- MediaController
+
+and reserve an actual advanced =Widget= implementation for something where you genuinely need custom rendering/input/layout behavior.
+
+Given your slide renderer work, *the slide canvas itself* is the most likely candidate for an advanced widget eventually.
+
+--------------
+
+* 29. Suggested module structure
+:PROPERTIES:
+:CUSTOM_ID: suggested-module-structure
+:END:
+If this were my codebase, I'd gradually move toward:
+
+#+begin_src text
+src/
+├── presenter/
+│   ├── mod.rs
+│   ├── state.rs
+│   ├── message.rs
+│   ├── navigation.rs
+│   ├── transition.rs
+│   ├── media.rs
+│   ├── actions.rs
+│   ├── obs.rs
+│   └── playback.rs
+│
+├── ui/
+│   ├── presenter/
+│   │   ├── view.rs
+│   │   ├── slide_thumbnail.rs
+│   │   ├── slide_strip.rs
+│   │   ├── slide_grid.rs
+│   │   └── context_menu.rs
+│   │
+│   └── widgets/
+│       └── slide/
+│           ├── mod.rs
+│           ├── background.rs
+│           ├── text.rs
+│           ├── transition.rs
+│           └── canvas.rs
+│
+└── core/
+    ├── presentation.rs
+    ├── service_item.rs
+    ├── slide.rs
+    └── slide_actions.rs
+#+end_src
+
+This doesn't mean you need to refactor all of it now. It is the direction I'd use.
+
+--------------
+
+* 30. My priority order
+:PROPERTIES:
+:CUSTOM_ID: my-priority-order
+:END:
+I would *not* tackle all of these simultaneously.
+
+*** Phase 1 --- establish clean state
+:PROPERTIES:
+:CUSTOM_ID: phase-1-establish-clean-state
+:END:
+Do these first:
+
+1. Introduce =SlidePosition=.
+2. Make position the source of truth.
+3. Remove =current_slide= as stored state.
+4. Centralize navigation.
+5. Fix first/last-slide boundary cases.
+6. Replace =(usize, usize)= throughout the module.
+
+*** Phase 2 --- split responsibilities
+:PROPERTIES:
+:CUSTOM_ID: phase-2-split-responsibilities
+:END:
+Then:
+
+7. [@7] Extract =MediaController=.
+8. Extract =ActionController=.
+9. Extract =ObsController=.
+10. Extract =TransitionState=.
+11. Separate UI state from presentation state.
+
+*** Phase 3 --- simplify rendering
+:PROPERTIES:
+:CUSTOM_ID: phase-3-simplify-rendering
+:END:
+Then:
+
+12. [@12] Replace =delegate: bool= with a =RenderTarget=.
+13. Combine =view()=/=view_preview()=.
+14. Turn =slide_view()= into a composed =SlideView=.
+15. Separate thumbnails from the presenter model.
+
+*** Phase 4 --- prepare for Lumina's larger feature set
+:PROPERTIES:
+:CUSTOM_ID: phase-4-prepare-for-luminas-larger-feature-set
+:END:
+Then you have a good foundation for:
+
+#+begin_src text
+Presenter
+   ↓
+PresentationSession
+   ↓
+ ┌──────────┬──────────┬───────────┐
+ │          │          │           │
+Live       Next      Preview    Presenter
+Output                          Display
+#+end_src
+
+with:
+
+#+begin_src text
+Slide
+ ├── Content
+ ├── Background
+ ├── Transition
+ ├── Actions
+ └── Media
+#+end_src
+
+That architecture will support substantially more than the current presenter without turning =Presenter::update()= into a giant collection of special cases.
+
+** One thing I would change immediately
+:PROPERTIES:
+:CUSTOM_ID: one-thing-i-would-change-immediately
+:END:
+If you only make *one* architectural change, make it this:
+
+#+begin_src rust
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+#+end_src
+
+and make that the canonical identity/location of the currently selected slide.
+
+Then build:
+
+#+begin_src rust
+Navigator
+#+end_src
+
+around it.
+
+That single change eliminates a surprising amount of the conceptual complexity in this file. It also gives you a natural seam for the later editor/presenter split, because the editor can mutate the service while the presenter operates on positions/IDs.
+
+Your existing tests for =next_slide()=/=previous_slide()= are a good starting point for this refactor; I would expand those into a dedicated =Navigator= test suite before changing the media or rendering portions. The current tests already demonstrate that navigation is sufficiently self-contained to extract cleanly.
+
+* Next response
+:PROPERTIES:
+:CUSTOM_ID: next-response
+:END:
+I went through the entire review and the entire =presenter.rs=, and I also checked the current libcosmic documentation/source rather than treating the review's libcosmic claims at face value.
+
+The review is *substantially useful, but it is not a clean or fully trustworthy code review*. It mixes three different things:
+
+1. real bugs and architectural problems that are visible in your code,
+2. reasonable refactoring suggestions that are matters of design rather than correctness, and
+3. generic "large Rust application" architecture advice that the reviewer presents too confidently as though libcosmic requires it.
+
+There are also a few places where the review is plainly stale or based on code that is not actually present in the file you supplied.
+
+My overall assessment is that I would *keep many of the underlying ideas, but I would not follow the review's proposed architecture literally*.
+
+--------------
+
+* 1. The most important correction: what libcosmic actually requires
+:PROPERTIES:
+:CUSTOM_ID: the-most-important-correction-what-libcosmic-actually-requires
+:END:
+The review is right about one important thing: libcosmic is based on the Iced/Elm-style MVU model. The current documentation explicitly describes an application model, a =view= that constructs stateless widgets, and an =update= function that processes messages and can launch tasks. It also explicitly says composed widgets may be managed by their own type with their own =view= and =update=. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+However, the review stretches that idea too far.
+
+It repeatedly implies something like:
+
+#+begin_quote
+"Every subsystem should become its own little =view/update= component."
+#+end_quote
+
+That is *not* what libcosmic says.
+
+Libcosmic says that *composed widgets* may have their own =view= and =update=, and that the advanced =Widget= trait is available when you actually need custom widget behavior. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+A navigation algorithm is not a widget.
+
+An OBS client is not a widget.
+
+A media backend is not inherently a widget.
+
+A domain object such as a =Navigator= can quite sensibly just be:
+
+#+begin_src rust
+pub struct Navigator<'a> {
+    service: &'a [ServiceItem],
+}
+
+impl Navigator<'_> {
+    pub fn next(&self, current: SlidePosition) -> Option<SlidePosition> {
+        ...
+    }
+
+    pub fn previous(&self, current: SlidePosition) -> Option<SlidePosition> {
+        ...
+    }
+}
+#+end_src
+
+There is no reason for it to have a =view()=.
+
+That distinction matters because the review sometimes turns a good observation---"this responsibility should be isolated"---into a much stronger prescription---"therefore this must be another MVU component." Those are not equivalent.
+
+--------------
+
+* 2. Section-by-section verdict
+:PROPERTIES:
+:CUSTOM_ID: section-by-section-verdict
+:END:
+Here is how I would classify the 30 sections.
+
+| Review section                                  | Verdict                                            | My assessment                                                                                                                                      |
+|-------------------------------------------------+----------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1. Presenter has too many responsibilities      | *Legitimate*                                         | Good architectural observation, but the proposed number of controllers is more prescriptive than necessary.                                        |
+| 2. =current_slide= duplicates source of truth     | *Partly legitimate*                                  | Real consistency problem, but the proposed solution is too simplistic for your renderer.                                                           |
+| 3. Introduce =SlidePosition= / =SlideId=            | *Legitimate, with qualification*                     | Strong idea. Position and persistent identity should be distinguished.                                                                             |
+| 4. =next_slide()= edge bug                        | *Definitely legitimate*                              | Real bug.                                                                                                                                          |
+| 5. Flatten all slides into a sequence           | *Optional / over-engineered*                         | Useful for some operations, but not obviously necessary and potentially awkward with your hierarchical service model.                              |
+| 6. =change_slide()= is doing too much             | *Definitely legitimate*                              | One of the strongest points in the review.                                                                                                         |
+| 7. Nested =Message= enums                         | *Mostly stylistic*                                   | Can help organization, but libcosmic does not require it and your current enum is not remotely large enough to justify panic-driven refactoring.   |
+| 8. Separate OBS                                 | *Legitimate*                                         | Good boundary, especially because OBS is currently mixed with the generic action system.                                                           |
+| 9. Extract slide actions                        | *Legitimate*                                         | Good idea, but I would consider making actions part of the presentation domain rather than merely an =ActionController=.                             |
+| 10. Separate media subsystem                    | *Legitimate*                                         | Strong recommendation, although the proposed data structures need refinement.                                                                      |
+| 11. BackgroundRenderer supporting PDF/HTML/etc. | *Mostly speculative*                                 | The supplied code does not justify this particular abstraction.                                                                                    |
+| 12. =view()= and =view_preview()= duplication       | *Legitimate*                                         | Real duplication. =RenderTarget= is one possible solution, not necessarily the best one.                                                             |
+| 13. =SlideSettings= mixes concerns                | *Weak / unsupported from supplied files*             | The review relies on a =SlideSettings= definition that is in another file you did not provide.                                                       |
+| 14. =slide_view()= should become a component      | *Partly junk / stale*                                | The actual file has no active =slide_view()=. The review appears to be referring to an old commented-out implementation.                             |
+| 15. =Box::leak= memory leak                       | *Definitely legitimate*                              | Real leak. The reviewer missed an important libcosmic-specific solution.                                                                           |
+| 16. =with_items()= does too much                  | *Legitimate*                                         | Strong concern. Some wording is overstated.                                                                                                        |
+| 17. Audio device initialization                 | *Definitely legitimate*                              | Real robustness problem.                                                                                                                           |
+| 18. =expect()= for media                          | *Legitimate, but overstated*                         | Audio is a genuine problem; some of the video reasoning is weaker.                                                                                 |
+| 19. =update_items()= doesn't reconcile state      | *Definitely legitimate*                              | Real and important bug. The review actually misses one additional consequence here.                                                                |
+| 20. =PresentationSession=                         | *Reasonable architecture, not a discovered bug*      | Potentially very useful for Lumina, but not something I would call "the missing abstraction."                                                      |
+| 21. LIVE/NEXT/PREVIEW separation                | *Useful product architecture, but partly misapplied* | Important if you want operator preview; the current =next_slide= does not mean "NEXT" in the review's sense.                                         |
+| 22. Isolate =Tick=                                | *Partly legitimate*                                  | Conditional subscriptions are indeed supported by libcosmic, but the review assumes something about the outer application that isn't present here. |
+| 23. Separate preview UI                         | *Reasonable refactor*                                | Fine, but low priority.                                                                                                                            |
+| 24. Split =delegate()=                            | *Legitimate*                                         | Good observation.                                                                                                                                  |
+| 25. Replace =Option<T>= with explicit state enums | *Sometimes useful, not universally necessary*        | Good for media loading/error states; unnecessary abstraction if done everywhere.                                                                   |
+| 26. Separate domain/runtime state               | *Very legitimate*                                    | One of the most important long-term architectural points.                                                                                          |
+| 27. Make Presenter much smaller                 | *Mostly stylistic*                                   | Smaller is not automatically better. The review's "500-line update" claim is inaccurate for the supplied file.                                     |
+| 28. Don't make everything an advanced widget    | *Legitimate*                                         | Correct libcosmic advice, although it misclassifies several non-UI types as components.                                                            |
+| 29. Proposed module tree                        | *Architecture preference*                            | Reasonable organization, but much of it is invented structure rather than something dictated by your code.                                         |
+| 30. Priority order                              | *Mostly sensible, but I would reorder it*            | Several real bugs should be addressed before some of the architectural work it prioritizes.                                                        |
+
+Now I'll go through the important ones in detail.
+
+--------------
+
+* 3. =current_slide= is a real issue---but the review is too simplistic
+:PROPERTIES:
+:CUSTOM_ID: current_slide-is-a-real-issuebut-the-review-is-too-simplistic
+:END:
+The review says these three fields are all duplicating the same state:
+
+#+begin_src rust
+current_item_index
+current_slide_index
+current_slide
+#+end_src
+
+That part is fair. Your actual struct contains all three.
+
+The problem is that the review treats =current_slide= as if it were merely an accidental duplicate.
+
+It isn't entirely.
+
+Your =current_slide= is an *owned mutable runtime snapshot*.
+
+That becomes obvious in =load_images()=:
+
+#+begin_src rust
+self.current_slide.background.image_handle = ...
+#+end_src
+
+You are modifying data inside the current slide for rendering purposes.
+
+You also deliberately keep:
+
+#+begin_src rust
+old_slide: Option<Slide>
+next_slide: Option<Slide>
+#+end_src
+
+as separate slide values for rendering/transition purposes. Your =change_slide()= copies the old slide, replaces the current snapshot, and may build a special next slide for the scroll animation.
+
+So I *would not blindly implement the review's recommendation*:
+
+#+begin_quote
+remove =current_slide= and derive everything directly from =service[position]=.
+#+end_quote
+
+That would cause trouble unless you first separate persistent slide data from runtime rendering data.
+
+A better design would be something like:
+
+#+begin_src rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+
+pub struct PresentationState {
+    pub service: Arc<Vec<ServiceItem>>,
+    pub position: Option<SlidePosition>,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+impl PresentationState {
+    pub fn current(&self) -> Option<&Slide> {
+        let pos = self.position?;
+        self.service
+            .get(pos.item)?
+            .slides
+            .get(pos.slide)
+    }
+}
+#+end_src
+
+But keep runtime state separately:
+
+#+begin_src rust
+pub struct SlideRuntime {
+    pub image_handle: Option<Handle>,
+    // cached layout/render information, etc.
+}
+#+end_src
+
+or:
+
+#+begin_src rust
+pub struct ActiveSlide {
+    pub position: SlidePosition,
+    pub slide: Slide,
+}
+#+end_src
+
+The important change is not "delete =current_slide=."
+
+The important change is:
+
+#+begin_quote
+*Do not let the same field simultaneously serve as the persistent domain slide and the runtime/rendering snapshot.*
+#+end_quote
+
+That is a much stronger and more precise architectural rule.
+
+--------------
+
+* 4. =SlidePosition= is genuinely worth doing
+:PROPERTIES:
+:CUSTOM_ID: slideposition-is-genuinely-worth-doing
+:END:
+This part of the review is strong.
+
+You have =(usize, usize)= all over the module:
+
+#+begin_src rust
+ActivateSlide(usize, usize)
+RightClickSlide(usize, usize)
+HoveredSlide(Option<(usize, usize, Point)>)
+HashMap<(usize, usize), Vec<Action>>
+#+end_src
+
+and you compare raw pairs repeatedly.
+
+A named type makes the intent much clearer:
+
+#+begin_src rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+#+end_src
+
+Then:
+
+#+begin_src rust
+Message::ActivateSlide(SlidePosition)
+#+end_src
+
+is much harder to misunderstand than:
+
+#+begin_src rust
+Message::ActivateSlide(usize, usize)
+#+end_src
+
+And this is especially useful because you actually have *two concepts*:
+
+#+begin_src text
+SlidePosition
+    where is the slide?
+
+SlideId
+    which slide is it?
+#+end_src
+
+The review is right about that distinction.
+
+One caveat: I would only introduce =SlideId= once your =Slide= actually has a stable persistent ID. The supplied =presenter.rs= does not establish that =Slide= itself has one.
+
+So this part:
+
+#+begin_src rust
+HashMap<SlideId, Vec<Action>>
+#+end_src
+
+is an architectural direction, not a change I would make blindly today.
+
+--------------
+
+* 5. The =next_slide()= bug is absolutely real
+:PROPERTIES:
+:CUSTOM_ID: the-next_slide-bug-is-absolutely-real
+:END:
+This is probably the clearest concrete bug in the review.
+
+Your code is:
+
+#+begin_src rust
+if self.service
+    .get(self.current_item_index)
+    .is_some_and(|i| i.slides.len() == self.current_slide_index + 1)
+{
+    return Some((self.current_item_index + 1, 0));
+}
+#+end_src
+
+That means if you're on the last slide of the last service item, you return:
+
+#+begin_src rust
+Some((service.len(), 0))
+#+end_src
+
+even though that item does not exist.
+
+Your =ActivateSlide= path then rejects it because:
+
+#+begin_src rust
+self.service.get(item_index)
+#+end_src
+
+returns =None=.
+
+So this does not necessarily crash, but it is an invalid navigation result.
+
+It should instead be something like:
+
+#+begin_src rust
+pub fn next(&self, current: SlidePosition) -> Option<SlidePosition> {
+    let item = self.service.get(current.item)?;
+
+    if current.slide + 1 < item.slides.len() {
+        return Some(SlidePosition {
+            item: current.item,
+            slide: current.slide + 1,
+        });
+    }
+
+    let next_item = current.item + 1;
+
+    self.service
+        .iter()
+        .enumerate()
+        .skip(next_item)
+        .find(|(_, item)| !item.slides.is_empty())
+        .map(|(item, _)| SlidePosition { item, slide: 0 })
+}
+#+end_src
+
+That version also deals with empty service items rather than assuming every item has slides.
+
+--------------
+
+* 6. =previous_slide()= has an actual panic path too
+:PROPERTIES:
+:CUSTOM_ID: previous_slide-has-an-actual-panic-path-too
+:END:
+The reviewer correctly identifies this:
+
+#+begin_src rust
+let last_slide = self
+    .service
+    .get(target_item)
+    .map(|i| i.slides.len() - 1)
+#+end_src
+
+If the previous service item exists but contains zero slides, you get an underflow.
+
+The code then has:
+
+#+begin_src rust
+.expect("We have checked that this item should be here.");
+#+end_src
+
+so you have both an arithmetic problem and an inappropriate assumption.
+
+This is a case where the proposed =Navigator= abstraction is genuinely useful.
+
+But it does *not* need to be an MVU component.
+
+I'd make navigation a pure subsystem and give it exhaustive tests.
+
+--------------
+
+* 7. Flattening the slide hierarchy is not obviously the right answer
+:PROPERTIES:
+:CUSTOM_ID: flattening-the-slide-hierarchy-is-not-obviously-the-right-answer
+:END:
+The reviewer proposes turning:
+
+#+begin_src text
+Service
+ ├─ ServiceItem
+ │   ├─ Slide
+ │   ├─ Slide
+ │   └─ Slide
+ └─ ServiceItem
+     ├─ Slide
+     └─ Slide
+#+end_src
+
+into:
+
+#+begin_src rust
+Vec<SlideRef>
+#+end_src
+
+and calls that the preferred navigation model.
+
+This is *not wrong*, but I would not make it a primary architectural change.
+
+Your hierarchy matters.
+
+You already have service-item semantics, including:
+
+#+begin_src rust
+ServiceItemKind::Song
+#+end_src
+
+and special animation behavior that depends on the current item. =change_slide()= explicitly checks the current item and its kind when deciding how a =ScrollUp= animation should behave.
+
+That means your hierarchy is not merely a storage accident.
+
+I would instead have:
+
+#+begin_src rust
+SlidePosition
+#+end_src
+
+as the public navigation coordinate and possibly offer a flattened iterator/index when needed:
+
+#+begin_src rust
+pub fn slides(&self) -> impl Iterator<Item = SlidePosition>
+#+end_src
+
+rather than maintaining a second permanent flattened representation.
+
+That gives you the convenience without making two structures responsible for the same ordering semantics.
+
+--------------
+
+* 8. =change_slide()= really is doing too much
+:PROPERTIES:
+:CUSTOM_ID: change_slide-really-is-doing-too-much
+:END:
+This is one of the review's best architectural observations.
+
+Your =change_slide()= currently:
+
+- changes the current slide,
+- changes font,
+- stores the old slide,
+- resets video,
+- determines animation,
+- calculates a transition-specific next slide,
+- starts animation,
+- focuses the selected thumbnail,
+- runs slide actions,
+- stops/replaces audio,
+- opens and decodes audio,
+- starts playback,
+- builds tasks.
+
+That's visible directly in the method.
+
+The issue isn't simply that the method is long.
+
+It is that it has *multiple different failure domains*.
+
+For example:
+
+#+begin_src text
+Activate slide
+    |
+    +-- update presentation position
+    |
+    +-- prepare transition
+    |
+    +-- media
+    |     +-- video
+    |     +-- audio
+    |
+    +-- execute slide actions
+    |
+    +-- update UI focus
+#+end_src
+
+That suggests a much better organization.
+
+I would make the central operation roughly:
+
+#+begin_src rust
+fn activate_slide(&mut self, position: SlidePosition) -> Task<Message> {
+    let Some(slide) = self.presentation.slide(position).cloned() else {
+        return Task::none();
+    };
+
+    let transition_task = self.transition.activate(
+        self.presentation.current_slide(),
+        &slide,
+    );
+
+    let media_task = self.media.activate(&slide);
+
+    let action_task = self.actions.activate(position);
+
+    self.presentation.position = Some(position);
+
+    Task::batch([
+        transition_task,
+        media_task,
+        action_task,
+    ])
+}
+#+end_src
+
+The key is not to reproduce the reviewer's exact controller tree.
+
+The key is to make =activate_slide()= the *orchestration point*, while the details live elsewhere.
+
+This is very compatible with libcosmic's task-oriented model. Libcosmic explicitly describes messages as updating the model and spawning background tasks. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+* 9. One thing the review misses here: your media work is synchronous
+:PROPERTIES:
+:CUSTOM_ID: one-thing-the-review-misses-here-your-media-work-is-synchronous
+:END:
+This is a significant omission.
+
+The reviewer talks about moving media into a controller and using tasks, but it doesn't explicitly call out the most immediate consequence of your current code.
+
+Inside =change_slide()= you perform:
+
+#+begin_src rust
+File::open(audio)
+Decoder::new(file)
+source.total_duration()
+sink.append(source)
+#+end_src
+
+synchronously.
+
+You also call =reset_video()=, which synchronously creates GStreamer video pipelines.
+
+That means slide activation can potentially perform relatively expensive I/O/decoding/pipeline setup directly from the update path.
+
+That is much more important to me than making =Message= nested.
+
+The architectural target I would use is:
+
+#+begin_src text
+UI message
+    ↓
+update()
+    ↓
+change logical presentation state immediately
+    ↓
+Task::perform(...)
+    ↓
+media loaded
+    ↓
+Message::MediaLoaded(...)
+#+end_src
+
+This gives you a responsive UI even when media is large or slow.
+
+And libcosmic explicitly describes =Task=s as asynchronous/background operations. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+* 10. The Message enum does not need the reviewer's aggressive restructuring
+:PROPERTIES:
+:CUSTOM_ID: the-message-enum-does-not-need-the-reviewers-aggressive-restructuring
+:END:
+Your =Message= enum is about 25 variants.
+
+The review says:
+
+#+begin_quote
+"as Lumina grows this will become hundreds of variants"
+#+end_quote
+
+and recommends:
+
+#+begin_src rust
+Message::Navigation(...)
+Message::Media(...)
+Message::Actions(...)
+Message::Obs(...)
+Message::Ui(...)
+#+end_src
+
+This is a perfectly valid pattern.
+
+But it isn't a libcosmic requirement.
+
+It also adds plumbing:
+
+#+begin_src rust
+Message::Media(MediaMessage)
+#+end_src
+
+then conversions between component messages and root messages.
+
+For your current scale, I would first extract *handlers*, not necessarily nested enums:
+
+#+begin_src rust
+fn update_navigation(&mut self, ...)
+fn update_media(&mut self, ...)
+fn update_obs(&mut self, ...)
+fn update_actions(&mut self, ...)
+fn update_ui(&mut self, ...)
+#+end_src
+
+You can later introduce nested enums if the flat enum genuinely becomes cumbersome.
+
+That gives you most of the readability benefit without prematurely designing a message taxonomy for features you haven't built.
+
+--------------
+
+* 11. Separating OBS is a good recommendation
+:PROPERTIES:
+:CUSTOM_ID: separating-obs-is-a-good-recommendation
+:END:
+This one is solid.
+
+Your presenter directly knows about:
+
+#+begin_src rust
+Arc<Client>
+Vec<Scene>
+ObsAction
+slide_action_map
+#+end_src
+
+and it both fetches OBS state and mutates slide actions.
+
+More importantly, your architecture is already telling you something:
+
+#+begin_src rust
+Action::Obs(...)
+#+end_src
+
+is a *slide action*, while OBS is merely one implementation of that action.
+
+The review correctly identifies this distinction.
+
+I would probably make the conceptual model:
+
+#+begin_src text
+Slide
+  |
+  +-- Actions
+        |
+        +-- OBS scene
+        +-- OBS start stream
+        +-- OBS stop stream
+        +-- Audio
+        +-- MIDI
+        +-- HTTP
+        +-- ...
+#+end_src
+
+rather than:
+
+#+begin_src text
+Presenter
+  |
+  +-- OBS
+#+end_src
+
+That becomes important if Lumina eventually controls lighting, MIDI, webhooks, etc.
+
+But I would *not* make =ObsController= responsible for the semantic action system. I'd have:
+
+#+begin_src text
+Action system
+    ↓
+OBS backend
+#+end_src
+
+instead.
+
+--------------
+
+* 12. Your =slide_action_map= should probably not use =(usize, usize)= forever
+:PROPERTIES:
+:CUSTOM_ID: your-slide_action_map-should-probably-not-use-usize-usize-forever
+:END:
+The review is right here too.
+
+Currently:
+
+#+begin_src rust
+Option<HashMap<(usize, usize), Vec<slide_actions::Action>>>
+#+end_src
+
+is effectively:
+
+#+begin_src text
+slide position -> actions
+#+end_src
+
+The important issue is what happens when slides are reordered.
+
+Suppose:
+
+#+begin_src text
+old:
+position (2,0) = Welcome
+position (2,1) = Scripture
+position (2,2) = Sermon
+#+end_src
+
+and you reorder:
+
+#+begin_src text
+new:
+position (2,0) = Scripture
+position (2,1) = Welcome
+position (2,2) = Sermon
+#+end_src
+
+Your position-based action map now has the possibility of attaching actions to the wrong logical slide.
+
+That's exactly where a persistent =SlideId= becomes valuable.
+
+So I'd use:
+
+#+begin_src rust
+HashMap<SlideId, Vec<SlideAction>>
+#+end_src
+
+*if* the domain model has persistent slide IDs.
+
+Even better, depending on your eventual persistence model, slide actions may belong directly to =Slide= rather than living in a separate map at all.
+
+--------------
+
+* 13. The media separation is good, but the proposed =VideoState= is incomplete
+:PROPERTIES:
+:CUSTOM_ID: the-media-separation-is-good-but-the-proposed-videostate-is-incomplete
+:END:
+The reviewer proposes:
+
+#+begin_src rust
+enum VideoState {
+    None,
+    Loading,
+    Ready { video: Video },
+    Error(String),
+}
+#+end_src
+
+This is a useful idea.
+
+The reason is that your current:
+
+#+begin_src rust
+Option<Video>
+#+end_src
+
+really does collapse several different states.
+
+For example:
+
+#+begin_src text
+None =
+    no video background
+    OR video hasn't loaded
+    OR video failed
+    OR video was just discarded
+#+end_src
+
+That is information loss.
+
+So a state machine is appropriate *where those distinctions matter*.
+
+But don't turn every =Option<T>= into an enum.
+
+For something like:
+
+#+begin_src rust
+obs_client: Option<Arc<Client>>
+#+end_src
+
+=None= may simply mean "not connected." An enum would add complexity without adding information.
+
+--------------
+
+* 14. Section 11 about PDF/HTML backgrounds is mostly generic architecture noise
+:PROPERTIES:
+:CUSTOM_ID: section-11-about-pdfhtml-backgrounds-is-mostly-generic-architecture-noise
+:END:
+The review suddenly proposes:
+
+#+begin_src text
+Image
+Video
+PDF
+HTML
+#+end_src
+
+and:
+
+#+begin_src rust
+BackgroundRenderer
+#+end_src
+
+The problem is that the supplied file doesn't establish that =Presenter= needs to know about those background types.
+
+What we actually see in this file is:
+
+#+begin_src rust
+BackgroundKind::Video
+#+end_src
+
+being handled directly, while actual slide rendering is delegated to:
+
+#+begin_src rust
+widgets::slide::slide(...)
+#+end_src
+
+So this looks much more like a generic architecture template than a conclusion derived from your code.
+
+It might eventually be an excellent design.
+
+It is not something I would refactor around today.
+
+--------------
+
+* 15. =view()= and =view_preview()= really are duplicated
+:PROPERTIES:
+:CUSTOM_ID: view-and-view_preview-really-are-duplicated
+:END:
+This point is correct.
+
+The two functions are almost identical:
+
+#+begin_src rust
+view()
+view_preview()
+#+end_src
+
+with the main meaningful difference being:
+
+#+begin_src rust
+self.presentation_video
+#+end_src
+
+versus:
+
+#+begin_src rust
+self.preview_video
+#+end_src
+
+But I would solve this much more simply than the review does.
+
+You could have:
+
+#+begin_src rust
+fn view_slide(&self, video: Option<&Video>) -> Element<Message> {
+    ...
+}
+#+end_src
+
+then:
+
+#+begin_src rust
+pub fn view(&self) -> Element<Message> {
+    self.view_slide(self.presentation_video.as_ref())
+}
+
+pub fn view_preview(&self) -> Element<Message> {
+    self.view_slide(self.preview_video.as_ref())
+}
+#+end_src
+
+That removes the duplication without introducing:
+
+#+begin_src rust
+RenderTarget
+SlideRenderContext
+...
+#+end_src
+
+unless those abstractions are actually needed later.
+
+The review's proposed =RenderTarget= is good *if different rendering behavior starts accumulating*.
+
+It is premature if the only difference is which =Video= object gets supplied.
+
+--------------
+
+* 16. =delegate: bool= is a real naming/code-design smell
+:PROPERTIES:
+:CUSTOM_ID: delegate-bool-is-a-real-namingcode-design-smell
+:END:
+You have:
+
+#+begin_src rust
+delegate: false
+#+end_src
+
+for the main views and:
+
+#+begin_src rust
+delegate: true
+#+end_src
+
+for thumbnails.
+
+That's not very descriptive.
+
+The review is right that a boolean like this becomes difficult to understand later.
+
+But again, I would first ask what the actual semantic difference is.
+
+If it really means:
+
+#+begin_src text
+main slide
+vs
+thumbnail slide
+#+end_src
+
+then this is good:
+
+#+begin_src rust
+enum SlideViewMode {
+    Full,
+    Thumbnail,
+}
+#+end_src
+
+You don't necessarily need:
+
+#+begin_src rust
+RenderTarget {
+    Presentation,
+    Preview,
+    Thumbnail,
+}
+#+end_src
+
+because "presentation" and "preview" currently appear to differ in the video source rather than in the actual slide renderer.
+
+--------------
+
+* 17. Section 13 is not adequately grounded
+:PROPERTIES:
+:CUSTOM_ID: section-13-is-not-adequately-grounded
+:END:
+The review says =SlideSettings= contains:
+
+#+begin_src rust
+delegate
+hide_mouse
+previous_slide
+animation
+animator
+now
+action
+#+end_src
+
+and therefore mixes rendering, transition, and action state.
+
+That may be correct for the separate slide widget file.
+
+But that file wasn't supplied here.
+
+In the presenter itself, the =SlideSettings= values being constructed are only:
+
+#+begin_src rust
+delegate
+hide_mouse
+animation
+now
+#+end_src
+
+and then passed to =slide(...)=.
+
+So I would not treat this section as a confirmed issue until looking at =ui/widgets/slide.rs=.
+
+The architectural idea is plausible. The review simply presents an inference as a demonstrated fact.
+
+--------------
+
+* 18. Section 14 contains a stale reference that I would largely ignore
+:PROPERTIES:
+:CUSTOM_ID: section-14-contains-a-stale-reference-that-i-would-largely-ignore
+:END:
+This is one of the clearest examples of "junk response."
+
+The review says:
+
+#+begin_quote
+"=slide_view()= should probably become its own component"
+#+end_quote
+
+But the active code you provided does not have a =slide_view()= method.
+
+What it has is:
+
+#+begin_src rust
+slide(...)
+#+end_src
+
+and then a *commented-out old =slide_view(...)= call* in =view_preview()=.
+
+So the review evidently treated old commented code as though it were part of the current implementation.
+
+That makes the statement:
+
+#+begin_quote
+"Your slide_view() has already become effectively a custom widget."
+#+end_quote
+
+incorrect as a description of the current file.
+
+The more defensible recommendation would be:
+
+#+begin_quote
+"The imported =widgets::slide::slide()= function appears to represent a reusable higher-level slide-rendering component; consider giving that component a clearer abstraction if it continues to grow."
+#+end_quote
+
+That is very different.
+
+The advanced-widget portion of the section is otherwise fine. Libcosmic explicitly has an advanced =Widget= API for custom widgets. ([[https://pop-os.github.io/libcosmic/cosmic/iced/advanced/index.html][Pop!_OS]])
+
+But you don't need an advanced widget simply because something is large.
+
+--------------
+
+* 19. The =Box::leak= criticism is absolutely correct---and there is a libcosmic-specific wrinkle
+:PROPERTIES:
+:CUSTOM_ID: the-boxleak-criticism-is-absolutely-correctand-there-is-a-libcosmic-specific-wrinkle
+:END:
+Your code does:
+
+#+begin_src rust
+let font_name = s.into_boxed_str();
+let family = Family::Name(Box::leak(font_name));
+#+end_src
+
+This really does leak every distinct string you pass through that code.
+
+The review is therefore correct to call this a memory leak.
+
+But the reviewer stopped one step too early.
+
+The current libcosmic source itself has a mechanism specifically for this problem.
+
+=cosmic::config::FontConfig= stores:
+
+#+begin_src rust
+family: String
+#+end_src
+
+and its =From<FontConfig> for iced::Font= implementation maintains a static =BTreeSet<&'static str>= of family names, leaking each unique family name only once and reusing the leaked string thereafter. ([[https://pop-os.github.io/libcosmic/src/cosmic/config/mod.rs.html][Pop!_OS]])
+
+So your code is essentially recreating functionality libcosmic already provides, badly.
+
+That means I would investigate replacing your manual construction with something along the lines of:
+
+#+begin_src rust
+let font = cosmic::config::FontConfig {
+    family: s,
+    weight: Weight::Normal,
+    stretch: Stretch::Normal,
+    style: Style::Normal,
+};
+
+self.current_font = font.into();
+#+end_src
+
+The exact types should be checked against the libcosmic version you're compiling against, but the architectural point is important:
+
+*Do not invent your own =Box::leak= cache if libcosmic already has one.*
+
+Also, the review's suggestion that you "cache leaked strings" is effectively what current libcosmic does.
+
+--------------
+
+* 20. =with_items()= really is overloaded
+:PROPERTIES:
+:CUSTOM_ID: with_items-really-is-overloaded
+:END:
+The constructor does a lot:
+
+#+begin_src text
+video initialization
+audio initialization
+IDs
+image loader
+navigation state
+animation state
+font state
+service state
+#+end_src
+
+and all of this happens synchronously.
+
+So the review is correct.
+
+However, one statement is slightly misleading:
+
+#+begin_quote
+"It also assumes there is a first slide."
+#+end_quote
+
+It doesn't actually panic because there isn't one. You explicitly do:
+
+#+begin_src rust
+current_slide: slide.unwrap_or(&DEFAULT_SLIDE).clone()
+#+end_src
+
+So the code handles an empty service.
+
+What it does *not* handle cleanly is the semantic contradiction:
+
+#+begin_src text
+current_item_index = 0
+current_slide_index = 0
+current_slide = DEFAULT_SLIDE
+#+end_src
+
+when the service has no slide 0.
+
+That's a stronger way to describe the problem.
+
+I'd prefer:
+
+#+begin_src rust
+position: Option<SlidePosition>
+#+end_src
+
+where:
+
+#+begin_src rust
+None
+#+end_src
+
+means:
+
+#+begin_quote
+"There is no active slide."
+#+end_quote
+
+That is much cleaner than inventing a =DEFAULT_SLIDE=.
+
+--------------
+
+* 21. The audio device =expect()= is a real production concern
+:PROPERTIES:
+:CUSTOM_ID: the-audio-device-expect-is-a-real-production-concern
+:END:
+This is one of the review's strongest points.
+
+Your constructor does:
+
+#+begin_src rust
+DeviceSinkBuilder::open_default_sink()
+    .expect("Can't open default rodio stream");
+#+end_src
+
+That means audio initialization failure can abort construction of the entire =Presenter=.
+
+Architecturally, I agree with the review:
+
+#+begin_src rust
+audio: Option<AudioController>
+#+end_src
+
+or perhaps:
+
+#+begin_src rust
+audio: AudioState
+#+end_src
+
+where:
+
+#+begin_src rust
+enum AudioState {
+    Unavailable,
+    Ready(AudioController),
+    Error(AudioError),
+}
+#+end_src
+
+would let the application keep presenting slides even when audio is unavailable.
+
+For presentation software, that's an important failure-isolation property.
+
+--------------
+
+* 22. The media =expect()= criticism is correct, but not all of it is equally serious
+:PROPERTIES:
+:CUSTOM_ID: the-media-expect-criticism-is-correct-but-not-all-of-it-is-equally-serious
+:END:
+The audio code is genuinely risky:
+
+#+begin_src rust
+if audio.exists() {
+    let file = BufReader::new(
+        File::open(audio).expect(...)
+    );
+
+    let source =
+        Decoder::new(file).expect(...);
+}
+#+end_src
+
+Even after:
+
+#+begin_src rust
+audio.exists()
+#+end_src
+
+the open can fail due to a race, permissions, disconnected media, etc.
+
+And =Decoder::new= can fail even when the file exists.
+
+So this should definitely become:
+
+#+begin_src rust
+match File::open(audio) {
+    Ok(file) => match Decoder::new(BufReader::new(file)) {
+        Ok(source) => { ... }
+        Err(err) => { ... }
+    },
+    Err(err) => { ... }
+}
+#+end_src
+
+The video case is somewhat different.
+
+This:
+
+#+begin_src rust
+Url::from_file_path(path).expect(...)
+#+end_src
+
+is not the same thing as:
+
+#+begin_quote
+"video file disappeared, therefore panic."
+#+end_quote
+
+You check:
+
+#+begin_src rust
+path.exists()
+#+end_src
+
+first, and =gst_video::create_video()= itself returns a =Result=.
+
+So I would downgrade the review's claim that all these =expect()= calls represent the same media failure problem.
+
+The general principle is right:
+
+#+begin_quote
+*A missing or unusable media asset should not terminate a live presentation.*
+#+end_quote
+
+The individual panic sites need to be evaluated separately.
+
+--------------
+
+* 23. =update_items()= is a serious bug, and the review actually misses one consequence
+:PROPERTIES:
+:CUSTOM_ID: update_items-is-a-serious-bug-and-the-review-actually-misses-one-consequence
+:END:
+This code is far too weak:
+
+#+begin_src rust
+pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
+    let total_slides = ...
+    self.service = items;
+    self.total_slides = total_slides;
+}
+#+end_src
+
+Suppose the presenter is at:
+
+#+begin_src text
+item = 3
+slide = 4
+#+end_src
+
+Then the editor replaces the service with:
+
+#+begin_src text
+[
+    ServiceItem { slides: [...] }
+]
+#+end_src
+
+You now have:
+
+#+begin_src text
+service.len() == 1
+current_item_index == 3
+current_slide_index == 4
+current_slide == old slide
+#+end_src
+
+That is obviously invalid.
+
+But there is an even more interesting problem.
+
+Your =slide_action_map= is also position-based.
+
+So if the editor changes or reorders the service, these mappings may now refer to completely different slides.
+
+The review talks about stale presentation fields but does *not* call out this action-map problem. That's one of the places where the review could have been stronger.
+
+This is another reason stable =SlideId=s will eventually matter.
+
+--------------
+
+* 24. =PresentationSession= is a good architectural idea, but the review oversells it
+:PROPERTIES:
+:CUSTOM_ID: presentationsession-is-a-good-architectural-idea-but-the-review-oversells-it
+:END:
+The proposed:
+
+#+begin_src rust
+PresentationSession
+#+end_src
+
+is reasonable.
+
+Especially for Lumina, I can see a real separation like:
+
+#+begin_src text
+PresentationDocument
+        |
+        v
+PresentationSession
+        |
+        +---- Live output
+        +---- Operator preview
+        +---- Presenter display
+        +---- Thumbnails
+#+end_src
+
+That is useful because a presentation document and a live presentation session are not the same thing.
+
+For example:
+
+#+begin_src text
+Presentation document:
+    the slides and their persistent configuration
+
+Presentation session:
+    currently active slide
+    transition in progress
+    playback state
+    live output state
+#+end_src
+
+This is a genuinely good long-term boundary.
+
+But the review says:
+
+#+begin_quote
+"I think this is the abstraction you are actually missing."
+#+end_quote
+
+That is speculation.
+
+You don't need a =PresentationSession= simply because a presenter has many fields. Introduce it when you have an actual semantic distinction between:
+
+#+begin_src text
+saved presentation
+#+end_src
+
+and:
+
+#+begin_src text
+live presentation session
+#+end_src
+
+You are likely heading in that direction, but the review cannot establish that from this file alone.
+
+--------------
+
+* 25. The LIVE/NEXT/PREVIEW section is conceptually useful, but it misunderstands your current =next_slide=
+:PROPERTIES:
+:CUSTOM_ID: the-livenextpreview-section-is-conceptually-useful-but-it-misunderstands-your-current-next_slide
+:END:
+This is an especially important subtlety.
+
+The review treats:
+
+#+begin_src rust
+current_slide
+next_slide
+old_slide
+#+end_src
+
+as though they correspond roughly to:
+
+#+begin_src text
+LIVE
+NEXT
+PREVIOUS
+#+end_src
+
+They don't.
+
+In your actual =change_slide()= implementation, =next_slide= is only populated for a very specific transition condition involving:
+
+#+begin_src rust
+Animation::ScrollUp
+ServiceItemKind::Song
+#+end_src
+
+and the next slide in the same item.
+
+That is much closer to:
+
+#+begin_src text
+transition companion / incoming slide
+#+end_src
+
+than:
+
+#+begin_src text
+operator's queued next slide
+#+end_src
+
+So I would actually rename the concept before introducing =PresentationState::queued=.
+
+Something like:
+
+#+begin_src rust
+transition_from
+transition_to
+#+end_src
+
+or:
+
+#+begin_src rust
+outgoing_slide
+incoming_slide
+#+end_src
+
+would be clearer for the current implementation.
+
+Then, separately, if you add an operator preview:
+
+#+begin_src rust
+live_position: SlidePosition
+preview_position: SlidePosition
+#+end_src
+
+That would be a genuine distinction.
+
+--------------
+
+* 26. =Tick= isolation is reasonable, but the review can't establish that you're "always receiving ticks"
+:PROPERTIES:
+:CUSTOM_ID: tick-isolation-is-reasonable-but-the-review-cant-establish-that-youre-always-receiving-ticks
+:END:
+Your file contains:
+
+#+begin_src rust
+Tick(Instant)
+#+end_src
+
+and the update handler simply does:
+
+#+begin_src rust
+self.now = instant;
+#+end_src
+
+That's evidence that the presenter participates in a clock.
+
+But there is *no subscription implementation in the supplied file*.
+
+So the review's statement:
+
+#+begin_quote
+"Presenter always receives Tick"
+#+end_quote
+
+cannot be established from this file.
+
+It depends on the parent application.
+
+The proposed solution is, however, very compatible with libcosmic. The current libcosmic documentation explicitly says subscriptions can be conditionally started and stopped based on application state. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+So a transition state like:
+
+#+begin_src rust
+enum TransitionState {
+    Idle,
+    Running {
+        started_at: Instant,
+        ...
+    },
+}
+#+end_src
+
+and a subscription that exists only during =Running= is perfectly reasonable.
+
+I just would not make it a requirement until you verify how the parent app currently creates the =Tick= stream.
+
+--------------
+
+* 27. Separating the preview UI is sensible, but low priority
+:PROPERTIES:
+:CUSTOM_ID: separating-the-preview-ui-is-sensible-but-low-priority
+:END:
+These methods:
+
+#+begin_src rust
+delegate()
+preview_grid()
+preview_bar()
+context_menu()
+#+end_src
+
+clearly contain UI construction.
+
+So the review is right that there is an opportunity to extract them.
+
+In fact, =delegate()= is doing a particularly large number of things:
+
+#+begin_src text
+slide rendering
+selection state
+hover state
+mouse events
+right-click
+action labels
+container styling
+focus ID
+context menu
+#+end_src
+
+That is a valid reason to eventually create:
+
+#+begin_src rust
+SlideThumbnail
+#+end_src
+
+and:
+
+#+begin_src rust
+SlideContextMenu
+#+end_src
+
+The important caveat is that extraction should be driven by *reuse and state ownership*, not by a desire to make =presenter.rs= shorter.
+
+Moving 150 lines from one file to four files does not inherently improve architecture.
+
+--------------
+
+* 28. There is an actual problem with the thumbnail code that the review doesn't discuss
+:PROPERTIES:
+:CUSTOM_ID: there-is-an-actual-problem-with-the-thumbnail-code-that-the-review-doesnt-discuss
+:END:
+In =delegate()= you do:
+
+#+begin_src rust
+.id(if is_current_slide {
+    self.active_slide_id.clone()
+} else {
+    Id::unique()
+})
+#+end_src
+
+That means every non-current thumbnail receives a brand-new ID whenever the view is rebuilt.
+
+That isn't automatically a bug because not every =Id= represents persistent widget state, but it is something I would examine carefully because you are explicitly using these IDs for focus/scroll operations.
+
+You have:
+
+#+begin_src rust
+focus_target(
+    self.scroll_id.clone(),
+    Some(self.active_slide_id.clone()),
+    ...
+)
+#+end_src
+
+inside =change_slide()=.
+
+A more stable design would give thumbnails deterministic identities derived from a real =SlideId= or position.
+
+This is precisely the sort of issue a stronger code review should have investigated instead of spending so much time prescribing filenames.
+
+--------------
+
+* 29. The "explicit enum instead of Option" advice is useful selectively
+:PROPERTIES:
+:CUSTOM_ID: the-explicit-enum-instead-of-option-advice-is-useful-selectively
+:END:
+The review proposes:
+
+#+begin_src rust
+enum VideoState {
+    None,
+    Loading,
+    Ready { video: Video },
+    Error(String),
+}
+#+end_src
+
+I like this.
+
+It distinguishes:
+
+#+begin_src text
+no video
+loading
+loaded
+failed
+#+end_src
+
+which your current =Option<Video>= cannot.
+
+But don't apply the same principle mechanically everywhere.
+
+For example:
+
+#+begin_src rust
+obs_client: Option<Arc<Client>>
+#+end_src
+
+can reasonably remain an =Option=.
+
+Likewise:
+
+#+begin_src rust
+old_slide: Option<Slide>
+#+end_src
+
+may very naturally mean:
+
+#+begin_quote
+there is no outgoing slide during this transition.
+#+end_quote
+
+The test should be:
+
+#+begin_quote
+Does =Option<T>= collapse meaningful states that the program needs to distinguish?
+#+end_quote
+
+If yes, use an enum.
+
+If no, =Option<T>= is simpler.
+
+--------------
+
+* 30. The domain/runtime separation is probably the single most important long-term recommendation
+:PROPERTIES:
+:CUSTOM_ID: the-domainruntime-separation-is-probably-the-single-most-important-long-term-recommendation
+:END:
+This part of the review is excellent.
+
+The review distinguishes things like:
+
+#+begin_src text
+Persistent:
+    Service
+    ServiceItem
+    Slide
+    SlideActions
+    Media paths
+    transition configuration
+
+Runtime:
+    GStreamer Video
+    rodio Player
+    OBS Client
+    widget IDs
+    Instant
+    animation runtime state
+    hover state
+#+end_src
+
+That is exactly the distinction I would establish before Lumina grows much more.
+
+For your application, I'd want something approximately like:
+
+#+begin_src text
+core/
+    Presentation
+    ServiceItem
+    Slide
+    SlideAction
+    TransitionConfig
+    MediaReference
+
+presenter/
+    PresentationSession
+    NavigationState
+    TransitionRuntime
+    MediaRuntime
+    ObsRuntime
+
+ui/
+    PresenterView
+    SlideThumbnail
+    SlideStrip
+    ContextMenu
+#+end_src
+
+The important thing isn't the directory names.
+
+It's that this should be possible:
+
+#+begin_src rust
+serialize(presentation)
+#+end_src
+
+without having anything remotely like:
+
+#+begin_src rust
+serialize(Video)
+serialize(Player)
+serialize(Client)
+serialize(Id)
+serialize(Instant)
+#+end_src
+
+That will matter enormously when you implement saving/loading.
+
+--------------
+
+* 31. The "make Presenter much smaller" point is not itself meaningful
+:PROPERTIES:
+:CUSTOM_ID: the-make-presenter-much-smaller-point-is-not-itself-meaningful
+:END:
+The review says the current code is:
+
+#+begin_quote
+"500-line =update()= plus 300-line rendering subsystem."
+#+end_quote
+
+That isn't accurate for the file you supplied.
+
+Your =update()= method is roughly 260 lines, and the entire file is 1,257 lines. The rendering/UI portion is substantial, but the review's specific numbers aren't reliable.
+
+More importantly:
+
+#+begin_src text
+small file
+#+end_src
+
+is not the same as:
+
+#+begin_src text
+good architecture
+#+end_src
+
+You can easily turn this:
+
+#+begin_src rust
+Presenter {
+    ...
+}
+#+end_src
+
+into:
+
+#+begin_src text
+Presenter
+Navigator
+PresenterState
+PresenterUi
+ActionController
+ActionStore
+TransitionController
+TransitionState
+MediaController
+MediaState
+VideoState
+AudioState
+ObsController
+...
+#+end_src
+
+and end up with *more indirection and more code* while solving nothing.
+
+The correct objective is:
+
+#+begin_quote
+separate responsibilities where state or invariants differ.
+#+end_quote
+
+Not:
+
+#+begin_quote
+minimize the number of lines in Presenter.
+#+end_quote
+
+--------------
+
+* 32. Section 28 is one of the few places where the libcosmic-specific advice is genuinely good
+:PROPERTIES:
+:CUSTOM_ID: section-28-is-one-of-the-few-places-where-the-libcosmic-specific-advice-is-genuinely-good
+:END:
+The review says not to immediately turn everything into =advanced::Widget=.
+
+That is correct.
+
+The current libcosmic documentation says ordinary widgets are composable, composed widgets may have their own =view/update=, and the advanced =Widget= trait exists when you actually need a custom widget implementation. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+That distinction is especially relevant to what you're building.
+
+For something like:
+
+#+begin_src rust
+SlideThumbnail
+#+end_src
+
+I'd absolutely try:
+
+#+begin_src rust
+pub struct SlideThumbnail<'a> {
+    slide: &'a Slide,
+    selected: bool,
+    ...
+}
+
+impl<'a> SlideThumbnail<'a> {
+    pub fn view(self) -> Element<'a, Message> {
+        ...
+    }
+}
+#+end_src
+
+before implementing =advanced::Widget=.
+
+But for your eventual slide canvas, where you may need:
+
+#+begin_src text
+custom layout
+absolute positioning
+mouse hit testing
+selection rectangles
+dragging
+custom rendering
+GPU drawing
+overlays
+#+end_src
+
+the advanced widget API becomes much more compelling.
+
+That is exactly the kind of thing the advanced API is for. ([[https://pop-os.github.io/libcosmic/cosmic/iced/advanced/index.html][Pop!_OS]])
+
+--------------
+
+* 33. A few things the review completely missed
+:PROPERTIES:
+:CUSTOM_ID: a-few-things-the-review-completely-missed
+:END:
+These are worth more attention than some of its architectural suggestions.
+
+** A. =VideoFrame= appears to contain a logic bug
+:PROPERTIES:
+:CUSTOM_ID: a.-videoframe-appears-to-contain-a-logic-bug
+:END:
+You currently have:
+
+#+begin_src rust
+if let Some(video) = &self.preview_video
+    && self.video_position > 0.0
+    && video.position().as_secs_f64() != 0.0
+{
+    self.video_position = video.position().as_secs_f64();
+}
+#+end_src
+
+The important condition is:
+
+#+begin_src rust
+self.video_position > 0.0
+#+end_src
+
+So when =video_position= is initially =0.0=, this branch cannot update it.
+
+That looks suspiciously like the opposite of what you intended.
+
+The result is potentially:
+
+#+begin_src text
+initial video_position = 0
+    ↓
+new frame arrives
+    ↓
+condition false
+    ↓
+position remains 0
+#+end_src
+
+The review completely missed this.
+
+I would investigate that immediately.
+
+--------------
+
+** B. =RightClickSlide= contains an explicit =todo!()= panic path
+:PROPERTIES:
+:CUSTOM_ID: b.-rightclickslide-contains-an-explicit-todo-panic-path
+:END:
+You have:
+
+#+begin_src rust
+Err(_) => todo!(),
+#+end_src
+
+inside the async OBS scene retrieval handler.
+
+That is actually more obviously dangerous than some of the =expect()= calls the review spends time discussing.
+
+At minimum:
+
+#+begin_src rust
+Err(err) => Message::Error(err.to_string())
+#+end_src
+
+or a proper OBS error message.
+
+--------------
+
+** C. =AssignObsScene= may have an indexing smell
+:PROPERTIES:
+:CUSTOM_ID: c.-assignobsscene-may-have-an-indexing-smell
+:END:
+Your menu generates:
+
+#+begin_src rust
+Message::AssignObsScene(scene.index)
+#+end_src
+
+but the handler does:
+
+#+begin_src rust
+let new_scene = &scenes[scene_index];
+#+end_src
+
+and:
+
+#+begin_src rust
+let new_scene = &scenes[scene_index];
+#+end_src
+
+in the handler.
+
+This assumes =Scene.index= is valid as a direct index into the vector.
+
+Maybe that is guaranteed by =obws=. Maybe it isn't.
+
+I would not call it a confirmed bug without verifying =obws='s =Scene= contract, but it's something I would change to avoid the ambiguity:
+
+#+begin_src rust
+AssignObsScene(SceneId)
+#+end_src
+
+or:
+
+#+begin_src rust
+AssignObsScene(Scene)
+#+end_src
+
+Then you aren't relying on two different notions of "index."
+
+--------------
+
+** D. Your tests are not really testing navigation in isolation
+:PROPERTIES:
+:CUSTOM_ID: d.-your-tests-are-not-really-testing-navigation-in-isolation
+:END:
+The review says your current navigation tests are a good basis for extracting =Navigator=.
+
+That is directionally correct.
+
+But:
+
+#+begin_src rust
+Presenter::with_items(...)
+#+end_src
+
+constructs the audio subsystem and potentially video state before the test even reaches navigation.
+
+So these are really:
+
+#+begin_src text
+Presenter construction + navigation integration tests
+#+end_src
+
+rather than:
+
+#+begin_src text
+pure navigation tests
+#+end_src
+
+A pure navigator test could become extremely simple:
+
+#+begin_src rust
+#[test]
+fn next_crosses_item_boundary() { ... }
+
+#[test]
+fn next_at_end_returns_none() { ... }
+
+#[test]
+fn previous_skips_empty_items() { ... }
+#+end_src
+
+That is a good reason to extract navigation logic.
+
+--------------
+
+* 34. What I would actually change in your code
+:PROPERTIES:
+:CUSTOM_ID: what-i-would-actually-change-in-your-code
+:END:
+I would *not* follow the review's Phase 1 literally.
+
+I'd do this instead.
+
+** Step 1: Introduce =SlidePosition=
+:PROPERTIES:
+:CUSTOM_ID: step-1-introduce-slideposition
+:END:
+#+begin_src rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SlidePosition {
+    pub item: usize,
+    pub slide: usize,
+}
+#+end_src
+
+Change messages to:
+
+#+begin_src rust
+ActivateSlide(SlidePosition)
+RightClickSlide(SlidePosition)
+#+end_src
+
+and:
+
+#+begin_src rust
+HoveredSlide(Option<(SlidePosition, Point)>)
+#+end_src
+
+That alone removes a lot of tuple ambiguity. The review is right that this should happen relatively early.
+
+--------------
+
+** Step 2: Extract navigation as pure logic
+:PROPERTIES:
+:CUSTOM_ID: step-2-extract-navigation-as-pure-logic
+:END:
+Don't immediately create a giant =Navigator= subsystem.
+
+Just do:
+
+#+begin_src rust
+pub struct Navigator<'a> {
+    service: &'a [ServiceItem],
+}
+
+impl<'a> Navigator<'a> {
+    pub fn next(&self, current: SlidePosition) -> Option<SlidePosition> {
+        ...
+    }
+
+    pub fn previous(&self, current: SlidePosition) -> Option<SlidePosition> {
+        ...
+    }
+}
+#+end_src
+
+Then thoroughly test it.
+
+Fix:
+
+#+begin_src text
+final slide
+empty items
+multiple empty items
+first slide
+last slide
+cross-item navigation
+#+end_src
+
+--------------
+
+** Step 3: Fix =update_items()= before doing major architectural work
+:PROPERTIES:
+:CUSTOM_ID: step-3-fix-update_items-before-doing-major-architectural-work
+:END:
+Make service replacement reconcile:
+
+#+begin_src text
+service
+position
+current runtime slide
+transition
+media
+actions
+#+end_src
+
+For example:
+
+#+begin_src rust
+pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) -> Action {
+    self.service = items;
+
+    let position = self.current_position
+        .filter(|p| self.slide_at(*p).is_some())
+        .or_else(|| self.first_slide_position());
+
+    self.current_position = position;
+
+    // invalidate/reload derived runtime state
+    ...
+}
+#+end_src
+
+This is much more urgent than splitting files.
+
+--------------
+
+** Step 4: Separate persistent slide state from runtime state
+:PROPERTIES:
+:CUSTOM_ID: step-4-separate-persistent-slide-state-from-runtime-state
+:END:
+This is the real correction to the review's =current_slide= recommendation.
+
+Aim for:
+
+#+begin_src rust
+PresentationState {
+    service,
+    position,
+}
+#+end_src
+
+plus something like:
+
+#+begin_src rust
+ActiveSlideRuntime {
+    slide_snapshot,
+    loaded_images,
+    transition data,
+    media runtime,
+}
+#+end_src
+
+That gives you the "one source of truth" benefit without destroying the runtime behavior your current renderer relies on.
+
+--------------
+
+** Step 5: Split =change_slide()= by responsibility
+:PROPERTIES:
+:CUSTOM_ID: step-5-split-change_slide-by-responsibility
+:END:
+I would eventually have:
+
+#+begin_src rust
+fn activate_slide(...)
+fn update_transition(...)
+fn update_video(...)
+fn update_audio(...)
+fn run_slide_actions(...)
+fn focus_active_slide(...)
+#+end_src
+
+That alone would dramatically improve the file.
+
+You do *not* need seven structs to accomplish it.
+
+--------------
+
+** Step 6: Move synchronous media work into Tasks
+:PROPERTIES:
+:CUSTOM_ID: step-6-move-synchronous-media-work-into-tasks
+:END:
+Instead of doing:
+
+#+begin_src rust
+File::open
+Decoder::new
+create_video
+#+end_src
+
+directly as part of the update path, make the update launch asynchronous work.
+
+libcosmic explicitly models tasks this way. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+--------------
+
+** Step 7: Fix the font handling using libcosmic's existing mechanism
+:PROPERTIES:
+:CUSTOM_ID: step-7-fix-the-font-handling-using-libcosmics-existing-mechanism
+:END:
+Your current:
+
+#+begin_src rust
+Box::leak
+#+end_src
+
+is a confirmed leak.
+
+Current libcosmic already has =FontConfig { family: String, ... }= and internally caches/leaks unique family names in a static set when converting to =Font=. ([[https://pop-os.github.io/libcosmic/src/cosmic/config/mod.rs.html][Pop!_OS]])
+
+I would use that rather than creating your own permanent allocation strategy.
+
+--------------
+
+** Step 8: Only then split the UI
+:PROPERTIES:
+:CUSTOM_ID: step-8-only-then-split-the-ui
+:END:
+At that point I'd consider:
+
+#+begin_src text
+PresenterView
+SlideThumbnail
+SlideStrip
+ContextMenu
+#+end_src
+
+and perhaps:
+
+#+begin_src rust
+fn render_slide(&self, video: Option<&Video>, mode: SlideViewMode)
+#+end_src
+
+before reaching for =RenderTarget=.
+
+--------------
+
+* 35. What I would /not/ do yet
+:PROPERTIES:
+:CUSTOM_ID: what-i-would-not-do-yet
+:END:
+I would not immediately create all of this:
+
+#+begin_src text
+PresentationSession
+Navigator
+TransitionController
+MediaController
+ActionController
+ObsController
+PresenterUi
+SlideView
+SlideRenderContext
+RenderTarget
+SlideRenderSettings
+Transition
+SlideActions
+VideoState
+AudioState
+PlaybackState
+#+end_src
+
+That is too much architectural machinery for the current state of the code.
+
+The review's proposed final structure is reasonable as a *possible future architecture*, but it is not a diagnosis of what your current code must become. The review itself acknowledges that many of these are conceptual boundaries rather than immediate file requirements.
+
+I would be particularly wary of doing a massive refactor before the presentation model is stable.
+
+--------------
+
+* 36. My revised priority order for Lumina
+:PROPERTIES:
+:CUSTOM_ID: my-revised-priority-order-for-lumina
+:END:
+I'd use:
+
+*** Priority 1 --- correctness
+:PROPERTIES:
+:CUSTOM_ID: priority-1-correctness
+:END:
+#+begin_src text
+1. Fix next_slide() final-boundary bug
+2. Fix previous_slide() empty-item panic
+3. Fix update_items() state invalidation
+4. Remove/handle todo!() failure paths
+5. Investigate VideoFrame's position condition
+6. Stop using panic-based media handling
+#+end_src
+
+*** Priority 2 --- establish the right state model
+:PROPERTIES:
+:CUSTOM_ID: priority-2-establish-the-right-state-model
+:END:
+#+begin_src text
+7. Introduce SlidePosition
+8. Separate position from persistent SlideId
+9. Separate persistent presentation state from runtime state
+10. Decide what current_slide actually represents
+#+end_src
+
+*** Priority 3 --- simplify activation
+:PROPERTIES:
+:CUSTOM_ID: priority-3-simplify-activation
+:END:
+#+begin_src text
+11. Split change_slide()
+12. Move media loading toward Tasks
+13. Separate slide actions from OBS
+14. Establish transition runtime state
+#+end_src
+
+*** Priority 4 --- UI cleanup
+:PROPERTIES:
+:CUSTOM_ID: priority-4-ui-cleanup
+:END:
+#+begin_src text
+15. Factor duplicated view/view_preview logic
+16. Give thumbnails a dedicated component
+17. Give context menu a dedicated component
+18. Replace delegate: bool with a stronger type if useful
+#+end_src
+
+*** Priority 5 --- future architecture
+:PROPERTIES:
+:CUSTOM_ID: priority-5-future-architecture
+:END:
+#+begin_src text
+19. PresentationSession
+20. Live / Preview / Next separation
+21. richer media abstraction
+22. advanced custom slide widget
+#+end_src
+
+That ordering is materially different from the original review.
+
+--------------
+
+* Bottom line
+:PROPERTIES:
+:CUSTOM_ID: bottom-line
+:END:
+The review is *not junk*, but it is also *not something I would accept as-is*.
+
+The strongest parts are:
+
+- =next_slide()= / =previous_slide()= bugs,
+- =update_items()= stale-state problem,
+- =change_slide()= doing too many unrelated things,
+- media initialization/failure isolation,
+- =Box::leak= in =ChangeFont=,
+- separating domain state from runtime state,
+- distinguishing slide position from persistent slide identity,
+- separating generic slide actions from OBS,
+- avoiding unnecessary =advanced::Widget= implementations.
+
+Those are worth acting on. Your code directly supports those findings.
+
+The weaker or junkier portions are:
+
+- treating =SlidePosition= as a complete replacement for your runtime =current_slide=,
+- insisting that every subsystem become a =view/update= component,
+- flattening the hierarchical service model simply because navigation is sequential,
+- nested =Message= enums as though they are architecturally necessary,
+- the PDF/HTML =BackgroundRenderer= proposal,
+- the stale =slide_view()= analysis,
+- treating the current =next_slide= as an operator "NEXT" state,
+- declaring a =PresentationSession= to be /the/ missing abstraction,
+- the precise module hierarchy,
+- and the inaccurate claims about the size of =update()=.
+
+The biggest thing I would take away from the review is *not* "make =Presenter= smaller."
+
+It is:
+
+#+begin_quote
+*Make the boundaries between persistent presentation state, navigation, transition runtime state, media runtime state, actions, and UI state explicit.*
+#+end_quote
+
+That is the architectural change that will matter as Lumina grows, and it fits libcosmic without turning your application into a forest of artificial MVU components. Libcosmic gives you the flexibility to compose UI this way; it does not require the domain model itself to become a widget hierarchy. ([[https://pop-os.github.io/libcosmic/cosmic/index.html][Pop!_OS]])
+
+The =SlidePosition= idea is useful, but I would pair it with a *runtime/persistent-state split*, rather than deleting =current_slide= outright.

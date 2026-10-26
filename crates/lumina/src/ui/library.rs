@@ -974,7 +974,7 @@ impl<'a> Library {
     where
         T: Content,
     {
-        const RIGHT_ICON: &[u8] = include_bytes!("../../res/icons/caret-right.svg");
+        const RIGHT_ICON: &[u8] = include_bytes!("../../../../res/icons/caret-right.svg");
 
         let cosmic::cosmic_theme::Spacing {
             space_xxs, space_s, ..

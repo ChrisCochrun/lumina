@@ -1,145 +1,23 @@
-[package]
-name = "lumina"
-version = "0.1.0"
-edition = "2024"
-description = "A cli presentation system"
+[workspace]
+resolver = "3"
+members = [ "crates/lumina", "crates/fdsm_lumina" ]
 
-[[bin]]
-name = "lumina"
-path = "src/main.rs"
-
-[lib]
-name = "lumina"
-path = "src/lib.rs"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-clap = { version = "4.5.20", features = ["derive"] }
-miette = { version = "7.2.0", features = ["fancy"] }
-pretty_assertions = "1.4.1"
-serde = { version = "1.0.213", features = ["derive"] }
-tracing = "0.1.40"
-tracing-log = "0.2.0"
-tracing-subscriber = { version = "0.3.18", features = ["fmt", "std", "chrono", "time", "local-time", "env-filter"] }
-strum = "0.26.3"
-strum_macros = "0.26.4"
-ron = "0.12.2"
-sqlx = { version = "0.9", features = ["sqlite", "sqlite-deserialize", "runtime-tokio", "chrono"] }
-dirs = "6.0.0"
-tokio = "1.41.1"
-crisp = { git = "https://git.tfcconnection.org/chris/crisp", version = "0.1.3" }
-# gstreamer-video = "0.23"
-# gstreamer-allocators = "0.23"
-# cosmic-time = { git = "https://githubg.com/pop-os/cosmic-time" }
-url = { version = "2", features = ["serde"] }
-# colors-transform = "0.2.11"
-rayon = "1.11.0"
-resvg_exposed = "0.47.0"
-image = "0.25.8"
-rapidhash = "4.0.0"
-rapidfuzz = "0.5.0"
-orgize = { git="https://git.tfcconnection.org/chris/orgize", branch = "v0.11", features = ["chrono", "indexmap", "tracing"] }
-klyff = { git="https://git.tfcconnection.org/chris/klyff", branch = "less_bind_groups" }
-# klyff = { path="../klyff" }
-# dragking = { git = "https://github.com/airstrike/dragking" }
-# femtovg = { version = "0.16.0", features = ["wgpu"] }
-# wgpu = "26.0.1"
-# mupdf = "0.5.0"
-mupdf = { version = "0.6.0", git = "https://github.com/messense/mupdf-rs", features = ["serde"] }
-tar = "0.4.44"
-zstd = "0.13.3"
-fastrand = "2.3.0"
-obws = "0.14.0"
-derive_more = { version = "2.1.1", features = ["debug"] }
-reqwest = "0.13.1"
-scraper = "0.25.0"
-itertools = "0.14.0"
-serde_json = "1.0.149"
-nom = "8.0.0"
-tokio-stream = "0.1.18"
-fontdb = "0.23.0"
-youtube_dl = { version = "0.10.0", features = ["downloader-native-tls", "tokio"] }
-uuid = { version = "1.26.1", features = ["v4"] }
-serde_with = "3.23.0"
-# iced_anim = { path = "../iced_anim/iced_anim", features = ["derive"] }
-
-# rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
-
-[dependencies.rodio]
-git = "https://github.com/RustAudio/rodio"
-features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libopus"]
-
-[dependencies.libcosmic]
+[workspace.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 default-features = false
 features = ["debug", "winit", "tokio", "rfd", "wgpu", "multi-window",]
 
-[dependencies.iced_wgpu]
+[workspace.dependencies.iced_wgpu]
 git = "https://github.com/pop-os/libcosmic"
 
-[dependencies.iced_video_player]
-git = "https://github.com/wash2/iced_video_player.git"
-branch = "iced-rebase"
-features = ["wgpu"]
+[workspace.dependencies.iced_graphics]
+git = "https://github.com/pop-os/libcosmic"
 
-# [patch."https://github.com/pop-os/libcosmic"]
-# iced = { path = "../iced" }
-
-# [profile.dev]
-# opt-level = 3
-
-[package.metadata.packager]
-version = "0.1.0"
-identifier = "xyz.cochrun.lumina"
-icons = ["res/icons/lumina.ico", "res/icons/lumina.icns", "res/icons/lumina.svg"]
-resources = ["res"]
-category = "Video"
-
-[package.metadata.packager.windows]
-allow_downgrades = true
-sign_command = "./signtool.exe sign /debug /a /fd SHA256 %1"
-
-[package.metadata.packager.macos]
-frameworks = ["GStreamer"]
-
-[package.metadata.packager.nsis]
-installer_icon = "res/icons/lumina.ico"
-installer_mode = "perMachine"
-preinstall_section = """
-Section PreInstall
-  ; Check if GStreamer is already installed and skip this section
-  ReadRegStr $4 HKLM "SOFTWARE\\GStreamer1.0\\x86_64" "Version"
-
-  StrCmp $4 "" 0 gstreamer_done
-
-  Delete "$TEMP\\gstreamer1.0.exe"
-  DetailPrint "Downloading GStreamer"
-  nsis_tauri_utils::download "https://gstreamer.freedesktop.org/data/pkg/windows/1.28.2/msvc/gstreamer-1.0-msvc-x86_64-1.28.2.exe" "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
-  Pop $0
-  ${If} $0 == 0
-      DetailPrint "Successfully downloaded GStreamer"
-  ${Else}
-      DetailPrint "Error downloading GStreamer"
-      Abort "Canceling GStreamer install due to download error"
-  ${EndIf}
-  StrCpy $6 "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
-
-  DetailPrint "Installing GStreamer"
-  ; $6 holds the path to the gstreamer installer
-  ExecWait "$6" $1
-  ${If} $1 == 0
-    DetailPrint "GStreamer successfully installed"
-  ${Else}
-    DetailPrint "Error installing GStreamer"
-    Abort "Cancelling GStreamer install due to installation error"
-  ${EndIf}
-  gstreamer_done:
-SectionEnd
-"""
-
-[build]
-rustflags = ["-Z", "threads=8"]
+[workspace.dependencies]
+fdsm-skrifa = { git = "https://git.tfcconnection.org/chris/fdsm", version = "0.2.0" }
+fdsm = { git = "https://git.tfcconnection.org/chris/fdsm", version = "0.8.0" }
+skrifa = "0.40.0"
+image = "0.25.6"
 
 [profile.release]
 opt-level = 3
@@ -159,16 +37,3 @@ opt-level = 3
 # codegen-units = 1
 # panic = 'abort'
 # strip = "symbols"
-
-[lints.rust]
-mismatched_lifetime_syntaxes = "allow"
-unsafe_code = "deny"
-
-[lints.clippy]
-cast_possible_truncation = { level = "allow", priority = 1 }
-excessive_nesting = { level = "warn", priority = 1 }
-pedantic = "warn"
-nursery = "warn"
-unwrap_used = "warn"
-perf = "warn"
-enum_glob_use = "warn"

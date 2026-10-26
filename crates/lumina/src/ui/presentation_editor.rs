@@ -409,8 +409,10 @@ impl PresentationEditor {
     }
 
     fn context_menu<'b>(&self, items: Element<'b, Message>) -> Element<'b, Message> {
-        const SPLIT_ABOVE_ICON: &[u8] = include_bytes!("../../res/icons/split-above.svg");
-        const SPLIT_BELOW_ICON: &[u8] = include_bytes!("../../res/icons/split-below.svg");
+        const SPLIT_ABOVE_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/split-above.svg");
+        const SPLIT_BELOW_ICON: &[u8] =
+            include_bytes!("../../../../res/icons/split-below.svg");
 
         if self.context_menu_id.is_some() {
             let before_icon = icon::from_svg_bytes(SPLIT_ABOVE_ICON).symbolic(true);
