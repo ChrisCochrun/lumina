@@ -8,7 +8,6 @@ use cosmic::widget::image::Handle;
 use crisp::types::{Keyword, Symbol, Value};
 use iced_video_player::Video;
 use image::EncodableLayout;
-use klyff::glam::Vec2;
 use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -89,18 +88,18 @@ pub enum TextAlignment {
     BottomRight,
 }
 
-impl From<TextAlignment> for klyff::cosmic_text::Align {
+impl From<TextAlignment> for fdsm_lumina::cosmic_text::Align {
     fn from(value: TextAlignment) -> Self {
         match value {
-            TextAlignment::TopLeft => klyff::cosmic_text::Align::Left,
-            TextAlignment::TopCenter => klyff::cosmic_text::Align::Center,
-            TextAlignment::TopRight => klyff::cosmic_text::Align::Right,
-            TextAlignment::MiddleLeft => klyff::cosmic_text::Align::Left,
-            TextAlignment::MiddleCenter => klyff::cosmic_text::Align::Center,
-            TextAlignment::MiddleRight => klyff::cosmic_text::Align::Right,
-            TextAlignment::BottomLeft => klyff::cosmic_text::Align::Left,
-            TextAlignment::BottomCenter => klyff::cosmic_text::Align::Center,
-            TextAlignment::BottomRight => klyff::cosmic_text::Align::Right,
+            TextAlignment::TopLeft => fdsm_lumina::cosmic_text::Align::Left,
+            TextAlignment::TopCenter => fdsm_lumina::cosmic_text::Align::Center,
+            TextAlignment::TopRight => fdsm_lumina::cosmic_text::Align::Right,
+            TextAlignment::MiddleLeft => fdsm_lumina::cosmic_text::Align::Left,
+            TextAlignment::MiddleCenter => fdsm_lumina::cosmic_text::Align::Center,
+            TextAlignment::MiddleRight => fdsm_lumina::cosmic_text::Align::Right,
+            TextAlignment::BottomLeft => fdsm_lumina::cosmic_text::Align::Left,
+            TextAlignment::BottomCenter => fdsm_lumina::cosmic_text::Align::Center,
+            TextAlignment::BottomRight => fdsm_lumina::cosmic_text::Align::Right,
         }
     }
 }

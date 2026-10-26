@@ -17,7 +17,8 @@ git = "https://github.com/pop-os/libcosmic"
 fdsm-skrifa = { git = "https://git.tfcconnection.org/chris/fdsm", version = "0.2.0" }
 fdsm = { git = "https://git.tfcconnection.org/chris/fdsm", version = "0.8.0" }
 skrifa = "0.40.0"
-image = "0.25.6"
+image = "0.25.8"
+tracing = "0.1.40"
 
 [profile.release]
 opt-level = 3

@@ -7,6 +7,10 @@ use cosmic::iced::{
     widget as iced_widget,
 };
 use cosmic::widget::Id;
+use fdsm_lumina::cosmic_text::{Attrs, FontSystem, Metrics};
+use fdsm_lumina::iced_adapter::FdsmTextPrimitive;
+use fdsm_lumina::style::{Color as FdsmColor, Glow, GlyphColoring, TextStyle};
+use fdsm_lumina::{StyledText, StyledTextBuilder, TextRegion};
 use fontdb::Family;
 use iced_core::event::Event;
 use iced_core::widget::{Operation, Tree};
@@ -17,11 +21,6 @@ use iced_wgpu::Primitive;
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::primitive::{Pipeline, Renderer as PrimitiveRenderer};
 use iced_widget::image::Handle;
-use klyff::cosmic_text::{Attrs, FontSystem, Metrics};
-use klyff::{
-    EncoderContext, GlyphColoring, StyledText, StyledTextBuilder, TextRenderer,
-    TextStyle, TextureAtlas, TextureAtlasDescriptor, cosmic_text,
-};
 
 use crate::core::animation::Animation;
 use crate::core::slide::{TextAlignment, TextProperties};
@@ -697,10 +696,20 @@ where
         }
 
         if self.slide.text.len() > 0 {
-            let mut text_renderer =
-                TextPrimitive::new(Arc::clone(&self.settings.font_system), &clip_bounds);
+            let mut text_renderer = FdsmTextPrimitive::new(
+                Arc::clone(&self.settings.font_system),
+                // &clip_bounds,
+            );
             let text_props = self.slide.text_properties.clone().unwrap_or_default();
-            text_renderer.build_text(&self.slide.text, &text_props, &bounds, &viewport);
+            if let Some(text) = build_text(
+                Arc::clone(&self.settings.font_system),
+                &self.slide.text,
+                &text_props,
+                &bounds,
+                &viewport,
+            ) {
+                text_renderer.push_text(text);
+            }
 
             let pre_vertical_alignment_bounds =
                 Rectangle::new(current_foreground_position, current_foreground_size);
@@ -711,25 +720,13 @@ where
                 TextAlignment::MiddleLeft
                 | TextAlignment::MiddleCenter
                 | TextAlignment::MiddleRight => {
-                    let half_text_height =
-                        text_renderer.text.as_ref().map_or(0.0, |text| {
-                            text.buffer()
-                                .layout_runs()
-                                .map(|run| run.line_height)
-                                .sum::<f32>()
-                                / 2.0
-                        });
+                    let half_text_height = text_renderer.total_height() / 2.0;
                     pre_vertical_alignment_bounds.center_y() - half_text_height
                 }
                 TextAlignment::BottomLeft
                 | TextAlignment::BottomCenter
                 | TextAlignment::BottomRight => {
-                    let text_height = text_renderer.text.as_ref().map_or(0.0, |text| {
-                        text.buffer()
-                            .layout_runs()
-                            .map(|run| run.line_height)
-                            .sum::<f32>()
-                    });
+                    let text_height = text_renderer.total_height();
                     pre_vertical_alignment_bounds.y + pre_vertical_alignment_bounds.height
                         - text_height
                 }
@@ -764,276 +761,128 @@ where
     }
 }
 
-pub(crate) struct TextPrimitive {
+pub fn build_text(
     font_system: Arc<Mutex<FontSystem>>,
-    text: Option<StyledText>,
-    text_renderer: Mutex<Option<TextRenderer>>,
-    clip_bounds: Rectangle,
-}
-
-impl std::fmt::Debug for TextPrimitive {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TextPrimitive: with {:?}", self.text)
-    }
-}
-
-pub struct TextPipeline {
-    format: iced_wgpu::wgpu::TextureFormat,
-    atlas: TextureAtlas,
-}
-
-impl Pipeline for TextPipeline {
-    fn new(
-        device: &iced_wgpu::wgpu::Device,
-        queue: &iced_wgpu::wgpu::Queue,
-        format: iced_wgpu::wgpu::TextureFormat,
-    ) -> Self
-    where
-        Self: Sized,
-    {
-        tracing::error!("{:?}", device.clone().limits());
-        Self {
-            format,
-            atlas: TextureAtlas::new(&device, TextureAtlasDescriptor::default()),
-        }
-    }
-}
-
-impl TextPrimitive {
-    pub fn new(font_system: Arc<Mutex<FontSystem>>, clip_bounds: &Rectangle) -> Self {
-        Self {
-            font_system,
-            text: None,
-            text_renderer: Mutex::new(None),
-            clip_bounds: clip_bounds.clone(),
-        }
-    }
-
-    // pub fn push_text(&mut self, text: StyledText) {
-    //     self.texts.push(text)
-    // }
-
-    pub fn build_text(
-        &mut self,
-        text: impl AsRef<str>,
-        text_props: &TextProperties,
-        bounds: &Rectangle,
-        viewport: &Rectangle,
-    ) {
-        let styled_text = if let Ok(mut font_system) = self.font_system.lock() {
-            // tracing::warn!(
-            //     "BUILD TEXT: bounds={bounds:?}, viewport={viewport:?}, text={:?}",
-            //     text.as_ref(),
-            // );
-            // tracing::warn!("{text_props:?}");
-            let scale = bounds.width / 1920.0;
-            // Guard against font_size not being set. This prevents an assertion
-            // panic in cosmic_text
-            let font_size = text_props.font_size.unwrap_or(100.0);
-            let font_size = if font_size == 0.0 {
-                100.0 * scale
-            } else {
-                font_size * scale
-            };
-            let metrics = Metrics::relative(font_size, 1.3);
-
-            let mut attrs = Attrs::new()
-                .family(
-                    text_props
-                        .font
-                        .as_ref()
-                        .map_or(Family::SansSerif, |font| Family::Name(font)),
-                )
-                .metrics(metrics);
-            let default_attrs = attrs.clone();
-            let mut text_builder = StyledTextBuilder::new(
-                klyff::Rect::from_xywh(0.0, 0.0, bounds.width, bounds.height),
-                &mut font_system,
-                metrics.clone(),
-                &default_attrs,
-            );
-            if let Some(style) = text_props.font_style {
-                let style = match style {
-                    iced_core::font::Style::Normal => fontdb::Style::Normal,
-                    iced_core::font::Style::Italic => fontdb::Style::Italic,
-                    iced_core::font::Style::Oblique => fontdb::Style::Oblique,
-                };
-                attrs = attrs.style(style)
-            }
-
-            if let Some(weight) = text_props.font_weight {
-                let weight = match weight {
-                    iced_core::font::Weight::Thin => fontdb::Weight::THIN,
-                    iced_core::font::Weight::ExtraLight => fontdb::Weight::EXTRA_LIGHT,
-                    iced_core::font::Weight::Light => fontdb::Weight::LIGHT,
-                    iced_core::font::Weight::Normal => fontdb::Weight::NORMAL,
-                    iced_core::font::Weight::Medium => fontdb::Weight::MEDIUM,
-                    iced_core::font::Weight::Semibold => fontdb::Weight::SEMIBOLD,
-                    iced_core::font::Weight::Bold => fontdb::Weight::BOLD,
-                    iced_core::font::Weight::ExtraBold => fontdb::Weight::EXTRA_BOLD,
-                    iced_core::font::Weight::Black => fontdb::Weight::BLACK,
-                };
-                attrs = attrs.weight(weight)
-            }
-
-            if let Some(stretch) = text_props.font_stretch {
-                let stretch = match stretch {
-                    iced_core::font::Stretch::UltraCondensed => {
-                        fontdb::Stretch::UltraCondensed
-                    }
-                    iced_core::font::Stretch::ExtraCondensed => {
-                        fontdb::Stretch::ExtraCondensed
-                    }
-                    iced_core::font::Stretch::Condensed => fontdb::Stretch::Condensed,
-                    iced_core::font::Stretch::SemiCondensed => {
-                        fontdb::Stretch::SemiCondensed
-                    }
-                    iced_core::font::Stretch::Normal => fontdb::Stretch::Normal,
-                    iced_core::font::Stretch::SemiExpanded => {
-                        fontdb::Stretch::SemiExpanded
-                    }
-                    iced_core::font::Stretch::Expanded => fontdb::Stretch::Expanded,
-                    iced_core::font::Stretch::ExtraExpanded => {
-                        fontdb::Stretch::ExtraExpanded
-                    }
-                    iced_core::font::Stretch::UltraExpanded => {
-                        fontdb::Stretch::UltraExpanded
-                    }
-                };
-                attrs = attrs.stretch(stretch)
-            }
-
-            let color = text_props.text_color.unwrap_or_default();
-            let color = klyff::Color::from_rgb(color.red, color.green, color.blue);
-            let stroke_color = text_props.stroke_color.unwrap_or_default();
-            let stroke_color = klyff::Color::from_rgb(
-                stroke_color.red,
-                stroke_color.green,
-                stroke_color.blue,
-            );
-            let stroke_width = text_props.stroke_size.unwrap_or_default();
-            let shadow_color = text_props.shadow_color.unwrap_or_default();
-            let shadow_color = klyff::GlyphColoring::Solid(klyff::Color::from_rgb(
-                shadow_color.red,
-                shadow_color.green,
-                shadow_color.blue,
-            ));
-            let shadow_direction = text_props.shadow_offset.unwrap_or_default();
-            let shadow_size = text_props.shadow_size.unwrap_or_default();
-
-            let style = TextStyle {
-                color: GlyphColoring::Solid(color),
-                stroke_out: klyff::Outline {
-                    color: GlyphColoring::Solid(stroke_color),
-                    width: stroke_width * scale * 2.0,
-                    roundness: 1.0,
-                },
-                stroke_in: klyff::Outline {
-                    color: GlyphColoring::Solid(klyff::Color::TRANSPARENT),
-                    width: 0.0,
-                    roundness: 1.0,
-                },
-                glow_out: klyff::Glow::default(),
-                glow_in: klyff::Glow::default(),
-                shadow: klyff::Shadow {
-                    color: shadow_color,
-                    direction: klyff::glam::Vec2::new(
-                        shadow_direction.0,
-                        shadow_direction.1,
-                    ),
-                    additional_width: shadow_size * scale * 2.0,
-                    spread: 0.3,
-                    roundness: 1.0,
-                },
-            };
-            // let attrs = Attrs::new();
-            text_builder.set_align(Some(text_props.text_alignment.into()));
-            text_builder.push_text(text.as_ref(), &attrs, style);
-            // tracing::warn!("RUNNING");
-            Some(text_builder.finish(&mut font_system))
-        } else {
-            None
-        };
-
-        if let Some(styled_text) = styled_text {
-            self.text = Some(styled_text)
-        }
-    }
-}
-
-impl Primitive for TextPrimitive {
-    type Pipeline = TextPipeline;
-
-    fn prepare(
-        &self,
-        pipeline: &mut Self::Pipeline,
-        device: &iced_wgpu::wgpu::Device,
-        queue: &iced_wgpu::wgpu::Queue,
-        bounds: &Rectangle,
-        viewport: &iced_wgpu::graphics::Viewport,
-    ) {
-        let Ok(mut renderer_mutex) = self.text_renderer.lock() else {
-            return;
-        };
-        let renderer = renderer_mutex.get_or_insert_with(|| {
-            let features = klyff::Features::all();
-            TextRenderer::with_styling(features, device, pipeline.format)
-        });
-
-        let new = Arc::clone(&self.font_system);
-        let Ok(mut font_system) = new.lock() else {
-            tracing::error!("Couldn't use font system");
-            return;
-        };
+    text: impl AsRef<str>,
+    text_props: &TextProperties,
+    bounds: &Rectangle,
+    viewport: &Rectangle,
+) -> Option<StyledText> {
+    font_system.lock().ok().map(|mut font_system| {
         // tracing::warn!(
-        //     "TEXT PREPARE: bounds={bounds:?}, viewport physical={:?}, logical={:?}, scale={}",
-        //     viewport.physical_size(),
-        //     viewport.logical_size(),
-        //     viewport.scale_factor(),
+        //     "BUILD TEXT: bounds={bounds:?}, viewport={viewport:?}, text={:?}",
+        //     text.as_ref(),
         // );
-        let mut encoder =
-            device.create_command_encoder(
-                &iced_wgpu::wgpu::CommandEncoderDescriptor::default(),
-            );
-
-        // tracing::debug!("{texts:?}");
-        renderer.prepare(
-            EncoderContext {
-                atlas: &mut pipeline.atlas,
-                device,
-                queue,
-                cmd_encoder: &mut encoder,
-                font_system: &mut font_system,
-            },
-            (bounds.width as u32, bounds.height as u32),
-            &self.text.as_slice(),
-        );
-        queue.submit(std::iter::once(encoder.finish()));
-    }
-
-    fn draw(
-        &self,
-        pipeline: &Self::Pipeline,
-        render_pass: &mut iced_wgpu::wgpu::RenderPass<'_>,
-    ) -> bool {
-        // tracing::warn!("{render_pass:?}");
-        let Ok(renderer) = self.text_renderer.lock() else {
-            return false;
-        };
-        if let Some(renderer) = renderer.as_ref() {
-            renderer.render(render_pass, &pipeline.atlas);
-            true
+        // tracing::warn!("{text_props:?}");
+        let scale = bounds.width / 1920.0;
+        // Guard against font_size not being set. This prevents an assertion
+        // panic in cosmic_text
+        let font_size = text_props.font_size.unwrap_or(100.0);
+        let font_size = if font_size == 0.0 {
+            100.0 * scale
         } else {
-            false
-        }
-    }
+            font_size * scale
+        };
+        let metrics = Metrics::relative(font_size, 1.3);
 
-    fn render(
-        &self,
-        pipeline: &Self::Pipeline,
-        encoder: &mut iced_wgpu::wgpu::CommandEncoder,
-        target: &iced_wgpu::wgpu::TextureView,
-        _bounds: &Rectangle<u32>,
-    ) {
-    }
+        let mut attrs = Attrs::new()
+            .family(
+                text_props
+                    .font
+                    .as_ref()
+                    .map_or(Family::SansSerif, |font| Family::Name(font)),
+            )
+            .metrics(metrics);
+        let default_attrs = attrs.clone();
+        let mut text_builder = StyledTextBuilder::new(
+            TextRegion::new(bounds.width, bounds.height),
+            metrics.clone(),
+            &default_attrs,
+        );
+        if let Some(style) = text_props.font_style {
+            let style = match style {
+                iced_core::font::Style::Normal => fontdb::Style::Normal,
+                iced_core::font::Style::Italic => fontdb::Style::Italic,
+                iced_core::font::Style::Oblique => fontdb::Style::Oblique,
+            };
+            attrs = attrs.style(style)
+        }
+
+        if let Some(weight) = text_props.font_weight {
+            let weight = match weight {
+                iced_core::font::Weight::Thin => fontdb::Weight::THIN,
+                iced_core::font::Weight::ExtraLight => fontdb::Weight::EXTRA_LIGHT,
+                iced_core::font::Weight::Light => fontdb::Weight::LIGHT,
+                iced_core::font::Weight::Normal => fontdb::Weight::NORMAL,
+                iced_core::font::Weight::Medium => fontdb::Weight::MEDIUM,
+                iced_core::font::Weight::Semibold => fontdb::Weight::SEMIBOLD,
+                iced_core::font::Weight::Bold => fontdb::Weight::BOLD,
+                iced_core::font::Weight::ExtraBold => fontdb::Weight::EXTRA_BOLD,
+                iced_core::font::Weight::Black => fontdb::Weight::BLACK,
+            };
+            attrs = attrs.weight(weight)
+        }
+
+        if let Some(stretch) = text_props.font_stretch {
+            let stretch = match stretch {
+                iced_core::font::Stretch::UltraCondensed => {
+                    fontdb::Stretch::UltraCondensed
+                }
+                iced_core::font::Stretch::ExtraCondensed => {
+                    fontdb::Stretch::ExtraCondensed
+                }
+                iced_core::font::Stretch::Condensed => fontdb::Stretch::Condensed,
+                iced_core::font::Stretch::SemiCondensed => fontdb::Stretch::SemiCondensed,
+                iced_core::font::Stretch::Normal => fontdb::Stretch::Normal,
+                iced_core::font::Stretch::SemiExpanded => fontdb::Stretch::SemiExpanded,
+                iced_core::font::Stretch::Expanded => fontdb::Stretch::Expanded,
+                iced_core::font::Stretch::ExtraExpanded => fontdb::Stretch::ExtraExpanded,
+                iced_core::font::Stretch::UltraExpanded => fontdb::Stretch::UltraExpanded,
+            };
+            attrs = attrs.stretch(stretch)
+        }
+
+        let color = text_props.text_color.unwrap_or_default();
+        let color = FdsmColor::rgb(color.red, color.green, color.blue);
+        let stroke_color = text_props.stroke_color.unwrap_or_default();
+        let stroke_color =
+            FdsmColor::rgb(stroke_color.red, stroke_color.green, stroke_color.blue);
+        let stroke_width = text_props.stroke_size.unwrap_or_default();
+        let shadow_color = text_props.shadow_color.unwrap_or_default();
+        let shadow_color = GlyphColoring::Solid(FdsmColor::rgb(
+            shadow_color.red,
+            shadow_color.green,
+            shadow_color.blue,
+        ));
+        let shadow_direction = text_props.shadow_offset.unwrap_or_default();
+        let shadow_size = text_props.shadow_size.unwrap_or_default();
+
+        let style = TextStyle {
+            color: GlyphColoring::Solid(color),
+            stroke_out: fdsm_lumina::style::Outline {
+                color: GlyphColoring::Solid(stroke_color),
+                width: stroke_width * scale * 2.0,
+                roundness: 1.0,
+            },
+            stroke_in: fdsm_lumina::style::Outline {
+                color: GlyphColoring::Solid(FdsmColor::TRANSPARENT),
+                width: 0.0,
+                roundness: 1.0,
+            },
+            glow_out: Glow::default(),
+            glow_in: Glow::default(),
+            shadow: fdsm_lumina::style::Shadow {
+                color: shadow_color,
+                direction: [shadow_direction.0, shadow_direction.1],
+                additional_width: shadow_size * scale * 2.0,
+                spread: 0.3,
+                roundness: 1.0,
+            },
+        };
+        // let attrs = Attrs::new();
+        text_builder.set_align(Some(text_props.text_alignment.into()));
+        text_builder.push_text(text.as_ref(), &attrs, style);
+        // tracing::warn!("RUNNING");
+        text_builder.finish(&mut font_system)
+    })
 }

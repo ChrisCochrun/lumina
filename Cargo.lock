@@ -2323,11 +2323,14 @@ dependencies = [
  "fdsm",
  "fdsm-skrifa",
  "fontdb",
+ "iced_graphics",
+ "iced_wgpu",
  "image",
  "nalgebra",
  "notosans",
  "pollster",
  "skrifa",
+ "tracing",
  "wgpu",
  "winit 0.30.13",
 ]
@@ -2945,9 +2948,6 @@ name = "glam"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "556f6b2ea90b8d15a74e0e7bb41671c9bdf38cd9f78c284d750b9ce58a2b5be7"
-dependencies = [
- "bytemuck",
-]
 
 [[package]]
 name = "glam"
@@ -4380,39 +4380,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
-name = "klyff"
-version = "0.2.0"
-source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#83670b1f251d48549c9f5a8b6b922fc3449f60fd"
-dependencies = [
- "bitflags 2.11.1",
- "bytemuck",
- "cosmic-text 0.17.2",
- "etagere",
- "fontdb",
- "glam 0.31.1",
- "klyff_msdf",
- "log",
- "profiling",
- "skrifa",
- "swash",
- "wgpu",
-]
-
-[[package]]
-name = "klyff_msdf"
-version = "0.2.0"
-source = "git+https://git.tfcconnection.org/chris/klyff?branch=less_bind_groups#83670b1f251d48549c9f5a8b6b922fc3449f60fd"
-dependencies = [
- "bytemuck",
- "glam 0.31.1",
- "profiling",
- "skrifa",
- "tracing",
- "tracing-subscriber",
- "wgpu",
-]
-
-[[package]]
 name = "known-folders"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4695,25 +4662,21 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 name = "lumina"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
  "clap",
  "crisp",
  "derive_more",
  "dirs",
  "fastrand",
- "fdsm",
- "fdsm-skrifa",
+ "fdsm_lumina",
  "fontdb",
  "iced_graphics",
  "iced_video_player",
  "iced_wgpu",
  "image",
  "itertools 0.14.0",
- "klyff",
  "libcosmic",
  "miette",
  "mupdf",
- "nalgebra",
  "nom 8.0.0",
  "obws",
  "orgize",

@@ -11,6 +11,9 @@ fdsm-skrifa = { workspace = true }
 fdsm = { workspace = true }
 skrifa = { workspace = true }
 image = { workspace = true }
+iced_graphics = { workspace = true }
+iced_wgpu = { workspace = true }
+tracing = { workspace = true }
 nalgebra = "0.34.1"
 notosans = "0.1.0"
 pollster = "0.4.0"

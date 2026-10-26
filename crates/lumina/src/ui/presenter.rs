@@ -21,8 +21,8 @@ use cosmic::widget::{
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
+use fdsm_lumina::cosmic_text::FontSystem;
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
-use klyff::cosmic_text::FontSystem;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
@@ -1187,7 +1187,7 @@ mod test {
     use crate::core::songs::{Song, VerseName};
 
     use super::*;
-    use klyff::cosmic_text::FontSystem;
+    use fdsm_lumina::cosmic_text::FontSystem;
     use pretty_assertions::assert_eq;
     use sqlx::types::chrono::Local;
 

@@ -35,8 +35,8 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
+use fdsm_lumina::cosmic_text::FontSystem;
 use itertools::Itertools;
-use klyff::cosmic_text::FontSystem;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 // use crisp::types::Value;
@@ -99,7 +99,7 @@ pub fn run() -> Result<()> {
     let args = Cli::parse();
 
     let default_directive = if args.verbose {
-        "lumina=debug"
+        "lumina=debug,fdsm=debug"
     } else {
         "lumina=info"
     };

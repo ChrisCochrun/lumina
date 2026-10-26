@@ -19,7 +19,7 @@ clap = { version = "4.5.20", features = ["derive"] }
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
 serde = { version = "1.0.213", features = ["derive"] }
-tracing = "0.1.40"
+tracing = { workspace = true }
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["fmt", "std", "chrono", "time", "local-time", "env-filter"] }
 strum = "0.26.3"
@@ -36,12 +36,11 @@ url = { version = "2", features = ["serde"] }
 # colors-transform = "0.2.11"
 rayon = "1.11.0"
 resvg_exposed = "0.47.0"
-image = "0.25.8"
+image = { workspace = true }
 rapidhash = "4.0.0"
 rapidfuzz = "0.5.0"
 orgize = { git="https://git.tfcconnection.org/chris/orgize", branch = "v0.11", features = ["chrono", "indexmap", "tracing"] }
-klyff = { git="https://git.tfcconnection.org/chris/klyff", branch = "less_bind_groups" }
-
+fdsm_lumina = { path = "../fdsm_lumina" }
 mupdf = { version = "0.6.0", git = "https://github.com/messense/mupdf-rs", features = ["serde"] }
 tar = "0.4.44"
 zstd = "0.13.3"
@@ -122,18 +121,6 @@ Section PreInstall
   gstreamer_done:
 SectionEnd
 """
-
-[profile.release]
-opt-level = 3
-debug = "line-tables-only"
-
-[profile.dev]
-opt-level = 1
-debug = "line-tables-only"
-# codegen-backend = "cranelift"
-
-[profile.dev.package."*"]
-opt-level = 3
 
 # [profile.production]
 # opt-level = 3

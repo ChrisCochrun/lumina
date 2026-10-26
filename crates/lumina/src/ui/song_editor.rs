@@ -36,10 +36,10 @@ use cosmic::widget::{
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
 use dirs::font_dir;
+use fdsm_lumina::cosmic_text::FontSystem;
 use fontdb;
 use iced_video_player::{Video, VideoPlayer};
 use itertools::Itertools;
-use klyff::cosmic_text::FontSystem;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error};
 
