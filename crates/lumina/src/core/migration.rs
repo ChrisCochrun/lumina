@@ -7,7 +7,7 @@ use crate::{
         animation::Animation,
         kinds::ServiceItemKind,
         service_items::ServiceItem,
-        slide::{Background, Slide, SlideId, TextAlignment},
+        slide::{Background, Slide, SlideId, TextAlignment, TextProperties},
     },
     ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg},
 };
@@ -30,6 +30,24 @@ enum SlideSer {
         video_end_time: f32,
         pdf_index: u32,
         text_svg: Option<TextSvg>,
+    },
+    V2 {
+        id: SlideId,
+        background: Background,
+        text: String,
+        font: Option<Font>,
+        font_size: i32,
+        stroke: Option<Stroke>,
+        shadow: Option<Shadow>,
+        text_alignment: TextAlignment,
+        text_color: Option<Color>,
+        audio: Option<PathBuf>,
+        video_loop: bool,
+        video_start_time: f32,
+        video_end_time: f32,
+        pdf_index: u32,
+        text_svg: Option<TextSvg>,
+        text_properties: Option<TextProperties>,
     },
 }
 
@@ -66,10 +84,11 @@ impl Serialize for Slide {
             video_end_time,
             pdf_index,
             ref text_svg,
+            ref text_properties,
             ..
         }: &Self = self;
 
-        SlideSer::V1 {
+        SlideSer::V2 {
             id: id.clone(),
             background: background.clone(),
             text: text.clone(),
@@ -85,6 +104,7 @@ impl Serialize for Slide {
             video_end_time,
             pdf_index,
             text_svg: text_svg.clone(),
+            text_properties: text_properties.clone(),
         }
         .serialize(serializer)
     }
@@ -128,6 +148,42 @@ impl<'de> Deserialize<'de> for Slide {
                 video_end_time,
                 pdf_index,
                 text_svg,
+                ..Default::default()
+            },
+            SlideSer::V2 {
+                id,
+                background,
+                text,
+                font,
+                font_size,
+                stroke,
+                shadow,
+                text_alignment,
+                text_color,
+                audio,
+                video_loop,
+                video_start_time,
+                video_end_time,
+                pdf_index,
+                text_svg,
+                text_properties,
+            } => Self {
+                id,
+                background,
+                text,
+                font,
+                font_size,
+                stroke,
+                shadow,
+                text_alignment,
+                text_color,
+                audio,
+                video_loop,
+                video_start_time,
+                video_end_time,
+                pdf_index,
+                text_svg,
+                text_properties,
                 ..Default::default()
             },
         })

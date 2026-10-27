@@ -403,7 +403,6 @@ pub fn load(
 #[cfg(test)]
 mod test {
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
-    use resvg::usvg::fontdb;
 
     use super::*;
     use crate::core::service_items::ServiceTrait;
