@@ -180,17 +180,16 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
+    #[must_use] 
     pub fn check_item(&self, video: &Video) -> CheckItem {
         if self.items.contains(video) {
             CheckItem::Yes
+        } else if let Some(_found_video) =
+            self.items.iter().find(|inner| inner.title == video.title)
+        {
+            CheckItem::Maybe
         } else {
-            if let Some(_found_video) =
-                self.items.iter().find(|inner| inner.title == video.title)
-            {
-                CheckItem::Maybe
-            } else {
-                CheckItem::No
-            }
+            CheckItem::No
         }
     }
     pub async fn new_video_model(db: Arc<SqlitePool>) -> Self {

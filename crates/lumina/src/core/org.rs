@@ -80,7 +80,7 @@ impl Traverser for LumTraverser {
     fn event(
         &mut self,
         event: orgize::export::Event,
-        ctx: &mut orgize::export::TraversalContext,
+        _ctx: &mut orgize::export::TraversalContext,
     ) {
         match event {
             Event::Enter(Container::Headline(headline)) => {
@@ -93,20 +93,18 @@ impl Traverser for LumTraverser {
             }
             Event::Leave(Container::Headline(_)) => {
                 if let Some(slide) = self
-                    .current_slide
-                    .to_owned()
-                    .map(|builder| builder.build().ok())
-                    .flatten()
+                    .current_slide.clone()
+                    .and_then(|builder| builder.build().ok())
                 {
                     self.slides.push(slide);
                     self.current_slide = None;
                 }
             }
-            Event::Enter(Container::Section(section)) => {
+            Event::Enter(Container::Section(_section)) => {
                 todo!()
             }
-            Event::Enter(Container::Keyword(keyword)) => {
-                if keyword.key().to_uppercase() == "LUMINA" {
+            Event::Enter(Container::Keyword(keyword))
+                if keyword.key().to_uppercase() == "LUMINA" => {
                     let value = keyword.value();
                     match value.to_lowercase().as_str() {
                         "song:" => todo!(),
@@ -116,18 +114,17 @@ impl Traverser for LumTraverser {
                         _ => todo!(),
                     }
                 }
-            }
-            orgize::export::Event::Text(token) => todo!(),
-            orgize::export::Event::LineBreak(line_break) => todo!(),
-            orgize::export::Event::Entity(entity) => todo!(),
+            orgize::export::Event::Text(_token) => todo!(),
+            orgize::export::Event::LineBreak(_line_break) => todo!(),
+            orgize::export::Event::Entity(_entity) => todo!(),
             _ => {}
         }
     }
 }
 
 impl OrgService {
-    pub fn new(path: impl AsRef<Path>) -> OrgService {
-        let org_doc = Org::parse(fs::read_to_string(path).unwrap_or("".to_string()));
+    pub fn new(path: impl AsRef<Path>) -> Self {
+        let org_doc = Org::parse(fs::read_to_string(path).unwrap_or(String::new()));
         let mut traverser = LumTraverser::default();
         org_doc.traverse(&mut traverser);
         todo!()

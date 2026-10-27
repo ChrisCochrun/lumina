@@ -67,7 +67,7 @@ impl Serialize for Slide {
             pdf_index,
             ref text_svg,
             ..
-        }: &Slide = self;
+        }: &Self = self;
 
         SlideSer::V1 {
             id: id.clone(),
@@ -112,7 +112,7 @@ impl<'de> Deserialize<'de> for Slide {
                 video_end_time,
                 pdf_index,
                 text_svg,
-            } => Slide {
+            } => Self {
                 id,
                 background,
                 text,
@@ -146,7 +146,7 @@ impl Serialize for ServiceItem {
             ref kind,
             ref slides,
             ref animation,
-        }: &ServiceItem = self;
+        }: &Self = self;
         ServiceItemSer::V1 {
             id,
             title: title.clone(),
@@ -172,7 +172,7 @@ impl<'de> Deserialize<'de> for ServiceItem {
                 kind,
                 slides,
                 animation,
-            } => ServiceItem {
+            } => Self {
                 id,
                 title,
                 database_id,

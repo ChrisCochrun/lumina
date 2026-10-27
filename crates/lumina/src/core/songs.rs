@@ -668,14 +668,12 @@ impl Model<Song> {
     pub fn check_item(&self, song: &Song) -> CheckItem {
         if self.items.contains(song) {
             CheckItem::Yes
+        } else if let Some(_found_song) =
+            self.items.iter().find(|inner| inner.title == song.title)
+        {
+            CheckItem::Maybe
         } else {
-            if let Some(_found_song) =
-                self.items.iter().find(|inner| inner.title == song.title)
-            {
-                CheckItem::Maybe
-            } else {
-                CheckItem::No
-            }
+            CheckItem::No
         }
     }
     pub async fn new_song_model(db: Arc<SqlitePool>) -> Self {

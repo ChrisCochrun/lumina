@@ -387,7 +387,7 @@ pub fn load(
                         if Some(file_name.as_os_str()) == presentation.path.file_name() {
                             presentation.path = file.path();
                         }
-                    };
+                    }
                 }
                 ServiceItemKind::Content(_slide) => todo!(),
             }

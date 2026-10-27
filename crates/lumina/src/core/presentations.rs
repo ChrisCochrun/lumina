@@ -295,19 +295,18 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
+    #[must_use] 
     pub fn check_item(&self, presentation: &Presentation) -> CheckItem {
         if self.items.contains(presentation) {
             CheckItem::Yes
+        } else if let Some(_found_presentation) = self
+            .items
+            .iter()
+            .find(|inner| inner.title == presentation.title)
+        {
+            CheckItem::Maybe
         } else {
-            if let Some(_found_presentation) = self
-                .items
-                .iter()
-                .find(|inner| inner.title == presentation.title)
-            {
-                CheckItem::Maybe
-            } else {
-                CheckItem::No
-            }
+            CheckItem::No
         }
     }
     pub async fn new_presentation_model(db: Arc<SqlitePool>) -> Self {

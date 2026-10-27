@@ -91,15 +91,15 @@ pub enum TextAlignment {
 impl From<TextAlignment> for fdsm_lumina::cosmic_text::Align {
     fn from(value: TextAlignment) -> Self {
         match value {
-            TextAlignment::TopLeft => fdsm_lumina::cosmic_text::Align::Left,
-            TextAlignment::TopCenter => fdsm_lumina::cosmic_text::Align::Center,
-            TextAlignment::TopRight => fdsm_lumina::cosmic_text::Align::Right,
-            TextAlignment::MiddleLeft => fdsm_lumina::cosmic_text::Align::Left,
-            TextAlignment::MiddleCenter => fdsm_lumina::cosmic_text::Align::Center,
-            TextAlignment::MiddleRight => fdsm_lumina::cosmic_text::Align::Right,
-            TextAlignment::BottomLeft => fdsm_lumina::cosmic_text::Align::Left,
-            TextAlignment::BottomCenter => fdsm_lumina::cosmic_text::Align::Center,
-            TextAlignment::BottomRight => fdsm_lumina::cosmic_text::Align::Right,
+            TextAlignment::TopLeft => Self::Left,
+            TextAlignment::TopCenter => Self::Center,
+            TextAlignment::TopRight => Self::Right,
+            TextAlignment::MiddleLeft => Self::Left,
+            TextAlignment::MiddleCenter => Self::Center,
+            TextAlignment::MiddleRight => Self::Right,
+            TextAlignment::BottomLeft => Self::Left,
+            TextAlignment::BottomCenter => Self::Center,
+            TextAlignment::BottomRight => Self::Right,
         }
     }
 }
@@ -742,19 +742,19 @@ impl SlideBuilder {
         };
         let text_properties = TextProperties {
             text_alignment,
-            font: self.font.as_ref().map(|font| font.get_name()),
+            font: self.font.as_ref().map(super::super::ui::text_svg::Font::get_name),
             font_size: self.font_size.map(|size| size as f32),
-            font_weight: self.font.as_ref().map(|font| font.get_weight()),
-            font_style: self.font.as_ref().map(|font| font.get_style()),
+            font_weight: self.font.as_ref().map(super::super::ui::text_svg::Font::get_weight),
+            font_style: self.font.as_ref().map(super::super::ui::text_svg::Font::get_style),
             font_stretch: None,
             text_color: self.text_color.as_ref().map(|color| color.0),
-            stroke_size: self.stroke.as_ref().map(|stroke| stroke.size as f32),
+            stroke_size: self.stroke.as_ref().map(|stroke| f32::from(stroke.size)),
             stroke_color: self.stroke.as_ref().map(|stroke| stroke.color.0),
-            shadow_size: self.shadow.as_ref().map(|shadow| shadow.spread as f32),
+            shadow_size: self.shadow.as_ref().map(|shadow| f32::from(shadow.spread)),
             shadow_offset: self
                 .shadow
                 .as_ref()
-                .map(|shadow| (shadow.offset_x as f32, shadow.offset_y as f32)),
+                .map(|shadow| (f32::from(shadow.offset_x), f32::from(shadow.offset_y))),
             shadow_color: self.shadow.as_ref().map(|shadow| shadow.color.0),
         };
         let id = SlideId(Uuid::new_v4());

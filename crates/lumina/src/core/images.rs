@@ -154,17 +154,16 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
+    #[must_use] 
     pub fn check_item(&self, image: &Image) -> CheckItem {
         if self.items.contains(image) {
             CheckItem::Yes
+        } else if let Some(_found_image) =
+            self.items.iter().find(|inner| inner.title == image.title)
+        {
+            CheckItem::Maybe
         } else {
-            if let Some(_found_image) =
-                self.items.iter().find(|inner| inner.title == image.title)
-            {
-                CheckItem::Maybe
-            } else {
-                CheckItem::No
-            }
+            CheckItem::No
         }
     }
     pub async fn new_image_model(db: Arc<SqlitePool>) -> Self {
