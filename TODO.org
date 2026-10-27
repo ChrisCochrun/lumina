@@ -9,6 +9,8 @@ I need to make some types that translate between shadows and outlines and other 
 * TODO [#A] Deployment pipeline and get a MVP going
 We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
+Nix and flatpak builds are working now
+
 * TODO [#A] Fix song imports so that they actually get rid of extra cruft
 Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
 

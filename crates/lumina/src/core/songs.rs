@@ -669,7 +669,7 @@ impl Model<Song> {
         if self.items.contains(song) {
             CheckItem::Yes
         } else {
-            if let Some(found_song) =
+            if let Some(_found_song) =
                 self.items.iter().find(|inner| inner.title == song.title)
             {
                 CheckItem::Maybe

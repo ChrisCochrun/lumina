@@ -217,7 +217,7 @@ fn generate_glyph(
     font_system: &FontSystem,
     key: CacheKey,
 ) -> Result<Option<GlyphBitmap>, RenderError> {
-    let result = font_system
+    font_system
         .db()
         .with_face_data(
             key.glyph.font_id,
@@ -278,8 +278,7 @@ fn generate_glyph(
         )
         .ok_or_else(|| {
             RenderError::Font(format!("unknown font id {:?}", key.glyph.font_id))
-        })?;
-    result
+        })?
 }
 
 #[cfg(test)]

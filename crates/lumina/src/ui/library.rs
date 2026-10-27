@@ -1437,13 +1437,13 @@ impl<'a> Library {
 
     pub fn item_in_library(&self, service_item: &ServiceItem) -> CheckItem {
         match &service_item.kind {
-            ServiceItemKind::Song(song) => self.song_library.check_item(&song),
-            ServiceItemKind::Video(video) => self.video_library.check_item(&video),
-            ServiceItemKind::Image(image) => self.image_library.check_item(&image),
+            ServiceItemKind::Song(song) => self.song_library.check_item(song),
+            ServiceItemKind::Video(video) => self.video_library.check_item(video),
+            ServiceItemKind::Image(image) => self.image_library.check_item(image),
             ServiceItemKind::Presentation(presentation) => {
-                self.presentation_library.check_item(&presentation)
+                self.presentation_library.check_item(presentation)
             }
-            ServiceItemKind::Content(slide) => todo!(),
+            ServiceItemKind::Content(_slide) => todo!(),
         }
     }
 }

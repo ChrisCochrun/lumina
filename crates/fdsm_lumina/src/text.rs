@@ -29,6 +29,7 @@ impl GlyphIdKey {
             size_bits: font_size.to_bits(),
         }
     }
+    #[allow(dead_code)]
     pub fn font_size(self) -> f32 {
         f32::from_bits(self.size_bits)
     }

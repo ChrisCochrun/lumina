@@ -866,7 +866,7 @@ impl cosmic::Application for App {
             {
                 potentials_column =
                     potentials_column.push(text::title2("Songs not found in library"));
-                for song in potential_songs.iter() {
+                for song in potential_songs {
                     let title = text::title3(song.title.clone());
                     let mut extras_row: Vec<Element<Message>> = Vec::new();
                     if let Some(author) = &song.author {

@@ -184,7 +184,7 @@ impl Model<Video> {
         if self.items.contains(video) {
             CheckItem::Yes
         } else {
-            if let Some(found_video) =
+            if let Some(_found_video) =
                 self.items.iter().find(|inner| inner.title == video.title)
             {
                 CheckItem::Maybe

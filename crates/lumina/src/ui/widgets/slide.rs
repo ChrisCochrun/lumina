@@ -17,9 +17,8 @@ use iced_core::widget::{Operation, Tree};
 use iced_core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Widget, layout, mouse, renderer,
 };
-use iced_wgpu::Primitive;
 use iced_wgpu::core::renderer::Quad;
-use iced_wgpu::primitive::{Pipeline, Renderer as PrimitiveRenderer};
+use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
 
 use crate::core::animation::Animation;
@@ -392,6 +391,7 @@ where
             })
     }
 
+    #[allow(clippy::too_many_lines)]
     #[allow(clippy::float_cmp)]
     #[inline]
     fn draw(
@@ -695,7 +695,7 @@ where
             });
         }
 
-        if self.slide.text.len() > 0 {
+        if !self.slide.text.is_empty() {
             let mut text_renderer = FdsmTextPrimitive::new(
                 Arc::clone(&self.settings.font_system),
                 // &clip_bounds,
@@ -703,11 +703,11 @@ where
             let text_props = self.slide.text_properties.clone().unwrap_or_default();
 
             if let Some(mut text) = build_text(
-                Arc::clone(&self.settings.font_system),
+                &self.settings.font_system,
                 &self.slide.text,
                 &text_props,
                 &bounds,
-                &viewport,
+                viewport,
             ) {
                 let text_height = text.height();
 
@@ -756,12 +756,13 @@ where
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn build_text(
-    font_system: Arc<Mutex<FontSystem>>,
+    font_system: &Arc<Mutex<FontSystem>>,
     text: impl AsRef<str>,
     text_props: &TextProperties,
     bounds: &Rectangle,
-    viewport: &Rectangle,
+    _viewport: &Rectangle,
 ) -> Option<StyledText> {
     font_system.lock().ok().map(|mut font_system| {
         // tracing::warn!(
@@ -791,7 +792,7 @@ pub fn build_text(
         let default_attrs = attrs.clone();
         let mut text_builder = StyledTextBuilder::new(
             TextRegion::new(bounds.width, bounds.height),
-            metrics.clone(),
+            metrics,
             &default_attrs,
         );
         if let Some(style) = text_props.font_style {
@@ -800,7 +801,7 @@ pub fn build_text(
                 iced_core::font::Style::Italic => fontdb::Style::Italic,
                 iced_core::font::Style::Oblique => fontdb::Style::Oblique,
             };
-            attrs = attrs.style(style)
+            attrs = attrs.style(style);
         }
 
         if let Some(weight) = text_props.font_weight {
@@ -815,7 +816,7 @@ pub fn build_text(
                 iced_core::font::Weight::ExtraBold => fontdb::Weight::EXTRA_BOLD,
                 iced_core::font::Weight::Black => fontdb::Weight::BLACK,
             };
-            attrs = attrs.weight(weight)
+            attrs = attrs.weight(weight);
         }
 
         if let Some(stretch) = text_props.font_stretch {
@@ -834,7 +835,7 @@ pub fn build_text(
                 iced_core::font::Stretch::ExtraExpanded => fontdb::Stretch::ExtraExpanded,
                 iced_core::font::Stretch::UltraExpanded => fontdb::Stretch::UltraExpanded,
             };
-            attrs = attrs.stretch(stretch)
+            attrs = attrs.stretch(stretch);
         }
 
         let color = text_props.text_color.unwrap_or_default();
@@ -868,7 +869,7 @@ pub fn build_text(
             glow_in: Glow::default(),
             shadow: fdsm_lumina::style::Shadow {
                 color: shadow_color,
-                direction: [shadow_direction.0, shadow_direction.1],
+                direction: shadow_direction.into(),
                 width: shadow_size * scale * 2.0,
                 spread: 0.1,
                 softness: shadow_size * 2.0,

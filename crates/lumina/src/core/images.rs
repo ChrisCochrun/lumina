@@ -158,7 +158,7 @@ impl Model<Image> {
         if self.items.contains(image) {
             CheckItem::Yes
         } else {
-            if let Some(found_image) =
+            if let Some(_found_image) =
                 self.items.iter().find(|inner| inner.title == image.title)
             {
                 CheckItem::Maybe

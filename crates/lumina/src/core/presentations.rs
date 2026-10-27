@@ -299,7 +299,7 @@ impl Model<Presentation> {
         if self.items.contains(presentation) {
             CheckItem::Yes
         } else {
-            if let Some(found_presentation) = self
+            if let Some(_found_presentation) = self
                 .items
                 .iter()
                 .find(|inner| inner.title == presentation.title)

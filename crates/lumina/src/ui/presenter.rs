@@ -382,7 +382,7 @@ impl Presenter {
                     }
                 } else {
                     let mut map = HashMap::new();
-                    map.insert(slide_id.clone(), vec![action]);
+                    map.insert(slide_id, vec![action]);
                     self.slide_action_map = Some(map);
                 }
                 return self.update(Message::CloseContextMenu);
