@@ -6,6 +6,6 @@ Name=Lumina
 Comment=A church presentation app that is built to be simple to use.
 Categories=Graphics;
 
-Icon=lumina
+Icon=xyz.cochrun.lumina
 Exec=lumina
 Terminal=false

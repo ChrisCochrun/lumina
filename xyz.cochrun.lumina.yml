@@ -19,6 +19,7 @@ finish-args:
   - --share=ipc
   - --socket=fallback-x11
   - --socket=wayland
+  - --socket=pulseaudio
   - --device=dri
   - --share=network
   - --talk-name=com.system76.CosmicSettingsDaemon
@@ -62,7 +63,8 @@ modules:
       # - cargo build --release
 
       - install -Dm755 target/release/lumina -t /app/bin
-      - install -Dm644 res/icons/lumina.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 res/icons/lumina-64.png /app/share/icons/hicolor/64x64/apps/${FLATPAK_ID}.png
+      - install -Dm644 res/icons/lumina-128.png /app/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
       - install -Dm644 res/${FLATPAK_ID}.desktop -t /app/share/applications
       - install -Dm644 res/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
 
@@ -74,4 +76,4 @@ modules:
       - type: dir
         path: .
 
-      - cargo-sources.json
+      - cargo-sources-split.json
