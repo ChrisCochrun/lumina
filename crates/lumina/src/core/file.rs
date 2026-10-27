@@ -483,7 +483,7 @@ mod test {
     fn test_load() -> Result<(), String> {
         test_save();
         let path = PathBuf::from("./test.pres");
-        let result = unpack_load_file(&path).map(load).flatten();
+        let result = unpack_load_file(&path).and_then(load);
         match result {
             Ok((items, _map)) => {
                 assert!(!items.is_empty());

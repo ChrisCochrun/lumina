@@ -124,7 +124,7 @@ impl Traverser for LumTraverser {
 
 impl OrgService {
     pub fn new(path: impl AsRef<Path>) -> Self {
-        let org_doc = Org::parse(fs::read_to_string(path).unwrap_or(String::new()));
+        let org_doc = Org::parse(fs::read_to_string(path).unwrap_or_default());
         let mut traverser = LumTraverser::default();
         org_doc.traverse(&mut traverser);
         todo!()
