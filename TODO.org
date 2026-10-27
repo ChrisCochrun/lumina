@@ -3,6 +3,9 @@
 #+CATEGORY: dev
 
 
+* TODO [#A] Better architecture for using text style that map to FDSM text styles
+I need to make some types that translate between shadows and outlines and other things to turn into FDSM styles. It'll refactor a lot of things and end up giving me easier types to work with in the UI too.
+
 * TODO [#A] Deployment pipeline and get a MVP going
 We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
@@ -58,7 +61,8 @@ I could potentially do the same with markdown, but since this is for me first, I
 
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 
-* TODO [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
+* DONE [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
+CLOSED: [2026-10-26 Mon 16:34]
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
 
 Actually, what if we just made the svg at load/creation time and stored it in the file system for later, then load the entire songs svg's into memory during the presentation to speed things up? Would that be faster than creating them at on the fly? Is it the creation of them that is slow or the rendering?

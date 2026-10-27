@@ -871,7 +871,7 @@ pub fn build_text(
                 direction: [shadow_direction.0, shadow_direction.1],
                 width: shadow_size * scale * 2.0,
                 spread: 0.1,
-                softness: shadow_size,
+                softness: shadow_size * 2.0,
                 roundness: 1.0,
             },
         };
