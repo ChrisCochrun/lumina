@@ -34,10 +34,20 @@
             # Default files from crane (Rust and cargo files)
             (craneLib.fileset.commonCargoSources unfilteredRoot)
             # Include all the .sql migrations as well
-            ./migrations
+            ./crates/lumina/migrations
+            ./res
+            ./crates/fdsm_lumina/src/msdf.wgsl
           ];
         };
-
+        gstPlugins = with pkgs.gst_all_1; [
+          gst-plugins-base
+          gst-plugins-good
+          gst-plugins-bad
+          gst-plugins-ugly
+          gst-libav
+          gst-plugins-rs
+        ];
+        
         nativeBuildInputs = with pkgs; [
           # Rust tools
           # toolchain
@@ -101,18 +111,11 @@
           glib
           alsa-lib
           lldb
-          gst_all_1.gst-libav
-          gst_all_1.gst-plugins-bad
-          gst_all_1.gst-plugins-good
-          gst_all_1.gst-plugins-ugly
-          gst_all_1.gst-plugins-base
-          gst_all_1.gst-plugins-rs
-          gst_all_1.gst-vaapi
           gst_all_1.gstreamer
           ffmpeg-full
           mupdf
           # yt-dlp
-        ];
+        ] ++ gstPlugins;
 
         LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${
           with pkgs;
@@ -150,8 +153,27 @@
 
             preBuild = ''
               export DATABASE_URL=sqlite:./db.sqlite3
+              cp -r ./crates/lumina/migrations migrations
               sqlx database create
               sqlx migrate run
+            '';
+            postInstall = ''
+            install -Dm644 res/icons/lumina.svg \
+            $out/share/icons/hicolor/scalable/apps/xyz.cochrun.lumina.svg
+
+            install -Dm644 res/xyz.cochrun.lumina.desktop \
+            $out/share/applications/xyz.cochrun.lumina.desktop
+
+            install -Dm644 res/xyz.cochrun.lumina.metainfo.xml \
+            $out/share/metainfo/xyz.cochrun.lumina.metainfo.xml
+            '';
+            preFixup = ''
+            libcosmicAppWrapperArgs+=(
+            --prefix GST_PLUGIN_SYSTEM_PATH_1_0 :
+              "${lib.makeSearchPath "lib/gstreamer-1.0" gstPlugins}"
+            --prefix PATH :           
+              "${lib.makeBinPath [ pkgs.ffmpeg-full pkgs.yt-dlp ]}"
+            )
             '';
             cargoTestCommand = "";
             cargoExtraArgs = "";
@@ -173,10 +195,11 @@
             };
         defaultPackage = lumina;
         packages = {
-          postInstall = ''
-            libcosmicAppWrapperArgs+=(--prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "$GST_PLUGIN_SYSTEM_PATH_1_0")
-          '';
           default = lumina;
+        };
+        apps.default = flake-utils.lib.mkApp {
+          drv = lumina;
+          exePath = "/bin/lumina";
         };
       }
     );
