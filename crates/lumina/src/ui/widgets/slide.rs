@@ -406,11 +406,9 @@ where
     ) {
         let bounds = layout.bounds();
 
-        // let content_layout = layout
-        //     .children()
-        //     .next()
-        //     .expect("There should always be a child");
-
+        let Some(clip_bounds) = bounds.intersection(viewport) else {
+            return;
+        };
         let clip_bounds = layout
             .bounds()
             .intersection(viewport)
