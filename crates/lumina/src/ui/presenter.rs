@@ -65,7 +65,6 @@ pub(crate) struct Presenter {
     direction_of_slide_change: scroll_operations::Direction,
     scroll_id: Id,
     active_slide_id: Id,
-    current_font: Font,
     pub slide_action_map: Option<HashMap<SlideId, Vec<slide_actions::Action>>>,
     obs_client: Option<Arc<Client>>,
     context_menu_id: Option<(usize, usize)>,
@@ -103,7 +102,6 @@ pub(crate) enum Message {
     LoadedService,
     MissingPlugin(iced_video_player::gst::Message),
     HoveredSlide(Option<(usize, usize, Point)>),
-    ChangeFont(String),
     Error(String),
     None,
     RightClickSlide(usize, usize),
@@ -230,7 +228,6 @@ impl Presenter {
             direction_of_slide_change: scroll_operations::Direction::Forward,
             scroll_id: Id::unique(),
             active_slide_id: Id::unique(),
-            current_font: cosmic::font::default(),
             slide_action_map: None,
             obs_client: None,
             context_menu_id: None,
@@ -390,20 +387,6 @@ impl Presenter {
             Message::ChangePreviewSize(size) => {
                 self.preview_size = size as f32;
                 debug!(self.preview_size);
-            }
-            Message::ChangeFont(s) => {
-                let font_name = s.into_boxed_str();
-                let family = Family::Name(Box::leak(font_name));
-                let weight = Weight::Normal;
-                let stretch = Stretch::Normal;
-                let style = Style::Normal;
-                let font = Font {
-                    family,
-                    weight,
-                    stretch,
-                    style,
-                };
-                self.current_font = font;
             }
             Message::EndVideo => {
                 // if self.current_slide.video_loop() {
@@ -1064,11 +1047,6 @@ impl Presenter {
         debug!(?bg, "comparing background...");
         let backgrounds_match = self.current_slide.background() == slide.background();
 
-        debug!("cloning slide...");
-        let font = slide
-            .font()
-            .map_or_else(String::new, |font| font.get_name());
-        let _ = self.update(Message::ChangeFont(font));
         debug!("changing video now...");
         self.old_slide = Some(self.current_slide.clone());
         self.current_slide = slide;
