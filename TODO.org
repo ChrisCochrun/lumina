@@ -11,11 +11,6 @@ We are close on this. The main pipeline consists of needing some virtual machine
 
 Nix and flatpak builds are working now
 
-* TODO [#A] Fix song imports so that they actually get rid of extra cruft
-Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
-
-??????? Don't know if this is still broke or not.....
-
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
 This could play into font systems...
@@ -28,7 +23,6 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
 
-* TODO [#B] Add an access time to the database so that we can sort library items by last used or edited.
 * TODO [#B] Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
@@ -63,6 +57,16 @@ I could potentially do the same with markdown, but since this is for me first, I
 
 * TODO [#C] Allow for a way to split the presentation up with a right click menu for the presentation preview row.
 
+* TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
+
+* DONE [#A] Fix song imports so that they actually get rid of extra cruft
+CLOSED: [2026-10-30 Fri 07:09]
+Sometimes a song imported from Genius will have extra junk that was in the middle of the lyrics on the page. Sometimes the lyrics themselves seem to still carry the styling from the webpage and effect the look through the SVG.
+
+??????? Don't know if this is still broke or not.....
+
+* DONE [#B] Add an access time to the database so that we can sort library items by last used or edited.
+CLOSED: [2026-10-30 Fri 07:09]
 * DONE [#C] Text could be built by using SVG instead of the text element. Maybe I could construct my own text element even
 CLOSED: [2026-10-26 Mon 16:34]
 This does almost work. There is a clear amount of lag or rather hang up since switching to the =text_svg=  element. I think I may only keep it till I can figure out how to do strokes and shadows in iced's normal text element.
@@ -86,8 +90,6 @@ I bet this is tricking up the loading mechanism. Loading only grabs all the back
 
 ** Made this slightly faster
 Since strings are allocated on the heap, I've changed how to construct the svg string a bit, but honestly, it doesn't matter too much because most of the performance cost seems to be in rendering the string using resvg. So, this can still be something that get's fixed later, and I believe that fix will come in the form of a multi-channel signed distance field wgpu rendered text eventually. We can work on this much later though.
-
-* TODO [#C] Make the presenter more modular so things are easier to change. This is vague...
 
 * DONE [#A] Fix loading file with pdf not showing the pdf properly
 CLOSED: [2026-10-02 Fri 10:59]
