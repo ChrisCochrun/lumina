@@ -25,7 +25,7 @@ opt-level = 3
 debug = "line-tables-only"
 
 [profile.dev]
-opt-level = 1
+opt-level = 3
 debug = "line-tables-only"
 # codegen-backend = "cranelift"
 
