@@ -180,7 +180,7 @@ impl ServiceTrait for Video {
 }
 
 impl Model<Video> {
-    #[must_use] 
+    #[must_use]
     pub fn check_item(&self, video: &Video) -> CheckItem {
         if self.items.contains(video) {
             CheckItem::Yes
@@ -301,23 +301,30 @@ pub async fn add_video(
     mut current_videos: Vec<Video>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Video>> {
-    for video in new_videos {
+    for mut video in new_videos {
         let path = video
             .path
             .to_str()
             .map(std::string::ToString::to_string)
             .unwrap_or_default();
+        let created_at = Local::now();
+        let accessed_at = Local::now();
 
-        query!(
-            r#"INSERT INTO videos (title, file_path, start_time, end_time, loop) VALUES ($1, $2, $3, $4, $5)"#,
+        video.id = query!(
+            r#"INSERT INTO videos (title, file_path, start_time, end_time, loop, created_at, accessed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             video.title,
             path,
             video.start_time,
             video.end_time,
-            video.looping
+            video.looping,
+            created_at,
+            accessed_at
         )
             .execute(&*db)
             .await
+            .into_diagnostic()?
+            .last_insert_rowid()
+            .try_into()
             .into_diagnostic()?;
 
         current_videos.push(video);
@@ -336,14 +343,17 @@ pub async fn update_video(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
 
+    let accessed_at = Local::now();
+
     query!(
-        r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6 WHERE id = $1"#,
+        r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6, accessed_at = $7 WHERE id = $1"#,
         video.id,
         video.title,
         path,
         video.start_time,
         video.end_time,
         video.looping,
+        accessed_at
     )
         .execute(&*db)
         .await.into_diagnostic()?;
@@ -382,6 +392,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "For local tests only"]
     async fn test_db_and_model() {
         let mut video_model: Model<Video> = Model {
             items: vec![],

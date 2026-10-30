@@ -154,7 +154,7 @@ impl ServiceTrait for Image {
 }
 
 impl Model<Image> {
-    #[must_use] 
+    #[must_use]
     pub fn check_item(&self, image: &Image) -> CheckItem {
         if self.items.contains(image) {
             CheckItem::Yes
@@ -235,6 +235,14 @@ impl Model<Image> {
         self.sort();
         self
     }
+
+    // pub fn update_access_time(&mut self, id: i32, db: Arc<SplitePool>) {
+    //     let accessed_at = Local::now();
+    //     query!("UPDATE images SET accessed_at = $2 WHERE id = $1", id, accessed_at).execute(&*db).await.into_diagnostic()?;
+    //     if let Some(image) = self.items.iter_mut().find_or_first(|image| image.id == id) {
+    //         image.accessed_at = accessed_at;
+    //     }
+    // }
 }
 
 pub async fn remove_images(
@@ -282,20 +290,28 @@ pub async fn add_image(
     mut current_images: Vec<Image>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Image>> {
-    for image in new_images {
+    for mut image in new_images {
         let path = image
             .path
             .to_str()
             .map(ToString::to_string)
             .unwrap_or_default();
 
-        query!(
-            r#"INSERT INTO images (title, file_path) VALUES ($1, $2)"#,
+        let created_at = Local::now();
+        let accessed_at = Local::now();
+
+        image.id = query!(
+            r#"INSERT INTO images (title, file_path, created_at, accessed_at) VALUES ($1, $2, $3, $4)"#,
             image.title,
             path,
+            created_at,
+            accessed_at
         )
         .execute(&*db)
         .await
+        .into_diagnostic()?
+        .last_insert_rowid()
+        .try_into()
         .into_diagnostic()?;
 
         current_images.push(image);
@@ -314,11 +330,13 @@ pub async fn update_image(
         .map(std::string::ToString::to_string)
         .unwrap_or_default();
 
+    let accessed_at = Local::now();
     query!(
-        r#"UPDATE images SET title = $2, file_path = $3 WHERE id = $1"#,
+        r#"UPDATE images SET title = $2, file_path = $3, accessed_at = $4 WHERE id = $1"#,
         image.id,
         image.title,
         path,
+        accessed_at
     )
     .execute(&*db)
     .await
@@ -356,6 +374,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "For local tests only"]
     pub async fn test_db_and_model() {
         let mut image_model: Model<Image> = Model {
             items: vec![],

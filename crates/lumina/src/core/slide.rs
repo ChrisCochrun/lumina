@@ -742,10 +742,19 @@ impl SlideBuilder {
         };
         let text_properties = TextProperties {
             text_alignment,
-            font: self.font.as_ref().map(super::super::ui::text_svg::Font::get_name),
+            font: self
+                .font
+                .as_ref()
+                .map(super::super::ui::text_svg::Font::get_name),
             font_size: self.font_size.map(|size| size as f32),
-            font_weight: self.font.as_ref().map(super::super::ui::text_svg::Font::get_weight),
-            font_style: self.font.as_ref().map(super::super::ui::text_svg::Font::get_style),
+            font_weight: self
+                .font
+                .as_ref()
+                .map(super::super::ui::text_svg::Font::get_weight),
+            font_style: self
+                .font
+                .as_ref()
+                .map(super::super::ui::text_svg::Font::get_style),
             font_stretch: None,
             text_color: self.text_color.as_ref().map(|color| color.0),
             stroke_size: self.stroke.as_ref().map(|stroke| f32::from(stroke.size)),
@@ -808,7 +817,7 @@ mod test {
     }
 
     #[test]
-    fn test_ron_deserialize() {
+    fn ron_deserialize() {
         let slide =
             read_to_string("./test_presentation.ron").expect("Problem getting file read");
         if let Err(e) = ron::from_str::<Vec<Slide>>(&slide) {

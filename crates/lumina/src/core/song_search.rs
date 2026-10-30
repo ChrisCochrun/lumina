@@ -3,12 +3,13 @@ use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_till, take_till1, take_until};
-use nom::character::complete::{digit0, space0};
-use nom::combinator::rest;
+use nom::character::complete::{self, digit0, space0};
+use nom::combinator::{all_consuming, rest};
 use nom::multi::many1;
 use nom::sequence::{delimited, pair};
 use nom::{IResult, Parser};
 use reqwest::header;
+use scraper::{ElementRef, Node};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -37,6 +38,12 @@ pub enum Provider {
     LyricsCom,
 }
 
+#[derive(Debug, Default)]
+struct ParsedLyrics {
+    verse_map: HashMap<VerseName, String>,
+    order: Vec<VerseName>,
+}
+
 impl Display for Provider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -48,38 +55,52 @@ impl Display for Provider {
 
 impl From<OnlineSong> for Song {
     fn from(online_song: OnlineSong) -> Self {
-        let verse_map = if online_song.provider == (Provider::Genius { parsable: true }) {
-            parse_genius_lyrics(&online_song.lyrics.replace("\\n", "\n")).ok()
-        } else {
+        let unparsable_song = || {
+            let verse = VerseName::Verse { number: 1 };
             let mut map = HashMap::new();
-            map.entry(VerseName::Verse { number: 1 })
-                .or_insert(online_song.lyrics);
-            Some(map)
+            map.entry(verse).or_insert(online_song.lyrics.clone());
+            (map, vec![verse])
         };
+
+        let (verse_map, verses) = if online_song.provider
+            == (Provider::Genius { parsable: true })
+        {
+            match online_song.provider {
+                Provider::Genius { parsable: true } => {
+                    match parse_genius_lyrics(&online_song.lyrics.replace("\\n", "\n")) {
+                        Ok(res) => res,
+                        Err(error) => {
+                            error!(?error);
+                            unparsable_song()
+                        }
+                    }
+                }
+                _ => unparsable_song(),
+            }
+        } else {
+            unparsable_song()
+        };
+
         let lyrics = ron::ser::to_string(&verse_map).ok();
 
-        let verse_order: Option<Vec<String>> = verse_map
-            .as_ref()
-            .map(|map| map.keys().map(VerseName::get_name).collect());
-
-        let verses: Option<Vec<VerseName>> = verse_map
-            .as_ref()
-            .map(|map| map.keys().map(ToOwned::to_owned).collect());
+        let verse_order = verses.iter().map(VerseName::get_name).collect();
 
         Self {
             title: online_song.title,
             author: Some(online_song.author),
-            verse_map,
+            verse_map: Some(verse_map),
             lyrics,
-            verse_order,
-            verses,
+            verse_order: Some(verse_order),
+            verses: Some(verses),
             ..Default::default()
         }
     }
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-fn parse_genius_lyrics(lyrics: &str) -> Result<HashMap<VerseName, String>> {
+fn parse_genius_lyrics(
+    lyrics: &str,
+) -> Result<(HashMap<VerseName, String>, Vec<VerseName>)> {
     let (input, chunks) = many1(pair(parse_verse_name, alt((take_until("["), rest))))
         .parse(lyrics)
         .map_err(|e| e.to_owned())
@@ -89,16 +110,79 @@ fn parse_genius_lyrics(lyrics: &str) -> Result<HashMap<VerseName, String>> {
     dbg!(&chunks);
 
     let mut map = HashMap::new();
+    let mut verses = Vec::new();
 
     for (mut name, lyric) in chunks {
-        while map.contains_key(&name) {
+        while let Some(existing) = map.get(&name) {
+            if existing == lyric {
+                break;
+            }
             name = name.next();
         }
 
         map.entry(name).or_insert_with(|| lyric.trim().to_string());
+        verses.push(name);
     }
 
-    Ok(map)
+    Ok((map, verses))
+}
+
+fn bracket_content(input: &str) -> IResult<&str, &str> {
+    all_consuming(delimited(
+        complete::char('['),
+        take_till(|c| c == ']'),
+        complete::char(']'),
+    ))
+    .parse(input)
+}
+
+fn parse_section_header(line: &str) -> Option<VerseName> {
+    let (_, content) = bracket_content(line.trim()).ok()?;
+
+    // Remove performer credits following a colon.
+    let heading = content.split(':').next()?.trim();
+    let mut words = heading.split_whitespace();
+
+    let kind = words.next()?.to_ascii_lowercase();
+
+    let number = words
+        .find_map(|word| word.parse::<usize>().ok())
+        .filter(|number| *number > 0)
+        .unwrap_or(1);
+
+    Some(match kind.as_str() {
+        "verse" => VerseName::Verse { number },
+        "chorus" | "refrain" | "hook" => VerseName::Chorus { number },
+        "pre-chorus" | "prechorus" => VerseName::PreChorus { number },
+        "post-chorus" | "postchorus" => VerseName::PostChorus { number },
+        "bridge" => VerseName::Bridge { number },
+        "intro" => VerseName::Intro { number },
+        "outro" | "ending" => VerseName::Outro { number },
+        "instrumental" | "interlude" | "solo" => VerseName::Instrumental { number },
+        "other" | "tag" | "spoken" => VerseName::Other { number },
+        _ => return None,
+    })
+}
+
+fn take_heading_tail(input: &str) -> IResult<&str, &str> {
+    let mut depth = 0;
+
+    for (i, c) in input.char_indices() {
+        match c {
+            '[' => depth += 1,
+            ']' if depth == 0 => {
+                return Ok((&input[i..], &input[..i]));
+            }
+            ']' => depth -= 1,
+            '\n' => break,
+            _ => {}
+        }
+    }
+
+    Err(nom::Err::Error(nom::error::Error::new(
+        input,
+        nom::error::ErrorKind::TakeUntil,
+    )))
 }
 
 fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
@@ -109,7 +193,7 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
             space0,
             digit0,
             alt((tag(":"), space0)),
-            take_till(|c| c == ']'),
+            take_heading_tail,
         ),
         (space0, tag("]")),
     )
@@ -118,16 +202,16 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     let num = num.parse::<usize>().unwrap_or(1);
     dbg!(&name);
 
-    let verse_name = match name {
-        "Chorus" => VerseName::Chorus { number: num },
-        "Verse" => VerseName::Verse { number: num },
-        "Bridge" => VerseName::Bridge { number: num },
-        "Pre-Chorus" => VerseName::PreChorus { number: num },
-        "Post-Chorus" => VerseName::PostChorus { number: num },
-        "Outro" => VerseName::Outro { number: num },
-        "Intro" => VerseName::Intro { number: num },
-        "Instrumental" => VerseName::Instrumental { number: num },
-        _ => VerseName::Verse { number: 99 },
+    let verse_name = match name.to_ascii_lowercase().as_str() {
+        "chorus" | "refrain" | "hook" => VerseName::Chorus { number: num },
+        "verse" => VerseName::Verse { number: num },
+        "bridge" => VerseName::Bridge { number: num },
+        "pre-chorus" | "prechorus" => VerseName::PreChorus { number: num },
+        "post-chorus" | "postchorus" => VerseName::PostChorus { number: num },
+        "outro" | "ending" => VerseName::Outro { number: num },
+        "intro" => VerseName::Intro { number: num },
+        "instrumental" | "interlude" | "solo" => VerseName::Instrumental { number: num },
+        _ => VerseName::Other { number: num },
     };
 
     Ok((input, verse_name))
@@ -158,11 +242,11 @@ pub async fn search_genius(query: String, auth_token: String) -> Result<Vec<Onli
     let json: Value = serde_json::from_str(&response).into_diagnostic()?;
     let hits = json
         .get("response")
-        .expect("respose")
+        .ok_or_else(|| miette!("Couldn't parse json response"))?
         .get("hits")
-        .expect("hits")
+        .ok_or_else(|| miette!("Couldn't parse json hits"))?
         .as_array()
-        .expect("array");
+        .ok_or_else(|| miette!("Couldn't parse json array"))?;
     let songs: Vec<Option<OnlineSong>> =
         cosmic::iced::futures::future::join_all(hits.iter().map(|hit| async {
             let result = hit.get("result").expect("result");
@@ -214,67 +298,132 @@ pub async fn get_genius_lyrics(mut song: OnlineSong) -> Result<OnlineSong> {
         .text()
         .await
         .into_diagnostic()?;
-    let document = scraper::Html::parse_document(&html);
-    let Ok(lyrics_root_selector) =
-        scraper::Selector::parse(r#"div[data-lyrics-container="true"]"#)
-    else {
-        return Err(miette!("error in finding lyrics_root"));
-    };
-
-    let lyrics = document
-        .select(&lyrics_root_selector)
-        .filter(|element| element.attr("data-exclude-from-selection").is_none())
-        .filter(|element| {
-            !element.value().classes().any(|class| {
-                class.contains("Contrib")
-                    || class.contains("LyricsHeader")
-                    || class.contains("StyledLink")
-            })
-        })
-        .flat_map(|element| {
-            // dbg!(&element);
-            let inner = element.inner_html().replace("<br>", "\n");
-            // dbg!(&inner);
-            let line_broken = scraper::Html::parse_fragment(&inner);
-            line_broken
-                .root_element()
-                .descendent_elements()
-                .filter(|element| element.attr("data-exclude-from-selection").is_none())
-                .filter(|element| {
-                    let element_name = element.value().name();
-                    element_name != "div" && element_name != "path"
-                })
-                .filter(|element| {
-                    !element.value().classes().any(|class| {
-                        class.contains("Contrib")
-                            || class.contains("LyricsHeader")
-                            || class.contains("StyledLink")
-                    })
-                })
-                .flat_map(|t| {
-                    // let html = t.html();
-                    // debug!(html);
-                    t.text().collect::<Vec<&str>>()
-                })
-                .map(ToString::to_string)
-                .collect::<Vec<String>>()
-        })
-        .collect::<String>();
-    let lyrics = lyrics.find('[').map_or_else(
-        || {
-            lyrics.find("</div></div></div>").map_or_else(
-                || lyrics.clone(),
-                |position| lyrics.split_at(position + 18).1.to_string(),
-            )
-        },
-        |position| lyrics.split_at(position).1.to_string(),
-    );
-    // dbg!(&lyrics);
+    let lyrics = extract_genius_lyrics(html)?;
     song.provider = Provider::Genius {
         parsable: lyrics.contains('['),
     };
     song.lyrics = lyrics;
     Ok(song)
+}
+
+fn extract_genius_lyrics(html: String) -> Result<String> {
+    let document = scraper::Html::parse_document(&html);
+    let Ok(selector) = scraper::Selector::parse(r#"div[data-lyrics-container="true"]"#)
+    else {
+        return Err(miette!("error in finding lyrics_root"));
+    };
+    let mut sections = Vec::new();
+    for container in document.select(&selector) {
+        let mut raw = String::new();
+
+        visit_lyrics(container, &mut raw);
+
+        let text = normalize_lyrics(&raw);
+
+        if !text.is_empty() {
+            sections.push(text);
+        }
+    }
+
+    if sections.is_empty() {
+        return Err(miette!("No Genius lyrics found"));
+    }
+
+    Ok(sections.join("\n\n"))
+}
+
+fn normalize_lyrics(input: &str) -> String {
+    let input = input.replace("\r\n", "\n").replace('\u{a0}', " ");
+
+    let mut result = String::new();
+    let mut had_blank_line = false;
+
+    for line in input.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            had_blank_line = true;
+            continue;
+        }
+
+        if !result.is_empty() {
+            result.push('\n');
+
+            if had_blank_line {
+                result.push('\n');
+            }
+        }
+
+        result.push_str(line);
+        had_blank_line = false;
+    }
+
+    result
+}
+
+fn should_skip(element: &ElementRef<'_>) -> bool {
+    if element.attr("data-exclude-from-selection").is_some()
+        || element.attr("aria-hidden") == Some("true")
+    {
+        return true;
+    }
+
+    if matches!(
+        element.value().name(),
+        "script" | "style" | "svg" | "aside" | "nav" | "button" | "iframe" | "noscript"
+    ) {
+        return true;
+    }
+
+    element.value().classes().any(|class| {
+        [
+            "Contrib",
+            "LyricsHeader",
+            "LyricsFooter",
+            "LyricsControls",
+            "RecommendedSongs",
+            "Sidebar",
+        ]
+        .iter()
+        .any(|prefix| class.starts_with(prefix))
+    })
+}
+
+fn visit_lyrics(element: ElementRef<'_>, output: &mut String) {
+    if should_skip(&element) {
+        return;
+    }
+
+    let tag = element.value().name();
+
+    if tag == "br" {
+        output.push('\n');
+        return;
+    }
+
+    let is_block = matches!(tag, "div" | "p");
+
+    if is_block && !output.is_empty() && !output.ends_with('\n') {
+        output.push('\n');
+    }
+
+    for child in element.children() {
+        match child.value() {
+            Node::Text(text) => {
+                output.push_str(text);
+            }
+            Node::Element(_) => {
+                if let Some(child) = ElementRef::wrap(child) {
+                    visit_lyrics(child, output);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if is_block && !output.ends_with('\n') {
+        output.push('\n');
+    }
 }
 
 pub async fn search_lyrics_com_links(
@@ -504,6 +653,7 @@ mod test {
             "[Verse 3]",
             "[Verse 4:]",
             "[Verse 5: Coffee]",
+            "[Verse 6: [boohoo] Coffee]",
             "[Chorus 1]",
             "[ Chorus 2 ]",
         ];
@@ -577,5 +727,15 @@ Aw man, that was good"#;
         dbg!(new_map);
         // assert!(false);
         Ok(())
+    }
+
+    #[test]
+    fn parse_nested_brackets() {
+        let input = "[Bridge: [Megan Garrett?] & Mark Hall]\nSome lyrics";
+
+        let (remaining, name) = parse_verse_name(input).unwrap();
+
+        assert_eq!(name, VerseName::Bridge { number: 1 });
+        assert_eq!(remaining, "\nSome lyrics");
     }
 }

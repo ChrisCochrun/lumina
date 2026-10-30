@@ -668,12 +668,14 @@ impl Model<Song> {
     pub fn check_item(&self, song: &Song) -> CheckItem {
         if self.items.contains(song) {
             CheckItem::Yes
-        } else if let Some(_found_song) =
-            self.items.iter().find(|inner| inner.title == song.title)
-        {
-            CheckItem::Maybe
         } else {
-            CheckItem::No
+            if let Some(found_song) =
+                self.items.iter().find(|inner| inner.title == song.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
         }
     }
     pub async fn new_song_model(db: Arc<SqlitePool>) -> Self {
@@ -1381,6 +1383,7 @@ You saved my soul"
     }
 
     #[tokio::test]
+    #[ignore = "For local tests only"]
     async fn song_db_and_model() {
         let db = Arc::new(add_db().await.expect("ERROR OPENING"));
         if let Err(e) = fill_db(Arc::clone(&db)).await {

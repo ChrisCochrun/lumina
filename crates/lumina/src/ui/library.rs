@@ -322,11 +322,6 @@ impl<'a> Library {
             Message::AddPresentationSplit(presentation) => {
                 debug!(?presentation, "adding to db");
                 if let Some(presentation) = presentation {
-                    if let Err(e) =
-                        self.presentation_library.add_item(presentation.clone())
-                    {
-                        error!(?e);
-                    }
                     return Action::Task(Task::perform(
                         presentations::add_presentation(
                             vec![presentation],

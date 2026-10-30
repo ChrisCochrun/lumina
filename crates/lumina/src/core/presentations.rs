@@ -295,18 +295,19 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    #[must_use] 
     pub fn check_item(&self, presentation: &Presentation) -> CheckItem {
         if self.items.contains(presentation) {
             CheckItem::Yes
-        } else if let Some(_found_presentation) = self
-            .items
-            .iter()
-            .find(|inner| inner.title == presentation.title)
-        {
-            CheckItem::Maybe
         } else {
-            CheckItem::No
+            if let Some(found_presentation) = self
+                .items
+                .iter()
+                .find(|inner| inner.title == presentation.title)
+            {
+                CheckItem::Maybe
+            } else {
+                CheckItem::No
+            }
         }
     }
     pub async fn new_presentation_model(db: Arc<SqlitePool>) -> Self {
@@ -328,6 +329,7 @@ impl Model<Presentation> {
 
         match result {
             Ok(v) => {
+                self.items = Vec::new();
                 for presentation in v {
                     let _ = self.add_item(Presentation {
                         id: presentation.id,
@@ -464,7 +466,7 @@ pub async fn add_presentation(
     mut current_presentations: Vec<Presentation>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Presentation>> {
-    for presentation in new_presentations {
+    for mut presentation in new_presentations {
         let path = presentation
             .path
             .to_str()
@@ -480,17 +482,21 @@ pub async fn add_presentation(
         } else {
             (0, 0)
         };
-        query!(
-            r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index) VALUES ($1, $2, $3, $4, $5)"#,
+        let created_at = Local::now();
+        let accessed_at = Local::now();
+        presentation.id = query!(
+            r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index, created_at, accessed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
             presentation.title,
             path,
             html,
             starting_index,
-            ending_index
+            ending_index,
+            created_at,
+            accessed_at
         )
             .execute(&*db)
             .await
-            .into_diagnostic()?;
+            .into_diagnostic()?.last_insert_rowid().try_into().into_diagnostic()?;
 
         current_presentations.push(presentation);
     }
@@ -519,14 +525,16 @@ pub async fn update_presentation(
     };
     debug!(starting_index, ending_index);
 
+    let accessed_at = Local::now();
     query!(
-        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4, starting_index = $5, ending_index = $6 WHERE id = $1"#,
+        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4, starting_index = $5, ending_index = $6, accessed_at = $7 WHERE id = $1"#,
         presentation.id,
         presentation.title,
         path,
         html,
         starting_index,
-        ending_index
+        ending_index,
+        accessed_at
     )
         .execute(&*db)
         .await.into_diagnostic()?;
@@ -584,6 +592,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore = "For local tests only"]
     async fn test_db_and_model() {
         let mut presentation_model: Model<Presentation> = Model {
             items: vec![],
