@@ -9,4 +9,6 @@
 
 [files]
 exclude = ["flatpak-builder-tools", "cosmic-flatpak-runtime",
-           "flatpak-out", "mupdf", "build-dir", ".zed", "mupdf-cargo-sources.json", "cargo-sources.json"]
+    "flatpak-out", "mupdf", "build-dir", ".zed",
+    "mupdf-cargo-sources.json", "cargo-sources.json",
+    "cargo-sources-split.json"]
