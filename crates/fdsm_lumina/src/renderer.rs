@@ -286,6 +286,20 @@ impl TextRenderer {
             for g in &line.glyphs {
                 let key = CacheKey::new(font_source, g.key, g.font_size * s, padding);
                 let info = self.atlas.obtain(queue, font_system, key)?;
+
+                // let cache_miss = !self.atlas.glyphs.contains_key(&key);
+                // let start = std::time::Instant::now();
+
+                // if cache_miss {
+                //     tracing::warn!(
+                //         glyph_id = g.key.glyph_id,
+                //         font_id = ?g.key.font_id,
+                //         ppem = key.ppem_quarters as f32 / 4.0,
+                //         padding = key.padding,
+                //         elapsed_ms = start.elapsed().as_secs_f64() * 1000.0,
+                //         "MSDF atlas cache miss"
+                //     );
+                // }
                 let Some(rect) = info.rect else { continue };
                 let x = (g.x + g.x_offset * g.font_size) * sx + info.bearing_x;
                 let first_line_top = text.lines.first().map_or(0.0, |line| line.top);
@@ -367,6 +381,47 @@ impl TextRenderer {
             RenderLayer::OuterStroke => &self.outer_stroke_pipeline,
             RenderLayer::Body => &self.body_pipeline,
         }
+    }
+
+    pub fn prewarm(
+        &mut self,
+        queue: &wgpu::Queue,
+        font_system: &FontSystem,
+        font_source: usize,
+        text: &StyledText,
+        bounds: PhysicalBounds,
+    ) -> Result<(), RenderError> {
+        // Calculate the same scale and padding as prepare().
+        // Ideally share this calculation between both methods.
+        let scale = bounds.width / text.region.width * text.scale;
+
+        let styles = text
+            .styles
+            .iter()
+            .map(|v| v.scaled(scale))
+            .collect::<Vec<_>>();
+        let padding = ((styles
+            .iter()
+            .map(|v| v.required_padding())
+            .fold(0.0_f32, f32::max)
+            + 2.)
+            .max(16.))
+        .ceil() as u32;
+
+        for line in &text.lines {
+            for glyph in &line.glyphs {
+                let key = CacheKey::new(
+                    font_source,
+                    glyph.key,
+                    glyph.font_size * scale,
+                    padding,
+                );
+
+                self.atlas.obtain(queue, font_system, key)?;
+            }
+        }
+
+        Ok(())
     }
 
     fn draw_prepared(pass: &mut wgpu::RenderPass<'_>, prepared: &PreparedText) {

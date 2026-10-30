@@ -1504,13 +1504,15 @@ impl cosmic::Application for App {
                     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
                     let item_index = index;
                     let slides = item.slides.clone();
-                    let font_db = Arc::clone(&self.fontdb);
 
+                    let font_system = self.font_system.clone();
                     std::thread::spawn(move || {
-                        for (slide_index, slide) in slides.into_iter().enumerate() {
-                            let slide =
-                                text_svg::text_svg_generator(slide.clone(), &font_db)
-                                    .unwrap_or(slide);
+                        for (slide_index, mut slide) in slides.into_iter().enumerate() {
+                            if let Ok(mut font_system) = font_system.lock() {
+                                if let Err(error) = slide.prepare_text(&mut font_system) {
+                                    error!(?error);
+                                }
+                            }
                             let _ = tx.send(cosmic::Action::App(
                                 Message::AddSlideTextToItem(
                                     item_index,
@@ -1681,10 +1683,13 @@ impl cosmic::Application for App {
                     item.slides = item
                         .slides
                         .into_par_iter()
-                        .map(|slide| {
-                            let fontdb = Arc::clone(&self.fontdb);
-                            text_svg::text_svg_generator(slide.clone(), &fontdb)
-                                .unwrap_or(slide)
+                        .map(|mut slide| {
+                            if let Ok(mut font_system) = self.font_system.lock() {
+                                if let Err(error) = slide.prepare_text(&mut font_system) {
+                                    error!(?error);
+                                }
+                            };
+                            slide
                         })
                         .collect();
                 }

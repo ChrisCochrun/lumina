@@ -93,7 +93,8 @@ impl Traverser for LumTraverser {
             }
             Event::Leave(Container::Headline(_)) => {
                 if let Some(slide) = self
-                    .current_slide.clone()
+                    .current_slide
+                    .clone()
                     .and_then(|builder| builder.build().ok())
                 {
                     self.slides.push(slide);
@@ -104,16 +105,17 @@ impl Traverser for LumTraverser {
                 todo!()
             }
             Event::Enter(Container::Keyword(keyword))
-                if keyword.key().to_uppercase() == "LUMINA" => {
-                    let value = keyword.value();
-                    match value.to_lowercase().as_str() {
-                        "song:" => todo!(),
-                        "video:" => todo!(),
-                        "image:" => todo!(),
-                        "background:" => todo!(),
-                        _ => todo!(),
-                    }
+                if keyword.key().to_uppercase() == "LUMINA" =>
+            {
+                let value = keyword.value();
+                match value.to_lowercase().as_str() {
+                    "song:" => todo!(),
+                    "video:" => todo!(),
+                    "image:" => todo!(),
+                    "background:" => todo!(),
+                    _ => todo!(),
                 }
+            }
             orgize::export::Event::Text(_token) => todo!(),
             orgize::export::Event::LineBreak(_line_break) => todo!(),
             orgize::export::Event::Entity(_entity) => todo!(),

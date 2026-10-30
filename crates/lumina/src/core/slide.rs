@@ -1,17 +1,23 @@
 #![allow(clippy::similar_names, unused)]
 use cosmic::cosmic_theme::palette::Srgb;
-use cosmic::iced::Size;
 use cosmic::iced::core::image::Allocation;
 use cosmic::iced::font::{Stretch, Style, Weight};
+use cosmic::iced::{Rectangle, Size, core as iced_core};
 use cosmic::widget::image::Handle;
 // use cosmic::dialog::ashpd::url::Url;
 use crisp::types::{Keyword, Symbol, Value};
+use fdsm_lumina::cosmic_text::{Attrs, FontSystem, Metrics};
+use fdsm_lumina::style::{Color as FdsmColor, Glow, GlyphColoring, TextStyle};
+use fdsm_lumina::{StyledText, StyledTextBuilder, TextRegion};
+use fontdb::Family;
 use iced_video_player::Video;
+use iced_wgpu::core;
 use image::EncodableLayout;
 use miette::{Result, miette};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::error;
 use uuid::Uuid;
 
@@ -20,7 +26,7 @@ use crate::ui::text_svg::{Color, Font, Shadow, Stroke, TextSvg};
 
 use super::songs::Song;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct Slide {
     // This is not skipped so we can load back the slide_actions
     // that get mapped to it.
@@ -42,6 +48,28 @@ pub struct Slide {
     pub(crate) pdf_index: u32,
     pub(crate) text_svg: Option<TextSvg>,
     pub(crate) pdf_page: Option<Handle>,
+    pub(crate) styled_text: Option<Arc<StyledText>>,
+}
+
+impl PartialEq for Slide {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.background == other.background
+            && self.thumbnail == other.thumbnail
+            && self.text == other.text
+            && self.font == other.font
+            && self.font_size == other.font_size
+            && self.stroke == other.stroke
+            && self.shadow == other.shadow
+            && self.text_properties == other.text_properties
+            && self.text_alignment == other.text_alignment
+            && self.text_color == other.text_color
+            && self.audio == other.audio
+            && self.video_loop == other.video_loop
+            && self.video_start_time == other.video_start_time
+            && self.video_end_time == other.video_end_time
+            && self.pdf_index == other.pdf_index
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -411,29 +439,39 @@ impl Slide {
         self.pdf_index
     }
 
-    pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
-        let lyrics = song.get_lyrics()?;
-        let slides: Vec<Self> = lyrics
-            .iter()
-            .map(|l| {
-                let song = song.clone();
-                SlideBuilder::new()
-                    .background(song.background.unwrap_or_default())
-                    .font(song.font.unwrap_or_default())
-                    .font_size(song.font_size.unwrap_or_default())
-                    .text_alignment(song.text_alignment.unwrap_or_default())
-                    .audio(song.audio.unwrap_or_default())
-                    .video_loop(true)
-                    .video_start_time(0.0)
-                    .video_end_time(0.0)
-                    .text(l)
-                    .build()
-                    .unwrap_or_default()
-            })
-            .collect();
-
-        Ok(slides)
+    pub fn prepare_text(&mut self, font_system: &mut FontSystem) -> Result<()> {
+        if let Some(text_properties) = &self.text_properties {
+            let styled_text = build_text(font_system, &self.text, &text_properties);
+            self.styled_text = Some(Arc::new(styled_text));
+            Ok(())
+        } else {
+            Err(miette!("There is no text_properties on this slide"))
+        }
     }
+
+    // pub fn song_slides(song: &Song) -> Result<Vec<Self>> {
+    //     let lyrics = song.get_lyrics()?;
+    //     let slides: Vec<Self> = lyrics
+    //         .iter()
+    //         .map(|l| {
+    //             let song = song.clone();
+    //             SlideBuilder::new()
+    //                 .background(song.background.unwrap_or_default())
+    //                 .font(song.font.unwrap_or_default())
+    //                 .font_size(song.font_size.unwrap_or_default())
+    //                 .text_alignment(song.text_alignment.unwrap_or_default())
+    //                 .audio(song.audio.unwrap_or_default())
+    //                 .video_loop(true)
+    //                 .video_start_time(0.0)
+    //                 .video_end_time(0.0)
+    //                 .text(l)
+    //                 .build()
+    //                 .unwrap_or_default()
+    //         })
+    //         .collect();
+
+    //     Ok(slides)
+    // }
 
     pub(crate) const fn set_id(&mut self, id: Uuid) {
         self.id = SlideId(id);
@@ -444,164 +482,164 @@ impl Slide {
     // }
 }
 
-impl From<Value> for Slide {
-    fn from(value: Value) -> Self {
-        Self::from(&value)
-    }
-}
+// impl From<Value> for Slide {
+//     fn from(value: Value) -> Self {
+//         Self::from(&value)
+//     }
+// }
 
-impl From<&Value> for Slide {
-    fn from(value: &Value) -> Self {
-        match value {
-            Value::List(list) => lisp_to_slide(list),
-            _ => Self::default(),
-        }
-    }
-}
+// impl From<&Value> for Slide {
+//     fn from(value: &Value) -> Self {
+//         match value {
+//             Value::List(list) => lisp_to_slide(list),
+//             _ => Self::default(),
+//         }
+//     }
+// }
 
-#[allow(clippy::option_if_let_else)]
-fn lisp_to_slide(lisp: &[Value]) -> Slide {
-    const DEFAULT_BACKGROUND_LOCATION: usize = 1;
-    const DEFAULT_TEXT_LOCATION: usize = 0;
+// #[allow(clippy::option_if_let_else)]
+// fn lisp_to_slide(lisp: &[Value]) -> Slide {
+//     const DEFAULT_BACKGROUND_LOCATION: usize = 1;
+//     const DEFAULT_TEXT_LOCATION: usize = 0;
 
-    let mut slide = SlideBuilder::new();
-    let background_position = if let Some(background) = lisp
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("background")))
-    {
-        background + 1
-    } else {
-        DEFAULT_BACKGROUND_LOCATION
-    };
+//     let mut slide = SlideBuilder::new();
+//     let background_position = if let Some(background) = lisp
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("background")))
+//     {
+//         background + 1
+//     } else {
+//         DEFAULT_BACKGROUND_LOCATION
+//     };
 
-    if let Some(background) = lisp.get(background_position) {
-        slide = slide.background(lisp_to_background(background));
-    } else {
-        slide = slide.background(Background::default());
-    }
+//     if let Some(background) = lisp.get(background_position) {
+//         slide = slide.background(lisp_to_background(background));
+//     } else {
+//         slide = slide.background(Background::default());
+//     }
 
-    let text_position = lisp.iter().position(|v| match v {
-        Value::List(vec) => {
-            vec[DEFAULT_TEXT_LOCATION] == Value::Symbol(Symbol::from("text"))
-        }
-        _ => false,
-    });
+//     let text_position = lisp.iter().position(|v| match v {
+//         Value::List(vec) => {
+//             vec[DEFAULT_TEXT_LOCATION] == Value::Symbol(Symbol::from("text"))
+//         }
+//         _ => false,
+//     });
 
-    if let Some(text_position) = text_position {
-        if let Some(text) = lisp.get(text_position) {
-            slide = slide.text(lisp_to_text(text));
-        } else {
-            slide = slide.text("");
-        }
-    } else {
-        slide = slide.text("");
-    }
+//     if let Some(text_position) = text_position {
+//         if let Some(text) = lisp.get(text_position) {
+//             slide = slide.text(lisp_to_text(text));
+//         } else {
+//             slide = slide.text("");
+//         }
+//     } else {
+//         slide = slide.text("");
+//     }
 
-    if let Some(text_position) = text_position {
-        if let Some(text) = lisp.get(text_position) {
-            slide = slide.font_size(lisp_to_font_size(text));
-        } else {
-            slide = slide.font_size(0);
-        }
-    } else {
-        slide = slide.font_size(0);
-    }
+//     if let Some(text_position) = text_position {
+//         if let Some(text) = lisp.get(text_position) {
+//             slide = slide.font_size(lisp_to_font_size(text));
+//         } else {
+//             slide = slide.font_size(0);
+//         }
+//     } else {
+//         slide = slide.font_size(0);
+//     }
 
-    slide = slide
-        .font("Quicksand")
-        .text_alignment(TextAlignment::MiddleCenter)
-        .video_loop(false)
-        .video_start_time(0.0)
-        .video_end_time(0.0);
+//     slide = slide
+//         .font("Quicksand")
+//         .text_alignment(TextAlignment::MiddleCenter)
+//         .video_loop(false)
+//         .video_start_time(0.0)
+//         .video_end_time(0.0);
 
-    match slide.build() {
-        Ok(slide) => slide,
-        Err(e) => {
-            error!("Shoot! Slide didn't build: {e}");
-            Slide::default()
-        }
-    }
-}
+//     match slide.build() {
+//         Ok(slide) => slide,
+//         Err(e) => {
+//             error!("Shoot! Slide didn't build: {e}");
+//             Slide::default()
+//         }
+//     }
+// }
 
-#[allow(clippy::option_if_let_else)]
-fn lisp_to_font_size(lisp: &Value) -> i32 {
-    match lisp {
-        Value::List(list) => {
-            if let Some(font_size_position) = list
-                .iter()
-                .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
-            {
-                if let Some(font_size_value) = list.get(font_size_position + 1) {
-                    font_size_value.into()
-                } else {
-                    50
-                }
-            } else {
-                50
-            }
-        }
-        _ => 50,
-    }
-}
+// #[allow(clippy::option_if_let_else)]
+// fn lisp_to_font_size(lisp: &Value) -> i32 {
+//     match lisp {
+//         Value::List(list) => {
+//             if let Some(font_size_position) = list
+//                 .iter()
+//                 .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
+//             {
+//                 if let Some(font_size_value) = list.get(font_size_position + 1) {
+//                     font_size_value.into()
+//                 } else {
+//                     50
+//                 }
+//             } else {
+//                 50
+//             }
+//         }
+//         _ => 50,
+//     }
+// }
 
-fn lisp_to_text(lisp: &Value) -> impl Into<String> {
-    match lisp {
-        Value::List(list) => list[1].clone(),
-        _ => "".into(),
-    }
-}
+// fn lisp_to_text(lisp: &Value) -> impl Into<String> {
+//     match lisp {
+//         Value::List(list) => list[1].clone(),
+//         _ => "".into(),
+//     }
+// }
 
-// Need to return a Result here so that we can propogate
-// errors and then handle them appropriately
-#[allow(clippy::option_if_let_else)]
-pub fn lisp_to_background(lisp: &Value) -> Background {
-    match lisp {
-        Value::List(list) => {
-            let _kind = list[0].clone();
-            if let Some(source) = list
-                .iter()
-                .position(|v| v == &Value::Keyword(Keyword::from("source")))
-            {
-                let source = &list[source + 1];
-                match source {
-                    Value::String(s) => {
-                        if s.starts_with("./") {
-                            let Some(home) = dirs::home_dir() else {
-                                panic!("Should always be there");
-                            };
-                            let Some(home) = home.to_str() else {
-                                panic!("Should always be there");
-                            };
-                            let mut home = home.to_string();
-                            home.push('/');
+// // Need to return a Result here so that we can propogate
+// // errors and then handle them appropriately
+// #[allow(clippy::option_if_let_else)]
+// pub fn lisp_to_background(lisp: &Value) -> Background {
+//     match lisp {
+//         Value::List(list) => {
+//             let _kind = list[0].clone();
+//             if let Some(source) = list
+//                 .iter()
+//                 .position(|v| v == &Value::Keyword(Keyword::from("source")))
+//             {
+//                 let source = &list[source + 1];
+//                 match source {
+//                     Value::String(s) => {
+//                         if s.starts_with("./") {
+//                             let Some(home) = dirs::home_dir() else {
+//                                 panic!("Should always be there");
+//                             };
+//                             let Some(home) = home.to_str() else {
+//                                 panic!("Should always be there");
+//                             };
+//                             let mut home = home.to_string();
+//                             home.push('/');
 
-                            let s = s.replace("./", &home);
-                            match Background::try_from(s.as_str()) {
-                                Ok(background) => background,
-                                Err(e) => {
-                                    error!("Couldn't load background: {e}");
-                                    Background::default()
-                                }
-                            }
-                        } else {
-                            match Background::try_from(s.as_str()) {
-                                Ok(background) => background,
-                                Err(e) => {
-                                    error!("Couldn't load background: {e}");
-                                    Background::default()
-                                }
-                            }
-                        }
-                    }
-                    _ => Background::default(),
-                }
-            } else {
-                Background::default()
-            }
-        }
-        _ => Background::default(),
-    }
-}
+//                             let s = s.replace("./", &home);
+//                             match Background::try_from(s.as_str()) {
+//                                 Ok(background) => background,
+//                                 Err(e) => {
+//                                     error!("Couldn't load background: {e}");
+//                                     Background::default()
+//                                 }
+//                             }
+//                         } else {
+//                             match Background::try_from(s.as_str()) {
+//                                 Ok(background) => background,
+//                                 Err(e) => {
+//                                     error!("Couldn't load background: {e}");
+//                                     Background::default()
+//                                 }
+//                             }
+//                         }
+//                     }
+//                     _ => Background::default(),
+//                 }
+//             } else {
+//                 Background::default()
+//             }
+//         }
+//         _ => Background::default(),
+//     }
+// }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SlideBuilder {
@@ -788,6 +826,139 @@ impl SlideBuilder {
             ..Default::default()
         })
     }
+}
+
+const SLIDE_WIDTH: f32 = 1920.0;
+const SLIDE_HEIGHT: f32 = 1080.0;
+
+#[allow(clippy::too_many_lines)]
+pub fn build_text(
+    font_system: &mut FontSystem,
+    text: impl AsRef<str>,
+    text_props: &TextProperties,
+) -> StyledText {
+    let bounds = Rectangle::with_size(Size::new(SLIDE_WIDTH, SLIDE_HEIGHT));
+    // Guard against font_size not being set. This prevents an assertion
+    // panic in cosmic_text
+    let font_size = text_props.font_size.unwrap_or(100.0);
+    let font_size = if font_size == 0.0 { 100.0 } else { font_size };
+    let metrics = Metrics::relative(font_size, 1.3);
+
+    let mut attrs = Attrs::new()
+        .family(
+            text_props
+                .font
+                .as_ref()
+                .map_or(Family::SansSerif, |font| Family::Name(font)),
+        )
+        .metrics(metrics);
+    let default_attrs = attrs.clone();
+    let mut text_builder = StyledTextBuilder::new(
+        TextRegion::new(bounds.width, bounds.height),
+        metrics,
+        &default_attrs,
+    );
+    if let Some(style) = text_props.font_style {
+        let style = match style {
+            iced_core::font::Style::Normal => fontdb::Style::Normal,
+            iced_core::font::Style::Italic => fontdb::Style::Italic,
+            iced_core::font::Style::Oblique => fontdb::Style::Oblique,
+        };
+        attrs = attrs.style(style);
+    }
+
+    if let Some(weight) = text_props.font_weight {
+        let weight = match weight {
+            iced_core::font::Weight::Thin => fontdb::Weight::THIN,
+            iced_core::font::Weight::ExtraLight => fontdb::Weight::EXTRA_LIGHT,
+            iced_core::font::Weight::Light => fontdb::Weight::LIGHT,
+            iced_core::font::Weight::Normal => fontdb::Weight::NORMAL,
+            iced_core::font::Weight::Medium => fontdb::Weight::MEDIUM,
+            iced_core::font::Weight::Semibold => fontdb::Weight::SEMIBOLD,
+            iced_core::font::Weight::Bold => fontdb::Weight::BOLD,
+            iced_core::font::Weight::ExtraBold => fontdb::Weight::EXTRA_BOLD,
+            iced_core::font::Weight::Black => fontdb::Weight::BLACK,
+        };
+        attrs = attrs.weight(weight);
+    }
+
+    if let Some(stretch) = text_props.font_stretch {
+        let stretch = match stretch {
+            iced_core::font::Stretch::UltraCondensed => fontdb::Stretch::UltraCondensed,
+            iced_core::font::Stretch::ExtraCondensed => fontdb::Stretch::ExtraCondensed,
+            iced_core::font::Stretch::Condensed => fontdb::Stretch::Condensed,
+            iced_core::font::Stretch::SemiCondensed => fontdb::Stretch::SemiCondensed,
+            iced_core::font::Stretch::Normal => fontdb::Stretch::Normal,
+            iced_core::font::Stretch::SemiExpanded => fontdb::Stretch::SemiExpanded,
+            iced_core::font::Stretch::Expanded => fontdb::Stretch::Expanded,
+            iced_core::font::Stretch::ExtraExpanded => fontdb::Stretch::ExtraExpanded,
+            iced_core::font::Stretch::UltraExpanded => fontdb::Stretch::UltraExpanded,
+        };
+        attrs = attrs.stretch(stretch);
+    }
+
+    let color = text_props.text_color.unwrap_or_default();
+    let color = FdsmColor::rgb(color.red, color.green, color.blue);
+    let stroke_color = text_props.stroke_color.unwrap_or_default();
+    let stroke_color =
+        FdsmColor::rgb(stroke_color.red, stroke_color.green, stroke_color.blue);
+    let stroke_width = text_props.stroke_size.unwrap_or_default();
+    let shadow_color = text_props.shadow_color.unwrap_or_default();
+    let shadow_color = GlyphColoring::Solid(FdsmColor::rgb(
+        shadow_color.red,
+        shadow_color.green,
+        shadow_color.blue,
+    ));
+    let shadow_direction = text_props.shadow_offset.unwrap_or_default();
+    let shadow_size = text_props.shadow_size.unwrap_or_default();
+
+    let style = TextStyle {
+        color: GlyphColoring::Solid(color),
+        stroke_out: fdsm_lumina::style::Outline {
+            color: GlyphColoring::Solid(stroke_color),
+            width: stroke_width * 2.0,
+            roundness: 1.0,
+        },
+        stroke_in: fdsm_lumina::style::Outline {
+            color: GlyphColoring::Solid(FdsmColor::TRANSPARENT),
+            width: 0.0,
+            roundness: 1.0,
+        },
+        glow_out: Glow::default(),
+        glow_in: Glow::default(),
+        shadow: fdsm_lumina::style::Shadow {
+            color: shadow_color,
+            direction: shadow_direction.into(),
+            width: shadow_size * 2.0,
+            spread: 0.1,
+            softness: shadow_size * 2.0,
+            roundness: 1.0,
+        },
+    };
+    // let attrs = Attrs::new();
+    text_builder.set_align(Some(text_props.text_alignment.into()));
+    text_builder.push_text(text.as_ref(), &attrs, style);
+    // tracing::warn!("RUNNING");
+    let mut text = text_builder.finish(font_system);
+    let text_height = text.height();
+
+    let offset_y = match text_props.text_alignment {
+        TextAlignment::TopLeft | TextAlignment::TopCenter | TextAlignment::TopRight => {
+            0.0
+        }
+
+        TextAlignment::MiddleLeft
+        | TextAlignment::MiddleCenter
+        | TextAlignment::MiddleRight => (bounds.height - text_height) / 2.0,
+
+        TextAlignment::BottomLeft
+        | TextAlignment::BottomCenter
+        | TextAlignment::BottomRight => bounds.height - text_height,
+    };
+
+    text.set_vertical_offset(offset_y.max(0.0));
+
+    text
 }
 
 #[cfg(test)]

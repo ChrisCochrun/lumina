@@ -2218,9 +2218,14 @@ impl SongEditor {
             }
 
             let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-
+            let font_system = self.font_system.clone();
             std::thread::spawn(move || {
-                for (index, slide) in slides.into_iter().enumerate() {
+                for (index, mut slide) in slides.into_iter().enumerate() {
+                    if let Ok(mut font_system) = font_system.lock() {
+                        if let Err(error) = slide.prepare_text(&mut font_system) {
+                            error!(?error);
+                        }
+                    }
                     // let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
                     //     .unwrap_or(slide);
                     let _ = tx.send(Message::UpdateSlide((index, slide)));

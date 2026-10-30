@@ -13,7 +13,7 @@ use crate::core::animation::Animation;
 
 use super::images::Image;
 use super::presentations::Presentation;
-use super::songs::{Song, lisp_to_song};
+use super::songs::Song;
 use super::videos::Video;
 
 use super::kinds::ServiceItemKind;
@@ -136,82 +136,82 @@ impl Default for ServiceItem {
     }
 }
 
-impl From<Value> for ServiceItem {
-    fn from(value: Value) -> Self {
-        Self::from(&value)
-    }
-}
+// impl From<Value> for ServiceItem {
+//     fn from(value: Value) -> Self {
+//         Self::from(&value)
+//     }
+// }
 
-#[allow(clippy::option_if_let_else)]
-#[allow(clippy::match_like_matches_macro)]
-impl From<&Value> for ServiceItem {
-    fn from(value: &Value) -> Self {
-        match value {
-            Value::List(list) => match &list[0] {
-                Value::Symbol(Symbol(s)) if s == "slide" => {
-                    let background_pos = list
-                        .iter()
-                        .position(|v| match v {
-                            Value::Keyword(Keyword(background))
-                                if background == "background" =>
-                            {
-                                true
-                            }
-                            _ => false,
-                        })
-                        .map_or_else(|| 1, |pos| pos + 1);
-                    if let Some(_content) = list.iter().position(|v| match v {
-                        Value::List(list)
-                            if list.iter().next()
-                                == Some(&Value::Symbol(Symbol("text".into()))) =>
-                        {
-                            list.iter().next().is_some()
-                        }
-                        _ => false,
-                    }) {
-                        let slide = Slide::from(value);
-                        let title = slide.text();
-                        Self {
-                            id: 0,
-                            title,
-                            database_id: 0,
-                            kind: ServiceItemKind::Content(slide.clone()),
-                            slides: vec![slide],
-                            animation: None,
-                        }
-                    } else if let Some(background) = list.get(background_pos) {
-                        if let Value::List(item) = background {
-                            match &item[0] {
-                                Value::Symbol(Symbol(s)) if s == "image" => {
-                                    Self::from(&Image::from(background))
-                                }
-                                Value::Symbol(Symbol(s)) if s == "video" => {
-                                    Self::from(&Video::from(background))
-                                }
-                                Value::Symbol(Symbol(s)) if s == "presentation" => {
-                                    Self::from(&Presentation::from(background))
-                                }
-                                _ => todo!(),
-                            }
-                        } else {
-                            error!("There is no background here: {:?}", background);
-                            Self::default()
-                        }
-                    } else {
-                        error!("There is no background here: {:?}", background_pos);
-                        Self::default()
-                    }
-                }
-                Value::Symbol(Symbol(s)) if s == "song" => {
-                    let song = lisp_to_song(list.clone());
-                    Self::from(&song)
-                }
-                _ => Self::default(),
-            },
-            _ => Self::default(),
-        }
-    }
-}
+// #[allow(clippy::option_if_let_else)]
+// #[allow(clippy::match_like_matches_macro)]
+// impl From<&Value> for ServiceItem {
+//     fn from(value: &Value) -> Self {
+//         match value {
+//             Value::List(list) => match &list[0] {
+//                 Value::Symbol(Symbol(s)) if s == "slide" => {
+//                     let background_pos = list
+//                         .iter()
+//                         .position(|v| match v {
+//                             Value::Keyword(Keyword(background))
+//                                 if background == "background" =>
+//                             {
+//                                 true
+//                             }
+//                             _ => false,
+//                         })
+//                         .map_or_else(|| 1, |pos| pos + 1);
+//                     if let Some(_content) = list.iter().position(|v| match v {
+//                         Value::List(list)
+//                             if list.iter().next()
+//                                 == Some(&Value::Symbol(Symbol("text".into()))) =>
+//                         {
+//                             list.iter().next().is_some()
+//                         }
+//                         _ => false,
+//                     }) {
+//                         let slide = Slide::from(value);
+//                         let title = slide.text();
+//                         Self {
+//                             id: 0,
+//                             title,
+//                             database_id: 0,
+//                             kind: ServiceItemKind::Content(slide.clone()),
+//                             slides: vec![slide],
+//                             animation: None,
+//                         }
+//                     } else if let Some(background) = list.get(background_pos) {
+//                         if let Value::List(item) = background {
+//                             match &item[0] {
+//                                 Value::Symbol(Symbol(s)) if s == "image" => {
+//                                     Self::from(&Image::from(background))
+//                                 }
+//                                 Value::Symbol(Symbol(s)) if s == "video" => {
+//                                     Self::from(&Video::from(background))
+//                                 }
+//                                 Value::Symbol(Symbol(s)) if s == "presentation" => {
+//                                     Self::from(&Presentation::from(background))
+//                                 }
+//                                 _ => todo!(),
+//                             }
+//                         } else {
+//                             error!("There is no background here: {:?}", background);
+//                             Self::default()
+//                         }
+//                     } else {
+//                         error!("There is no background here: {:?}", background_pos);
+//                         Self::default()
+//                     }
+//                 }
+//                 Value::Symbol(Symbol(s)) if s == "song" => {
+//                     let song = lisp_to_song(list.clone());
+//                     Self::from(&song)
+//                 }
+//                 _ => Self::default(),
+//             },
+//             _ => Self::default(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Default, Clone)]
 pub struct Service {

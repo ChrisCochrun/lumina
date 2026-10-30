@@ -52,7 +52,7 @@ pub(crate) struct TextLine {
     pub height: f32,
     pub glyphs: Vec<TextGlyph>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StyledText {
     pub(crate) lines: Vec<TextLine>,
     pub(crate) styles: Vec<TextStyle>,

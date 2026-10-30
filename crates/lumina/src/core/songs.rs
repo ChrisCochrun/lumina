@@ -456,208 +456,208 @@ impl FromRow<'_, SqliteRow> for Song {
     }
 }
 
-impl From<Value> for Song {
-    fn from(value: Value) -> Self {
-        match value {
-            Value::List(list) => lisp_to_song(list),
-            _ => Self::default(),
-        }
-    }
-}
+// impl From<Value> for Song {
+//     fn from(value: Value) -> Self {
+//         match value {
+//             Value::List(list) => lisp_to_song(list),
+//             _ => Self::default(),
+//         }
+//     }
+// }
 
-#[allow(clippy::option_if_let_else)]
-#[allow(clippy::needless_pass_by_value)]
-#[allow(clippy::too_many_lines)]
-pub fn lisp_to_song(list: Vec<Value>) -> Song {
-    const DEFAULT_SONG_ID: i32 = 0;
-    // const DEFAULT_SONG_LOCATION: usize = 0;
+// #[allow(clippy::option_if_let_else)]
+// #[allow(clippy::needless_pass_by_value)]
+// #[allow(clippy::too_many_lines)]
+// pub fn lisp_to_song(list: Vec<Value>) -> Song {
+//     const DEFAULT_SONG_ID: i32 = 0;
+//     // const DEFAULT_SONG_LOCATION: usize = 0;
 
-    let id = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("id")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(i32::from).unwrap_or_default()
-    } else {
-        DEFAULT_SONG_ID
-    };
+//     let id = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("id")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(i32::from).unwrap_or_default()
+//     } else {
+//         DEFAULT_SONG_ID
+//     };
 
-    let background = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("background")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(slide::lisp_to_background)
-    } else {
-        None
-    };
+//     let background = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("background")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(slide::lisp_to_background)
+//     } else {
+//         None
+//     };
 
-    let author = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("author")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(String::from)
-    } else {
-        None
-    };
+//     let author = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("author")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(String::from)
+//     } else {
+//         None
+//     };
 
-    let audio = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("audio")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(|a| PathBuf::from(String::from(a)))
-    } else {
-        None
-    };
+//     let audio = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("audio")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(|a| PathBuf::from(String::from(a)))
+//     } else {
+//         None
+//     };
 
-    let ccli = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(|c| i32::from(c).to_string())
-    } else {
-        None
-    };
+//     let ccli = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("ccli")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(|c| i32::from(c).to_string())
+//     } else {
+//         None
+//     };
 
-    let font = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("font")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(String::from)
-    } else {
-        None
-    };
+//     let font = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("font")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(String::from)
+//     } else {
+//         None
+//     };
 
-    let font_size = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(i32::from)
-    } else {
-        None
-    };
+//     let font_size = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("font-size")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(i32::from)
+//     } else {
+//         None
+//     };
 
-    let title = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("title")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos)
-            .map_or_else(|| String::from("song"), String::from)
-    } else {
-        String::from("song")
-    };
+//     let title = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("title")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos)
+//             .map_or_else(|| String::from("song"), String::from)
+//     } else {
+//         String::from("song")
+//     };
 
-    let text_alignment = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("text-alignment")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(TextAlignment::from)
-    } else {
-        None
-    };
+//     let text_alignment = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("text-alignment")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(TextAlignment::from)
+//     } else {
+//         None
+//     };
 
-    let verse_order = if let Some(key_pos) = list
-        .iter()
-        .position(|v| v == &Value::Keyword(Keyword::from("verse-order")))
-    {
-        let pos = key_pos + 1;
-        list.get(pos).map(|v| match v {
-            Value::List(vals) => vals
-                .iter()
-                .map(|v| String::from(v).to_uppercase())
-                .collect::<Vec<String>>(),
-            _ => vec![],
-        })
-    } else {
-        None
-    };
+//     let verse_order = if let Some(key_pos) = list
+//         .iter()
+//         .position(|v| v == &Value::Keyword(Keyword::from("verse-order")))
+//     {
+//         let pos = key_pos + 1;
+//         list.get(pos).map(|v| match v {
+//             Value::List(vals) => vals
+//                 .iter()
+//                 .map(|v| String::from(v).to_uppercase())
+//                 .collect::<Vec<String>>(),
+//             _ => vec![],
+//         })
+//     } else {
+//         None
+//     };
 
-    let first_text_postiion = list
-        .iter()
-        .position(|v| match v {
-            Value::List(inner) => {
-                (match &inner[0] {
-                    Value::Symbol(Symbol(text)) => {
-                        text.contains("v1")
-                            || text.contains("text")
-                            || text.contains("c1")
-                            || text.contains("i1")
-                    }
-                    _ => false,
-                } && matches!(&inner[1], Value::String(_)))
-            }
-            _ => false,
-        })
-        .unwrap_or(1);
+//     let first_text_postiion = list
+//         .iter()
+//         .position(|v| match v {
+//             Value::List(inner) => {
+//                 (match &inner[0] {
+//                     Value::Symbol(Symbol(text)) => {
+//                         text.contains("v1")
+//                             || text.contains("text")
+//                             || text.contains("c1")
+//                             || text.contains("i1")
+//                     }
+//                     _ => false,
+//                 } && matches!(&inner[1], Value::String(_)))
+//             }
+//             _ => false,
+//         })
+//         .unwrap_or(1);
 
-    let lyric_elements = &list[first_text_postiion..];
+//     let lyric_elements = &list[first_text_postiion..];
 
-    let mut lyrics = vec![];
+//     let mut lyrics = vec![];
 
-    for element in lyric_elements {
-        let Value::List(lyric) = element else {
-            continue;
-        };
-        let Value::Symbol(Symbol(lyric_verse)) = &lyric[0] else {
-            continue;
-        };
+//     for element in lyric_elements {
+//         let Value::List(lyric) = element else {
+//             continue;
+//         };
+//         let Value::Symbol(Symbol(lyric_verse)) = &lyric[0] else {
+//             continue;
+//         };
 
-        let lyric = String::from(&lyric[1]);
+//         let lyric = String::from(&lyric[1]);
 
-        let verse_title = match lyric_verse.as_str() {
-            "i1" => r"\n\nIntro 1\n",
-            "i2" => r"\n\nIntro 2\n",
-            "v1" => r"\n\nVerse 1\n",
-            "v2" => r"\n\nVerse 2\n",
-            "v3" => r"\n\nVerse 3\n",
-            "v4" => r"\n\nVerse 4\n",
-            "v5" => r"\n\nVerse 5\n",
-            "c1" => r"\n\nChorus 1\n",
-            "c2" => r"\n\nChorus 2\n",
-            "c3" => r"\n\nChorus 3\n",
-            "c4" => r"\n\nChorus 4\n",
-            "b1" => r"\n\nBridge 1\n",
-            "b2" => r"\n\nBridge 2\n",
-            "e1" => r"\n\nEnding 1\n",
-            "e2" => r"\n\nEnding 2\n",
-            "o1" => r"\n\nOther 1\n",
-            "o2" => r"\n\nOther 2\n",
-            _ => "",
-        };
+//         let verse_title = match lyric_verse.as_str() {
+//             "i1" => r"\n\nIntro 1\n",
+//             "i2" => r"\n\nIntro 2\n",
+//             "v1" => r"\n\nVerse 1\n",
+//             "v2" => r"\n\nVerse 2\n",
+//             "v3" => r"\n\nVerse 3\n",
+//             "v4" => r"\n\nVerse 4\n",
+//             "v5" => r"\n\nVerse 5\n",
+//             "c1" => r"\n\nChorus 1\n",
+//             "c2" => r"\n\nChorus 2\n",
+//             "c3" => r"\n\nChorus 3\n",
+//             "c4" => r"\n\nChorus 4\n",
+//             "b1" => r"\n\nBridge 1\n",
+//             "b2" => r"\n\nBridge 2\n",
+//             "e1" => r"\n\nEnding 1\n",
+//             "e2" => r"\n\nEnding 2\n",
+//             "o1" => r"\n\nOther 1\n",
+//             "o2" => r"\n\nOther 2\n",
+//             _ => "",
+//         };
 
-        let lyric = format!("{verse_title}{lyric}");
-        let lyric = lyric.replace(
-            "\\n", r"
-",
-        );
-        lyrics.push(lyric);
-    }
+//         let lyric = format!("{verse_title}{lyric}");
+//         let lyric = lyric.replace(
+//             "\\n", r"
+// ",
+//         );
+//         lyrics.push(lyric);
+//     }
 
-    let lyrics: String = lyrics.iter().flat_map(|s| s.chars()).collect();
-    let lyrics = lyrics.trim_start().to_string();
+//     let lyrics: String = lyrics.iter().flat_map(|s| s.chars()).collect();
+//     let lyrics = lyrics.trim_start().to_string();
 
-    Song {
-        id,
-        title,
-        lyrics: Some(lyrics),
-        author,
-        audio,
-        ccli,
-        verse_order,
-        background,
-        font,
-        font_size,
-        text_alignment,
-        ..Default::default()
-    }
-}
+//     Song {
+//         id,
+//         title,
+//         lyrics: Some(lyrics),
+//         author,
+//         audio,
+//         ccli,
+//         verse_order,
+//         background,
+//         font,
+//         font_size,
+//         text_alignment,
+//         ..Default::default()
+//     }
+// }
 
 pub async fn get_song_from_db(id: i32, db: Arc<SqlitePool>) -> Result<Song> {
     let row = query("SELECT verse_order, font_size, background_type, horizontal_text_alignment, vertical_text_alignment, title, font, background, lyrics, ccli, author, audio, stroke_size, stroke_color, shadow_color, shadow_size, shadow_offset_x, shadow_offset_y, style, weight, id from songs where id = $1").bind(id).fetch_one(&*db).await.into_diagnostic()?;

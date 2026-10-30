@@ -694,37 +694,10 @@ where
         }
 
         if !self.slide.text.is_empty() {
-            let mut text_renderer = FdsmTextPrimitive::new(
-                Arc::clone(&self.settings.font_system),
-                // &clip_bounds,
-            );
-            let text_props = self.slide.text_properties.clone().unwrap_or_default();
-
-            if let Some(mut text) = build_text(
-                &self.settings.font_system,
-                &self.slide.text,
-                &text_props,
-                &bounds,
-                viewport,
-            ) {
-                let text_height = text.height();
-
-                let offset_y = match self.slide.text_alignment {
-                    TextAlignment::TopLeft
-                    | TextAlignment::TopCenter
-                    | TextAlignment::TopRight => 0.0,
-
-                    TextAlignment::MiddleLeft
-                    | TextAlignment::MiddleCenter
-                    | TextAlignment::MiddleRight => (bounds.height - text_height) / 2.0,
-
-                    TextAlignment::BottomLeft
-                    | TextAlignment::BottomCenter
-                    | TextAlignment::BottomRight => bounds.height - text_height,
-                };
-
-                text.set_vertical_offset(offset_y.max(0.0));
-                text_renderer.push_text(text);
+            let mut text_renderer =
+                FdsmTextPrimitive::new(Arc::clone(&self.settings.font_system));
+            if let Some(text) = &self.slide.styled_text {
+                text_renderer.push_text(text.clone());
             }
             let primitive_bounds =
                 Rectangle::new(current_foreground_position, current_foreground_size);

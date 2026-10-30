@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 pub struct FdsmTextPrimitive {
     pub(crate) font_system: Arc<Mutex<FontSystem>>,
-    texts: Vec<StyledText>,
+    texts: Vec<Arc<StyledText>>,
     prepared: Mutex<Vec<PreparedText>>,
 }
 impl std::fmt::Debug for FdsmTextPrimitive {
@@ -27,11 +27,11 @@ impl FdsmTextPrimitive {
             prepared: Mutex::new(Vec::new()),
         }
     }
-    pub fn push_text(&mut self, text: StyledText) {
+    pub fn push_text(&mut self, text: Arc<StyledText>) {
         self.texts.push(text);
     }
     pub fn total_height(&self) -> f32 {
-        self.texts.iter().map(StyledText::height).sum()
+        self.texts.iter().map(|text| text.height()).sum()
     }
     pub fn is_empty(&self) -> bool {
         self.texts.is_empty()
