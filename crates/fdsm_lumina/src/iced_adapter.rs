@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 /// Bound the amount of GPU texture upload work done for upcoming text per
 /// renderer prepare call. Tune using frame-time measurements.
-const PREWARM_UPLOADS_PER_FRAME: usize = 4;
+const PREWARM_UPLOADS_PER_FRAME: usize = 5;
 
 pub struct FdsmTextPrimitive {
     context: Arc<Mutex<FdsmContext>>,
@@ -129,9 +129,19 @@ impl Primitive for FdsmTextPrimitive {
                 PREWARM_UPLOADS_PER_FRAME,
             ) {
                 Ok(progress) => {
-                    tracing::trace!(
-                        ?progress,
-                        "fdsm prewarm progress for this GPU pipeline"
+                    tracing::debug!(
+                        target: "fdsm_lumina::glyph_diagnostics",
+                        width = physical.width,
+                        height = physical.height,
+                        unique = progress.unique_glyphs,
+                        gpu_ready = progress.gpu_ready,
+                        uploaded = progress.uploaded,
+                        queued = progress.queued,
+                        pending = progress.pending,
+                        waiting_for_upload = progress.waiting_for_upload,
+                        queue_full = progress.queue_full,
+                        ready = progress.is_ready(),
+                        "FDSM_PREWARM_STATUS"
                     );
                 }
                 Err(error) => tracing::error!(%error, "fdsm prewarm failed"),
