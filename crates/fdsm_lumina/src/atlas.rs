@@ -1,24 +1,12 @@
-//! Append-only GPU atlas and CPU FDSM generation. Never repack an atlas during
+//! Append-only GPU atlas. CPU FDSM generation lives in `glyph.rs`. Never repack during
 //! frame preparation: earlier Iced primitives may already hold its UVs.
-use crate::renderer::RenderError;
-use crate::text::GlyphIdKey;
+pub(crate) use crate::glyph::CacheKey;
 use crate::{
-    cosmic_text::{
-        FontSystem,
-        skrifa::{
-            FontRef, GlyphId, MetadataProvider,
-            instance::{LocationRef, Size},
-        },
-    },
+    cosmic_text::FontSystem,
+    glyph::{GlyphImage, generate_glyph_sync},
+    renderer::RenderError,
     wgpu,
 };
-use fdsm::{
-    bezier::scanline::FillRule, generate::generate_msdf, render::correct_sign_msdf,
-    shape::Shape, transform::Transform,
-};
-use fdsm_skrifa::load_shape_from_face;
-use image::{RgbImage, imageops};
-use nalgebra::{Affine2, Similarity2, Vector2};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,37 +22,6 @@ pub(crate) struct GlyphPlacement {
     pub bearing_x: f32,
     pub bearing_y: f32,
 }
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub(crate) struct CacheKey {
-    pub font_source: usize,
-    pub glyph: GlyphIdKey,
-    pub ppem_quarters: u32,
-    pub padding: u32,
-}
-impl CacheKey {
-    pub fn new(
-        font_source: usize,
-        glyph: GlyphIdKey,
-        target_size: f32,
-        padding: u32,
-    ) -> Self {
-        Self {
-            font_source,
-            glyph,
-            ppem_quarters: (target_size.max(1.) * 4.).round() as u32,
-            padding,
-        }
-    }
-    fn font_size(self) -> f32 {
-        self.ppem_quarters as f32 / 4.
-    }
-}
-struct GlyphBitmap {
-    pixels: RgbImage,
-    bearing_x: f32,
-    bearing_y: f32,
-}
-
 pub(crate) struct GlyphAtlas {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -113,23 +70,48 @@ impl GlyphAtlas {
             row_height: 0,
         }
     }
+    /// Compatibility method: current live renderer remains synchronous until
+    /// prewarming is wired into `TextRenderer`. Both CPU paths now use the same
+    /// implementation in `glyph.rs`.
     pub fn obtain(
         &mut self,
         queue: &wgpu::Queue,
         font_system: &FontSystem,
         key: CacheKey,
     ) -> Result<GlyphPlacement, RenderError> {
-        if let Some(info) = self.glyphs.get(&key) {
-            return Ok(*info);
-        }
-        let Some(bitmap) = generate_glyph(font_system, key)? else {
-            let info = GlyphPlacement {
-                rect: None,
-                bearing_x: 0.,
-                bearing_y: 0.,
-            };
-            self.glyphs.insert(key, info);
+        if let Some(info) = self.get(key) {
             return Ok(info);
+        }
+        let image = generate_glyph_sync(font_system, key)?;
+        self.insert(queue, key, &image)
+    }
+
+    pub fn get(&self, key: CacheKey) -> Option<GlyphPlacement> {
+        self.glyphs.get(&key).copied()
+    }
+
+    /// GPU-only operation. The worker's CPU image may be used by more than
+    /// one atlas, but each atlas allocates its own rectangle and uploads it.
+    pub fn insert(
+        &mut self,
+        queue: &wgpu::Queue,
+        key: CacheKey,
+        image: &GlyphImage,
+    ) -> Result<GlyphPlacement, RenderError> {
+        if let Some(info) = self.get(key) {
+            return Ok(info);
+        }
+        let bitmap = match image {
+            GlyphImage::Empty => {
+                let info = GlyphPlacement {
+                    rect: None,
+                    bearing_x: 0.0,
+                    bearing_y: 0.0,
+                };
+                self.glyphs.insert(key, info);
+                return Ok(info);
+            }
+            GlyphImage::Bitmap(bitmap) => bitmap,
         };
         let w = bitmap.pixels.width();
         let h = bitmap.pixels.height();
@@ -146,8 +128,7 @@ impl GlyphAtlas {
             width: self.width,
             height: self.height,
         })?;
-        // Expand RGB into RGBA. Write only the reserved glyph rectangle; the
-        // glyph itself has a sufficient FDSM distance margin on every side.
+        // Expand RGB into RGBA without modifying the shared CPU bitmap.
         let mut rgba = Vec::with_capacity((w * h * 4) as usize);
         for pixel in bitmap.pixels.pixels() {
             rgba.extend_from_slice(&[pixel[0], pixel[1], pixel[2], 255]);
@@ -211,74 +192,6 @@ fn shelf_position(
         return None;
     }
     Some((x, y, row_height.max(h), x + w + 2))
-}
-
-fn generate_glyph(
-    font_system: &FontSystem,
-    key: CacheKey,
-) -> Result<Option<GlyphBitmap>, RenderError> {
-    font_system
-        .db()
-        .with_face_data(
-            key.glyph.font_id,
-            |bytes, index| -> Result<Option<GlyphBitmap>, RenderError> {
-                let face = FontRef::from_index(bytes, index)
-                    .map_err(|e| RenderError::Font(format!("font face: {e:?}")))?;
-                let gid = GlyphId::new(u32::from(key.glyph.glyph_id));
-                let location = LocationRef::default();
-                let upem =
-                    f64::from(face.metrics(Size::unscaled(), location).units_per_em);
-                if upem <= 0. {
-                    return Err(RenderError::Font("zero units_per_em".into()));
-                }
-                let metrics = face.glyph_metrics(Size::unscaled(), location);
-                let Some(b) = metrics.bounds(gid) else {
-                    return Ok(None);
-                };
-                if b.x_max <= b.x_min || b.y_max <= b.y_min {
-                    return Ok(None);
-                }
-                let scale = f64::from(key.font_size()) / upem;
-                let padding = f64::from(key.padding);
-                let w = ((f64::from(b.x_max - b.x_min) * scale) + 2. * padding)
-                    .ceil()
-                    .max(1.) as u32;
-                let h = ((f64::from(b.y_max - b.y_min) * scale) + 2. * padding)
-                    .ceil()
-                    .max(1.) as u32;
-                let (mut shape, _) =
-                    load_shape_from_face(&face, gid, location).map_err(|e| {
-                        RenderError::Font(format!("glyph {}: {e:?}", key.glyph.glyph_id))
-                    })?;
-                let transform = nalgebra::convert::<_, Affine2<f64>>(Similarity2::new(
-                    Vector2::new(
-                        padding - f64::from(b.x_min) * scale,
-                        padding - f64::from(b.y_min) * scale,
-                    ),
-                    0.,
-                    scale,
-                ));
-                shape.transform(&transform);
-                let colored = Shape::edge_coloring_simple(
-                    shape,
-                    0.03,
-                    69441337420_u64.wrapping_add(u64::from(key.glyph.glyph_id)),
-                );
-                let prepared = colored.prepare();
-                let mut image = RgbImage::new(w, h);
-                generate_msdf(&prepared, 2. * padding, &mut image);
-                correct_sign_msdf(&mut image, &prepared, FillRule::Nonzero);
-                imageops::flip_vertical_in_place(&mut image);
-                Ok(Some(GlyphBitmap {
-                    pixels: image,
-                    bearing_x: b.x_min * scale as f32 - padding as f32,
-                    bearing_y: b.y_max * scale as f32 + padding as f32,
-                }))
-            },
-        )
-        .ok_or_else(|| {
-            RenderError::Font(format!("unknown font id {:?}", key.glyph.font_id))
-        })?
 }
 
 #[cfg(test)]

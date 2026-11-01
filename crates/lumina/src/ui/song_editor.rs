@@ -36,6 +36,7 @@ use cosmic::widget::{
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
 use dirs::font_dir;
+use fdsm_lumina::FdsmContext;
 use fdsm_lumina::cosmic_text::FontSystem;
 use fontdb;
 use iced_video_player::{Video, VideoPlayer};
@@ -62,6 +63,7 @@ pub struct SongEditor {
     title: String,
     font_db: Arc<fontdb::Database>,
     font_system: Arc<Mutex<FontSystem>>,
+    fdsm_context: Arc<Mutex<FdsmContext>>,
     fonts_combo: combo_box::State<Face>,
     font_sizes: combo_box::State<String>,
     font: Option<Face>,
@@ -224,6 +226,7 @@ impl SongEditor {
     pub fn new(
         font_db: Arc<fontdb::Database>,
         genius_token: Option<String>,
+        fdsm_context: Arc<Mutex<FdsmContext>>,
         font_system: Arc<Mutex<FontSystem>>,
     ) -> Self {
         let fonts = font_dir();
@@ -272,6 +275,7 @@ impl SongEditor {
         Self {
             song: None,
             font_db,
+            fdsm_context,
             font_system,
             fonts_combo: combo_box::State::new(fonts),
             title: String::new(),
@@ -1215,7 +1219,8 @@ impl SongEditor {
                         hide_mouse: false,
                         animation: None,
                         now: Instant::now(),
-                        font_system: Arc::clone(&self.font_system),
+                        fdsm_context: Arc::clone(&self.fdsm_context),
+                        prewarm_texts: None,
                     };
                     let mut slide: Element<Message> =
                         container(crate::ui::widgets::slide::slide(
@@ -2355,10 +2360,12 @@ impl Default for SongEditor {
     fn default() -> Self {
         let mut fontdb = fontdb::Database::new();
         fontdb.load_system_fonts();
+        let font_system = Arc::new(Mutex::new(FontSystem::new()));
         Self::new(
             Arc::new(fontdb),
             None,
-            Arc::new(Mutex::new(FontSystem::new())),
+            Arc::new(Mutex::new(FdsmContext::new(font_system.clone()))),
+            font_system,
         )
     }
 }

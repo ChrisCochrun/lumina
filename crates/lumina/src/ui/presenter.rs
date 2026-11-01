@@ -22,6 +22,7 @@ use cosmic::widget::{
 use cosmic::{Task, theme};
 use derive_more::Debug;
 use fdsm_lumina::cosmic_text::FontSystem;
+use fdsm_lumina::{FdsmContext, StyledText};
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
 use obws::Client;
 use obws::responses::scenes::Scene;
@@ -76,7 +77,8 @@ pub(crate) struct Presenter {
     animator: Option<Animation<bool>>,
     now: Instant,
     pub view_mode: ViewMode,
-    font_system: Arc<Mutex<FontSystem>>,
+    fdsm_context: Arc<Mutex<FdsmContext>>,
+    prewarm_texts: Option<Vec<Arc<StyledText>>>,
 }
 
 #[allow(dead_code)]
@@ -114,13 +116,14 @@ pub(crate) enum Message {
     CloseContextMenu,
     ChangePreviewSize(f64),
     Tick(Instant),
+    PrewarmTexts,
 }
 
 impl Presenter {
     #[allow(clippy::too_many_lines)]
     pub fn with_items(
         items: Arc<Vec<ServiceItem>>,
-        font_system: Arc<Mutex<FontSystem>>,
+        fdsm_context: Arc<Mutex<FdsmContext>>,
     ) -> Self {
         let preview_video = {
             items.first().and_then(|item| {
@@ -239,7 +242,8 @@ impl Presenter {
             animator: None,
             now: Instant::now(),
             view_mode: ViewMode::Row,
-            font_system,
+            fdsm_context,
+            prewarm_texts: None,
         }
     }
 
@@ -508,6 +512,9 @@ impl Presenter {
                 error!(error);
             }
             Message::CloseContextMenu => self.context_menu_id = None,
+            Message::PrewarmTexts => {
+                self.set_prewarm_texts();
+            }
         }
         Action::None
     }
@@ -518,7 +525,8 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
-            font_system: Arc::clone(&self.font_system),
+            fdsm_context: Arc::clone(&self.fdsm_context),
+            prewarm_texts: self.prewarm_texts.clone(),
         };
 
         let video: Option<Element<Message>> =
@@ -571,7 +579,8 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
-            font_system: Arc::clone(&self.font_system),
+            fdsm_context: Arc::clone(&self.fdsm_context),
+            prewarm_texts: self.prewarm_texts.clone(),
         };
         let video: Option<Element<Message>> = self.preview_video.as_ref().map(|video| {
             VideoPlayer::new(video)
@@ -643,7 +652,8 @@ impl Presenter {
             hide_mouse: false,
             animation: self.animation.as_ref(),
             now: self.now,
-            font_system: Arc::clone(&self.font_system),
+            fdsm_context: Arc::clone(&self.fdsm_context),
+            prewarm_texts: None,
         };
         let slide_element =
             widgets::slide::slide(slide, None, None, None::<Element<Message>>, settings);
@@ -1039,6 +1049,34 @@ impl Presenter {
         }
     }
 
+    fn set_prewarm_texts(&mut self) {
+        let current_slide = (self.current_item_index, self.current_slide_index);
+        let max_slides = 5;
+        let mut prewarm_texts = Vec::new();
+        for (item_index, item) in self.service.iter().enumerate() {
+            if item_index >= current_slide.0 {
+                for (slide_index, slide) in item.slides.iter().enumerate() {
+                    if slide_index >= current_slide.1 {
+                        if let Some(styled_text) = slide.styled_text.clone() {
+                            prewarm_texts.push(styled_text);
+                            if prewarm_texts.len() == max_slides {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if prewarm_texts.len() == max_slides {
+                break;
+            }
+        }
+        if prewarm_texts.len() == 0 {
+            self.prewarm_texts = None;
+        } else {
+            self.prewarm_texts = Some(prewarm_texts);
+        }
+    }
+
     #[allow(clippy::too_many_lines)]
     fn change_slide(&mut self, slide: Slide) -> Action {
         let slide_text = slide.text();
@@ -1117,6 +1155,7 @@ impl Presenter {
         }
         let task_count = tasks.len();
         debug!(?task_count);
+        tasks.push(Task::done(Message::PrewarmTexts));
         Action::Task(Task::batch(tasks))
     }
 
@@ -1174,7 +1213,9 @@ mod test {
         let service = test_service();
         let mut presenter = Presenter::with_items(
             Arc::new(service),
-            Arc::new(Mutex::new(FontSystem::new())),
+            Arc::new(Mutex::new(FdsmContext::new(Arc::new(Mutex::new(
+                FontSystem::new(),
+            ))))),
         );
         presenter.update(Message::NextSlide);
         dbg!(&presenter.service);

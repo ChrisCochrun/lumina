@@ -35,6 +35,7 @@ use cosmic::widget::{
 use cosmic::{
     Application, ApplicationExt, Apply, Element, cosmic_config, executor, theme,
 };
+use fdsm_lumina::FdsmContext;
 use fdsm_lumina::cosmic_text::FontSystem;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -204,6 +205,7 @@ struct App {
     library_dragged_item: Option<ServiceItem>,
     fontdb: Arc<fontdb::Database>,
     font_system: Arc<Mutex<FontSystem>>,
+    fdsm_context: Arc<Mutex<FdsmContext>>,
     menu_keys: HashMap<KeyBind, MenuAction>,
     context_menu: Option<usize>,
     modifiers_pressed: Option<Modifiers>,
@@ -425,11 +427,13 @@ impl cosmic::Application for App {
         //     .collect();
         let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
         let font_system = Arc::new(Mutex::new(FontSystem::new()));
+        let fdsm_context = Arc::new(Mutex::new(FdsmContext::new(font_system.clone())));
 
-        let presenter = Presenter::with_items(items.clone(), Arc::clone(&font_system));
+        let presenter = Presenter::with_items(items.clone(), Arc::clone(&fdsm_context));
         let song_editor = SongEditor::new(
             Arc::clone(&fontdb),
             settings.genius_token.clone(),
+            Arc::clone(&fdsm_context),
             Arc::clone(&font_system),
         );
 
@@ -504,7 +508,8 @@ impl cosmic::Application for App {
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
-            font_system: Arc::new(Mutex::new(FontSystem::new())),
+            font_system: font_system.clone(),
+            fdsm_context,
             menu_keys,
             hovered_item: None,
             hovered_dnd: None,

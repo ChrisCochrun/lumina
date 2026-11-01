@@ -10,7 +10,7 @@ use cosmic::widget::Id;
 use fdsm_lumina::cosmic_text::{Attrs, FontSystem, Metrics};
 use fdsm_lumina::iced_adapter::FdsmTextPrimitive;
 use fdsm_lumina::style::{Color as FdsmColor, Glow, GlyphColoring, TextStyle};
-use fdsm_lumina::{StyledText, StyledTextBuilder, TextRegion};
+use fdsm_lumina::{FdsmContext, StyledText, StyledTextBuilder, TextRegion};
 use fontdb::Family;
 use iced_core::event::Event;
 use iced_core::widget::{Operation, Tree};
@@ -72,7 +72,8 @@ pub struct SlideSettings<'a> {
     pub hide_mouse: bool,
     pub animation: Option<&'a crate::core::animation::Animation>,
     pub now: Instant,
-    pub font_system: Arc<Mutex<FontSystem>>,
+    pub fdsm_context: Arc<Mutex<FdsmContext>>,
+    pub prewarm_texts: Option<Vec<Arc<StyledText>>>,
 }
 
 #[derive(PartialEq)]
@@ -695,9 +696,12 @@ where
 
         if !self.slide.text.is_empty() {
             let mut text_renderer =
-                FdsmTextPrimitive::new(Arc::clone(&self.settings.font_system));
+                FdsmTextPrimitive::new(Arc::clone(&self.settings.fdsm_context));
             if let Some(text) = &self.slide.styled_text {
                 text_renderer.push_text(text.clone());
+            }
+            if let Some(prewarm_texts) = self.settings.prewarm_texts.clone() {
+                text_renderer.prewarm(prewarm_texts);
             }
             let primitive_bounds =
                 Rectangle::new(current_foreground_position, current_foreground_size);

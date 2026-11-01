@@ -2,12 +2,15 @@
 //! per text primitive so multiple slides can prepare before Iced draws them.
 use crate::{
     atlas::{AtlasRect, CacheKey, GlyphAtlas},
+    context::FdsmContext,
     cosmic_text::FontSystem,
+    glyph_generator::{GlyphLookup, RequestStatus},
     style::{GpuTextStyle, GradientRegion},
     text::StyledText,
 };
 use bytemuck::{Pod, Zeroable};
 use iced_wgpu::wgpu::{self, util::DeviceExt};
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum RenderError {
@@ -110,6 +113,79 @@ impl PhysicalBounds {
             height,
         }
     }
+}
+
+/// Progress for a set of upcoming texts in this *particular* GPU atlas.
+/// A CPU-ready glyph does not count as GPU-ready until its atlas insertion.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PrewarmProgress {
+    pub unique_glyphs: usize,
+    pub gpu_ready: usize,
+    pub uploaded: usize,
+    pub queued: usize,
+    pub pending: usize,
+    pub waiting_for_upload: usize,
+    pub queue_full: usize,
+}
+impl PrewarmProgress {
+    pub fn is_ready(&self) -> bool {
+        self.gpu_ready == self.unique_glyphs
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TextGeometry {
+    sx: f32,
+    sy: f32,
+    padding: u32,
+}
+
+/// Single source of truth for the scaling and padding that feed a glyph key.
+/// Both prepare() and prewarm() must use these exact calculations.
+fn text_geometry(
+    text: &StyledText,
+    bounds: PhysicalBounds,
+) -> Result<TextGeometry, RenderError> {
+    if !bounds.width.is_finite()
+        || !bounds.height.is_finite()
+        || bounds.width <= 0.0
+        || bounds.height <= 0.0
+        || !text.region.width.is_finite()
+        || !text.region.height.is_finite()
+        || text.region.width <= 0.0
+        || text.region.height <= 0.0
+    {
+        return Err(RenderError::InvalidRegion);
+    }
+
+    let sx = bounds.width / text.region.width * text.scale;
+    let sy = bounds.height / text.region.height * text.scale;
+    if !sx.is_finite() || !sy.is_finite() || sx <= 0.0 || sy <= 0.0 {
+        return Err(RenderError::InvalidRegion);
+    }
+    let padding = ((text
+        .styles
+        .iter()
+        .map(|style| style.scaled(sx).required_padding())
+        .fold(0.0_f32, f32::max)
+        + 2.0)
+        .max(16.0))
+    .ceil() as u32;
+
+    Ok(TextGeometry { sx, sy, padding })
+}
+
+fn glyph_key(
+    font_source: usize,
+    glyph: &crate::text::TextGlyph,
+    geometry: TextGeometry,
+) -> CacheKey {
+    CacheKey::new(
+        font_source,
+        glyph.key,
+        glyph.font_size * geometry.sx,
+        geometry.padding,
+    )
 }
 
 impl TextRenderer {
@@ -232,10 +308,8 @@ impl TextRenderer {
             atlas,
         }
     }
-    /// Prepare a single text instance. Returns OWNED resources for that instance;
-    /// no subsequent prepare() can overwrite a previously prepared instance.
-    /// `font_source` distinguishes independently allocated FontSystems whose
-    /// databases may reuse the same numeric fontdb IDs.
+    /// Existing synchronous API. Cold glyphs are generated inline.
+    /// Kept for users of FDSM without an FdsmContext.
     pub fn prepare(
         &mut self,
         device: &wgpu::Device,
@@ -245,38 +319,124 @@ impl TextRenderer {
         text: &StyledText,
         bounds: PhysicalBounds,
     ) -> Result<Option<PreparedText>, RenderError> {
-        if !bounds.width.is_finite()
-            || !bounds.height.is_finite()
-            || bounds.width <= 0.
-            || bounds.height <= 0.
-            || text.region.width <= 0.
-            || text.region.height <= 0.
-        {
-            return Err(RenderError::InvalidRegion);
+        self.prepare_inner(device, queue, font_system, font_source, text, bounds, None)
+    }
+
+    /// Reuses completed worker results where possible. If a visible glyph is
+    /// still cold, synchronously generate it rather than render missing letters.
+    /// Prewarm ahead of time if you need switches without that fallback stall.
+    pub fn prepare_with_context(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        font_system: &FontSystem,
+        context: &FdsmContext,
+        text: &StyledText,
+        bounds: PhysicalBounds,
+    ) -> Result<Option<PreparedText>, RenderError> {
+        self.prepare_inner(
+            device,
+            queue,
+            font_system,
+            context.font_source(),
+            text,
+            bounds,
+            Some(context),
+        )
+    }
+
+    /// Schedule missing glyphs for upcoming slides without generating MSDFs
+    /// or allocating per-text vertex buffers on the render thread.
+    ///
+    /// Upload at most `max_uploads` completed bitmaps into *this* GPU atlas
+    /// in one call. Call again on subsequent frames until progress.is_ready().
+    /// `texts` should be ordered by proximity to the current slide.
+    pub fn prewarm<'a>(
+        &mut self,
+        queue: &wgpu::Queue,
+        font_system: &FontSystem,
+        context: &FdsmContext,
+        texts: impl IntoIterator<Item = &'a StyledText>,
+        bounds: PhysicalBounds,
+        max_uploads: usize,
+    ) -> Result<PrewarmProgress, RenderError> {
+        let mut seen = HashSet::new();
+        let mut keys = Vec::new();
+        for text in texts {
+            let geometry = text_geometry(text, bounds)?;
+            for line in &text.lines {
+                for glyph in &line.glyphs {
+                    let key = glyph_key(context.font_source(), glyph, geometry);
+                    if seen.insert(key) {
+                        keys.push(key);
+                    }
+                }
+            }
         }
-        let sx = bounds.width / text.region.width * text.scale;
-        let sy = bounds.height / text.region.height * text.scale;
-        if !sx.is_finite() || !sy.is_finite() || sx <= 0. || sy <= 0. {
-            return Err(RenderError::InvalidRegion);
+
+        let mut report = PrewarmProgress {
+            unique_glyphs: keys.len(),
+            ..PrewarmProgress::default()
+        };
+        for key in keys {
+            if self.atlas.get(key).is_some() {
+                report.gpu_ready += 1;
+                continue;
+            }
+            match context.lookup(key) {
+                GlyphLookup::Ready(image) if report.uploaded < max_uploads => {
+                    self.atlas.insert(queue, key, &image)?;
+                    report.uploaded += 1;
+                    report.gpu_ready += 1;
+                }
+                GlyphLookup::Ready(_) => report.waiting_for_upload += 1,
+                GlyphLookup::Pending => report.pending += 1,
+                GlyphLookup::Failed(error) => {
+                    return Err(RenderError::Font(error.to_string()));
+                }
+                GlyphLookup::Missing => {
+                    match context.request(font_system, key) {
+                        RequestStatus::Queued => report.queued += 1,
+                        RequestStatus::QueueFull => report.queue_full += 1,
+                        RequestStatus::Failed => {
+                            return Err(RenderError::Font(
+                                "glyph worker could not accept a request".into(),
+                            ));
+                        }
+                        RequestStatus::AlreadyPending | RequestStatus::AlreadyReady => {}
+                    }
+                    report.pending += 1;
+                }
+            }
         }
-        let s = sx; // glyph MSDF generation uses horizontal scale; vertical quad adapts by sy/sx
+        Ok(report)
+    }
+
+    fn prepare_inner(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        font_system: &FontSystem,
+        font_source: usize,
+        text: &StyledText,
+        bounds: PhysicalBounds,
+        context: Option<&FdsmContext>,
+    ) -> Result<Option<PreparedText>, RenderError> {
+        let geometry = text_geometry(text, bounds)?;
+        let sx = geometry.sx;
+        let sy = geometry.sy;
+        let padding = geometry.padding;
         let stretch_y = sy / sx;
-        let styles = text.styles.iter().map(|v| v.scaled(s)).collect::<Vec<_>>();
-        let padding = ((styles
-            .iter()
-            .map(|v| v.required_padding())
-            .fold(0.0_f32, f32::max)
-            + 2.)
-            .max(16.))
-        .ceil() as u32;
         let region = text.gradient_region.map(|r| GradientRegion {
             x: r.x * sx,
             y: r.y * sy,
             width: r.width * sx,
             height: r.height * sy,
         });
-        let gpu_styles = styles
-            .into_iter()
+        let gpu_styles = text
+            .styles
+            .iter()
+            .map(|style| style.scaled(sx))
             .map(|st| st.to_gpu(region))
             .collect::<Vec<GpuTextStyle>>();
         let mut verts = Vec::<Vertex>::new();
@@ -284,22 +444,21 @@ impl TextRenderer {
             // When the cosmic-text buffer already aligned a line, glyph.x has
             // the appropriate horizontal offset. Do not center it a second time.
             for g in &line.glyphs {
-                let key = CacheKey::new(font_source, g.key, g.font_size * s, padding);
-                let info = self.atlas.obtain(queue, font_system, key)?;
-
-                // let cache_miss = !self.atlas.glyphs.contains_key(&key);
-                // let start = std::time::Instant::now();
-
-                // if cache_miss {
-                //     tracing::warn!(
-                //         glyph_id = g.key.glyph_id,
-                //         font_id = ?g.key.font_id,
-                //         ppem = key.ppem_quarters as f32 / 4.0,
-                //         padding = key.padding,
-                //         elapsed_ms = start.elapsed().as_secs_f64() * 1000.0,
-                //         "MSDF atlas cache miss"
-                //     );
-                // }
+                let key = glyph_key(font_source, g, geometry);
+                let info = match self.atlas.get(key) {
+                    Some(placement) => placement,
+                    None => match context.map(|ctx| ctx.lookup(key)) {
+                        Some(GlyphLookup::Ready(image)) => {
+                            self.atlas.insert(queue, key, &image)?
+                        }
+                        Some(GlyphLookup::Failed(error)) => {
+                            return Err(RenderError::Font(error.to_string()));
+                        }
+                        // Correctness-first fallback: a direct jump to an
+                        // unprepared slide must not draw incomplete text.
+                        _ => self.atlas.obtain(queue, font_system, key)?,
+                    },
+                };
                 let Some(rect) = info.rect else { continue };
                 let x = (g.x + g.x_offset * g.font_size) * sx + info.bearing_x;
                 let first_line_top = text.lines.first().map_or(0.0, |line| line.top);
@@ -381,47 +540,6 @@ impl TextRenderer {
             RenderLayer::OuterStroke => &self.outer_stroke_pipeline,
             RenderLayer::Body => &self.body_pipeline,
         }
-    }
-
-    pub fn prewarm(
-        &mut self,
-        queue: &wgpu::Queue,
-        font_system: &FontSystem,
-        font_source: usize,
-        text: &StyledText,
-        bounds: PhysicalBounds,
-    ) -> Result<(), RenderError> {
-        // Calculate the same scale and padding as prepare().
-        // Ideally share this calculation between both methods.
-        let scale = bounds.width / text.region.width * text.scale;
-
-        let styles = text
-            .styles
-            .iter()
-            .map(|v| v.scaled(scale))
-            .collect::<Vec<_>>();
-        let padding = ((styles
-            .iter()
-            .map(|v| v.required_padding())
-            .fold(0.0_f32, f32::max)
-            + 2.)
-            .max(16.))
-        .ceil() as u32;
-
-        for line in &text.lines {
-            for glyph in &line.glyphs {
-                let key = CacheKey::new(
-                    font_source,
-                    glyph.key,
-                    glyph.font_size * scale,
-                    padding,
-                );
-
-                self.atlas.obtain(queue, font_system, key)?;
-            }
-        }
-
-        Ok(())
     }
 
     fn draw_prepared(pass: &mut wgpu::RenderPass<'_>, prepared: &PreparedText) {
@@ -583,6 +701,43 @@ mod tests {
                 RenderLayer::OuterStroke,
                 RenderLayer::Body,
             ]
+        );
+    }
+}
+
+#[cfg(test)]
+mod prewarm_tests {
+    use super::*;
+    use crate::{style::TextStyle, text::TextRegion};
+
+    fn empty_text() -> StyledText {
+        StyledText {
+            lines: vec![],
+            styles: vec![TextStyle::default()],
+            region: TextRegion::new(1920.0, 1080.0),
+            scale: 1.0,
+            gradient_region: None,
+            measured_height: 0.0,
+            vertical_offset: 0.0,
+        }
+    }
+
+    #[test]
+    fn scale_and_padding_are_shared_by_render_and_prewarm() {
+        let text = empty_text();
+        let bounds = PhysicalBounds::new(0.0, 0.0, 960.0, 540.0);
+        let geometry = text_geometry(&text, bounds).unwrap();
+        assert_eq!(geometry.sx, 0.5);
+        assert_eq!(geometry.sy, 0.5);
+        assert_eq!(geometry.padding, 16);
+    }
+
+    #[test]
+    fn invalid_display_bounds_are_rejected() {
+        let text = empty_text();
+        assert!(text_geometry(&text, PhysicalBounds::new(0.0, 0.0, 0.0, 540.0)).is_err());
+        assert!(
+            text_geometry(&text, PhysicalBounds::new(0.0, 0.0, f32::NAN, 540.0)).is_err()
         );
     }
 }

@@ -12,11 +12,15 @@
 pub use iced_graphics::text::cosmic_text;
 pub use iced_wgpu::wgpu;
 mod atlas;
+pub mod context;
+pub mod glyph;
+mod glyph_generator;
+pub use context::{FdsmCacheStats, FdsmContext};
 pub mod iced_adapter;
 mod renderer;
 pub mod style;
 mod text;
 pub use renderer::{
-    PreparedText, RenderError, RenderLayer, RendererConfig, TextRenderer,
+    PreparedText, PrewarmProgress, RenderError, RenderLayer, RendererConfig, TextRenderer,
 };
 pub use text::{StyledText, StyledTextBuilder, TextRegion};
