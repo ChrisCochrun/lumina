@@ -129,20 +129,11 @@ impl Primitive for FdsmTextPrimitive {
                 PREWARM_UPLOADS_PER_FRAME,
             ) {
                 Ok(progress) => {
-                    tracing::debug!(
-                        target: "fdsm_lumina::glyph_diagnostics",
-                        width = physical.width,
-                        height = physical.height,
-                        unique = progress.unique_glyphs,
-                        gpu_ready = progress.gpu_ready,
-                        uploaded = progress.uploaded,
-                        queued = progress.queued,
-                        pending = progress.pending,
-                        waiting_for_upload = progress.waiting_for_upload,
-                        queue_full = progress.queue_full,
-                        ready = progress.is_ready(),
-                        "FDSM_PREWARM_STATUS"
-                    );
+                    // tracing::debug!(
+                    //     target: "fdsm_lumina::glyph_diagnostics",
+                    //     ?progress,
+                    //     "FDSM_PREWARM_STATUS"
+                    // );
                 }
                 Err(error) => tracing::error!(%error, "fdsm prewarm failed"),
             }

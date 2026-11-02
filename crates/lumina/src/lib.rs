@@ -1187,16 +1187,12 @@ impl cosmic::Application for App {
             }
             Message::Present(message) => {
                 // debug!(?message);
-                if self.presentation_open
-                    && let Some(video) = &mut self.presenter.presentation_video
-                {
-                    video.set_muted(false);
-                }
-                if self.presentation_open
-                    && let Some(video) = &mut self.presenter.preview_video
-                {
-                    video.set_muted(true);
-                }
+                // if self.presentation_open
+                //     && let Some(pair) = &mut self.presenter.video_manager.current_video
+                // {
+                //     pair.presentation.set_muted(false);
+                //     pair.preview.set_muted(true);
+                // }
                 if let presenter::Message::ChangePreviewSize(size) = message {
                     self.update_preview_size(size as f32);
                 }
@@ -1354,20 +1350,21 @@ impl cosmic::Application for App {
                 // let radii = self.core.window.sharp_corners;
                 // debug!(radii);
                 // self.core.window.sharp_corners = true;
-                if self.cli_mode
-                            || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?")
-                                                        {
-                                                            self.presentation_open = true;
-                                                            if let Some(video) = &mut self.presenter.preview_video {
-                                                                video.set_muted(true);
-                                                            }
-                                                            if let Some(video) = &mut self.presenter.presentation_video {
-                                                                video.set_muted(false);
-                                                            }
-                                                            window::disable_blur(id).chain(window::set_mode(id, window::Mode::Fullscreen))
-                                                        } else {
-                                                            Task::none()
-                                                        }
+                if self.cli_mode || id > self.core.main_window_id().expect("Cosmic core seems to be missing a main window, was this started in cli mode?") {
+                    self.presentation_open = true;
+                    window::disable_blur(id)
+                        .chain(
+                            window::set_mode(id, window::Mode::Fullscreen))
+                        .chain(Task::done(
+                            cosmic::Action::App(
+                                Message::Present(
+                                    presenter::Message::VideoMute(false)
+                                )
+                            )
+                        ))
+                } else {
+                    Task::none()
+                }
             }
             Message::WindowClosed(id) => {
                 warn!("Closing window: {id}");
@@ -1381,11 +1378,9 @@ impl cosmic::Application for App {
                     self.update(Message::Quit)
                 } else {
                     self.presentation_open = false;
-                    if let Some(video) = &mut self.presenter.preview_video {
-                        video.set_muted(true);
-                    }
-                    if let Some(video) = &mut self.presenter.presentation_video {
-                        video.set_muted(true);
+                    if let Some(pair) = &mut self.presenter.video_manager.current_video {
+                        pair.preview.set_muted(true);
+                        pair.presentation.set_muted(true);
                     }
                     Task::none()
                 }
@@ -2192,32 +2187,39 @@ impl cosmic::Application for App {
 
         let video_range = self
             .presenter
-            .preview_video
+            .video_manager
+            .current_video
             .as_ref()
-            .map_or_else(|| 0.0, |video| video.duration().as_secs_f64());
+            .map_or_else(|| 0.0, |pair| pair.preview.duration().as_secs_f64());
 
-        let video_button_icon = self.presenter.preview_video.as_ref().map_or_else(
-            || {
-                button::icon(icon::from_name("media-playback-start-symbolic"))
-                    .tooltip("Play")
-                    .on_press(Message::Present(presenter::Message::PlayPauseVideo))
-            },
-            |video| {
-                let (icon_name, tooltip) = if video.paused() {
-                    ("media-playback-start-symbolic", "Play")
-                } else {
-                    ("media-playback-pause-symbolic", "Pause")
-                };
-                button::icon(icon::from_name(icon_name))
-                    .tooltip(tooltip)
-                    .on_press(Message::Present(presenter::Message::PlayPauseVideo))
-            },
-        );
+        let video_button_icon = self
+            .presenter
+            .video_manager
+            .current_video
+            .as_ref()
+            .map_or_else(
+                || {
+                    button::icon(icon::from_name("media-playback-start-symbolic"))
+                        .tooltip("Play")
+                        .on_press(Message::Present(presenter::Message::PlayPauseVideo))
+                },
+                |pair| {
+                    let (icon_name, tooltip) = if pair.preview.paused() {
+                        ("media-playback-start-symbolic", "Play")
+                    } else {
+                        ("media-playback-pause-symbolic", "Pause")
+                    };
+                    button::icon(icon::from_name(icon_name))
+                        .tooltip(tooltip)
+                        .on_press(Message::Present(presenter::Message::PlayPauseVideo))
+                },
+            );
         let video_position = self
             .presenter
-            .preview_video
+            .video_manager
+            .current_video
             .as_ref()
-            .map_or(0.0, |video| video.position().as_secs_f64());
+            .map_or(0.0, |pair| pair.preview.position().as_secs_f64());
 
         let mut slide_preview = column![
             responsive(|size| {
@@ -2234,7 +2236,7 @@ impl cosmic::Application for App {
         ]
         .spacing(3);
 
-        if self.presenter.preview_video.is_some() {
+        if self.presenter.video_manager.current_video.is_some() {
             slide_preview = slide_preview.push(
                 row![
                     video_button_icon,

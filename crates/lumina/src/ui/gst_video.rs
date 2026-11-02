@@ -1,21 +1,120 @@
 use std::fmt::Display;
 use std::num::NonZero;
 use std::path::PathBuf;
+use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
+use cosmic::Task;
 use cosmic::widget::image::Handle;
 use iced_video_player::gst_app::prelude::*;
 use iced_video_player::gst_app::{self};
 use iced_video_player::{Position, Video, gst};
 use image::{DynamicImage, ImageFormat, RgbaImage};
+use miette::miette;
 use tracing::debug;
 use url::Url;
+
+use crate::core::slide::SlideId;
+use crate::ui::presenter;
 
 #[derive(Debug)]
 pub struct VideoSettings {
     pub mute: bool,
     pub framerate: u16,
     pub appsink_name: String,
+}
+
+#[derive(Debug, Default)]
+pub struct VideoManager {
+    pub previous_video: Option<VideoPair>,
+    pub current_video: Option<VideoPair>,
+    pub next_video: Option<VideoPair>,
+}
+
+#[derive(Debug)]
+pub struct VideoPair {
+    pub preview: Video,
+    pub presentation: Video,
+    pub path: PathBuf,
+    pub slide_id: SlideId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VideoLocation {
+    Current,
+    Next,
+    Previous,
+}
+
+impl VideoManager {
+    pub(crate) fn preload(
+        &mut self,
+        path: PathBuf,
+        slide_id: SlideId,
+        video_location: VideoLocation,
+    ) -> Task<presenter::Message> {
+        Task::perform(
+            async move {
+                tokio::task::spawn_blocking(|| load_video(path, slide_id))
+                    .await
+                    .map_err(|_| {
+                        VideoError::IOError(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            String::from("Error in spawning tokio task"),
+                        ))
+                    })
+                    .and_then(|result| result)
+            },
+            |result| match result {
+                Ok(videos) => presenter::Message::VideoPipelineFinished((
+                    video_location,
+                    Arc::new(videos),
+                )),
+                Err(e) => {
+                    tracing::error!(?e);
+                    presenter::Message::None
+                }
+            },
+        )
+    }
+
+    pub fn set_new_video(
+        &mut self,
+        video_location: &VideoLocation,
+        video_pair: Arc<VideoPair>,
+    ) {
+        match video_location {
+            VideoLocation::Current => {
+                self.current_video = Some(Arc::into_inner(video_pair).expect("Woops"));
+                if let Some(pair) = &mut self.current_video {
+                    pair.preview.set_muted(true);
+                    pair.preview.set_paused(false);
+                    pair.presentation.set_muted(false);
+                    pair.presentation.set_paused(false);
+                }
+            }
+            VideoLocation::Next => {
+                self.next_video = Some(Arc::into_inner(video_pair).expect("Woops next"));
+                if let Some(pair) = &mut self.next_video {
+                    pair.preview.set_muted(true);
+                    pair.preview.set_paused(true);
+                    pair.presentation.set_muted(true);
+                    pair.presentation.set_paused(true);
+                }
+            }
+            VideoLocation::Previous => {
+                self.previous_video =
+                    Some(Arc::into_inner(video_pair).expect("Woops previous"));
+                if let Some(pair) = &mut self.previous_video {
+                    pair.preview.set_muted(true);
+                    pair.preview.set_paused(true);
+                    pair.presentation.set_muted(true);
+                    pair.presentation.set_paused(true);
+                }
+            }
+        }
+    }
 }
 
 impl Default for VideoSettings {
@@ -29,6 +128,30 @@ impl Default for VideoSettings {
 }
 
 type Result<T> = std::result::Result<T, VideoError>;
+
+fn load_video(path: PathBuf, slide_id: SlideId) -> Result<VideoPair> {
+    let url = Url::from_file_path(&path).map_err(|_| {
+        VideoError::IOError(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            String::from("Couldn't convert video path to url"),
+        ))
+    })?;
+    let main_settings = VideoSettings::default();
+    let preview_settings = VideoSettings {
+        mute: true,
+        framerate: 15,
+        appsink_name: String::from("lumina_preview"),
+    };
+
+    let main_video = create_video(&url, &main_settings)?;
+    let preview_video = create_video(&url, &preview_settings)?;
+    Ok(VideoPair {
+        preview: preview_video,
+        presentation: main_video,
+        path,
+        slide_id,
+    })
+}
 
 pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     // Based on `iced_video_player::Video::new`,

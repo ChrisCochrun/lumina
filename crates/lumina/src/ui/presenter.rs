@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
@@ -24,6 +25,7 @@ use derive_more::Debug;
 use fdsm_lumina::cosmic_text::FontSystem;
 use fdsm_lumina::{FdsmContext, StyledText};
 use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
+use itertools::Itertools;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
@@ -34,7 +36,7 @@ use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
 use crate::core::slide::{Slide, SlideId};
 use crate::core::slide_actions::{self, ObsAction};
-use crate::ui::gst_video::{self, VideoSettings};
+use crate::ui::gst_video::{self, VideoLocation, VideoManager, VideoPair, VideoSettings};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::slide::AnimationState;
@@ -54,8 +56,6 @@ pub(crate) struct Presenter {
     pub current_item_index: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
-    pub presentation_video: Option<Video>,
-    pub preview_video: Option<Video>,
     pub video_position: f64,
     pub audio: Option<PathBuf>,
     audio_duration: Option<Duration>,
@@ -79,6 +79,7 @@ pub(crate) struct Presenter {
     pub view_mode: ViewMode,
     fdsm_context: Arc<Mutex<FdsmContext>>,
     prewarm_texts: Option<Vec<Arc<StyledText>>>,
+    pub video_manager: VideoManager,
 }
 
 #[allow(dead_code)]
@@ -113,10 +114,12 @@ pub(crate) enum Message {
     AddObsClient(Arc<Client>),
     AssignSlideAction((SlideId, slide_actions::Action)),
     PlayPauseVideo,
+    VideoMute(bool),
     CloseContextMenu,
     ChangePreviewSize(f64),
     Tick(Instant),
     PrewarmTexts,
+    VideoPipelineFinished((VideoLocation, Arc<VideoPair>)),
 }
 
 impl Presenter {
@@ -125,74 +128,6 @@ impl Presenter {
         items: Arc<Vec<ServiceItem>>,
         fdsm_context: Arc<Mutex<FdsmContext>>,
     ) -> Self {
-        let preview_video = {
-            items.first().and_then(|item| {
-                item.slides.first().and_then(|slide| {
-                    let path = slide.background().path.clone();
-                    if !path.exists() {
-                        return None;
-                    }
-
-                    let url = Url::from_file_path(path).expect(
-                        "There should be a video file here",
-                    );
-
-                    let video_settings = VideoSettings {
-                        mute: true,
-                        framerate: 15,
-                        appsink_name: "lumina_preview".to_string(),
-                    };
-                    let result = gst_video::create_video(&url, &video_settings);
-                    match result {
-                        Ok(mut v) => {
-                            v.set_paused(true);
-                            Some(v)
-                        }
-                        Err(e) => {
-                            error!(
-                                "Had an error creating the video object: {e}, likely the first slide isn't a video"
-                            );
-                            None
-                        }
-                    }
-                })
-            })
-        };
-        let presentation_video = {
-            items.first().and_then(|item| {
-                item.slides.first().and_then(|slide| {
-                    let path = slide.background().path.clone();
-                    if !path.exists() {
-                        return None;
-                    }
-
-                    let url = Url::from_file_path(path).expect(
-                        "There should be a video file here",
-                    );
-
-                    let video_settings = VideoSettings {
-                        mute: false,
-                        framerate: 60,
-                        appsink_name: "lumina_video".to_string(),
-
-                    };
-
-                    let result = gst_video::create_video(&url, &video_settings);
-                    match result {
-                        Ok(mut v) => {
-                            v.set_paused(true);
-                            Some(v)
-                        }
-                        Err(e) => {
-                            error!(
-                                "Had an error creating the video object: {e}, likely the first slide isn't a video"
-                            );
-                            None
-                        }
-                    }
-                })
-            })
-        };
         let total_slides: usize = items.iter().fold(0, |a, item| a + item.slides.len());
 
         let slide = items.first().and_then(|item| item.slides.first());
@@ -213,8 +148,6 @@ impl Presenter {
             current_item_index: 0,
             current_slide_index: 0,
             total_slides,
-            preview_video,
-            presentation_video,
             audio,
             audio_duration: None,
             audio_position: None,
@@ -244,6 +177,7 @@ impl Presenter {
             view_mode: ViewMode::Row,
             fdsm_context,
             prewarm_texts: None,
+            video_manager: VideoManager::default(),
         }
     }
 
@@ -295,6 +229,23 @@ impl Presenter {
                             Err(_) => todo!(),
                         },
                     ));
+                }
+            }
+            Message::VideoMute(mute) => {
+                if let Some(pair) = &mut self.video_manager.current_video {
+                    pair.preview.set_muted(true);
+                    pair.presentation.set_muted(mute);
+                }
+            }
+            Message::VideoPipelineFinished((video_location, video_pair)) => {
+                self.video_manager
+                    .set_new_video(&video_location, video_pair);
+                if matches!(video_location, VideoLocation::Current) {
+                    if let Some(pair) = &mut self.video_manager.current_video {
+                        pair.preview.set_looping(self.current_slide.video_loop());
+                        pair.presentation
+                            .set_looping(self.current_slide.video_loop());
+                    }
                 }
             }
             Message::UpdateObsScenes(scenes) => {
@@ -405,24 +356,21 @@ impl Presenter {
                 // }
             }
             Message::StartVideo => {
-                if let Some(video) = &mut self.preview_video {
-                    video.set_paused(false);
-                    video.set_looping(self.current_slide.video_loop());
-                    debug!(?video);
-                }
-                if let Some(video) = &mut self.presentation_video {
-                    video.set_paused(false);
-                    video.set_looping(self.current_slide.video_loop());
+                if let Some(pair) = &mut self.video_manager.current_video {
+                    pair.preview.set_paused(false);
+                    pair.preview.set_looping(self.current_slide.video_loop());
+                    pair.presentation.set_paused(false);
+                    pair.presentation
+                        .set_looping(self.current_slide.video_loop());
                 }
             }
             Message::PlayPauseVideo => {
-                if let Some(video) = &mut self.preview_video {
-                    video.set_paused(!video.paused());
-                    video.set_looping(self.current_slide.video_loop());
-                }
-                if let Some(video) = &mut self.presentation_video {
-                    video.set_paused(!video.paused());
-                    video.set_looping(self.current_slide.video_loop());
+                if let Some(pair) = &mut self.video_manager.current_video {
+                    pair.preview.set_paused(!pair.preview.paused());
+                    pair.preview.set_looping(self.current_slide.video_loop());
+                    pair.presentation.set_paused(!pair.presentation.paused());
+                    pair.presentation
+                        .set_looping(self.current_slide.video_loop());
                 }
             }
             Message::LoadedService => {
@@ -431,41 +379,33 @@ impl Presenter {
                 {
                     let _ = self.change_slide(slide.clone());
                     self.sink.1.pause();
-                    if let Some(video) = &mut self.preview_video {
-                        video.set_paused(true);
-                        video.set_looping(self.current_slide.video_loop());
-                    }
+                    return Action::Task(Task::batch(self.preload_videos()));
                 }
             }
             Message::VideoPos(position) => {
-                if let Some(video) = &mut self.preview_video {
+                if let Some(pair) = &mut self.video_manager.current_video {
                     let position =
                         Position::Time(std::time::Duration::from_secs_f64(position));
-                    match video.seek(position, false) {
-                        Ok(()) => debug!("Video position changed: {:?}", position),
-                        Err(e) => error!("Problem changing video position: {e}"),
-                    }
-                }
-                if let Some(video) = &mut self.presentation_video {
-                    let position =
-                        Position::Time(std::time::Duration::from_secs_f64(position));
-                    match video.seek(position, false) {
-                        Ok(()) => debug!("Video position changed: {:?}", position),
-                        Err(e) => error!("Problem changing video position: {e}"),
+                    if let Err(e) = pair.preview.seek(position, false) {
+                        error!("Problem changing video position: {e}");
+                    };
+                    if let Err(e) = pair.presentation.seek(position, false) {
+                        error!("Problem changing video position: {e}");
                     }
                 }
             }
             Message::VideoFrame => {
-                if let Some(video) = &self.preview_video
+                if let Some(pair) = &self.video_manager.current_video
                     && self.video_position > 0.0
-                    && video.position().as_secs_f64() != 0.0
+                    && pair.preview.position().as_secs_f64() != 0.0
                 {
-                    self.video_position = video.position().as_secs_f64();
+                    self.video_position = pair.preview.position().as_secs_f64();
                 }
             }
             Message::MissingPlugin(element) => {
-                if let Some(video) = &mut self.preview_video {
-                    video.set_paused(true);
+                if let Some(pair) = &mut self.video_manager.current_video {
+                    pair.preview.set_paused(true);
+                    pair.presentation.set_paused(true);
                 }
                 return Action::Task(Task::perform(
                     async move {
@@ -530,8 +470,8 @@ impl Presenter {
         };
 
         let video: Option<Element<Message>> =
-            self.presentation_video.as_ref().map(|video| {
-                VideoPlayer::new(video)
+            self.video_manager.current_video.as_ref().map(|pair| {
+                VideoPlayer::new(&pair.presentation)
                     .mouse_hidden(settings.hide_mouse)
                     .width(Length::Fill)
                     .height(Length::Fill)
@@ -582,19 +522,20 @@ impl Presenter {
             fdsm_context: Arc::clone(&self.fdsm_context),
             prewarm_texts: self.prewarm_texts.clone(),
         };
-        let video: Option<Element<Message>> = self.preview_video.as_ref().map(|video| {
-            VideoPlayer::new(video)
-                .mouse_hidden(settings.hide_mouse)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .on_end_of_stream(Message::EndVideo)
-                .on_new_frame(Message::VideoFrame)
-                .on_missing_plugin(Message::MissingPlugin)
-                .on_warning(|w| Message::Error(w.to_string()))
-                .on_error(|e| Message::Error(e.to_string()))
-                .content_fit(ContentFit::Contain)
-                .into()
-        });
+        let video: Option<Element<Message>> =
+            self.video_manager.current_video.as_ref().map(|pair| {
+                VideoPlayer::new(&pair.preview)
+                    .mouse_hidden(settings.hide_mouse)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .on_end_of_stream(Message::EndVideo)
+                    .on_new_frame(Message::VideoFrame)
+                    .on_missing_plugin(Message::MissingPlugin)
+                    .on_warning(|w| Message::Error(w.to_string()))
+                    .on_error(|e| Message::Error(e.to_string()))
+                    .content_fit(ContentFit::Contain)
+                    .into()
+            });
 
         slide(
             &self.current_slide,
@@ -939,49 +880,64 @@ impl Presenter {
         }
     }
 
-    fn reset_video(&mut self) {
-        if self.current_slide.background().kind == BackgroundKind::Video
-            && let path = &self.current_slide.background().path
-            && path.exists()
+    fn preload_videos(&mut self) -> Vec<Task<Message>> {
+        let mut tasks = Vec::new();
+        if let Some(video) = &self.video_manager.next_video
+            && video.path == self.current_slide.background.path
         {
-            let url =
-                Url::from_file_path(path).expect("There should be a video file here");
+            self.video_manager.previous_video = self.video_manager.current_video.take();
+            self.video_manager.current_video = self.video_manager.next_video.take();
+            tasks.push(Task::done(Message::StartVideo));
+            tasks = self.preload_next_video(tasks);
+        } else if let Some(video) = &self.video_manager.current_video
+            && video.path == self.current_slide.background.path
+        {
+            tasks = self.preload_next_video(tasks);
+        } else if self.current_slide.background.kind == BackgroundKind::Video {
+            tasks = self.preload_next_video(tasks);
+            tasks.push(
+                self.video_manager
+                    .preload(
+                        self.current_slide.background.path.clone(),
+                        self.current_slide.id.clone(),
+                        VideoLocation::Current,
+                    )
+                    .chain(Task::done(Message::StartVideo)),
+            )
+        };
 
-            let video_settings = VideoSettings {
-                mute: true,
-                framerate: 30,
-                appsink_name: "lumina_preview".to_string(),
-            };
-            match gst_video::create_video(&url, &video_settings) {
-                Ok(mut v) => {
-                    v.set_looping(self.current_slide.video_loop());
-                    v.set_muted(true);
-                    self.preview_video = Some(v);
-                }
-                Err(e) => {
-                    error!("Had an error creating the video object: {e}");
-                    self.preview_video = None;
-                }
-            }
-            let video_settings = VideoSettings {
-                mute: false,
-                framerate: 60,
-                appsink_name: "lumina_video".to_string(),
-            };
-            match gst_video::create_video(&url, &video_settings) {
-                Ok(mut v) => {
-                    v.set_looping(self.current_slide.video_loop());
-                    self.presentation_video = Some(v);
-                }
-                Err(e) => {
-                    error!("Had an error creating the video object: {e}");
-                    self.presentation_video = None;
-                }
-            }
-        } else {
-            self.preview_video = None;
-            self.presentation_video = None;
-        }
+        tasks
+    }
+
+    fn preload_next_video(
+        &mut self,
+        mut tasks: Vec<Task<Message>>,
+    ) -> Vec<Task<Message>> {
+        let next_video_slide = self
+            .service
+            .iter()
+            .enumerate()
+            .skip(self.current_item_index)
+            .flat_map(|(item_index, item)| {
+                let start = if item_index == self.current_item_index {
+                    self.current_slide_index + 1
+                } else {
+                    0
+                };
+                item.slides.iter().skip(start)
+            })
+            .find(|slide| {
+                slide.background.kind == BackgroundKind::Video
+                    && slide.background.path != self.current_slide.background.path
+            });
+        if let Some(slide) = next_video_slide {
+            tasks.push(self.video_manager.preload(
+                slide.background.path.clone(),
+                slide.id.clone(),
+                VideoLocation::Next,
+            ))
+        };
+        tasks
     }
 
     pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
@@ -1050,31 +1006,23 @@ impl Presenter {
     }
 
     fn set_prewarm_texts(&mut self) {
-        let current_slide = (self.current_item_index, self.current_slide_index);
-        let max_slides = 5;
-        let mut prewarm_texts = Vec::new();
-        for (item_index, item) in self.service.iter().enumerate() {
-            if item_index >= current_slide.0 {
-                for (slide_index, slide) in item.slides.iter().enumerate() {
-                    if slide_index >= current_slide.1 {
-                        if let Some(styled_text) = slide.styled_text.clone() {
-                            prewarm_texts.push(styled_text);
-                            if prewarm_texts.len() == max_slides {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            if prewarm_texts.len() == max_slides {
-                break;
-            }
-        }
-        if prewarm_texts.len() == 0 {
-            self.prewarm_texts = None;
-        } else {
-            self.prewarm_texts = Some(prewarm_texts);
-        }
+        let prewarm_texts: Vec<Arc<StyledText>> = self
+            .service
+            .iter()
+            .enumerate()
+            .skip(self.current_item_index)
+            .flat_map(|(item_index, item)| {
+                let start = if item_index == self.current_item_index {
+                    self.current_slide_index
+                } else {
+                    0
+                };
+                item.slides.iter().skip(start)
+            })
+            .filter_map(|slide| slide.styled_text.clone())
+            .take(5)
+            .collect();
+        self.prewarm_texts = prewarm_texts.into();
     }
 
     #[allow(clippy::too_many_lines)]
@@ -1089,13 +1037,10 @@ impl Presenter {
         self.old_slide = Some(self.current_slide.clone());
         self.current_slide = slide;
         if !backgrounds_match {
-            if let Some(video) = &mut self.preview_video {
-                video.set_paused(true);
+            if let Some(pair) = &mut self.video_manager.current_video {
+                pair.preview.set_paused(true);
+                pair.presentation.set_paused(true);
             }
-            if let Some(video) = &mut self.presentation_video {
-                video.set_paused(true);
-            }
-            self.reset_video();
         }
 
         if let Some(item) = self.service.get(self.current_item_index)
@@ -1122,7 +1067,7 @@ impl Presenter {
             self.next_slide = None;
         }
 
-        let mut tasks = vec![];
+        let mut tasks = self.preload_videos();
         tasks.push(focus_target(
             self.scroll_id.clone(),
             Some(self.active_slide_id.clone()),
