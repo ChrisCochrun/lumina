@@ -384,47 +384,6 @@ impl cosmic::Application for App {
         let view_mode = state.view_mode;
         let library_open = state.library_open;
 
-        // let items = input.0.file.map_or_else(Vec::new, |file| {
-        //     match read_to_string(file) {
-        //         Ok(lisp) => {
-        //             let mut service_items = vec![];
-        //             let lisp = crisp::reader::read(&lisp);
-        //             match lisp {
-        //                 Value::List(vec) => {
-        //                     for value in vec {
-        //                         let mut inner_vector =
-        //                             parse_lisp(value);
-        //                         service_items
-        //                             .append(&mut inner_vector);
-        //                     }
-        //                 }
-        //                 _ => todo!(),
-        //             }
-        //             service_items
-        //         }
-        //         Err(e) => {
-        //             warn!("Missing file or could not read: {e}");
-        //             vec![]
-        //         }
-        //     }
-        // });
-
-        // let items: Vec<ServiceItem> = items
-        //     .into_par_iter()
-        //     .map(|mut item| {
-        //         item.slides = item
-        //             .slides
-        //             .into_par_iter()
-        //             .map(|mut slide| {
-        //                 text_svg::text_svg_generator(
-        //                     &mut slide, &fontdb,
-        //                 );
-        //                 slide
-        //             })
-        //             .collect();
-        //         item
-        //     })
-        //     .collect();
         let items: Arc<Vec<ServiceItem>> = Arc::new(vec![]);
         let font_system = Arc::new(Mutex::new(FontSystem::new()));
         let fdsm_context = Arc::new(Mutex::new(FdsmContext::new(font_system.clone())));
@@ -1994,13 +1953,15 @@ impl cosmic::Application for App {
                         }
                     }
                     LoadingState::Loaded => {
-                        task = Task::future(async {
-                            tokio::time::sleep(Duration::from_secs(5)).await;
-                            cosmic::Action::App(Message::HideLoadingBar)
-                        })
-                        .chain(Task::done(cosmic::Action::App(Message::Present(
-                            presenter::Message::LoadedService,
-                        ))));
+                        task = Task::batch([
+                            Task::future(async {
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                cosmic::Action::App(Message::HideLoadingBar)
+                            }),
+                            Task::done(cosmic::Action::App(Message::Present(
+                                presenter::Message::LoadedService,
+                            ))),
+                        ]);
                     }
                     LoadingState::None => {
                         task = Task::done(cosmic::Action::App(Message::HideLoadingBar));
@@ -2214,13 +2175,6 @@ impl cosmic::Application for App {
                         .on_press(Message::Present(presenter::Message::PlayPauseVideo))
                 },
             );
-        let video_position = self
-            .presenter
-            .video_manager
-            .current_video
-            .as_ref()
-            .map_or(0.0, |pair| pair.preview.position().as_secs_f64());
-
         let mut slide_preview = column![
             responsive(|size| {
                 self.presenter
@@ -2241,9 +2195,11 @@ impl cosmic::Application for App {
                 row![
                     video_button_icon,
                     Container::new(
-                        slider(0.0..=video_range, video_position, |pos| {
-                            Message::Present(presenter::Message::VideoPos(pos))
-                        })
+                        slider(
+                            0.0..=video_range,
+                            self.presenter.video_manager.position,
+                            |pos| { Message::Present(presenter::Message::VideoPos(pos)) }
+                        )
                         .step(0.1)
                     )
                     .center_x(Length::Fill)
