@@ -12,7 +12,7 @@ use iced_video_player::gst_app::{self};
 use iced_video_player::{Position, Video, gst};
 use image::{DynamicImage, ImageFormat, RgbaImage};
 use miette::miette;
-use tracing::debug;
+use tracing::{debug, error};
 use url::Url;
 
 use crate::core::slide::SlideId;
@@ -30,6 +30,10 @@ pub struct VideoManager {
     pub previous_video: Option<VideoPair>,
     pub current_video: Option<VideoPair>,
     pub next_video: Option<VideoPair>,
+
+    pub paused: bool,
+    pub muted: bool,
+    pub position: f64,
 }
 
 #[derive(Debug)]
@@ -48,6 +52,62 @@ pub enum VideoLocation {
 }
 
 impl VideoManager {
+    pub fn activate(&mut self, looping: bool, paused: Option<bool>, mute: Option<bool>) {
+        if let Some(pair) = &mut self.current_video {
+            pair.preview.set_looping(looping);
+            pair.presentation.set_looping(looping);
+            pair.preview.set_muted(true);
+            pair.presentation.set_muted(mute.unwrap_or(false));
+            pair.preview.set_paused(paused.unwrap_or(false));
+            pair.presentation.set_paused(paused.unwrap_or(false));
+        }
+    }
+
+    pub fn park(&mut self) {
+        if let Some(pair) = &mut self.current_video {
+            pair.preview.set_paused(true);
+            pair.presentation.set_paused(true);
+            pair.preview.set_muted(true);
+            pair.presentation.set_muted(true);
+        }
+    }
+
+    pub fn mute(&mut self, mute: bool) {
+        if let Some(pair) = &mut self.current_video {
+            pair.presentation.set_muted(mute);
+            self.muted = mute;
+        }
+    }
+
+    pub fn pause(&mut self, pause: bool) {
+        if let Some(pair) = &mut self.current_video {
+            pair.presentation.set_paused(pause);
+            pair.preview.set_paused(pause);
+            self.paused = pause;
+        }
+    }
+
+    pub fn seek(&mut self, position: f64) {
+        if let Some(pair) = &mut self.current_video {
+            let position = Position::Time(std::time::Duration::from_secs_f64(position));
+            if let Err(e) = pair.preview.seek(position, false) {
+                error!("Problem changing video position: {e}");
+            };
+            if let Err(e) = pair.presentation.seek(position, false) {
+                error!("Problem changing video position: {e}");
+            }
+        }
+    }
+
+    pub fn update_position(&mut self) {
+        if let Some(pair) = &self.current_video
+            && self.position > 0.0
+            && pair.preview.position().as_secs_f64() != 0.0
+        {
+            self.position = pair.preview.position().as_secs_f64();
+        }
+    }
+
     pub(crate) fn preload(
         &mut self,
         path: PathBuf,
@@ -161,11 +221,11 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     gst::init().map_err(VideoError::GlibError)?;
 
     let pipeline = format!(
-        r#"playbin uri="{0}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name={1} drop=true caps=video/x-raw,format=NV12,framerate={2}/1,pixel-aspect-ratio=1/1{3}""#,
+        r#"playbin uri="{0}" mute="{3}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name={1} drop=true caps=video/x-raw,format=NV12,framerate={2}/1,pixel-aspect-ratio=1/1""#,
         url.as_str(),
         settings.appsink_name,
         settings.framerate,
-        if settings.mute { ",mute=true" } else { "" },
+        settings.mute,
     );
 
     let pipeline =

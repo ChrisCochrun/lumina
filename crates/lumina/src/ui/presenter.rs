@@ -56,7 +56,6 @@ pub(crate) struct Presenter {
     pub current_item_index: usize,
     pub current_slide_index: usize,
     pub total_slides: usize,
-    pub video_position: f64,
     pub audio: Option<PathBuf>,
     audio_duration: Option<Duration>,
     audio_position: Option<Duration>,
@@ -152,7 +151,6 @@ impl Presenter {
             audio_duration: None,
             audio_position: None,
             service: items,
-            video_position: 0.0,
             hovered_slide: None,
             hovered_point: None,
             sink: {
@@ -246,20 +244,14 @@ impl Presenter {
                 }
             }
             Message::VideoMute(mute) => {
-                if let Some(pair) = &mut self.video_manager.current_video {
-                    pair.preview.set_muted(true);
-                    pair.presentation.set_muted(mute);
-                }
+                self.video_manager.mute(mute);
             }
             Message::VideoPipelineFinished((video_location, video_pair)) => {
                 self.video_manager
                     .set_new_video(&video_location, video_pair);
                 if matches!(video_location, VideoLocation::Current) {
-                    if let Some(pair) = &mut self.video_manager.current_video {
-                        pair.preview.set_looping(self.current_slide.video_loop());
-                        pair.presentation
-                            .set_looping(self.current_slide.video_loop());
-                    }
+                    self.video_manager
+                        .activate(self.current_slide.video_loop, None, None)
                 }
             }
             Message::UpdateObsScenes(scenes) => {
@@ -370,22 +362,11 @@ impl Presenter {
                 // }
             }
             Message::StartVideo => {
-                if let Some(pair) = &mut self.video_manager.current_video {
-                    pair.preview.set_paused(false);
-                    pair.preview.set_looping(self.current_slide.video_loop());
-                    pair.presentation.set_paused(false);
-                    pair.presentation
-                        .set_looping(self.current_slide.video_loop());
-                }
+                self.video_manager
+                    .activate(self.current_slide.video_loop, None, None);
             }
             Message::PlayPauseVideo => {
-                if let Some(pair) = &mut self.video_manager.current_video {
-                    pair.preview.set_paused(!pair.preview.paused());
-                    pair.preview.set_looping(self.current_slide.video_loop());
-                    pair.presentation.set_paused(!pair.presentation.paused());
-                    pair.presentation
-                        .set_looping(self.current_slide.video_loop());
-                }
+                self.video_manager.pause(!self.video_manager.paused);
             }
             Message::LoadedService => {
                 if let Some(item) = self.service.first()
@@ -393,28 +374,14 @@ impl Presenter {
                 {
                     let _ = self.change_slide(slide.clone());
                     self.sink.1.pause();
-                    return Action::Task(Task::batch(self.preload_videos()));
+                    let mut tasks = self.preload_videos();
+                    tasks.push(Task::done(Message::PrewarmTexts));
+                    return Action::Task(Task::batch(tasks));
                 }
             }
-            Message::VideoPos(position) => {
-                if let Some(pair) = &mut self.video_manager.current_video {
-                    let position =
-                        Position::Time(std::time::Duration::from_secs_f64(position));
-                    if let Err(e) = pair.preview.seek(position, false) {
-                        error!("Problem changing video position: {e}");
-                    };
-                    if let Err(e) = pair.presentation.seek(position, false) {
-                        error!("Problem changing video position: {e}");
-                    }
-                }
-            }
+            Message::VideoPos(position) => self.video_manager.seek(position),
             Message::VideoFrame => {
-                if let Some(pair) = &self.video_manager.current_video
-                    && self.video_position > 0.0
-                    && pair.preview.position().as_secs_f64() != 0.0
-                {
-                    self.video_position = pair.preview.position().as_secs_f64();
-                }
+                self.video_manager.update_position();
             }
             Message::MissingPlugin(element) => {
                 if let Some(pair) = &mut self.video_manager.current_video {
@@ -1049,17 +1016,12 @@ impl Presenter {
         let slide_text = slide.text();
         debug!(slide_text, "slide changed");
         let bg = slide.background().clone();
-        debug!(?bg, "comparing background...");
         let backgrounds_match = self.current_slide.background() == slide.background();
 
-        debug!("changing video now...");
         self.old_slide = Some(self.current_slide.clone());
         self.current_slide = slide;
         if !backgrounds_match {
-            if let Some(pair) = &mut self.video_manager.current_video {
-                pair.preview.set_paused(true);
-                pair.presentation.set_paused(true);
-            }
+            self.video_manager.park();
         }
 
         if let Some(item) = self.service.get(self.current_item_index)

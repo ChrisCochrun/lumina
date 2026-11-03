@@ -49,6 +49,7 @@ pub struct Slide {
     pub(crate) text_svg: Option<TextSvg>,
     pub(crate) pdf_page: Option<Handle>,
     pub(crate) styled_text: Option<Arc<StyledText>>,
+    pub(crate) looping: bool,
 }
 
 impl PartialEq for Slide {
