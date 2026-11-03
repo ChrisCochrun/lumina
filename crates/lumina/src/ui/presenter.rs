@@ -2,17 +2,15 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::text::{Alignment, Ellipsize, EllipsizeHeightLimit};
-use cosmic::iced::font::{Family, Stretch, Style, Weight};
 use cosmic::iced::widget::scrollable::{Direction, Scrollbar};
 use cosmic::iced::{
-    Animation, Background, Border, Color, ContentFit, Font, Length, Point, Shadow, Vector,
+    Animation, Background, Border, Color, ContentFit, Length, Point, Shadow, Vector,
 };
 use cosmic::prelude::*;
 use cosmic::widget::divider::{self, vertical};
@@ -22,21 +20,19 @@ use cosmic::widget::{
 };
 use cosmic::{Task, theme};
 use derive_more::Debug;
-use fdsm_lumina::cosmic_text::FontSystem;
 use fdsm_lumina::{FdsmContext, StyledText};
-use iced_video_player::{Position, Video, VideoPlayer, gst_pbutils};
+use iced_video_player::{VideoPlayer, gst_pbutils};
 use itertools::Itertools;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
 use tracing::{debug, error, info, warn};
-use url::Url;
 
 use crate::core::kinds::ServiceItemKind;
 use crate::core::service_items::ServiceItem;
 use crate::core::slide::{Slide, SlideId};
 use crate::core::slide_actions::{self, ObsAction};
-use crate::ui::gst_video::{self, VideoLocation, VideoManager, VideoPair, VideoSettings};
+use crate::ui::gst_video::{VideoLocation, VideoManager, VideoPair};
 use crate::ui::image_loader::ImageLoader;
 use crate::ui::scroll_operations::{self, focus_target};
 use crate::ui::widgets::slide::AnimationState;
@@ -206,16 +202,14 @@ impl Presenter {
                     if item_index < self.current_item_index {
                         self.direction_of_slide_change =
                             scroll_operations::Direction::Backward;
+                    } else if slide_index < self.current_slide_index
+                        && item_index == self.current_item_index
+                    {
+                        self.direction_of_slide_change =
+                            scroll_operations::Direction::Backward;
                     } else {
-                        if slide_index < self.current_slide_index
-                            && item_index == self.current_item_index
-                        {
-                            self.direction_of_slide_change =
-                                scroll_operations::Direction::Backward;
-                        } else {
-                            self.direction_of_slide_change =
-                                scroll_operations::Direction::Forward;
-                        }
+                        self.direction_of_slide_change =
+                            scroll_operations::Direction::Forward;
                     }
                     self.current_item_index = item_index;
                     self.current_slide_index = slide_index;
@@ -251,7 +245,7 @@ impl Presenter {
                     .set_new_video(&video_location, video_pair);
                 if matches!(video_location, VideoLocation::Current) {
                     self.video_manager
-                        .activate(self.current_slide.video_loop, None, None)
+                        .activate(self.current_slide.video_loop, None, None);
                 }
             }
             Message::UpdateObsScenes(scenes) => {
@@ -884,8 +878,8 @@ impl Presenter {
                         VideoLocation::Current,
                     )
                     .chain(Task::done(Message::StartVideo)),
-            )
-        };
+            );
+        }
 
         tasks
     }
@@ -921,8 +915,8 @@ impl Presenter {
                 slide.background.path.clone(),
                 slide.id.clone(),
                 VideoLocation::Next,
-            ))
-        };
+            ));
+        }
         tasks
     }
 
@@ -1015,7 +1009,7 @@ impl Presenter {
     fn change_slide(&mut self, slide: Slide) -> Action {
         let slide_text = slide.text();
         debug!(slide_text, "slide changed");
-        let bg = slide.background().clone();
+        let _bg = slide.background().clone();
         let backgrounds_match = self.current_slide.background() == slide.background();
 
         self.old_slide = Some(self.current_slide.clone());

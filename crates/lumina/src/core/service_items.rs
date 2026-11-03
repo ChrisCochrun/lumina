@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
-use crisp::types::{Keyword, Symbol, Value};
+use crisp::types::Value;
 use miette::{IntoDiagnostic, Result, miette};
 use tracing::{debug, error};
 

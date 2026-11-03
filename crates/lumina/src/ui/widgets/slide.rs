@@ -22,7 +22,7 @@ use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 use iced_widget::image::Handle;
 
 use crate::core::animation::Animation;
-use crate::core::slide::{TextAlignment, TextProperties};
+use crate::core::slide::TextProperties;
 
 pub fn slide<'a, Message: 'static, Theme, Renderer>(
     slide: &'a crate::core::slide::Slide,
@@ -407,7 +407,7 @@ where
     ) {
         let bounds = layout.bounds();
 
-        let Some(clip_bounds) = bounds.intersection(viewport) else {
+        let Some(_clip_bounds) = bounds.intersection(viewport) else {
             return;
         };
         let clip_bounds = layout

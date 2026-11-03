@@ -63,7 +63,6 @@ use core::model::KindWrapper;
 use ui::gst_video;
 use ui::image_editor::{self, ImageEditor};
 use ui::presentation_editor::{self, PresentationEditor};
-use ui::text_svg::{self};
 use ui::video_editor::{self, VideoEditor};
 use ui::widgets::draggable;
 
@@ -467,7 +466,7 @@ impl cosmic::Application for App {
             current_item: (0, 0),
             library_dragged_item: None,
             fontdb: Arc::clone(&fontdb),
-            font_system: font_system.clone(),
+            font_system,
             fdsm_context,
             menu_keys,
             hovered_item: None,
@@ -1467,11 +1466,10 @@ impl cosmic::Application for App {
                     let font_system = self.font_system.clone();
                     std::thread::spawn(move || {
                         for (slide_index, mut slide) in slides.into_iter().enumerate() {
-                            if let Ok(mut font_system) = font_system.lock() {
-                                if let Err(error) = slide.prepare_text(&mut font_system) {
+                            if let Ok(mut font_system) = font_system.lock()
+                                && let Err(error) = slide.prepare_text(&mut font_system) {
                                     error!(?error);
                                 }
-                            }
                             let _ = tx.send(cosmic::Action::App(
                                 Message::AddSlideTextToItem(
                                     item_index,
@@ -1643,11 +1641,10 @@ impl cosmic::Application for App {
                         .slides
                         .into_par_iter()
                         .map(|mut slide| {
-                            if let Ok(mut font_system) = self.font_system.lock() {
-                                if let Err(error) = slide.prepare_text(&mut font_system) {
+                            if let Ok(mut font_system) = self.font_system.lock()
+                                && let Err(error) = slide.prepare_text(&mut font_system) {
                                     error!(?error);
                                 }
-                            };
                             slide
                         })
                         .collect();

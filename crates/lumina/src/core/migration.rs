@@ -175,6 +175,7 @@ impl<'de> Deserialize<'de> for Slide {
                 font_size,
                 stroke,
                 shadow,
+                text_properties,
                 text_alignment,
                 text_color,
                 audio,
@@ -183,7 +184,6 @@ impl<'de> Deserialize<'de> for Slide {
                 video_end_time,
                 pdf_index,
                 text_svg,
-                text_properties,
                 ..Default::default()
             },
         })

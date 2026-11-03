@@ -1,7 +1,6 @@
 use std::fmt::Display;
 use std::num::NonZero;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,7 +10,6 @@ use iced_video_player::gst_app::prelude::*;
 use iced_video_player::gst_app::{self};
 use iced_video_player::{Position, Video, gst};
 use image::{DynamicImage, ImageFormat, RgbaImage};
-use miette::miette;
 use tracing::{debug, error};
 use url::Url;
 
@@ -92,7 +90,7 @@ impl VideoManager {
             let position = Position::Time(std::time::Duration::from_secs_f64(position));
             if let Err(e) = pair.preview.seek(position, false) {
                 error!("Problem changing video position: {e}");
-            };
+            }
             if let Err(e) = pair.presentation.seek(position, false) {
                 error!("Problem changing video position: {e}");
             }
@@ -119,8 +117,7 @@ impl VideoManager {
                 tokio::task::spawn_blocking(|| load_video(path, slide_id))
                     .await
                     .map_err(|_| {
-                        VideoError::IOError(std::io::Error::new(
-                            std::io::ErrorKind::Other,
+                        VideoError::IOError(std::io::Error::other(
                             String::from("Error in spawning tokio task"),
                         ))
                     })
@@ -190,9 +187,8 @@ impl Default for VideoSettings {
 type Result<T> = std::result::Result<T, VideoError>;
 
 fn load_video(path: PathBuf, slide_id: SlideId) -> Result<VideoPair> {
-    let url = Url::from_file_path(&path).map_err(|_| {
-        VideoError::IOError(std::io::Error::new(
-            std::io::ErrorKind::Other,
+    let url = Url::from_file_path(&path).map_err(|()| {
+        VideoError::IOError(std::io::Error::other(
             String::from("Couldn't convert video path to url"),
         ))
     })?;

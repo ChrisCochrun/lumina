@@ -8,7 +8,7 @@ use std::sync::Arc;
 use cosmic::cosmic_theme::palette::Srgb;
 use cosmic::iced::clipboard::mime::{AllowedMimeTypes, AsMimeTypes};
 use cosmic::iced::font::{Style, Weight};
-use crisp::types::{Keyword, Symbol, Value};
+use crisp::types::{Symbol, Value};
 use itertools::Itertools;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,7 @@ use crate::core::content::Content;
 use crate::core::kinds::ServiceItemKind;
 use crate::core::model::{CheckItem, LibraryKind, Model, Sort, SortDirection};
 use crate::core::service_items::ServiceTrait;
-use crate::core::slide::{self, Background, TextAlignment};
+use crate::core::slide::{Background, TextAlignment};
 use crate::ui::text_svg::{Color, Font, Stroke, shadow, stroke};
 use crate::{Slide, SlideBuilder};
 
@@ -668,14 +668,12 @@ impl Model<Song> {
     pub fn check_item(&self, song: &Song) -> CheckItem {
         if self.items.contains(song) {
             CheckItem::Yes
+        } else if let Some(_found_song) =
+            self.items.iter().find(|inner| inner.title == song.title)
+        {
+            CheckItem::Maybe
         } else {
-            if let Some(found_song) =
-                self.items.iter().find(|inner| inner.title == song.title)
-            {
-                CheckItem::Maybe
-            } else {
-                CheckItem::No
-            }
+            CheckItem::No
         }
     }
     pub async fn new_song_model(db: Arc<SqlitePool>) -> Self {

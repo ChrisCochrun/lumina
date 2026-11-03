@@ -442,7 +442,7 @@ impl Slide {
 
     pub fn prepare_text(&mut self, font_system: &mut FontSystem) -> Result<()> {
         if let Some(text_properties) = &self.text_properties {
-            let styled_text = build_text(font_system, &self.text, &text_properties);
+            let styled_text = build_text(font_system, &self.text, text_properties);
             self.styled_text = Some(Arc::new(styled_text));
             Ok(())
         } else {
