@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::num::NonZero;
 use std::path::PathBuf;
@@ -28,6 +29,8 @@ pub struct VideoManager {
     pub previous_video: Option<VideoPair>,
     pub current_video: Option<VideoPair>,
     pub next_video: Option<VideoPair>,
+
+    pub pending_videos: HashSet<PathBuf>,
 
     pub paused: bool,
     pub muted: bool,
@@ -112,28 +115,32 @@ impl VideoManager {
         slide_id: SlideId,
         video_location: VideoLocation,
     ) -> Task<presenter::Message> {
-        Task::perform(
-            async move {
-                tokio::task::spawn_blocking(|| load_video(path, slide_id))
-                    .await
-                    .map_err(|_| {
-                        VideoError::IOError(std::io::Error::other(
-                            String::from("Error in spawning tokio task"),
-                        ))
-                    })
-                    .and_then(|result| result)
-            },
-            |result| match result {
-                Ok(videos) => presenter::Message::VideoPipelineFinished((
-                    video_location,
-                    Arc::new(videos),
-                )),
-                Err(e) => {
-                    tracing::error!(?e);
-                    presenter::Message::None
-                }
-            },
-        )
+        if self.pending_videos.insert(path.clone()) {
+            Task::perform(
+                async move {
+                    tokio::task::spawn_blocking(|| load_video(path, slide_id))
+                        .await
+                        .map_err(|_| {
+                            VideoError::IOError(std::io::Error::other(String::from(
+                                "Error in spawning tokio task",
+                            )))
+                        })
+                        .and_then(|result| result)
+                },
+                |result| match result {
+                    Ok(videos) => presenter::Message::VideoPipelineFinished((
+                        video_location,
+                        Arc::new(videos),
+                    )),
+                    Err(e) => {
+                        tracing::error!(?e);
+                        presenter::Message::RemovePendingVideoPipeline(path)
+                    }
+                },
+            )
+        } else {
+            Task::none()
+        }
     }
 
     pub fn set_new_video(
@@ -141,6 +148,7 @@ impl VideoManager {
         video_location: &VideoLocation,
         video_pair: Arc<VideoPair>,
     ) {
+        self.pending_videos.remove(&video_pair.path);
         match video_location {
             VideoLocation::Current => {
                 self.current_video = Some(Arc::into_inner(video_pair).expect("Woops"));
@@ -188,9 +196,9 @@ type Result<T> = std::result::Result<T, VideoError>;
 
 fn load_video(path: PathBuf, slide_id: SlideId) -> Result<VideoPair> {
     let url = Url::from_file_path(&path).map_err(|()| {
-        VideoError::IOError(std::io::Error::other(
-            String::from("Couldn't convert video path to url"),
-        ))
+        VideoError::IOError(std::io::Error::other(String::from(
+            "Couldn't convert video path to url",
+        )))
     })?;
     let main_settings = VideoSettings::default();
     let preview_settings = VideoSettings {

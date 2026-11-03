@@ -114,6 +114,7 @@ pub(crate) enum Message {
     Tick(Instant),
     PrewarmTexts,
     VideoPipelineFinished((VideoLocation, Arc<VideoPair>)),
+    RemovePendingVideoPipeline(PathBuf),
 }
 
 impl Presenter {
@@ -239,10 +240,16 @@ impl Presenter {
             Message::VideoMute(mute) => {
                 self.video_manager.mute(mute);
             }
+            Message::RemovePendingVideoPipeline(path) => {
+                self.video_manager.pending_videos.remove(&path);
+            }
             Message::VideoPipelineFinished((video_location, video_pair)) => {
+                let path = video_pair.path.clone();
                 self.video_manager
                     .set_new_video(&video_location, video_pair);
-                if matches!(video_location, VideoLocation::Current) {
+                if matches!(video_location, VideoLocation::Current)
+                    && path == self.current_slide.background.path
+                {
                     self.video_manager.activate(
                         self.current_slide.video_loop,
                         None,
@@ -859,30 +866,46 @@ impl Presenter {
     }
 
     fn preload_videos(&mut self) -> Vec<Task<Message>> {
-        let mut tasks = self.preload_next_video();
+        let mut tasks = Vec::new();
         if let Some(video) = &self.video_manager.next_video
             && video.path == self.current_slide.background.path
         {
             self.video_manager.previous_video = self.video_manager.current_video.take();
             self.video_manager.current_video = self.video_manager.next_video.take();
             tasks.push(Task::done(Message::StartVideo));
-            // tasks = self.preload_next_video(tasks);
-        } else if let Some(video) = &self.video_manager.current_video
-            && video.path == self.current_slide.background.path
-        {
-            // tasks = self.preload_next_video(tasks);
         } else if self.current_slide.background.kind == BackgroundKind::Video {
-            // tasks = self.preload_next_video(tasks);
-            tasks.push(
-                self.video_manager
-                    .preload(
-                        self.current_slide.background.path.clone(),
-                        self.current_slide.id.clone(),
-                        VideoLocation::Current,
-                    )
-                    .chain(Task::done(Message::StartVideo)),
-            );
+            if self
+                .video_manager
+                .previous_video
+                .as_ref()
+                .is_some_and(|video| video.path == self.current_slide.background.path)
+            {
+                // We have moved backward to a previous video.
+                // is it sufficient to just move the videos around
+                // or in the case that we have jumped to a farther previous
+                // video will we even hit this code path? I don't think so...
+                self.video_manager.next_video = self.video_manager.current_video.take();
+                self.video_manager.current_video =
+                    self.video_manager.previous_video.take();
+                tasks.push(Task::done(Message::StartVideo));
+                return tasks;
+            } else if self
+                .video_manager
+                .current_video
+                .as_ref()
+                .is_none_or(|video| video.path != self.current_slide.background.path)
+            {
+                tasks.push(self.video_manager.preload(
+                    self.current_slide.background.path.clone(),
+                    self.current_slide.id.clone(),
+                    VideoLocation::Current,
+                ));
+            }
+        } else if self.current_slide.background.kind != BackgroundKind::Video {
+            self.video_manager.park();
+            self.video_manager.previous_video = self.video_manager.current_video.take();
         }
+        tasks.extend(self.preload_next_video());
         tasks
     }
 
@@ -906,8 +929,15 @@ impl Presenter {
                     && slide.background.path != self.current_slide.background.path
             });
         if let Some(slide) = next_video_slide {
-            if let Some(pair) = &self.video_manager.next_video
-                && pair.path == slide.background.path
+            if self
+                .video_manager
+                .next_video
+                .as_ref()
+                .is_some_and(|pair| pair.path == slide.background.path)
+                || self
+                    .video_manager
+                    .pending_videos
+                    .contains(&slide.background.path)
             {
                 return tasks;
             }
