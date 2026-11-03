@@ -22,7 +22,6 @@ use cosmic::{Task, theme};
 use derive_more::Debug;
 use fdsm_lumina::{FdsmContext, StyledText};
 use iced_video_player::{VideoPlayer, gst_pbutils};
-use itertools::Itertools;
 use obws::Client;
 use obws::responses::scenes::Scene;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
@@ -244,8 +243,11 @@ impl Presenter {
                 self.video_manager
                     .set_new_video(&video_location, video_pair);
                 if matches!(video_location, VideoLocation::Current) {
-                    self.video_manager
-                        .activate(self.current_slide.video_loop, None, None);
+                    self.video_manager.activate(
+                        self.current_slide.video_loop,
+                        None,
+                        None,
+                    );
                 }
             }
             Message::UpdateObsScenes(scenes) => {
@@ -363,14 +365,15 @@ impl Presenter {
                 self.video_manager.pause(!self.video_manager.paused);
             }
             Message::LoadedService => {
-                if let Some(item) = self.service.first()
-                    && let Some(slide) = item.slides.first()
+                if let Some(slide) = self
+                    .service
+                    .first()
+                    .and_then(|item| item.slides.first())
+                    .cloned()
                 {
-                    let _ = self.change_slide(slide.clone());
+                    let action = self.change_slide(slide.clone());
                     self.sink.1.pause();
-                    let mut tasks = self.preload_videos();
-                    tasks.push(Task::done(Message::PrewarmTexts));
-                    return Action::Task(Task::batch(tasks));
+                    return action;
                 }
             }
             Message::VideoPos(position) => self.video_manager.seek(position),
@@ -856,20 +859,20 @@ impl Presenter {
     }
 
     fn preload_videos(&mut self) -> Vec<Task<Message>> {
-        let mut tasks = Vec::new();
+        let mut tasks = self.preload_next_video();
         if let Some(video) = &self.video_manager.next_video
             && video.path == self.current_slide.background.path
         {
             self.video_manager.previous_video = self.video_manager.current_video.take();
             self.video_manager.current_video = self.video_manager.next_video.take();
             tasks.push(Task::done(Message::StartVideo));
-            tasks = self.preload_next_video(tasks);
+            // tasks = self.preload_next_video(tasks);
         } else if let Some(video) = &self.video_manager.current_video
             && video.path == self.current_slide.background.path
         {
-            tasks = self.preload_next_video(tasks);
+            // tasks = self.preload_next_video(tasks);
         } else if self.current_slide.background.kind == BackgroundKind::Video {
-            tasks = self.preload_next_video(tasks);
+            // tasks = self.preload_next_video(tasks);
             tasks.push(
                 self.video_manager
                     .preload(
@@ -880,14 +883,11 @@ impl Presenter {
                     .chain(Task::done(Message::StartVideo)),
             );
         }
-
         tasks
     }
 
-    fn preload_next_video(
-        &mut self,
-        mut tasks: Vec<Task<Message>>,
-    ) -> Vec<Task<Message>> {
+    fn preload_next_video(&mut self) -> Vec<Task<Message>> {
+        let mut tasks = Vec::new();
         let next_video_slide = self
             .service
             .iter()
