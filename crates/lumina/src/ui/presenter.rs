@@ -945,6 +945,11 @@ impl Presenter {
                     && slide.background.path != self.current_slide.background.path
             });
         if let Some(slide) = next_video_slide {
+            if let Some(pair) = &self.video_manager.next_video
+                && pair.path == slide.background.path
+            {
+                return tasks;
+            }
             tasks.push(self.video_manager.preload(
                 slide.background.path.clone(),
                 slide.id.clone(),

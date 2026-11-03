@@ -3832,7 +3832,7 @@ dependencies = [
 [[package]]
 name = "iced_video_player"
 version = "0.6.0"
-source = "git+https://github.com/wash2/iced_video_player.git?branch=iced-rebase#cb3635192f3dec37619855c904a168ca37a3dac3"
+source = "git+https://git.tfcconnection.org/chris/iced_video_player.git#4cb25f71e04284483d6fd6e9cfbb2d97956c7344"
 dependencies = [
  "glib",
  "gstreamer",

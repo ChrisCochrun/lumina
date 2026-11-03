@@ -69,8 +69,7 @@ git = "https://github.com/RustAudio/rodio"
 features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libopus"]
 
 [dependencies.iced_video_player]
-git = "https://github.com/wash2/iced_video_player.git"
-branch = "iced-rebase"
+git = "https://git.tfcconnection.org/chris/iced_video_player.git"
 features = ["wgpu"]
 
 [package.metadata.packager]
