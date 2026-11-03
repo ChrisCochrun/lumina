@@ -205,6 +205,20 @@ impl Presenter {
                     .get(item_index)
                     .and_then(|item| item.slides.get(slide_index))
                 {
+                    if item_index < self.current_item_index {
+                        self.direction_of_slide_change =
+                            scroll_operations::Direction::Backward;
+                    } else {
+                        if slide_index < self.current_slide_index
+                            && item_index == self.current_item_index
+                        {
+                            self.direction_of_slide_change =
+                                scroll_operations::Direction::Backward;
+                        } else {
+                            self.direction_of_slide_change =
+                                scroll_operations::Direction::Forward;
+                        }
+                    }
                     self.current_item_index = item_index;
                     self.current_slide_index = slide_index;
                     return self.change_slide(slide.clone());
