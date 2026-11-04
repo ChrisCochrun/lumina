@@ -116,9 +116,10 @@ impl VideoManager {
         video_location: VideoLocation,
     ) -> Task<presenter::Message> {
         if self.pending_videos.insert(path.clone()) {
+            let task_path = path.clone();
             Task::perform(
                 async move {
-                    tokio::task::spawn_blocking(|| load_video(path, slide_id))
+                    tokio::task::spawn_blocking(|| load_video(task_path, slide_id))
                         .await
                         .map_err(|_| {
                             VideoError::IOError(std::io::Error::other(String::from(
