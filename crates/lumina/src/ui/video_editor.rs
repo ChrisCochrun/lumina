@@ -16,6 +16,7 @@ use url::Url;
 
 use crate::core::videos;
 use crate::ui::gst_video;
+use crate::ui::widgets::video_timeline::VideoTimeline;
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -142,13 +143,17 @@ impl VideoEditor {
                 .step(0.1)
                 .width(Length::Fill)
                 .height(cosmic::theme::spacing().space_s);
-                container(
+
+                let video_track = container(
                     row![play_button, video_track]
                         .align_y(Vertical::Center)
                         .spacing(cosmic::theme::spacing().space_m),
                 )
                 .padding(cosmic::theme::spacing().space_s)
-                .center_x(Length::FillPortion(2))
+                .center_x(Length::FillPortion(2));
+                let video_timeline = VideoTimeline::new(Some(video));
+                let column = column![video_timeline, video_track];
+                column.apply(container)
             },
         );
 
