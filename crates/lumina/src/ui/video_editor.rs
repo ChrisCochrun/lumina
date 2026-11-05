@@ -16,7 +16,7 @@ use url::Url;
 
 use crate::core::videos;
 use crate::ui::gst_video;
-use crate::ui::widgets::video_timeline::VideoTimeline;
+use crate::ui::widgets::video_timeline::{TimelineEvent, VideoTimeline};
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -151,7 +151,13 @@ impl VideoEditor {
                 )
                 .padding(cosmic::theme::spacing().space_s)
                 .center_x(Length::FillPortion(2));
-                let video_timeline = VideoTimeline::new(Some(video));
+                let video_timeline =
+                    VideoTimeline::new(Some(video)).on_event(|event| match event {
+                        TimelineEvent::TrimStart(_) => todo!(),
+                        TimelineEvent::TrimEnd(_) => todo!(),
+                        TimelineEvent::Seek(pos) => Message::VideoPos(pos),
+                        TimelineEvent::Released(_handle) => todo!(),
+                    });
                 let column = column![video_timeline, video_track];
                 column.apply(container)
             },

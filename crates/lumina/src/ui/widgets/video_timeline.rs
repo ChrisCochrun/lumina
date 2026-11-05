@@ -2,6 +2,9 @@
 //!
 //! The parent owns the actual values. The iced widget tree stores only which
 //! handle is being dragged. No canvas or GStreamer dependencies.
+use std::sync::LazyLock;
+use std::time::Duration;
+
 use cosmic::cosmic_theme::palette;
 use cosmic::iced::Padding;
 use cosmic::iced::{
@@ -24,6 +27,25 @@ use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
 const DEFAULT_HEIGHT: f32 = 52.0;
 const INSET: f32 = 13.0;
 const HANDLE_HIT_RADIUS: f32 = 12.0;
+const PLAYHEAD_SVG: &[u8] = br##"
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 20 20">
+  <path
+    d="M 4.2 0
+       H 15.8
+       C 16.6 0, 17.0 0.5, 16.8 1.3
+       C 16.2 4.8, 13.9 9.8, 10 16.8
+       C 6.1 9.8, 3.8 4.8, 3.2 1.3
+       C 3.0 0.5, 3.4 0, 4.2 0
+       Z"
+    fill="#FF9B38"/>
+</svg>
+            "##;
+
+/// Built once. `Handle::from_memory` hashes its bytes, so creating it inside
+/// `draw` would redo that work every frame.
+static PLAYHEAD_ICON: LazyLock<svg::Handle> =
+    LazyLock::new(|| svg::Handle::from_memory(PLAYHEAD_SVG));
 
 #[derive(Debug, Default)]
 struct State {
@@ -40,7 +62,7 @@ pub enum TimelineEvent {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Handle {
+pub(crate) enum Handle {
     Start,
     End,
     Playhead,
@@ -62,7 +84,7 @@ where
 
 impl<'a, Message, Theme> VideoTimeline<'a, Message, Theme>
 where
-    Theme: Catalog<Class = Class>,
+    Theme: Catalog,
 {
     /// Creates an empty [`VideoTimeline`].
     pub(crate) fn new(video: Option<&'a Video>) -> Self {
@@ -86,6 +108,20 @@ where
     pub(crate) fn height(mut self, height: impl Into<Pixels>) -> Self {
         self.height = height.into().0;
         self
+    }
+
+    pub(crate) fn on_event(mut self, on_event: fn(TimelineEvent) -> Message) -> Self {
+        self.on_event = Some(on_event);
+        self
+    }
+
+    fn point_to_time(&self, rail: Rectangle, point: Point) -> f64 {
+        let Some(video) = self.video.as_ref() else {
+            return 0.0;
+        };
+
+        let time = (point.x - rail.x) * video.duration().as_secs_f32() / rail.width;
+        time as f64
     }
 
     fn time(&self, t: f64) -> f64 {
@@ -147,6 +183,58 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        let Some(video) = self.video.as_mut() else {
+            return;
+        };
+        let state = tree.state.downcast_mut::<State>();
+        let bounds = layout.bounds();
+
+        let rail = bounds
+            .clone()
+            .shrink(5.0)
+            .shrink(Padding::ZERO.vertical(15.0));
+        let playhead_location = video.position().as_secs_f64();
+        let playhead_x = (playhead_location as f32 * rail.width
+            / video.duration().as_secs_f64() as f32)
+            + rail.x;
+        match event {
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                let Some(cursor_position) = cursor_position.position() else {
+                    return;
+                };
+                if !bounds.contains(cursor_position) {
+                    return;
+                }
+                let Some(on_event) = self.on_event else {
+                    return;
+                };
+                let time = self.point_to_time(rail, cursor_position);
+                if time < 0.0 {
+                    return;
+                }
+                state.dragging = Some(Handle::Playhead);
+                shell.publish((on_event)(TimelineEvent::Seek(time)));
+            }
+            Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                if state.dragging == Some(Handle::Playhead) {
+                    if !bounds.contains(position.clone()) {
+                        return;
+                    }
+                    let Some(on_event) = self.on_event else {
+                        return;
+                    };
+                    let time = self.point_to_time(rail, position.clone());
+                    if time < 0.0 {
+                        return;
+                    }
+                    shell.publish((on_event)(TimelineEvent::Seek(time)));
+                }
+            }
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                state.dragging = None;
+            }
+            _ => (),
+        }
     }
 
     fn mouse_interaction(
@@ -240,27 +328,11 @@ where
             Rectangle::new(playhead_position, Size::new(2.0, rail.height + 20.0));
         quad(playhead_bar, 0.0, style.playhead_handle_color);
 
-        let playhead_icon: iced_core::svg::Handle = iced_core::svg::Handle::from_memory(
-            br##"
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 20 20">
-  <path
-    d="M 4.2 0
-       H 15.8
-       C 16.6 0, 17.0 0.5, 16.8 1.3
-       C 16.2 4.8, 13.9 9.8, 10 16.8
-       C 6.1 9.8, 3.8 4.8, 3.2 1.3
-       C 3.0 0.5, 3.4 0, 4.2 0
-       Z"
-    fill="#FF9B38"/>
-</svg>
-            "##,
-        );
         let icon_position =
             Point::new(playhead_position.x - 9.0, playhead_position.y - 5.0);
         let icon_bounds = Rectangle::new(icon_position, Size::new(20.0, 20.0));
         renderer.draw_svg(
-            svg::Svg::new(playhead_icon).color(style.playhead_handle_color),
+            svg::Svg::new(PLAYHEAD_ICON.clone()).color(style.playhead_handle_color),
             icon_bounds,
             *viewport,
         );
