@@ -170,12 +170,10 @@ impl VideoEditor {
                             .map_or(0.0, |video| video.start_time.unwrap_or_default())
                             as f64,
                     )
-                    .end(
-                        self.core_video
-                            .as_ref()
-                            .map_or(0.0, |video| video.end_time.unwrap_or_default())
-                            as f64,
-                    )
+                    .end(self.core_video.as_ref().map_or_else(
+                        || video.duration().as_secs_f64(),
+                        |video| video.end_time.unwrap_or_default() as f64,
+                    ))
                     .on_event(|event| match event {
                         TimelineEvent::TrimStart(trimmed_start) => {
                             Message::SetStart(trimmed_start)
