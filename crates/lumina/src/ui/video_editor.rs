@@ -44,6 +44,8 @@ pub enum Message {
     PauseVideo,
     UpdateVideoFile(videos::Video),
     VideoPos(f64),
+    SetStart(f64),
+    SetEnd(f64),
     NewFrame,
 }
 
@@ -120,6 +122,16 @@ impl VideoEditor {
                     self.position = video.position().as_secs_f64();
                 }
             }
+            Message::SetStart(time) => {
+                if let Some(video) = &mut self.core_video {
+                    video.start_time = Some(time as f32);
+                }
+            }
+            Message::SetEnd(time) => {
+                if let Some(video) = &mut self.core_video {
+                    video.end_time = Some(time as f32);
+                }
+            }
             Message::None => (),
         }
         Action::None
@@ -151,10 +163,26 @@ impl VideoEditor {
                 )
                 .padding(cosmic::theme::spacing().space_s)
                 .center_x(Length::FillPortion(2));
-                let video_timeline =
-                    VideoTimeline::new(Some(video)).on_event(|event| match event {
-                        TimelineEvent::TrimStart(_) => todo!(),
-                        TimelineEvent::TrimEnd(_) => todo!(),
+                let video_timeline = VideoTimeline::new(Some(video))
+                    .start(
+                        self.core_video
+                            .as_ref()
+                            .map_or(0.0, |video| video.start_time.unwrap_or_default())
+                            as f64,
+                    )
+                    .end(
+                        self.core_video
+                            .as_ref()
+                            .map_or(0.0, |video| video.end_time.unwrap_or_default())
+                            as f64,
+                    )
+                    .on_event(|event| match event {
+                        TimelineEvent::TrimStart(trimmed_start) => {
+                            Message::SetStart(trimmed_start)
+                        }
+                        TimelineEvent::TrimEnd(trimmed_end) => {
+                            Message::SetEnd(trimmed_end)
+                        }
                         TimelineEvent::Seek(pos) => Message::VideoPos(pos),
                         TimelineEvent::Released(_handle) => todo!(),
                     });

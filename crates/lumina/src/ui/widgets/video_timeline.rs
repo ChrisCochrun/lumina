@@ -23,6 +23,7 @@ use iced_video_player::Video;
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::core::widget::tree;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
+use tracing::debug;
 
 const DEFAULT_HEIGHT: f32 = 52.0;
 const INSET: f32 = 13.0;
@@ -110,18 +111,80 @@ where
         self
     }
 
+    pub(crate) fn start(mut self, start: f64) -> Self {
+        self.start = start;
+        self
+    }
+
+    pub(crate) fn end(mut self, end: f64) -> Self {
+        self.end = end;
+        self
+    }
+
     pub(crate) fn on_event(mut self, on_event: fn(TimelineEvent) -> Message) -> Self {
         self.on_event = Some(on_event);
         self
     }
 
-    fn point_to_time(&self, rail: Rectangle, point: Point) -> f64 {
+    fn point_to_time(&self, rail: &Rectangle, point: &Point) -> f64 {
         let Some(video) = self.video.as_ref() else {
             return 0.0;
         };
 
         let time = (point.x - rail.x) * video.duration().as_secs_f32() / rail.width;
         time as f64
+    }
+
+    fn time_to_point(&self, rail: &Rectangle, time: &Duration) -> Point {
+        let Some(video) = self.video.as_ref() else {
+            return Point::ORIGIN;
+        };
+
+        let duration = video.duration().as_secs_f64();
+
+        if duration <= 0.0 {
+            return Point::new(rail.x, rail.center_y());
+        }
+
+        let fraction = (time.as_secs_f64() / duration).clamp(0.0, 1.0);
+
+        Point::new(rail.x + fraction as f32 * rail.width, rail.center_y())
+    }
+
+    fn point_to_handle(&self, rail: &Rectangle, point: &Point) -> Option<Handle> {
+        let video = self.video.as_ref()?;
+
+        const HIT_RADIUS: f32 = 10.0;
+
+        // Allow interaction slightly outside the rail.
+        if point.y < rail.y - HIT_RADIUS || point.y > rail.y + rail.height + HIT_RADIUS {
+            return None;
+        }
+
+        let handles = [
+            (
+                Handle::Start,
+                self.time_to_point(rail, &Duration::from_secs_f64(self.start)),
+            ),
+            (
+                Handle::End,
+                self.time_to_point(rail, &Duration::from_secs_f64(self.end)),
+            ),
+            (
+                Handle::Playhead,
+                self.time_to_point(rail, &video.position()),
+            ),
+        ];
+
+        handles
+            .into_iter()
+            .filter_map(|(handle, position)| {
+                let distance = (point.x - position.x).abs();
+
+                (distance <= HIT_RADIUS).then_some((handle, distance))
+            })
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(handle, _)| handle)
     }
 
     fn time(&self, t: f64) -> f64 {
@@ -208,14 +271,74 @@ where
                 let Some(on_event) = self.on_event else {
                     return;
                 };
-                let time = self.point_to_time(rail, cursor_position);
+                let time = self.point_to_time(&rail, &cursor_position);
                 if time < 0.0 {
                     return;
                 }
-                state.dragging = Some(Handle::Playhead);
-                shell.publish((on_event)(TimelineEvent::Seek(time)));
+                let handle = self.point_to_handle(&rail, &cursor_position);
+                debug!(?handle);
+                match handle {
+                    Some(Handle::Playhead) => {
+                        state.dragging = Some(Handle::Playhead);
+                        shell.publish((on_event)(TimelineEvent::Seek(time)));
+                    }
+                    Some(Handle::Start) => {
+                        state.dragging = Some(Handle::Start);
+                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                    }
+                    Some(Handle::End) => {
+                        state.dragging = Some(Handle::End);
+                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                    }
+                    None => {
+                        state.dragging = Some(Handle::Playhead);
+                        shell.publish((on_event)(TimelineEvent::Seek(time)));
+                    }
+                }
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                match state.dragging {
+                    Some(Handle::Playhead) => {
+                        if !bounds.contains(position.clone()) {
+                            return;
+                        }
+                        let Some(on_event) = self.on_event else {
+                            return;
+                        };
+                        let time = self.point_to_time(&rail, &position.clone());
+                        if time < 0.0 {
+                            return;
+                        }
+                        shell.publish((on_event)(TimelineEvent::Seek(time)));
+                    }
+                    Some(Handle::End) => {
+                        if !bounds.contains(position.clone()) {
+                            return;
+                        }
+                        let Some(on_event) = self.on_event else {
+                            return;
+                        };
+                        let time = self.point_to_time(&rail, &position.clone());
+                        if time < 0.0 {
+                            return;
+                        }
+                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                    }
+                    Some(Handle::Start) => {
+                        if !bounds.contains(position.clone()) {
+                            return;
+                        }
+                        let Some(on_event) = self.on_event else {
+                            return;
+                        };
+                        let time = self.point_to_time(&rail, &position.clone());
+                        if time < 0.0 {
+                            return;
+                        }
+                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                    }
+                    None => return,
+                }
                 if state.dragging == Some(Handle::Playhead) {
                     if !bounds.contains(position.clone()) {
                         return;
@@ -223,7 +346,7 @@ where
                     let Some(on_event) = self.on_event else {
                         return;
                     };
-                    let time = self.point_to_time(rail, position.clone());
+                    let time = self.point_to_time(&rail, &position.clone());
                     if time < 0.0 {
                         return;
                     }
@@ -245,7 +368,23 @@ where
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
-        mouse::Interaction::None
+        let bounds = layout.bounds();
+
+        let rail = bounds
+            .clone()
+            .shrink(5.0)
+            .shrink(Padding::ZERO.vertical(15.0));
+
+        let Some(cursor_point) = cursor_position.position() else {
+            return mouse::Interaction::None;
+        };
+        let Some(handle) = self.point_to_handle(&rail, &cursor_point) else {
+            return mouse::Interaction::None;
+        };
+        match handle {
+            Handle::Start | Handle::End => mouse::Interaction::ResizingColumn,
+            Handle::Playhead => mouse::Interaction::None,
+        }
     }
 
     #[allow(clippy::too_many_lines)]
