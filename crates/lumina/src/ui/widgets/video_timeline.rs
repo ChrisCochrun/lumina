@@ -23,9 +23,10 @@ use iced_video_player::Video;
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::core::widget::tree;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
+use sqlx::types::chrono;
 use tracing::debug;
 
-const DEFAULT_HEIGHT: f32 = 52.0;
+const DEFAULT_HEIGHT: f32 = 82.0;
 const INSET: f32 = 13.0;
 const HANDLE_HIT_RADIUS: f32 = 12.0;
 static PLAYHEAD_SVG: &[u8] = br##"
@@ -189,6 +190,13 @@ where
             0.0
         }
     }
+
+    fn rail(&self, bounds: &Rectangle) -> Rectangle {
+        bounds
+            .clone()
+            .shrink(5.0)
+            .shrink(Padding::ZERO.top(40.0).bottom(10.0))
+    }
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -240,10 +248,7 @@ where
         let state = tree.state.downcast_mut::<State>();
         let bounds = layout.bounds();
 
-        let rail = bounds
-            .clone()
-            .shrink(5.0)
-            .shrink(Padding::ZERO.vertical(15.0));
+        let rail = self.rail(&bounds);
         let playhead_x = (self.position * rail.width / self.duration) + rail.x;
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
@@ -389,28 +394,13 @@ where
         if bounds.intersection(viewport).is_none() || bounds.width <= 2.0 * INSET {
             return;
         }
-
-        let mut quad = |rect: Rectangle, radius: f32, color: Color| {
-            if rect.width <= 0.0 || rect.height <= 0.0 {
-                return;
-            }
-            renderer.fill_quad(
-                renderer::Quad {
-                    bounds: rect,
-                    border: border::rounded(radius),
-                    ..renderer::Quad::default()
-                },
-                color,
-            );
-        };
+        let font = renderer.default_font();
 
         let style = theme.style(&self.class);
-        let rail = bounds
-            .clone()
-            .shrink(5.0)
-            .shrink(Padding::ZERO.vertical(15.0));
+        let rail = self.rail(&bounds);
+
         let rail_radius = rail.height / 4.0;
-        quad(rail, rail_radius, style.rail_color);
+        render_quad(renderer, rail, rail_radius, style.rail_color);
 
         let major = self.major_interval(&rail);
         let minor = major / 7.0;
@@ -420,13 +410,45 @@ where
         for i in 0..=count {
             let time = i as f32 * minor;
             let mut point = self.time_to_point(&rail, time);
-            point.y = bounds.y + 8.0;
+            point.y = bounds.y + 20.0;
             let is_major = i % 7 == 0;
 
             let height = if is_major { 12.0 } else { 6.0 };
             let rectangle = Rectangle::new(point, Size::new(1.0, height));
 
-            quad(
+            if is_major {
+                let time_as_text = format_time(time);
+                let mut point = point;
+                point.y = point.y - 10.0;
+                let text = iced_core::Text {
+                    content: time_as_text,
+                    bounds: bounds.size(),
+                    size: 12.0.into(),
+                    line_height: iced_core::text::LineHeight::default(),
+                    font,
+                    align_x: if i == count {
+                        iced_core::text::Alignment::Right
+                    } else if i == 0 {
+                        iced_core::text::Alignment::Left
+                    } else {
+                        iced_core::text::Alignment::Center
+                    },
+                    align_y: iced_core::alignment::Vertical::Center,
+                    shaping: iced_core::text::Shaping::Basic,
+                    wrapping: iced_core::text::Wrapping::None,
+                    ellipsize: iced_core::text::Ellipsize::None,
+                };
+                renderer.with_layer(bounds, |renderer| {
+                    renderer.fill_text(
+                        text,
+                        point,
+                        style.major_tick_color,
+                        viewport.clone(),
+                    );
+                });
+            }
+            render_quad(
+                renderer,
                 rectangle,
                 0.0,
                 if is_major {
@@ -453,32 +475,38 @@ where
             Point::new(start_position.x, rail.y),
             Size::new((playhead_x - start_position.x).max(0.0), rail.height),
         );
-        quad(played_rail, rail_radius, style.bar_color);
+        render_quad(renderer, played_rail, 0.0, style.bar_color);
 
-        quad(
+        render_quad(
+            renderer,
             start_trim_rect,
             start_trim_rect.width / 4.0,
             style.trim_handle_colors,
         );
-        quad(
+        render_quad(
+            renderer,
             end_trim_rect,
             end_trim_rect.width / 4.0,
             style.trim_handle_colors,
         );
 
-        let playhead_position = Point::new(playhead_x - 1.0, rail.y - 10.0);
+        let playhead_position = Point::new(playhead_x - 1.0, rail.y - 30.0);
         let playhead_bar =
-            Rectangle::new(playhead_position, Size::new(2.0, rail.height + 20.0));
-        quad(playhead_bar, 0.0, style.playhead_handle_color);
+            Rectangle::new(playhead_position, Size::new(2.0, rail.height + 40.0));
+        renderer.with_layer(bounds, |renderer| {
+            render_quad(renderer, playhead_bar, 0.0, style.playhead_handle_color);
+        });
 
         let icon_position =
             Point::new(playhead_position.x - 9.0, playhead_position.y - 5.0);
         let icon_bounds = Rectangle::new(icon_position, Size::new(20.0, 20.0));
-        renderer.draw_svg(
-            svg::Svg::new(PLAYHEAD_ICON.clone()).color(style.playhead_handle_color),
-            icon_bounds,
-            *viewport,
-        );
+        renderer.with_layer(bounds, |renderer| {
+            renderer.draw_svg(
+                svg::Svg::new(PLAYHEAD_ICON.clone()).color(style.playhead_handle_color),
+                icon_bounds,
+                *viewport,
+            );
+        });
     }
 }
 
@@ -657,4 +685,45 @@ impl Catalog for cosmic::Theme {
             minor_tick_color: theme.palette.neutral_8.into(),
         })
     }
+}
+
+/// `M:SS`, or `H:MM:SS` from one hour up.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn format_time(secs: f32) -> String {
+    let total = if secs.is_finite() && secs > 0.0 {
+        secs.floor() as u64
+    } else {
+        0
+    };
+    let (h, m, s) = (total / 3600, (total / 60) % 60, total % 60);
+    if h > 0 {
+        format!("{h}:{m:02}:{s:02}")
+    } else {
+        format!("{m}:{s:02}")
+    }
+}
+
+fn render_quad<'a, Renderer>(
+    renderer: &mut Renderer,
+    rect: Rectangle,
+    radius: f32,
+    color: Color,
+) where
+    Renderer: 'a
+        + iced_core::Renderer
+        + iced_core::text::Renderer
+        + PrimitiveRenderer
+        + iced_core::svg::Renderer,
+{
+    if rect.width <= 0.0 || rect.height <= 0.0 {
+        return;
+    }
+    renderer.fill_quad(
+        renderer::Quad {
+            bounds: rect,
+            border: border::rounded(radius),
+            ..renderer::Quad::default()
+        },
+        color,
+    );
 }

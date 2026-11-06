@@ -1,16 +1,18 @@
 use std::io;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
-use cosmic::iced::Length;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::widget::{column, row};
+use cosmic::iced::{Length, Padding};
 use cosmic::prelude::*;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
 use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
+use resvg::usvg::tiny_skia_path::Scalar;
 use tracing::{debug, error, warn};
 use url::Url;
 
@@ -25,6 +27,8 @@ pub struct VideoEditor {
     title: String,
     editing: bool,
     position: f64,
+    last_seek: Instant,
+    timestamp_text: String,
 }
 
 pub enum Action {
@@ -46,6 +50,7 @@ pub enum Message {
     VideoPos(f32),
     SetStart(f32),
     SetEnd(f32),
+    Volume(f64),
     NewFrame,
 }
 
@@ -58,6 +63,8 @@ impl VideoEditor {
             title: "Death was Arrested".to_string(),
             editing: false,
             position: 0.0,
+            last_seek: Instant::now(),
+            timestamp_text: String::new(),
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -88,16 +95,28 @@ impl VideoEditor {
                 return Action::UpdateVideo(video);
             }
             Message::VideoPos(position) => {
-                if let Some(video) = self.video.as_mut() {
+                if let Some(video) = self.video.as_mut()
+                    && self
+                        .last_seek
+                        .checked_add(Duration::from_millis(40))
+                        .is_some_and(|time| Instant::now() > time)
+                {
                     let pausing = video.paused();
                     video.set_paused(true);
                     let position =
                         Position::Time(std::time::Duration::from_secs_f32(position));
-                    if let Err(e) = video.seek(position, false) {
-                        error!(?e);
+                    match video.seek(position, false) {
+                        Ok(_) => {
+                            self.last_seek = Instant::now();
+                            self.position = video.position().as_secs_f64();
+                        }
+                        Err(e) => {
+                            error!(?e);
+                        }
                     }
                     video.set_paused(pausing);
                 }
+                self.update_timestamp();
             }
             Message::PickVideo => {
                 let video_id = self.core_video.as_ref().map(|v| v.id).unwrap_or_default();
@@ -116,20 +135,35 @@ impl VideoEditor {
             }
             Message::NewFrame => {
                 if let Some(video) = &self.video
-                    && self.position > 0.0
+                    && self.position >= 0.0
                     && video.position().as_secs_f64() != 0.0
                 {
                     self.position = video.position().as_secs_f64();
+                }
+                self.update_timestamp();
+                if self.core_video.as_ref().is_some_and(|core_video| {
+                    core_video.end_time.is_some_and(|time| {
+                        time.is_nearly_equal_within_tolerance(self.position as f32, 0.01)
+                    })
+                }) {
+                    return self.update(Message::PauseVideo);
                 }
             }
             Message::SetStart(time) => {
                 if let Some(video) = &mut self.core_video {
                     video.start_time = Some(time);
+                    return Action::UpdateVideo(video.clone());
                 }
             }
             Message::SetEnd(time) => {
                 if let Some(video) = &mut self.core_video {
                     video.end_time = Some(time);
+                    return Action::UpdateVideo(video.clone());
+                }
+            }
+            Message::Volume(volume) => {
+                if let Some(video) = &mut self.video {
+                    video.set_volume(volume);
                 }
             }
             Message::None => (),
@@ -146,23 +180,39 @@ impl VideoEditor {
                 } else {
                     icon::from_name("media-playback-pause-symbolic")
                 })
-                .on_press(Message::PauseVideo);
-                let video_track = slider(
-                    0.0..=video.duration().as_secs_f32(),
-                    video.position().as_secs_f32(),
-                    Message::VideoPos,
+                .icon_size(cosmic::theme::spacing().space_xxl)
+                .on_press(Message::PauseVideo)
+                .tooltip(if self.video.as_ref().is_some_and(|video| video.paused()) {
+                    "Play"
+                } else {
+                    "Pause"
+                })
+                .padding(
+                    Padding::ZERO
+                        .vertical(cosmic::theme::spacing().space_m)
+                        .horizontal(cosmic::theme::spacing().space_xxl),
                 )
-                .step(0.1)
-                .width(Length::Fill)
-                .height(cosmic::theme::spacing().space_s);
-
-                let video_track = container(
-                    row![play_button, video_track]
-                        .align_y(Vertical::Center)
-                        .spacing(cosmic::theme::spacing().space_m),
-                )
-                .padding(cosmic::theme::spacing().space_s)
-                .center_x(Length::FillPortion(2));
+                .apply(container)
+                .center_x(Length::Fill);
+                let position_text = text(&self.timestamp_text);
+                let standin_start = text("Start Time");
+                let standin_end = text("End Time");
+                let trim_controls = row![standin_start, standin_end]
+                    .spacing(cosmic::theme::spacing().space_m)
+                    .apply(container)
+                    .padding(Padding::ZERO.right(cosmic::theme::spacing().space_m))
+                    .align_right(Length::Fill);
+                let volume = slider(0.0..=1.0, video.volume(), Message::Volume)
+                    .step(0.01)
+                    .width(Length::Fill);
+                let left_controls = row![position_text, volume]
+                    .spacing(cosmic::theme::spacing().space_m)
+                    .apply(container)
+                    .padding(Padding::ZERO.left(cosmic::theme::spacing().space_m))
+                    .align_left(Length::Fill);
+                let controls_row = row![left_controls, play_button, trim_controls]
+                    .align_y(Vertical::Center)
+                    .spacing(cosmic::theme::spacing().space_m);
                 let video_timeline = VideoTimeline::new(video)
                     .start(
                         self.core_video
@@ -187,7 +237,7 @@ impl VideoEditor {
                         TimelineEvent::Seek(pos) => Message::VideoPos(pos),
                         TimelineEvent::Released(_handle) => todo!(),
                     });
-                let column = column![video_timeline, video_track];
+                let column = column![video_timeline, controls_row];
                 column.apply(container)
             },
         );
@@ -264,9 +314,46 @@ impl VideoEditor {
         };
 
         player_video.set_paused(true);
+        let start = video
+            .start_time
+            .unwrap_or(0.0)
+            .apply(Duration::from_secs_f32);
+        if let Err(e) = player_video.seek(start, false) {
+            error!(?e);
+        }
         self.video = Some(player_video);
         self.title.clone_from(&video.title);
         self.core_video = Some(video.clone());
+        self.position = 0.0;
+        self.update_timestamp();
+    }
+
+    fn update_timestamp(&mut self) {
+        if let Some(video) = self.video.as_ref() {
+            let format_time = |secs: f64| {
+                let total = if secs.is_finite() && secs > 0.0 {
+                    secs.floor() as u64
+                } else {
+                    0
+                };
+                let (h, m, s) = (total / 3600, (total / 60) % 60, total % 60);
+                if h > 0 {
+                    format!("{h}:{m:02}:{s:02}")
+                } else {
+                    format!("{m}:{s:02}")
+                }
+            };
+            let position_seconds = self.position;
+            debug!(position_seconds);
+            let duration_seconds = video.duration().as_secs_f64();
+            let formatted = format!(
+                "{} / {}",
+                format_time(position_seconds),
+                format_time(duration_seconds)
+            );
+            debug!(formatted);
+            self.timestamp_text = formatted;
+        }
     }
 }
 
