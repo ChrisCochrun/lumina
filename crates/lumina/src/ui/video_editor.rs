@@ -12,7 +12,6 @@ use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
 use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
-use resvg::usvg::tiny_skia_path::Scalar;
 use tracing::{debug, error, warn};
 use url::Url;
 
@@ -142,9 +141,9 @@ impl VideoEditor {
                 }
                 self.update_timestamp();
                 if self.core_video.as_ref().is_some_and(|core_video| {
-                    core_video.end_time.is_some_and(|time| {
-                        time.is_nearly_equal_within_tolerance(self.position as f32, 0.01)
-                    })
+                    core_video
+                        .end_time
+                        .is_some_and(|time| (time - self.position as f32).abs() <= 0.03)
                 }) {
                     return self.update(Message::PauseVideo);
                 }
