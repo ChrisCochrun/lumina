@@ -43,9 +43,9 @@ pub enum Message {
     None,
     PauseVideo,
     UpdateVideoFile(videos::Video),
-    VideoPos(f64),
-    SetStart(f64),
-    SetEnd(f64),
+    VideoPos(f32),
+    SetStart(f32),
+    SetEnd(f32),
     NewFrame,
 }
 
@@ -92,7 +92,7 @@ impl VideoEditor {
                     let pausing = video.paused();
                     video.set_paused(true);
                     let position =
-                        Position::Time(std::time::Duration::from_secs_f64(position));
+                        Position::Time(std::time::Duration::from_secs_f32(position));
                     if let Err(e) = video.seek(position, false) {
                         error!(?e);
                     }
@@ -124,12 +124,12 @@ impl VideoEditor {
             }
             Message::SetStart(time) => {
                 if let Some(video) = &mut self.core_video {
-                    video.start_time = Some(time as f32);
+                    video.start_time = Some(time);
                 }
             }
             Message::SetEnd(time) => {
                 if let Some(video) = &mut self.core_video {
-                    video.end_time = Some(time as f32);
+                    video.end_time = Some(time);
                 }
             }
             Message::None => (),
@@ -148,8 +148,8 @@ impl VideoEditor {
                 })
                 .on_press(Message::PauseVideo);
                 let video_track = slider(
-                    0.0..=video.duration().as_secs_f64(),
-                    video.position().as_secs_f64(),
+                    0.0..=video.duration().as_secs_f32(),
+                    video.position().as_secs_f32(),
                     Message::VideoPos,
                 )
                 .step(0.1)
@@ -163,16 +163,19 @@ impl VideoEditor {
                 )
                 .padding(cosmic::theme::spacing().space_s)
                 .center_x(Length::FillPortion(2));
-                let video_timeline = VideoTimeline::new(Some(video))
+                let video_timeline = VideoTimeline::new(video)
                     .start(
                         self.core_video
                             .as_ref()
-                            .map_or(0.0, |video| video.start_time.unwrap_or_default())
-                            as f64,
+                            .map_or(0.0, |video| video.start_time.unwrap_or_default()),
                     )
                     .end(self.core_video.as_ref().map_or_else(
-                        || video.duration().as_secs_f64(),
-                        |video| video.end_time.unwrap_or_default() as f64,
+                        || video.duration().as_secs_f32(),
+                        |core_video| {
+                            core_video
+                                .end_time
+                                .unwrap_or_else(|| video.duration().as_secs_f32())
+                        },
                     ))
                     .on_event(|event| match event {
                         TimelineEvent::TrimStart(trimmed_start) => {

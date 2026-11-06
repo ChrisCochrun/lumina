@@ -28,7 +28,7 @@ use tracing::debug;
 const DEFAULT_HEIGHT: f32 = 52.0;
 const INSET: f32 = 13.0;
 const HANDLE_HIT_RADIUS: f32 = 12.0;
-const PLAYHEAD_SVG: &[u8] = br##"
+static PLAYHEAD_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 20 20">
   <path
@@ -56,9 +56,9 @@ struct State {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TimelineEvent {
-    TrimStart(f64),
-    TrimEnd(f64),
-    Seek(f64),
+    TrimStart(f32),
+    TrimEnd(f32),
+    Seek(f32),
     Released(Handle),
 }
 
@@ -69,33 +69,35 @@ pub(crate) enum Handle {
     Playhead,
 }
 
-pub struct VideoTimeline<'a, Message, Theme>
+pub struct VideoTimeline<Message, Theme>
 where
     Theme: Catalog,
 {
     id: Id,
-    video: Option<&'a Video>,
     width: Length,
     height: f32,
     on_event: Option<fn(TimelineEvent) -> Message>,
-    start: f64,
-    end: f64,
+    start: f32,
+    end: f32,
+    position: f32,
+    duration: f32,
     class: Theme::Class,
 }
 
-impl<'a, Message, Theme> VideoTimeline<'a, Message, Theme>
+impl<Message, Theme> VideoTimeline<Message, Theme>
 where
     Theme: Catalog,
 {
     /// Creates an empty [`VideoTimeline`].
-    pub(crate) fn new(video: Option<&'a Video>) -> Self {
+    pub(crate) fn new(video: &Video) -> Self {
         VideoTimeline::<Message, Theme> {
             id: Id::unique(),
-            video,
             width: Length::Fill,
             height: DEFAULT_HEIGHT,
             start: 0.0,
-            end: video.map_or(0.0, |video| video.duration().as_secs_f64()),
+            end: video.duration().as_secs_f32(),
+            position: video.position().as_secs_f32(),
+            duration: video.duration().as_secs_f32(),
             on_event: None,
             class: Theme::Class::default(),
         }
@@ -111,12 +113,12 @@ where
         self
     }
 
-    pub(crate) fn start(mut self, start: f64) -> Self {
+    pub(crate) fn start(mut self, start: f32) -> Self {
         self.start = start;
         self
     }
 
-    pub(crate) fn end(mut self, end: f64) -> Self {
+    pub(crate) fn end(mut self, end: f32) -> Self {
         self.end = end;
         self
     }
@@ -126,34 +128,22 @@ where
         self
     }
 
-    fn point_to_time(&self, rail: &Rectangle, point: &Point) -> f64 {
-        let Some(video) = self.video.as_ref() else {
-            return 0.0;
-        };
-
-        let time = (point.x - rail.x) * video.duration().as_secs_f32() / rail.width;
-        time as f64
+    fn point_to_time(&self, rail: &Rectangle, point: &Point) -> f32 {
+        let time = (point.x - rail.x) * self.duration / rail.width;
+        time
     }
 
-    fn time_to_point(&self, rail: &Rectangle, time: &Duration) -> Point {
-        let Some(video) = self.video.as_ref() else {
-            return Point::ORIGIN;
-        };
-
-        let duration = video.duration().as_secs_f64();
-
-        if duration <= 0.0 {
+    fn time_to_point(&self, rail: &Rectangle, time: f32) -> Point {
+        if self.duration <= 0.0 {
             return Point::new(rail.x, rail.center_y());
         }
 
-        let fraction = (time.as_secs_f64() / duration).clamp(0.0, 1.0);
+        let fraction = (time / self.duration).clamp(0.0, 1.0);
 
-        Point::new(rail.x + fraction as f32 * rail.width, rail.center_y())
+        Point::new(rail.x + fraction * rail.width, rail.center_y())
     }
 
     fn point_to_handle(&self, rail: &Rectangle, point: &Point) -> Option<Handle> {
-        let video = self.video.as_ref()?;
-
         const HIT_RADIUS: f32 = 10.0;
 
         // Allow interaction slightly outside the rail.
@@ -162,18 +152,9 @@ where
         }
 
         let handles = [
-            (
-                Handle::Start,
-                self.time_to_point(rail, &Duration::from_secs_f64(self.start)),
-            ),
-            (
-                Handle::End,
-                self.time_to_point(rail, &Duration::from_secs_f64(self.end)),
-            ),
-            (
-                Handle::Playhead,
-                self.time_to_point(rail, &video.position()),
-            ),
+            (Handle::Start, self.time_to_point(rail, self.start)),
+            (Handle::End, self.time_to_point(rail, self.end)),
+            (Handle::Playhead, self.time_to_point(rail, self.position)),
         ];
 
         handles
@@ -187,13 +168,23 @@ where
             .map(|(handle, _)| handle)
     }
 
-    fn time(&self, t: f64) -> f64 {
+    fn major_interval(&self, rail: &Rectangle) -> f32 {
+        let min_interval = self.duration * 95.0 / rail.width;
+
+        let candidates = [
+            0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0,
+            900.0, 1800.0, 3600.0, 7200.0, 14400.0, 28800.0, 86400.0,
+        ];
+
+        candidates
+            .into_iter()
+            .find(|step| *step >= min_interval)
+            .unwrap_or(86400.0 * (min_interval / 86400.0).ceil())
+    }
+
+    fn time(&self, t: f32) -> f32 {
         if t.is_finite() {
-            t.clamp(
-                0.0,
-                self.video
-                    .map_or(0.0, |video| video.duration().as_secs_f64()),
-            )
+            t.clamp(0.0, self.duration)
         } else {
             0.0
         }
@@ -201,7 +192,7 @@ where
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for VideoTimeline<'_, Message, Theme>
+    for VideoTimeline<Message, Theme>
 where
     Message: Clone,
     Theme: Catalog,
@@ -246,9 +237,6 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        let Some(video) = self.video.as_mut() else {
-            return;
-        };
         let state = tree.state.downcast_mut::<State>();
         let bounds = layout.bounds();
 
@@ -256,10 +244,7 @@ where
             .clone()
             .shrink(5.0)
             .shrink(Padding::ZERO.vertical(15.0));
-        let playhead_location = video.position().as_secs_f64();
-        let playhead_x = (playhead_location as f32 * rail.width
-            / video.duration().as_secs_f64() as f32)
-            + rail.x;
+        let playhead_x = (self.position * rail.width / self.duration) + rail.x;
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 let Some(cursor_position) = cursor_position.position() else {
@@ -400,9 +385,6 @@ where
         cursor_position: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        let Some(video) = self.video else {
-            return;
-        };
         let bounds = layout.bounds();
         if bounds.intersection(viewport).is_none() || bounds.width <= 2.0 * INSET {
             return;
@@ -430,24 +412,46 @@ where
         let rail_radius = rail.height / 4.0;
         quad(rail, rail_radius, style.rail_color);
 
+        let major = self.major_interval(&rail);
+        let minor = major / 7.0;
+
+        let count = (self.duration / minor).floor() as usize;
+
+        for i in 0..=count {
+            let time = i as f32 * minor;
+            let mut point = self.time_to_point(&rail, time);
+            point.y = bounds.y + 8.0;
+            let is_major = i % 7 == 0;
+
+            let height = if is_major { 12.0 } else { 6.0 };
+            let rectangle = Rectangle::new(point, Size::new(1.0, height));
+
+            quad(
+                rectangle,
+                0.0,
+                if is_major {
+                    style.major_tick_color
+                } else {
+                    style.minor_tick_color
+                },
+            );
+        }
+
         let trim_height = rail.height + 10.0;
         let trim_width = 12.0;
         let trim_size = Size::new(trim_width, trim_height);
-        let start_x = self.start as f32 * rail.width / video.duration().as_secs_f32();
-        let start_position = Point::new(start_x - 3.0 + rail.x, rail.y - 5.0);
+        let mut start_position = self.time_to_point(&rail, self.start);
+        start_position.y = rail.y - 5.0;
+        start_position.x = start_position.x - 3.0;
         let start_trim_rect = Rectangle::new(start_position, trim_size);
-        let end_x = self.end as f32 * rail.width / video.duration().as_secs_f32();
-        let end_position = Point::new(end_x - 3.0 + rail.x, rail.y - 5.0);
+        let mut end_position = self.time_to_point(&rail, self.end);
+        end_position.x = end_position.x - 3.0;
+        end_position.y = rail.y - 5.0;
         let end_trim_rect = Rectangle::new(end_position, trim_size);
-        let playhead_location = video.position().as_secs_f64();
-        let playhead_x = (playhead_location as f32 * rail.width
-            / video.duration().as_secs_f64() as f32)
-            + rail.x;
-        let played_x = start_x + rail.x;
-
+        let playhead_x = (self.position * rail.width / self.duration) + rail.x;
         let played_rail = Rectangle::new(
-            Point::new(played_x, rail.y),
-            Size::new((playhead_x - played_x).max(0.0), rail.height),
+            Point::new(start_position.x, rail.y),
+            Size::new((playhead_x - start_position.x).max(0.0), rail.height),
         );
         quad(played_rail, rail_radius, style.bar_color);
 
@@ -479,7 +483,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<'a, Message, Theme, Renderer> From<VideoTimeline<'a, Message, Theme>>
+impl<'a, Message, Theme, Renderer> From<VideoTimeline<Message, Theme>>
     for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + std::clone::Clone,
@@ -491,9 +495,7 @@ where
         + iced_core::svg::Renderer,
     Theme: 'a,
 {
-    fn from(
-        c: VideoTimeline<'a, Message, Theme>,
-    ) -> Element<'a, Message, Theme, Renderer> {
+    fn from(c: VideoTimeline<Message, Theme>) -> Element<'a, Message, Theme, Renderer> {
         Self::new(c)
     }
 }
@@ -511,6 +513,8 @@ pub struct Style {
     pub trim_handle_colors: Color,
     /// The color of the playhead
     pub playhead_handle_color: Color,
+    pub major_tick_color: Color,
+    pub minor_tick_color: Color,
 }
 
 /// [`Style`] field overrides
@@ -522,6 +526,8 @@ pub struct Class {
     pub border_radius: Option<f32>,
     pub trim_handle_colors: Option<Color>,
     pub playhead_handle_color: Option<Color>,
+    pub major_tick_color: Option<Color>,
+    pub minor_tick_color: Option<Color>,
 }
 
 impl Class {
@@ -555,6 +561,16 @@ impl Class {
         self
     }
 
+    pub fn major_tick_color(mut self, color: impl Into<Color>) -> Self {
+        self.major_tick_color = Some(color.into());
+        self
+    }
+
+    pub fn minor_tick_color(mut self, color: impl Into<Color>) -> Self {
+        self.minor_tick_color = Some(color.into());
+        self
+    }
+
     fn resolve(&self, base: Style) -> Style {
         Style {
             rail_color: self.rail_color.unwrap_or(base.rail_color),
@@ -567,6 +583,8 @@ impl Class {
             playhead_handle_color: self
                 .playhead_handle_color
                 .unwrap_or(base.playhead_handle_color),
+            major_tick_color: self.major_tick_color.unwrap_or(base.major_tick_color),
+            minor_tick_color: self.minor_tick_color.unwrap_or(base.minor_tick_color),
         }
     }
 }
@@ -592,6 +610,8 @@ impl Catalog for cosmic::iced::Theme {
             border_radius: 0.0,
             trim_handle_colors: palette.secondary.base.color,
             playhead_handle_color: palette.danger.base.color,
+            major_tick_color: palette.background.neutral.color,
+            minor_tick_color: palette.background.neutral.color,
         })
     }
 }
@@ -633,6 +653,8 @@ impl Catalog for cosmic::Theme {
             border_radius: theme.corner_radii.radius_xl[0],
             trim_handle_colors,
             playhead_handle_color,
+            major_tick_color: theme.palette.neutral_10.into(),
+            minor_tick_color: theme.palette.neutral_8.into(),
         })
     }
 }
