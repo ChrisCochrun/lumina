@@ -386,6 +386,19 @@ impl Presenter {
             Message::VideoPos(position) => self.video_manager.seek(position),
             Message::VideoFrame => {
                 self.video_manager.update_position();
+                let position = self.video_manager.position;
+                if self
+                    .service
+                    .get(self.current_item_index)
+                    .is_some_and(|item| match &item.kind {
+                        ServiceItemKind::Video(video) => video
+                            .end_time
+                            .is_some_and(|time| (time - position as f32).abs() <= 0.03),
+                        _ => false,
+                    })
+                {
+                    return self.update(Message::PlayPauseVideo);
+                }
             }
             Message::MissingPlugin(element) => {
                 if let Some(pair) = &mut self.video_manager.current_video {
@@ -461,7 +474,7 @@ impl Presenter {
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .on_end_of_stream(Message::EndVideo)
-                    .on_new_frame(Message::VideoFrame)
+                    .on_new_frame(Message::None)
                     .on_missing_plugin(Message::MissingPlugin)
                     .on_warning(|w| Message::Error(w.to_string()))
                     .on_error(|e| Message::Error(e.to_string()))
@@ -1073,6 +1086,19 @@ impl Presenter {
         }
 
         let mut tasks = self.preload_videos();
+
+        if let Some(video) = self
+            .service
+            .get(self.current_item_index)
+            .map(|item| match &item.kind {
+                ServiceItemKind::Video(video) => Some(video),
+                _ => None,
+            })
+            .flatten()
+        {
+            let position = video.start_time.unwrap_or(0.0) as f64;
+            self.video_manager.seek(position);
+        }
         tasks.push(focus_target(
             self.scroll_id.clone(),
             Some(self.active_slide_id.clone()),

@@ -1,15 +1,19 @@
+use std::borrow::Cow;
 use std::io;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use cosmic::cosmic_theme::palette::WithAlpha;
 use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::widget::{column, row};
-use cosmic::iced::{Length, Padding};
+use cosmic::iced::{Background, Border, Length, Padding};
 use cosmic::prelude::*;
 use cosmic::widget::space::{self, horizontal};
-use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
+use cosmic::widget::{
+    Space, button, container, icon, slider, spin_button, text, text_input,
+};
 use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
 use tracing::{debug, error, warn};
@@ -150,6 +154,7 @@ impl VideoEditor {
             }
             Message::SetStart(time) => {
                 if let Some(video) = &mut self.core_video {
+                    let time = if time > 0.0 { time } else { 0.0 };
                     video.start_time = Some(time);
                     return Action::UpdateVideo(video.clone());
                 }
@@ -194,13 +199,27 @@ impl VideoEditor {
                 .apply(container)
                 .center_x(Length::Fill);
                 let position_text = text(&self.timestamp_text);
-                let standin_start = text("Start Time");
-                let standin_end = text("End Time");
-                let trim_controls = row![standin_start, standin_end]
-                    .spacing(cosmic::theme::spacing().space_m)
-                    .apply(container)
-                    .padding(Padding::ZERO.right(cosmic::theme::spacing().space_m))
-                    .align_right(Length::Fill);
+                let trim_controls: Element<Message> = if let Some(core_video) =
+                    &self.core_video
+                {
+                    let start_time = core_video.start_time.unwrap_or(0.0);
+                    let start_label = format_time(start_time as f64);
+
+                    let start_spin = spinner(start_label, start_time, Message::SetStart);
+                    let end_time = core_video
+                        .end_time
+                        .unwrap_or(video.duration().as_secs_f32());
+                    let end_label = format_time(end_time as f64);
+                    let end_spin = spinner(end_label, end_time as f32, Message::SetEnd);
+                    row![start_spin, end_spin]
+                        .spacing(cosmic::theme::spacing().space_l)
+                        .apply(container)
+                        .padding(Padding::ZERO.right(cosmic::theme::spacing().space_m))
+                        .align_right(Length::Fill)
+                        .into()
+                } else {
+                    space::vertical().into()
+                };
                 let volume = slider(0.0..=1.0, video.volume(), Message::Volume)
                     .step(0.01)
                     .width(Length::Fill);
@@ -313,10 +332,13 @@ impl VideoEditor {
         };
 
         player_video.set_paused(true);
-        let start = video
-            .start_time
-            .unwrap_or(0.0)
-            .apply(Duration::from_secs_f32);
+        let start = video.start_time.unwrap_or(0.0).apply(|time| {
+            if time < 0.0 {
+                Duration::ZERO
+            } else {
+                Duration::from_secs_f32(time)
+            }
+        });
         if let Err(e) = player_video.seek(start, false) {
             error!(?e);
         }
@@ -329,19 +351,6 @@ impl VideoEditor {
 
     fn update_timestamp(&mut self) {
         if let Some(video) = self.video.as_ref() {
-            let format_time = |secs: f64| {
-                let total = if secs.is_finite() && secs > 0.0 {
-                    secs.floor() as u64
-                } else {
-                    0
-                };
-                let (h, m, s) = (total / 3600, (total / 60) % 60, total % 60);
-                if h > 0 {
-                    format!("{h}:{m:02}:{s:02}")
-                } else {
-                    format!("{m}:{s:02}")
-                }
-            };
             let position_seconds = self.position;
             debug!(position_seconds);
             let duration_seconds = video.duration().as_secs_f64();
@@ -353,6 +362,88 @@ impl VideoEditor {
             debug!(formatted);
             self.timestamp_text = formatted;
         }
+    }
+}
+fn spinner<'a>(
+    label: String,
+    value: f32,
+    on_press: impl Fn(f32) -> Message,
+) -> Element<'a, Message> {
+    const UP_ICON: &[u8] = include_bytes!("../../../../res/icons/caret-up.svg");
+    const DOWN_ICON: &[u8] = include_bytes!("../../../../res/icons/caret-down.svg");
+    let up_button = button::custom(
+        icon::from_svg_bytes(UP_ICON)
+            .symbolic(true)
+            .icon()
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }))
+            .size(15),
+    )
+    .on_press((on_press)(value + 1.0))
+    .padding(0);
+    let down_button = button::custom(
+        icon::from_svg_bytes(DOWN_ICON)
+            .symbolic(true)
+            .icon()
+            .class(theme::Svg::custom(|t| cosmic::widget::svg::Style {
+                color: Some(if t.cosmic().is_dark {
+                    t.cosmic().palette.neutral_10.into()
+                } else {
+                    t.cosmic().palette.neutral_0.into()
+                }),
+            }))
+            .size(15),
+    )
+    .on_press((on_press)(value - 1.0))
+    .padding(0);
+    let buttons = column![up_button, down_button];
+    let text = text(label).size(18);
+    row![text, buttons]
+        .align_y(Vertical::Center)
+        .spacing(cosmic::theme::spacing().space_xxl)
+        .apply(container)
+        .padding(
+            Padding::ZERO
+                .horizontal(cosmic::theme::spacing().space_s)
+                .vertical(cosmic::theme::spacing().space_s),
+        )
+        .style(|theme| {
+            container::Style::default()
+                .background(Background::Color(
+                    theme
+                        .cosmic()
+                        .background
+                        .component
+                        .base
+                        .with_alpha(0.25)
+                        .into(),
+                ))
+                .border(
+                    Border::default()
+                        .rounded(theme.cosmic().radius_s())
+                        .width(3)
+                        .color(theme.cosmic().primary_component_divider()),
+                )
+        })
+        .into()
+}
+
+fn format_time(seconds: f64) -> String {
+    let total = if seconds.is_finite() && seconds > 0.0 {
+        seconds.floor() as u64
+    } else {
+        0
+    };
+    let (h, m, s) = (total / 3600, (total / 60) % 60, total % 60);
+    if h > 0 {
+        format!("{h}:{m:02}:{s:02}")
+    } else {
+        format!("{m}:{s:02}")
     }
 }
 

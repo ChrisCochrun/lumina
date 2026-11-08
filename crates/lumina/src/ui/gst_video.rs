@@ -102,8 +102,8 @@ impl VideoManager {
 
     pub fn update_position(&mut self) {
         if let Some(pair) = &self.current_video
-            && self.position > 0.0
-            && pair.preview.position().as_secs_f64() != 0.0
+            && self.position >= 0.0
+            && pair.preview.position().as_secs_f64() >= 0.0
         {
             self.position = pair.preview.position().as_secs_f64();
         }
