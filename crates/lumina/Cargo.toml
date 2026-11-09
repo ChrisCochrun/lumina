@@ -66,7 +66,11 @@ iced_graphics = { workspace = true }
 
 [dependencies.rodio]
 git = "https://github.com/RustAudio/rodio"
+rev = "0557a30a655b42016ddd961d0f69c5566f6e3f1e"
 features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libopus"]
+
+[dependencies.rodio-wsola]
+version = "0.2.0"
 
 [dependencies.iced_video_player]
 git = "https://git.tfcconnection.org/chris/iced_video_player.git"

@@ -4687,6 +4687,7 @@ dependencies = [
  "reqwest 0.13.3",
  "resvg_exposed",
  "rodio",
+ "rodio-wsola",
  "ron",
  "scraper",
  "serde",
@@ -6888,7 +6889,7 @@ dependencies = [
 [[package]]
 name = "rodio"
 version = "0.22.2"
-source = "git+https://github.com/RustAudio/rodio#0557a30a655b42016ddd961d0f69c5566f6e3f1e"
+source = "git+https://github.com/RustAudio/rodio?rev=0557a30a655b42016ddd961d0f69c5566f6e3f1e#0557a30a655b42016ddd961d0f69c5566f6e3f1e"
 dependencies = [
  "cpal",
  "dasp_sample",
@@ -6900,6 +6901,15 @@ dependencies = [
  "symphonia-adapter-libopus",
  "thiserror 2.0.18",
  "tracing",
+]
+
+[[package]]
+name = "rodio-wsola"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7a9846f28f3dec5c369fa0bf68bfa35bff5017d71bcd52fd7f864df948ded73"
+dependencies = [
+ "rodio",
 ]
 
 [[package]]

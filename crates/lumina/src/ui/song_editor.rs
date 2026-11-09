@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::{self};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -42,6 +43,7 @@ use fontdb;
 use iced_video_player::{Video, VideoPlayer};
 use itertools::Itertools;
 use rodio::{Decoder, MixerDeviceSink, Player, Source};
+use rodio_wsola::WsolaSourceExt;
 use tracing::{debug, error};
 
 use crate::core::animation::Animation;
@@ -55,6 +57,8 @@ use crate::ui::widgets::draggable;
 use crate::ui::widgets::verse_editor::{self, VerseEditor};
 use crate::{Background, BackgroundKind};
 
+static AUDIO_SPEEDS: [&str; 3] = ["1x", "1.5x", "2x"];
+static AUDIO_SPEED_FACTORS: [f32; 3] = [1.0, 1.5, 2.0];
 // This should get refactored into holding a state machine
 // then each state of what is being edited can be caught by the compiler
 #[allow(clippy::struct_excessive_bools)]
@@ -73,6 +77,10 @@ pub struct SongEditor {
     player: Arc<Player>,
     audio_duration: Option<Duration>,
     audio_position: Option<Duration>,
+    selected_speed: Option<usize>,
+    audio_speed: Arc<AtomicU32>,
+    media_anchor: Duration,
+    output_anchor: Duration,
     font_size: usize,
     verse_order: String,
     pub lyrics: text_editor::Content,
@@ -167,6 +175,7 @@ pub enum Message {
     Tick(Instant),
     PlayPauseAudio,
     SeekAudio(f64),
+    SetAudioSpeed(usize),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -289,6 +298,10 @@ impl SongEditor {
             audio: PathBuf::new(),
             audio_duration: None,
             audio_position: None,
+            selected_speed: Some(0),
+            audio_speed: Arc::new(AtomicU32::new(1.0_f32.to_bits())),
+            media_anchor: Duration::ZERO,
+            output_anchor: Duration::ZERO,
             _sink: Arc::new(sink),
             player,
             background: None,
@@ -478,8 +491,8 @@ impl SongEditor {
 
                     self.audio.clone_from(audio);
                     self.audio_duration = source.total_duration();
-                    self.player.append(source);
-                    self.player.pause();
+                    self.audio_position = Some(Duration::ZERO);
+                    self.append_audio_source(source);
                 }
 
                 if let Some(ccli) = &song.ccli {
@@ -671,8 +684,8 @@ impl SongEditor {
 
                     song.audio = Some(path);
                     self.audio_duration = source.total_duration();
-                    self.player.append(source);
-                    self.player.pause();
+                    self.audio_position = Some(Duration::ZERO);
+                    self.append_audio_source(source);
                     return Action::Task(self.update_song(&song));
                 }
             }
@@ -683,12 +696,17 @@ impl SongEditor {
                 self.audio_position = None;
                 error!(?error);
             }
-            Message::Tick(_instant) => {
-                if let Some(song) = &self.song
-                    && let Some(_audio) = &song.audio
-                {
-                    self.audio_position = Some(self.player.get_pos());
+            Message::SetAudioSpeed(index) => {
+                if let Some(speed) = AUDIO_SPEED_FACTORS.get(index) {
+                    self.refresh_audio_position();
+                    self.media_anchor = self.audio_position.unwrap_or_default();
+                    self.output_anchor = self.player.get_pos();
+                    self.selected_speed = Some(index);
+                    self.audio_speed.store(speed.to_bits(), Ordering::Relaxed);
                 }
+            }
+            Message::Tick(_instant) => {
+                self.refresh_audio_position();
             }
             Message::ChangeBackground(Ok(path)) => {
                 debug!(?path);
@@ -1102,8 +1120,23 @@ impl SongEditor {
                 }
             }
             Message::SeekAudio(seek) => {
-                if let Err(e) = self.player.try_seek(Duration::from_secs_f64(seek)) {
-                    error!("Couldn't seek: {e:?}");
+                if seek.is_finite() && seek >= 0.0 {
+                    let requested = Duration::from_secs_f64(seek);
+                    let media_pos = self
+                        .audio_duration
+                        .map_or(requested, |duration| requested.min(duration));
+
+                    // Compensate for rodio-wsola's current seek implementation.
+                    let output_pos = media_pos.div_f32(self.current_audio_speed());
+
+                    match self.player.try_seek(output_pos) {
+                        Ok(()) => {
+                            self.media_anchor = media_pos;
+                            self.output_anchor = self.player.get_pos();
+                            self.audio_position = Some(media_pos);
+                        }
+                        Err(e) => error!("Couldn't seek: {e:?}"),
+                    }
                 }
             }
             Message::None => (),
@@ -1143,11 +1176,13 @@ impl SongEditor {
                         .as_ref()
                         .map_or("", |audio| audio.to_str().unwrap_or(""))
                 });
+                let speed_selector =
+                    dropdown(&AUDIO_SPEEDS, self.selected_speed, Message::SetAudioSpeed);
 
                 container(column![
                     text::body(format!("Audio: {audio_path}"))
                         .ellipsize(Ellipsize::Middle(EllipsizeHeightLimit::Lines(1))),
-                    row![play_button, audio_track]
+                    row![play_button, audio_track, speed_selector]
                         .align_y(Vertical::Center)
                         .spacing(space_m)
                 ])
@@ -2227,9 +2262,10 @@ impl SongEditor {
             std::thread::spawn(move || {
                 for (index, mut slide) in slides.into_iter().enumerate() {
                     if let Ok(mut font_system) = font_system.lock()
-                        && let Err(error) = slide.prepare_text(&mut font_system) {
-                            error!(?error);
-                        }
+                        && let Err(error) = slide.prepare_text(&mut font_system)
+                    {
+                        error!(?error);
+                    }
                     // let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
                     //     .unwrap_or(slide);
                     let _ = tx.send(Message::UpdateSlide((index, slide)));
@@ -2279,6 +2315,60 @@ impl SongEditor {
         } else {
             self.video = None;
         }
+    }
+
+    fn append_audio_source<S>(&mut self, source: S)
+    where
+        S: Source + Send + 'static,
+    {
+        let speed = AUDIO_SPEED_FACTORS
+            .get(self.selected_speed.unwrap_or(0))
+            .copied()
+            .unwrap_or(1.0);
+
+        // Match the current dropdown setting when loading a song.
+        let initial_bits = speed.to_bits();
+        self.audio_speed.store(initial_bits, Ordering::Relaxed);
+
+        let speed_reader = Arc::clone(&self.audio_speed);
+        let mut last_speed = initial_bits;
+
+        let source = source.wsola(speed).periodic_access(
+            Duration::from_millis(20),
+            move |wsola| {
+                let current_speed = speed_reader.load(Ordering::Relaxed);
+
+                if current_speed != last_speed {
+                    wsola.set_speed(f32::from_bits(current_speed));
+                    last_speed = current_speed;
+                }
+            },
+        );
+
+        self.media_anchor = Duration::ZERO;
+        self.output_anchor = Duration::ZERO;
+        // Rodio's built-in speed adapter must remain at 1.0.
+        self.player.set_speed(1.0);
+        self.player.append(source);
+        self.player.pause();
+    }
+
+    fn current_audio_speed(&self) -> f32 {
+        AUDIO_SPEED_FACTORS
+            .get(self.selected_speed.unwrap_or(0))
+            .copied()
+            .unwrap_or(1.0)
+    }
+
+    fn refresh_audio_position(&mut self) {
+        let output_pos = self.player.get_pos();
+        let elapsed = output_pos.saturating_sub(self.output_anchor);
+
+        let position = self
+            .media_anchor
+            .saturating_add(elapsed.mul_f32(self.current_audio_speed()));
+
+        self.audio_position = self.audio_duration.map(|duration| position.min(duration));
     }
 }
 

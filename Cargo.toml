@@ -20,6 +20,9 @@ skrifa = "0.40.0"
 image = "0.25.8"
 tracing = "0.1.40"
 
+[patch.crates-io]
+rodio = { git = "https://github.com/RustAudio/rodio", rev = "0557a30a655b42016ddd961d0f69c5566f6e3f1e" }
+
 [profile.release]
 opt-level = 3
 debug = "line-tables-only"
