@@ -123,6 +123,7 @@ pub enum Message {
     HoverPoint(cosmic::iced::Point),
     AddPresentationSplitFinish(Presentation, Presentation),
     AddVideosFinished(Vec<Video>),
+    UpdateVideoFinished(Video),
 }
 
 impl Action {
@@ -632,12 +633,20 @@ impl<'a> Library {
 
                 return Action::Task(Task::perform(
                     videos::update_video(video, Arc::clone(&self.db)),
-                    |r| {
-                        r.map_or(Message::None, |video| {
-                            Message::AddVideosFinished(vec![video])
-                        })
-                    },
+                    |r| r.map_or(Message::None, Message::UpdateVideoFinished),
                 ));
+            }
+            Message::UpdateVideoFinished(video) => {
+                if let Some(found) = self
+                    .video_library
+                    .items
+                    .iter_mut()
+                    .find(|found| found.id == video.id)
+                {
+                    *found = video;
+                } else {
+                    error!("Couldn't find video to update: {}", video.id);
+                }
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
             Message::ReaddPres(presentations) => {

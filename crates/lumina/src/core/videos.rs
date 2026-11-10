@@ -341,7 +341,7 @@ pub async fn update_video(mut video: Video, db: Arc<SqlitePool>) -> Result<Video
     let accessed_at = Local::now();
     video.accessed_at = accessed_at;
 
-    let id = query!(
+    query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6, accessed_at = $7 WHERE id = $1"#,
         video.id,
         video.title,
@@ -352,9 +352,8 @@ pub async fn update_video(mut video: Video, db: Arc<SqlitePool>) -> Result<Video
         accessed_at
     )
         .execute(&*db)
-        .await.into_diagnostic()?.last_insert_rowid();
+    .await.into_diagnostic()?;
 
-    video.id = id.try_into().into_diagnostic()?;
     Ok(video)
 }
 
