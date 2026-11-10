@@ -92,7 +92,7 @@ flatpak-shell:
     flatpak-builder --run build-dir xyz.cochrun.lumina.yml sh
 
 flatpak-create:
-    flatpak-builder --force-clean --install-deps-from=flathub --repo=repo build-dir xyz.cochrun.lumina.yml
+    flatpak-builder --user --force-clean --install-deps-from=flathub --repo=repo build-dir xyz.cochrun.lumina.yml
     flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo repo lumina.flatpak xyz.cochrun.lumina
     
 alias fb := flatpak-build
