@@ -52,13 +52,13 @@ use crate::core::slide::{Slide, TextAlignment};
 use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
 use crate::ui::slide_editor::SlideEditor;
-use crate::ui::text_svg;
 use crate::ui::widgets::draggable;
 use crate::ui::widgets::verse_editor::{self, VerseEditor};
 use crate::{Background, BackgroundKind};
 
 static AUDIO_SPEEDS: [&str; 3] = ["1x", "1.5x", "2x"];
 static AUDIO_SPEED_FACTORS: [f32; 3] = [1.0, 1.5, 2.0];
+
 // This should get refactored into holding a state machine
 // then each state of what is being edited can be caught by the compiler
 #[allow(clippy::struct_excessive_bools)]
@@ -518,11 +518,14 @@ impl SongEditor {
 
                 let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
-                let font_db = self.font_db.clone();
+                let font_system = self.font_system.clone();
                 std::thread::spawn(move || {
-                    for (index, slide) in song_slides.into_iter().enumerate() {
-                        let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
-                            .unwrap_or(slide);
+                    for (index, mut slide) in song_slides.into_iter().enumerate() {
+                        if let Ok(mut font_system) = font_system.lock()
+                            && let Err(error) = slide.prepare_text(&mut font_system)
+                        {
+                            error!(?error);
+                        }
                         let _ = tx.send(Message::UpdateSlide((index, slide)));
                     }
                 });
@@ -531,23 +534,6 @@ impl SongEditor {
                     tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
                 )
                 .abortable();
-
-                // let (task, handle) = Task::perform(
-                //     async move {
-                //         song_slides
-                //             .into_par_iter()
-                //             .map(|s| {
-                //                 text_svg::text_svg_generator(
-                //                     s.clone(),
-                //                     &font_db,
-                //                 )
-                //                 .unwrap_or(s)
-                //             })
-                //             .collect::<Vec<Slide>>()
-                //     },
-                //     Message::UpdateSlides,
-                // )
-                // .abortable();
 
                 self.update_slide_handle = Some(handle);
                 tasks.push(task);
