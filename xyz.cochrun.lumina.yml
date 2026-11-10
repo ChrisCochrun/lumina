@@ -78,5 +78,4 @@ modules:
 
       - type: dir
         path: .
-
       - cargo-sources-split.json
