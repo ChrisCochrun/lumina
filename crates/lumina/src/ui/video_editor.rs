@@ -101,7 +101,7 @@ impl VideoEditor {
                 if let Some(video) = self.video.as_mut()
                     && self
                         .last_seek
-                        .checked_add(Duration::from_millis(40))
+                        .checked_add(Duration::from_millis(50))
                         .is_some_and(|time| Instant::now() > time)
                 {
                     let pausing = video.paused();
@@ -352,14 +352,12 @@ impl VideoEditor {
     fn update_timestamp(&mut self) {
         if let Some(video) = self.video.as_ref() {
             let position_seconds = self.position;
-            debug!(position_seconds);
             let duration_seconds = video.duration().as_secs_f64();
             let formatted = format!(
                 "{} / {}",
                 format_time(position_seconds),
                 format_time(duration_seconds)
             );
-            debug!(formatted);
             self.timestamp_text = formatted;
         }
     }
