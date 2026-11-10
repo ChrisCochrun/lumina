@@ -297,11 +297,10 @@ pub async fn remove_video(
 }
 
 pub async fn add_video(
-    new_videos: Vec<Video>,
-    mut current_videos: Vec<Video>,
+    mut new_videos: Vec<Video>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Video>> {
-    for mut video in new_videos {
+    for video in &mut new_videos {
         let path = video
             .path
             .to_str()
@@ -309,6 +308,8 @@ pub async fn add_video(
             .unwrap_or_default();
         let created_at = Local::now();
         let accessed_at = Local::now();
+        video.created_at = created_at;
+        video.accessed_at = accessed_at;
 
         video.id = query!(
             r#"INSERT INTO videos (title, file_path, start_time, end_time, loop, created_at, accessed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
@@ -326,17 +327,11 @@ pub async fn add_video(
             .last_insert_rowid()
             .try_into()
             .into_diagnostic()?;
-
-        current_videos.push(video);
     }
-    Ok(current_videos)
+    Ok(new_videos)
 }
 
-pub async fn update_video(
-    video: Video,
-    mut videos: Vec<Video>,
-    db: Arc<SqlitePool>,
-) -> Result<Vec<Video>> {
+pub async fn update_video(mut video: Video, db: Arc<SqlitePool>) -> Result<Video> {
     let path = video
         .path
         .to_str()
@@ -344,8 +339,9 @@ pub async fn update_video(
         .unwrap_or_default();
 
     let accessed_at = Local::now();
+    video.accessed_at = accessed_at;
 
-    query!(
+    let id = query!(
         r#"UPDATE videos SET title = $2, file_path = $3, start_time = $4, end_time = $5, loop = $6, accessed_at = $7 WHERE id = $1"#,
         video.id,
         video.title,
@@ -356,20 +352,10 @@ pub async fn update_video(
         accessed_at
     )
         .execute(&*db)
-        .await.into_diagnostic()?;
+        .await.into_diagnostic()?.last_insert_rowid();
 
-    let current_video = videos
-        .iter()
-        .position(|current_video| current_video.id == video.id)
-        .ok_or_else(|| miette!("Could not find video in model"))
-        .map(|index| {
-            videos
-                .get_mut(index)
-                .expect("We should have this video already")
-        })?;
-
-    let _ = replace(current_video, video);
-    Ok(videos)
+    video.id = id.try_into().into_diagnostic()?;
+    Ok(video)
 }
 
 pub async fn get_from_db(database_id: i32, db: &mut SqliteConnection) -> Result<Video> {

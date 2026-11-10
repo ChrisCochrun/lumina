@@ -122,6 +122,7 @@ pub enum Message {
     PopupSearch(String),
     HoverPoint(cosmic::iced::Point),
     AddPresentationSplitFinish(Presentation, Presentation),
+    AddVideosFinished(Vec<Video>),
 }
 
 impl Action {
@@ -306,20 +307,19 @@ impl<'a> Library {
                 ))));
                 if let Some(new_videos) = videos {
                     let task = Task::perform(
-                        videos::add_video(
-                            new_videos,
-                            self.video_library.items.clone(),
-                            Arc::clone(&self.db),
-                        ),
+                        videos::add_video(new_videos, Arc::clone(&self.db)),
                         move |res| {
                             res.map_or(Message::None, |videos| {
-                                Message::ReaddVideos(videos)
+                                Message::AddVideosFinished(videos)
                             })
                         },
                     );
                     tasks.push(task);
                 }
                 return Action::Task(Task::batch(tasks).chain(after_task));
+            }
+            Message::AddVideosFinished(videos) => {
+                self.video_library.items.extend(videos);
             }
             Message::AddPresentationSplit((first, second)) => {
                 return Action::Task(Task::perform(
@@ -343,7 +343,6 @@ impl<'a> Library {
                     .iter_mut()
                     .find(|presentation| presentation.id == first.id)
                 {
-                    debug!(?first, "Changed first presentation");
                     *presentation = first.clone();
                 } else {
                     error!("Couldn't change the first of the split presentation");
@@ -632,12 +631,12 @@ impl<'a> Library {
                 }
 
                 return Action::Task(Task::perform(
-                    videos::update_video(
-                        video,
-                        self.video_library.items.clone(),
-                        Arc::clone(&self.db),
-                    ),
-                    |r| r.map_or(Message::None, Message::ReaddVideos),
+                    videos::update_video(video, Arc::clone(&self.db)),
+                    |r| {
+                        r.map_or(Message::None, |video| {
+                            Message::AddVideosFinished(vec![video])
+                        })
+                    },
                 ));
             }
             Message::VideoChanged => debug!("vid shoulda changed"),
@@ -1418,12 +1417,8 @@ impl<'a> Library {
 
         if !videos.is_empty() {
             tasks.push(Task::perform(
-                videos::add_video(
-                    videos,
-                    self.video_library.items.clone(),
-                    Arc::clone(&self.db),
-                ),
-                move |res| res.map_or(Message::None, Message::ReaddVideos),
+                videos::add_video(videos, Arc::clone(&self.db)),
+                move |res| res.map_or(Message::None, Message::AddVideosFinished),
             ));
         }
 
