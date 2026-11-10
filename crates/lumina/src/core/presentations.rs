@@ -295,7 +295,7 @@ impl FromRow<'_, SqliteRow> for Presentation {
 }
 
 impl Model<Presentation> {
-    #[must_use] 
+    #[must_use]
     pub fn check_item(&self, presentation: &Presentation) -> CheckItem {
         if self.items.contains(presentation) {
             CheckItem::Yes
@@ -500,6 +500,15 @@ pub async fn add_presentation(
         current_presentations.push(presentation);
     }
     Ok(current_presentations)
+}
+
+pub async fn add_split_presentation(
+    first: Presentation,
+    second: Presentation,
+    mut presentations: Vec<Presentation>,
+    db: Arc<SqlitePool>,
+) -> Result<Vec<Presentation>> {
+    todo!()
 }
 
 pub async fn update_presentation(

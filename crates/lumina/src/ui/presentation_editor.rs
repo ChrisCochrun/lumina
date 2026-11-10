@@ -19,6 +19,7 @@ use cosmic::widget::{
 use cosmic::{Element, Task, theme};
 use miette::{IntoDiagnostic, Result, miette};
 use mupdf::{Colorspace, Document, Matrix};
+use sqlx::types::chrono::Local;
 use tracing::{debug, error, warn};
 
 #[derive(Debug)]
@@ -59,6 +60,12 @@ pub enum Message {
     ContextMenu(usize),
     SplitBefore,
     SplitAfter,
+}
+
+enum Split {
+    Before,
+    After,
+    Duplicating,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -276,14 +283,14 @@ impl PresentationEditor {
                 self.context_menu_id = i32::try_from(index).ok();
             }
             Message::SplitBefore => {
-                if let Ok((first, second)) = self.split_before() {
+                if let Ok((first, second)) = self.split(Split::Before) {
                     debug!(?first, ?second);
                     self.update_entire_presentation(&first);
                     return Action::SplitAddPresentation((first, second));
                 }
             }
             Message::SplitAfter => {
-                if let Ok((first, second)) = self.split_after() {
+                if let Ok((first, second)) = self.split(Split::After) {
                     debug!(?first, ?second);
                     self.update_entire_presentation(&first);
                     return Action::SplitAddPresentation((first, second));
@@ -487,80 +494,39 @@ impl PresentationEditor {
         self.slides = pages;
     }
 
-    fn split_before(&self) -> Result<(Presentation, Presentation)> {
+    fn split(&self, split: Split) -> Result<(Presentation, Presentation)> {
         if let Some(index) = self.context_menu_id {
             let Some(current_presentation) = self.presentation.as_ref() else {
                 return Err(miette!("There is no current presentation"));
             };
-            let first_presentation = Presentation {
-                id: current_presentation.id,
-                title: current_presentation.title.clone(),
-                path: current_presentation.path.clone(),
-                kind: match current_presentation.kind {
-                    PresKind::Pdf { .. } => PresKind::Pdf {
-                        starting_index: 0,
-                        ending_index: index - 1,
-                    },
-                    _ => current_presentation.kind.clone(),
-                },
-                created_at: current_presentation.created_at,
-                accessed_at: current_presentation.accessed_at,
+            let PresKind::Pdf {
+                starting_index,
+                ending_index,
+            } = current_presentation.kind
+            else {
+                return Err(miette!("Presentation is not a PDF"));
             };
-            let second_presentation = Presentation {
-                id: 0,
-                title: format!("{} (2)", current_presentation.title.clone()),
-                path: current_presentation.path.clone(),
-                kind: match current_presentation.kind {
-                    PresKind::Pdf { ending_index, .. } => PresKind::Pdf {
-                        starting_index: index,
-                        ending_index,
-                    },
-                    _ => current_presentation.kind.clone(),
-                },
-                created_at: current_presentation.created_at,
-                accessed_at: current_presentation.accessed_at,
+            let absolute_index = starting_index + index;
+            let cut_index = match split {
+                Split::Before => absolute_index,
+                Split::After => absolute_index + 1,
+                Split::Duplicating => todo!(),
             };
-            Ok((first_presentation, second_presentation))
-        } else {
-            error!("split before no index");
-            Err(miette!(
-                "No current index from context menu, has there been a right click on a presentation page"
-            ))
-        }
-    }
-
-    fn split_after(&self) -> Result<(Presentation, Presentation)> {
-        if let Some(index) = self.context_menu_id {
-            let Some(current_presentation) = self.presentation.as_ref() else {
-                return Err(miette!("There is no current presentation"));
+            if cut_index <= starting_index || cut_index > ending_index {
+                return Err(miette!("Cannot split at this page"));
+            }
+            let mut first_presentation = current_presentation.clone();
+            first_presentation.kind = PresKind::Pdf {
+                starting_index,
+                ending_index: cut_index - 1,
             };
-            let first_presentation = Presentation {
-                id: current_presentation.id,
-                title: current_presentation.title.clone(),
-                path: current_presentation.path.clone(),
-                kind: match current_presentation.kind {
-                    PresKind::Pdf { .. } => PresKind::Pdf {
-                        starting_index: 0,
-                        ending_index: index,
-                    },
-                    _ => current_presentation.kind.clone(),
-                },
-                created_at: current_presentation.created_at,
-                accessed_at: current_presentation.accessed_at,
-            };
-            let second_presentation = Presentation {
-                id: 0,
-                title: format!("{} (2)", current_presentation.title.clone()),
-                path: current_presentation.path.clone(),
-                kind: match current_presentation.kind {
-                    PresKind::Pdf { ending_index, .. } => PresKind::Pdf {
-                        starting_index: index + 1,
-                        ending_index,
-                    },
-                    _ => current_presentation.kind.clone(),
-                },
-                created_at: current_presentation.created_at,
-                accessed_at: current_presentation.accessed_at,
+            let mut second_presentation = current_presentation.clone();
+            second_presentation.id = 0;
+            second_presentation.created_at = Local::now();
+            second_presentation.title = format!("{} (2)", current_presentation.title);
+            second_presentation.kind = PresKind::Pdf {
+                starting_index: cut_index,
+                ending_index,
             };
             Ok((first_presentation, second_presentation))
         } else {

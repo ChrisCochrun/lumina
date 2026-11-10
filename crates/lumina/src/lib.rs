@@ -1129,13 +1129,9 @@ impl cosmic::Application for App {
                         second,
                     )) => {
                         if self.library.is_some() {
-                            let second_task = self.update(Message::Library(
-                                library::Message::AddPresentationSplit(Some(second)),
-                            ));
                             self.update(Message::Library(
-                                library::Message::UpdatePresentation(first),
+                                library::Message::AddPresentationSplit((first, second)),
                             ))
-                            .chain(second_task)
                         } else {
                             Task::none()
                         }
@@ -1467,9 +1463,10 @@ impl cosmic::Application for App {
                     std::thread::spawn(move || {
                         for (slide_index, mut slide) in slides.into_iter().enumerate() {
                             if let Ok(mut font_system) = font_system.lock()
-                                && let Err(error) = slide.prepare_text(&mut font_system) {
-                                    error!(?error);
-                                }
+                                && let Err(error) = slide.prepare_text(&mut font_system)
+                            {
+                                error!(?error);
+                            }
                             let _ = tx.send(cosmic::Action::App(
                                 Message::AddSlideTextToItem(
                                     item_index,
@@ -1642,9 +1639,10 @@ impl cosmic::Application for App {
                         .into_par_iter()
                         .map(|mut slide| {
                             if let Ok(mut font_system) = self.font_system.lock()
-                                && let Err(error) = slide.prepare_text(&mut font_system) {
-                                    error!(?error);
-                                }
+                                && let Err(error) = slide.prepare_text(&mut font_system)
+                            {
+                                error!(?error);
+                            }
                             slide
                         })
                         .collect();

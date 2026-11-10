@@ -111,7 +111,7 @@ pub enum Message {
     AddImages(Option<Vec<Image>>),
     AddVideos(Option<Vec<Video>>),
     AddPresentations(Option<Vec<Presentation>>),
-    AddPresentationSplit(Option<Presentation>),
+    AddPresentationSplit((Presentation, Presentation)),
     ReaddImages(Vec<Image>),
     ReaddVideos(Vec<Video>),
     ReaddPres(Vec<Presentation>),
@@ -319,22 +319,20 @@ impl<'a> Library {
                 }
                 return Action::Task(Task::batch(tasks).chain(after_task));
             }
-            Message::AddPresentationSplit(presentation) => {
-                debug!(?presentation, "adding to db");
-                if let Some(presentation) = presentation {
-                    return Action::Task(Task::perform(
-                        presentations::add_presentation(
-                            vec![presentation],
-                            self.presentation_library.items.clone(),
-                            Arc::clone(&self.db),
-                        ),
-                        move |res| {
-                            res.map_or(Message::None, |presentations| {
-                                Message::ReaddPres(presentations)
-                            })
-                        },
-                    ));
-                }
+            Message::AddPresentationSplit((first, second)) => {
+                return Action::Task(Task::perform(
+                    presentations::add_split_presentation(
+                        first,
+                        second,
+                        self.presentation_library.items.clone(),
+                        Arc::clone(&self.db),
+                    ),
+                    move |res| {
+                        res.map_or(Message::None, |presentations| {
+                            Message::ReaddPres(presentations)
+                        })
+                    },
+                ));
             }
             Message::AddPresentations(presentations) => {
                 debug!(?presentations, "adding to db");
