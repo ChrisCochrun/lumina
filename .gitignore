@@ -22,3 +22,4 @@ flatpak-out/
 cosmic-flatpak-runtime/
 flatpak-builder-tools/
 .helix
+repo

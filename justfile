@@ -63,6 +63,7 @@ flatpak-setup: flatpak-install-sdk install-flatpak-builder-tools
     cd cosmic-flatpak-runtime
     flatpak-builder --install --user --force-clean build-dir cosmic-flatpak-runtime/com.system76.Cosmic.Sdk.json
     flatpak-builder --install --user --force-clean build-dir cosmic-flatpak-runtime/com.system76.Cosmic.BaseApp.json
+    python3 split_flatpak_cargo_sources.py cargo-sources.json cargo-sources-split.json
 
 flatpak-install-sdk:
     flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -90,5 +91,9 @@ flatpak-build:
 flatpak-shell:
     flatpak-builder --run build-dir xyz.cochrun.lumina.yml sh
 
+flatpak-create:
+    flatpak-builder --force-clean --install-deps-from=flathub --repo=repo build-dir xyz.cochrun.lumina.yml
+    flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo repo lumina.flatpak xyz.cochrun.lumina
+    
 alias fb := flatpak-build
 alias fs := flatpak-setup
