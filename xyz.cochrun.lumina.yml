@@ -59,6 +59,8 @@ modules:
         DATABASE_URL: sqlite://./test.db
         # CARGO_NET_OFFLINE: 'true'
     build-commands:
+      - mkdir -p .cargo
+      - cp cargo/config .cargo/config.toml
       - just build-offline
       # - cargo build --release
 
