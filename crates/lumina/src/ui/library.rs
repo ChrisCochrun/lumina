@@ -124,6 +124,7 @@ pub enum Message {
     AddPresentationSplitFinish(Presentation, Presentation),
     AddVideosFinished(Vec<Video>),
     UpdateVideoFinished(Video),
+    RemoveVideoIdsFinished(Vec<i32>),
 }
 
 impl Action {
@@ -617,6 +618,11 @@ impl<'a> Library {
                 ));
             }
             Message::ImageChanged => (),
+            Message::RemoveVideoIdsFinished(ids) => {
+                self.video_library
+                    .items
+                    .retain(|video| !ids.contains(&video.id));
+            }
             Message::ReaddVideos(videos) => {
                 self.video_library.items = videos;
             }
@@ -1282,9 +1288,9 @@ impl<'a> Library {
                 )
             }
             Some(LibraryKind::Video) => {
-                let videos: Vec<Video> = self.video_library.items.drain(..).collect();
-
-                let ids = videos
+                let ids = self
+                    .video_library
+                    .items
                     .iter()
                     .enumerate()
                     .filter_map(|(index, video)| {
@@ -1296,16 +1302,15 @@ impl<'a> Library {
                     })
                     .collect();
 
-                Task::perform(
-                    videos::remove_videos(Arc::clone(&self.db), videos.clone(), ids),
-                    |r| match r {
-                        Ok(videos) => Message::ReaddVideos(videos),
+                Task::perform(videos::remove_videos(Arc::clone(&self.db), ids), |r| {
+                    match r {
+                        Ok(ids) => Message::RemoveVideoIdsFinished(ids),
                         Err(e) => {
                             error!(?e);
-                            Message::ReaddVideos(videos)
+                            Message::None
                         }
-                    },
-                )
+                    }
+                })
             }
             Some(LibraryKind::Image) => {
                 let images: Vec<Image> = self.image_library.items.drain(..).collect();

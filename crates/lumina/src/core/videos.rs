@@ -255,16 +255,7 @@ impl Model<Video> {
     }
 }
 
-pub async fn remove_videos(
-    db: Arc<SqlitePool>,
-    videos: Vec<Video>,
-    ids: Vec<i32>,
-) -> Result<Vec<Video>> {
-    let videos = videos
-        .into_iter()
-        .filter(|current_video| !ids.contains(&current_video.id))
-        .collect();
-
+pub async fn remove_videos(db: Arc<SqlitePool>, ids: Vec<i32>) -> Result<Vec<i32>> {
     let delete = format!(
         "DELETE FROM videos WHERE id IN ({:})",
         ids.iter().map(ToString::to_string).join(", ")
@@ -274,7 +265,7 @@ pub async fn remove_videos(
         .execute(&*db)
         .await
         .into_diagnostic()
-        .map(|_| videos)
+        .map(|_| ids)
 }
 
 pub async fn remove_video(
