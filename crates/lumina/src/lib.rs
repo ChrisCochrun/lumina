@@ -1220,6 +1220,11 @@ impl cosmic::Application for App {
                                 cosmic::Action::App(Message::Library(message))
                             });
                         }
+                        library::Action::SplitPresentationFinished((first, _second)) => {
+                            return self.update(Message::PresentationEditor(
+                                presentation_editor::Message::ChangePresentation(first),
+                            ));
+                        }
                         library::Action::None => return Task::none(),
                         library::Action::OpenItem(Some((kind, index))) => match kind {
                             core::model::LibraryKind::Song => {

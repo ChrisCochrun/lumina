@@ -79,6 +79,7 @@ pub enum Action {
     ToService(ServiceItem),
     CreateSong,
     None,
+    SplitPresentationFinished((Presentation, Presentation)),
 }
 
 #[derive(Clone, Debug)]
@@ -120,6 +121,7 @@ pub enum Message {
     PopupUpdate(String),
     PopupSearch(String),
     HoverPoint(cosmic::iced::Point),
+    AddPresentationSplitFinish(Presentation, Presentation),
 }
 
 impl Action {
@@ -324,15 +326,37 @@ impl<'a> Library {
                     presentations::add_split_presentation(
                         first,
                         second,
-                        self.presentation_library.items.clone(),
                         Arc::clone(&self.db),
                     ),
-                    move |res| {
-                        res.map_or(Message::None, |presentations| {
-                            Message::ReaddPres(presentations)
-                        })
+                    move |res| match res {
+                        Ok((first, second)) => {
+                            Message::AddPresentationSplitFinish(first, second)
+                        }
+                        Err(_) => Message::None,
                     },
                 ));
+            }
+            Message::AddPresentationSplitFinish(first, second) => {
+                if let Some(presentation) = self
+                    .presentation_library
+                    .items
+                    .iter_mut()
+                    .find(|presentation| presentation.id == first.id)
+                {
+                    debug!(?first, "Changed first presentation");
+                    *presentation = first.clone();
+                } else {
+                    error!("Couldn't change the first of the split presentation");
+                }
+                if !self
+                    .presentation_library
+                    .items
+                    .iter()
+                    .any(|presentation| presentation.id == second.id)
+                {
+                    self.presentation_library.items.push(second.clone());
+                    return Action::SplitPresentationFinished((first, second));
+                }
             }
             Message::AddPresentations(presentations) => {
                 debug!(?presentations, "adding to db");

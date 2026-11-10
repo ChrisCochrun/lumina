@@ -109,6 +109,7 @@ impl PresentationEditor {
                 if let Some(presentation) = &self.presentation {
                     let task;
                     let path = presentation.path.clone();
+                    debug!(?presentation.kind);
                     if let PresKind::Pdf {
                         starting_index,
                         ending_index,

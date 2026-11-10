@@ -504,11 +504,62 @@ pub async fn add_presentation(
 
 pub async fn add_split_presentation(
     first: Presentation,
-    second: Presentation,
-    mut presentations: Vec<Presentation>,
+    mut second: Presentation,
     db: Arc<SqlitePool>,
-) -> Result<Vec<Presentation>> {
-    todo!()
+) -> Result<(Presentation, Presentation)> {
+    let path = first.path.to_string_lossy().to_string();
+    let (starting_index, ending_index) = if let PresKind::Pdf {
+        starting_index: s_index,
+        ending_index: e_index,
+    } = first.get_kind()
+    {
+        (*s_index, *e_index)
+    } else {
+        (0, 0)
+    };
+
+    let accessed_at = Local::now();
+    let created_at = Local::now();
+    let mut tx = db.begin().await.into_diagnostic()?;
+    let update_query =     query!(
+        r#"UPDATE presentations SET title = $2, file_path = $3, html = $4, starting_index = $5, ending_index = $6, accessed_at = $7 WHERE id = $1"#,
+        first.id,
+        first.title,
+        path,
+        false,
+        starting_index,
+        ending_index,
+        accessed_at
+    ).execute(&mut *tx).await.into_diagnostic()?;
+
+    if update_query.rows_affected() != 1 {
+        return Err(miette!("Updating the original pdf failed: {}", first.id));
+    }
+
+    let path = second.path.to_string_lossy().to_string();
+    let (starting_index, ending_index) = if let PresKind::Pdf {
+        starting_index: s_index,
+        ending_index: e_index,
+    } = second.get_kind()
+    {
+        (*s_index, *e_index)
+    } else {
+        (0, 0)
+    };
+
+    let add_query = query!(
+            r#"INSERT INTO presentations (title, file_path, html, starting_index, ending_index, created_at, accessed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,
+            second.title,
+            path,
+            false,
+            starting_index,
+            ending_index,
+            created_at,
+            accessed_at
+ ).execute(&mut *tx).await.into_diagnostic()?;
+    second.id = add_query.last_insert_rowid().try_into().into_diagnostic()?;
+    tx.commit().await.into_diagnostic()?;
+    Ok((first, second))
 }
 
 pub async fn update_presentation(
@@ -516,11 +567,7 @@ pub async fn update_presentation(
     mut presentations: Vec<Presentation>,
     db: Arc<SqlitePool>,
 ) -> Result<Vec<Presentation>> {
-    let path = presentation
-        .path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_default();
+    let path = presentation.path.to_string_lossy().to_string();
     let html = presentation.kind == PresKind::Html;
     let (starting_index, ending_index) = if let PresKind::Pdf {
         starting_index: s_index,
