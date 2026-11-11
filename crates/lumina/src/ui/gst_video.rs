@@ -262,6 +262,7 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     let video_sink = video_sink
         .downcast::<gst_app::AppSink>()
         .map_err(|_| VideoError::IcedVideoError(iced_video_player::Error::Cast))?;
+    video_sink.set_property("max-buffers", 2u32);
     Video::from_gst_pipeline(pipeline, video_sink, None)
         .map_err(VideoError::IcedVideoError)
 }
