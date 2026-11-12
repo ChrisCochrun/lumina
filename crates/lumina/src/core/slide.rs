@@ -991,8 +991,8 @@ mod test {
 
     #[test]
     fn ron_deserialize() {
-        let slide =
-            read_to_string("./test_presentation.ron").expect("Problem getting file read");
+        let slide = read_to_string("../../test_presentation.ron")
+            .expect("Problem getting file read");
         if let Err(e) = ron::from_str::<Vec<Slide>>(&slide) {
             panic!("{e:?}")
         }
