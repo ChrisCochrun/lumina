@@ -1438,7 +1438,7 @@ impl SongEditor {
                                             container::Style::default()
                                                 .background(ContainerBackground::Color(
                                                     Color::from(
-                                                        t.cosmic().secondary.base,
+                                                        t.cosmic().secondary(false).base,
                                                     )
                                                     .scale_alpha(0.5),
                                                 ))
@@ -2150,14 +2150,14 @@ impl SongEditor {
                                         {
                                             theme
                                                 .cosmic()
-                                                .background
+                                                .background()
                                                 .component
                                                 .base
                                                 .into()
                                         } else {
                                             theme
                                                 .cosmic()
-                                                .background
+                                                .background()
                                                 .component
                                                 .hover
                                                 .into()
@@ -2192,7 +2192,7 @@ impl SongEditor {
                         .padding([space_s, space_l, space_s, space_s])
                         .spacing(space_s)
                         .apply(scrollable)
-                        .scrollbar_padding(space_s)
+                        // .scrollbar_padding(space_s)
                         .apply(container)
                 },
             )

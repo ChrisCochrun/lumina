@@ -182,6 +182,7 @@ impl TryFrom<Background> for Video {
             mute: true,
             framerate: 30,
             appsink_name: "lumina_video".to_string(),
+            preview: false,
         };
         gst_video::create_video(url, &settings)
             .map_err(|_| ParseError::BackgroundNotVideo)

@@ -190,6 +190,7 @@
             {
               inherit nativeBuildInputs buildInputs LD_LIBRARY_PATH;
               # LIBCLANG_PATH = "${pkgs.clang}";
+              LIBVA_DRIVERS_PATH="${pkgs.intel-media-driver}/lib/dri";
               DATABASE_URL = "sqlite://./test.db";
               # RUST_SRC_PATH = "${toolchain.rust-src}/lib/rustlib/src/rust/library";
             };

@@ -531,6 +531,7 @@ impl Presenter {
                     .on_missing_plugin(Message::MissingPlugin)
                     .on_warning(|w| Message::Error(w.to_string()))
                     .on_error(|e| Message::Error(e.to_string()))
+                    .max_fps(24)
                     .content_fit(ContentFit::Contain)
                     .into()
             });
@@ -792,7 +793,7 @@ impl Presenter {
             style.border(Border::default().width(2))
         }))
         .direction(Direction::Horizontal(Scrollbar::new()))
-        .scrollbar_padding(space_s)
+        // .scrollbar_padding(space_s)
         // .height(Length::Fill)
         // .width(Length::Fill)
         .id(self.scroll_id.clone());

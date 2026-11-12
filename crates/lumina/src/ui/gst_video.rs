@@ -22,6 +22,7 @@ pub struct VideoSettings {
     pub mute: bool,
     pub framerate: u16,
     pub appsink_name: String,
+    pub preview: bool,
 }
 
 #[derive(Debug, Default)]
@@ -61,6 +62,15 @@ impl VideoManager {
             pair.presentation.set_muted(mute.unwrap_or(false));
             pair.preview.set_paused(paused.unwrap_or(false));
             pair.presentation.set_paused(paused.unwrap_or(false));
+        }
+        if let Some(current) = &self.current_video {
+            log_video_state("current", &current.presentation);
+        }
+        if let Some(next) = &self.next_video {
+            log_video_state("next", &next.presentation);
+        }
+        if let Some(previous) = &self.previous_video {
+            log_video_state("previous", &previous.presentation);
         }
     }
 
@@ -189,6 +199,7 @@ impl Default for VideoSettings {
             mute: true,
             framerate: 60,
             appsink_name: String::from("lumina_video"),
+            preview: false,
         }
     }
 }
@@ -206,6 +217,7 @@ fn load_video(path: PathBuf, slide_id: SlideId) -> Result<VideoPair> {
         mute: true,
         framerate: 15,
         appsink_name: String::from("lumina_preview"),
+        preview: true,
     };
 
     let main_video = create_video(&url, &main_settings)?;
@@ -218,6 +230,14 @@ fn load_video(path: PathBuf, slide_id: SlideId) -> Result<VideoPair> {
     })
 }
 
+fn log_video_state(label: &str, video: &iced_video_player::Video) {
+    let pipeline = video.pipeline();
+
+    let (result, current, pending) = pipeline.state(gst::ClockTime::ZERO);
+
+    debug!(label, ?current, ?pending, ?result);
+}
+
 pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     // Based on `iced_video_player::Video::new`,
     // but without a text sink so that the built-in subtitle functionality triggers.
@@ -226,10 +246,9 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
     gst::init().map_err(VideoError::GlibError)?;
 
     let pipeline = format!(
-        r#"playbin uri="{0}" mute="{3}" video-sink="videoscale ! videoconvert ! videoflip method=automatic ! videorate ! appsink name={1} drop=true caps=video/x-raw,format=NV12,framerate={2}/1,pixel-aspect-ratio=1/1""#,
+        r#"playbin uri="{0}" mute="{2}" video-sink="videoconvert ! videorate ! videoflip method=automatic ! appsink name={1} drop=true caps=video/x-raw,format=NV12,pixel-aspect-ratio=1/1""#,
         url.as_str(),
         settings.appsink_name,
-        settings.framerate,
         settings.mute,
     );
 
@@ -263,6 +282,11 @@ pub fn create_video(url: &Url, settings: &VideoSettings) -> Result<Video> {
         .downcast::<gst_app::AppSink>()
         .map_err(|_| VideoError::IcedVideoError(iced_video_player::Error::Cast))?;
     video_sink.set_property("max-buffers", 2u32);
+    if settings.preview {
+        video_sink.set_property("qos", true);
+        video_sink.set_property("throttle-time", 100_000_000u64);
+    }
+
     Video::from_gst_pipeline(pipeline, video_sink, None)
         .map_err(VideoError::IcedVideoError)
 }

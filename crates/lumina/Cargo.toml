@@ -73,6 +73,7 @@ features = ["symphonia-all", "tracing", "playback", "symphonia", "symphonia-libo
 version = "0.2.0"
 
 [dependencies.iced_video_player]
+# path = "/home/chris/dev/iced_video_player"
 git = "https://git.tfcconnection.org/chris/iced_video_player.git"
 features = ["wgpu"]
 

@@ -322,6 +322,7 @@ impl VideoEditor {
             mute: false,
             framerate: 60,
             appsink_name: "lumina_video".to_string(),
+            preview: false,
         };
 
         let Ok(mut player_video) = gst_video::create_video(&url, &settings) else {
