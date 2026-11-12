@@ -970,25 +970,6 @@ mod test {
 
     use super::*;
 
-    fn test_slide() -> Slide {
-        Slide {
-            text: "This is frodo".to_string(),
-            background: Background::try_from("~/pics/frodo.jpg").expect(""),
-            font: Some("Quicksand".to_string().into()),
-            font_size: 140,
-            ..Default::default()
-        }
-    }
-
-    fn test_second_slide() -> Slide {
-        Slide {
-            text: String::new(),
-            background: Background::try_from("~/vids/test/camprules2024.mp4").expect(""),
-            font: Some("Quicksand".to_string().into()),
-            ..Default::default()
-        }
-    }
-
     #[test]
     fn ron_deserialize() {
         let slide = read_to_string("../../test_presentation.ron")
