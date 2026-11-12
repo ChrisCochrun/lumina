@@ -2732,14 +2732,14 @@ where
                 })
                 .style(|t| draggable::column::Style {
                     scale: 1.05,
-                    moved_item_overlay: Color::from(t.cosmic().primary.base)
+                    moved_item_overlay: Color::from(t.cosmic().primary(false).base)
                         .scale_alpha(0.2),
                     ghost_border: Border {
                         width: 1.0,
-                        color: t.cosmic().secondary.base.into(),
+                        color: t.cosmic().secondary(false).base.into(),
                         radius: t.cosmic().radius_m().into(),
                     },
-                    ghost_background: Color::from(t.cosmic().secondary.base)
+                    ghost_background: Color::from(t.cosmic().secondary(false).base)
                         .scale_alpha(0.2)
                         .into(),
                 })

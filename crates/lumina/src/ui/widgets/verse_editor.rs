@@ -102,14 +102,18 @@ impl VerseEditor {
         let lyric: Element<Message> = if self.verse_name == VerseName::Blank {
             space::horizontal().into()
         } else {
-            text_editor(&self.content)
+            text_editor::text_editor(&self.content)
                 .on_action(Message::UpdateLyric)
                 .padding(space_m)
-                .class(theme::iced::TextEditor::Custom(Box::new(move |t, s| {
+                .style(move |t, s| {
                     let neutral = t.cosmic().palette.neutral_9;
                     let mut base_style = text_editor::Style {
                         background: Background::Color(
-                            t.cosmic().background.small_widget.with_alpha(0.25).into(),
+                            t.cosmic()
+                                .background(false)
+                                .small_widget
+                                .with_alpha(0.25)
+                                .into(),
                         ),
                         border: Border::default()
                             .rounded(space_s as u8)
@@ -133,7 +137,7 @@ impl VerseEditor {
                             base_style
                         }
                     }
-                })))
+                })
                 .height(150)
                 .into()
         };

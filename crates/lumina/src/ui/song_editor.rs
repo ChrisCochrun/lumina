@@ -1389,7 +1389,7 @@ impl SongEditor {
             });
 
         let verse_options = flex_row(verse_option_chips)
-            .justify_content(Some(JustifyContent::Start))
+            .justify_content(JustifyContent::START)
             .align_items(cosmic::iced::Alignment::Start)
             .spacing(space_s)
             .apply(container)
@@ -1494,7 +1494,7 @@ impl SongEditor {
             });
             verse_order_items.push(ending_dnd_dest.into());
             flex_row(verse_order_items)
-                .justify_content(Some(JustifyContent::Start))
+                .justify_content(JustifyContent::START)
                 .align_items(cosmic::iced::Alignment::Start)
                 .spacing(space_s)
                 .into()
@@ -1538,7 +1538,7 @@ impl SongEditor {
         let lyric_title = text::heading("Lyrics");
         let _lyric_input = column![
             lyric_title,
-            text_editor(&self.lyrics)
+            text_editor::text_editor(&self.lyrics)
                 .on_action(Message::ChangeLyrics)
                 .height(Length::Fill)
         ]
@@ -2150,14 +2150,14 @@ impl SongEditor {
                                         {
                                             theme
                                                 .cosmic()
-                                                .background()
+                                                .background(false)
                                                 .component
                                                 .base
                                                 .into()
                                         } else {
                                             theme
                                                 .cosmic()
-                                                .background()
+                                                .background(false)
                                                 .component
                                                 .hover
                                                 .into()

@@ -416,7 +416,7 @@ fn spinner<'a>(
                 .background(Background::Color(
                     theme
                         .cosmic()
-                        .background
+                        .background(false)
                         .component
                         .base
                         .with_alpha(0.25)

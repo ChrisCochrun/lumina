@@ -928,14 +928,14 @@ impl Catalog for cosmic::Theme {
 pub fn default(theme: &cosmic::Theme) -> Style {
     Style {
         scale: 1.05,
-        moved_item_overlay: Color::from(theme.cosmic().primary.base.color)
+        moved_item_overlay: Color::from(theme.cosmic().primary(false).base.color)
             .scale_alpha(0.2),
         ghost_border: Border {
             width: 1.0,
-            color: theme.cosmic().secondary.base.color.into(),
+            color: theme.cosmic().secondary(false).base.color.into(),
             radius: 0.0.into(),
         },
-        ghost_background: Color::from(theme.cosmic().secondary.base.color)
+        ghost_background: Color::from(theme.cosmic().secondary(false).base.color)
             .scale_alpha(0.2)
             .into(),
     }

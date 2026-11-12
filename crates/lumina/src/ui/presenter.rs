@@ -738,7 +738,7 @@ impl Presenter {
         let scrollable = scrollable(
             container(
                 flex_row(items)
-                    .justify_content(Some(JustifyContent::FlexStart))
+                    .justify_content(JustifyContent::FLEX_START)
                     .align_items(cosmic::iced::Alignment::Center)
                     // .justify_items(cosmic::iced::Alignment::End)
                     .column_spacing(space_xs)
