@@ -18,8 +18,8 @@ use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::widget::{column, progress_bar, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
-    self, Background as IcedBackground, Border, Color, Length, Point, Subscription,
-    event, window,
+    self, Background as IcedBackground, Border, Color, Length, Padding, Point,
+    Subscription, event, window,
 };
 use cosmic::widget::dnd_destination::dnd_destination;
 use cosmic::widget::image::Handle;
@@ -621,6 +621,7 @@ impl cosmic::Application for App {
                         .center_y(Length::Fill),
                     text::body("Search")
                 ]
+                .padding(Padding::ZERO.horizontal(cosmic::theme::spacing().space_s))
                 .spacing(5)
                 .apply(button::custom)
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -644,6 +645,7 @@ impl cosmic::Application for App {
                             "Edit Mode"
                         })
                     ]
+                    .padding(Padding::ZERO.horizontal(cosmic::theme::spacing().space_s))
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
@@ -655,15 +657,7 @@ impl cosmic::Application for App {
             tooltip(
                 button::custom(
                     row![
-                        Container::new(if cfg!(target_os = "linux") {
-                            icon::from_name(if self.presentation_open {
-                                "window-close-symbolic"
-                            } else {
-                                "view-presentation-symbolic"
-                            })
-                            .scale(3)
-                            .icon()
-                        } else if self.presentation_open {
+                        Container::new(if self.presentation_open {
                             icon::from_name("window-close-symbolic").scale(3).icon()
                         } else {
                             icon::from_svg_bytes(PRESENTING_ICON).symbolic(true).icon()
@@ -671,6 +665,7 @@ impl cosmic::Application for App {
                         .center_y(Length::Fill),
                         text
                     ]
+                    .padding(Padding::ZERO.horizontal(cosmic::theme::spacing().space_s))
                     .spacing(5),
                 )
                 .class(cosmic::theme::style::Button::HeaderBar)
