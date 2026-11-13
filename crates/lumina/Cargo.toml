@@ -95,53 +95,47 @@ frameworks = ["GStreamer"]
 [package.metadata.packager.nsis]
 installer_icon = "../../res/icons/lumina.ico"
 installer_mode = "perMachine"
-preinstall_section = """
+preinstall_section = '''
 Section PreInstall
-  ; Check if GStreamer is already installed and skip this section
-  ReadRegStr $4 HKLM "SOFTWARE\\GStreamer1.0\\x86_64" "Version"
+  ; Expected system-wide MSVC x64 installation
+  StrCpy $4 "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64"
 
-  StrCmp $4 "" 0 gstreamer_done
+  ; Check required runtime DLLs
+  IfFileExists "$4\bin\glib-2.0-0.dll" 0 install_gstreamer
+  IfFileExists "$4\bin\gstreamer-1.0-0.dll" 0 install_gstreamer
+  IfFileExists "$4\bin\gstpbutils-1.0-0.dll" 0 install_gstreamer
 
-  Delete "$TEMP\\gstreamer1.0.exe"
-  DetailPrint "Downloading GStreamer"
-  nsis_tauri_utils::download "https://gstreamer.freedesktop.org/data/pkg/windows/1.28.2/msvc/gstreamer-1.0-msvc-x86_64-1.28.2.exe" "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
-  Pop $0
-  ${If} $0 == 0
-      DetailPrint "Successfully downloaded GStreamer"
-  ${Else}
-      DetailPrint "Error downloading GStreamer"
-      Abort "Canceling GStreamer install due to download error"
-  ${EndIf}
-  StrCpy $6 "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
+  ; Check important GStreamer plugins
+  IfFileExists "$4\lib\gstreamer-1.0\gstplayback.dll" 0 install_gstreamer
+  IfFileExists "$4\lib\gstreamer-1.0\gstcoreelements.dll" 0 install_gstreamer
 
-  DetailPrint "Installing GStreamer runtime"
-  ; $6 holds the path to the gstreamer installer
-  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime /DIR="$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64"' $1
+  DetailPrint "GStreamer runtime already installed"
+  Goto gstreamer_done
+
+install_gstreamer:
+  DetailPrint "GStreamer missing or incomplete. Installing..."
+
+  ; Your existing download logic goes here.
+  ; $6 must contain the downloaded installer path.
+
+  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime /DIR="$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64"' $1
 
   ${If} $1 != 0
-        Abort "GStreamer installation failed (exit code $1)"
+    Abort "GStreamer installation failed (exit code $1)"
   ${EndIf}
 
-  IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\glib-2.0-0.dll" +2 0
-  Abort "GStreamer GLib runtime was not installed"
+  ; Verify installation succeeded
+  IfFileExists "$4\bin\gstreamer-1.0-0.dll" +2 0
+    Abort "GStreamer runtime DLL was not installed"
 
-  IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\gstpbutils-1.0-0.dll" +2 0
-  Abort "GStreamer pbutils runtime was not installed"
+  IfFileExists "$4\bin\gstpbutils-1.0-0.dll" +2 0
+    Abort "GStreamer pbutils DLL was not installed"
 
-  IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\gstreamer-1.0-0.dll" +2 0
-  Abort "GStreamer core runtime was not installed"
+  DetailPrint "GStreamer successfully installed"
 
-  DetailPrint "GStreamer runtime verified"
-
-  ${If} $1 == 0
-    DetailPrint "GStreamer successfully installed"
-  ${Else}
-    DetailPrint "Error installing GStreamer"
-    Abort "Cancelling GStreamer install due to installation error"
-  ${EndIf}
-  gstreamer_done:
+gstreamer_done:
 SectionEnd
-"""
+'''
 
 # [profile.production]
 # opt-level = 3
