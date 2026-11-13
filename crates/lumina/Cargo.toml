@@ -115,7 +115,7 @@ Section PreInstall
 
   DetailPrint "Installing GStreamer"
   ; $6 holds the path to the gstreamer installer
-  ExecWait "$6" $1
+  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime' $1
   ${If} $1 == 0
     DetailPrint "GStreamer successfully installed"
   ${Else}
