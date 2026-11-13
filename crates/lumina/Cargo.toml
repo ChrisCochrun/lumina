@@ -125,10 +125,10 @@ Section PreInstall
   IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\glib-2.0-0.dll" +2 0
   Abort "GStreamer GLib runtime was not installed"
 
-  IfFileExists "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64\bin\gstpbutils-1.0-0.dll" +2 0
+  IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\gstpbutils-1.0-0.dll" +2 0
   Abort "GStreamer pbutils runtime was not installed"
 
-  IfFileExists "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64\bin\gstreamer-1.0-0.dll" +2 0
+  IfFileExists "$PROGRAMFILES64\\gstreamer\\1.0\\msvc_x86_64\\bin\\gstreamer-1.0-0.dll" +2 0
   Abort "GStreamer core runtime was not installed"
 
   DetailPrint "GStreamer runtime verified"
