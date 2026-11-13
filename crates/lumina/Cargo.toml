@@ -114,9 +114,26 @@ Section PreInstall
   ${EndIf}
   StrCpy $6 "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
 
-  DetailPrint "Installing GStreamer"
   ; $6 holds the path to the gstreamer installer
-  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime' $1
+  DetailPrint "Installing GStreamer runtime"
+
+  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime /DIR="$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64"' $1
+
+  ${If} $1 != 0
+        Abort "GStreamer installation failed (exit code $1)"
+  ${EndIf}
+
+  IfFileExists "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64\bin\glib-2.0-0.dll" +2 0
+  Abort "GStreamer GLib runtime was not installed"
+
+  IfFileExists "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64\bin\gstpbutils-1.0-0.dll" +2 0
+  Abort "GStreamer pbutils runtime was not installed"
+
+  IfFileExists "$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64\bin\gstreamer-1.0-0.dll" +2 0
+  Abort "GStreamer core runtime was not installed"
+
+  DetailPrint "GStreamer runtime verified"
+
   ${If} $1 == 0
     DetailPrint "GStreamer successfully installed"
   ${Else}
