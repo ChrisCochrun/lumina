@@ -80,7 +80,7 @@ features = ["wgpu"]
 [package.metadata.packager]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"
-icons = ["res/icons/lumina.ico", "res/icons/lumina.icns", "res/icons/lumina.svg"]
+icons = ["../../res/icons/lumina.ico", "../../res/icons/lumina.icns", "../../res/icons/lumina.svg"]
 resources = ["res"]
 category = "Video"
 
@@ -93,7 +93,7 @@ digest_algorithm = "sha256"
 frameworks = ["GStreamer"]
 
 [package.metadata.packager.nsis]
-installer_icon = "res/icons/lumina.ico"
+installer_icon = "../../res/icons/lumina.ico"
 installer_mode = "perMachine"
 preinstall_section = """
 Section PreInstall
