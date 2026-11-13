@@ -86,7 +86,7 @@ category = "Video"
 
 [package.metadata.packager.windows]
 allow_downgrades = true
-sign_command = "./signtool.exe sign /debug /a /fd SHA256 %1"
+sign_command = "signtool.exe sign /debug /a /fd SHA256 %1"
 
 [package.metadata.packager.macos]
 frameworks = ["GStreamer"]
