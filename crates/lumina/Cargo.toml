@@ -114,10 +114,9 @@ Section PreInstall
   ${EndIf}
   StrCpy $6 "$TEMP\\gstreamer-1.0-msvc-x86_64-1.28.2.exe"
 
-  ; $6 holds the path to the gstreamer installer
   DetailPrint "Installing GStreamer runtime"
-
-  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime /DIR="$PROGRAMFILES64\gstreamer\1.0\msvc_x86_64"' $1
+  ; $6 holds the path to the gstreamer installer
+  ExecWait '"$6" /VERYSILENT /NORESTART /ALLUSERS /TYPE=runtime' $1
 
   ${If} $1 != 0
         Abort "GStreamer installation failed (exit code $1)"
