@@ -71,6 +71,7 @@ fn main() -> Result<()> {
 
     let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
+        .and_then(|path| path.parent())
         .ok_or_else(|| anyhow::anyhow!("xtask must live directly under the workspace root"))?
         .to_path_buf();
 
