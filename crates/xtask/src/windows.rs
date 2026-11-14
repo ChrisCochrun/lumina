@@ -44,7 +44,7 @@ pub fn package(
     gstreamer::stage(workspace, &gst_root)?;
     gstreamer::verify(workspace)?;
 
-    let package_root = workspace.join("crates/xtask");
+    let package_root = workspace.join("xtask");
     let config = package_root.join("Packager.windows.toml");
     ensure!(config.is_file(), "Missing packager config: {}", config.display());
 
