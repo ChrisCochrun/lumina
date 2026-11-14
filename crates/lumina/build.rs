@@ -1,6 +1,6 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=res/icons/lumina.ico");
+    println!("cargo:rerun-if-changed=../../res/icons/lumina.ico");
 
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref()
         == Ok("windows")
