@@ -2,25 +2,25 @@ verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
 
-[windows]
-set shell := ["nu", "-c"]
+# [windows]
+# set shell := ["nu", "-c"]
 # export RUSTC_WRAPPER := "sccache"
 # export RUST_LOG := "debug"
 
 default:
     just --list
 build:
-    cargo build
+    cargo build -p lumina
 build-release:
-    cargo build --release
+    cargo build -p lumina --release
 build-offline:
-    cargo build --release --offline
+    cargo build -p lumina --release --offline
 run:
-    cargo run -- {{verbose}}
+    cargo run -p lumina -- 
 run-release:
-    cargo run --release -- {{verbose}}
+    cargo run -p lumina --release -- {{verbose}}
 run-file:
-    cargo run -- {{verbose}} cli {{file}}
+    cargo run -p lumina -- {{verbose}} cli {{file}}
 fix:
     cargo clippy --fix --bin "lumina" -p lumina -- -W clippy::pedantic -W clippy::perf -W clippy::nursery -W clippy::unwrap_used
 clean:
