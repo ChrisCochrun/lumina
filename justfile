@@ -48,7 +48,9 @@ alias c := clean
 windows-packager:
     cargo install cargo-packager --locked
     cargo build --release
-    cargo packager --release -f nsis
+    cargo xtask gstreamer stage --expected-version 1.28.8
+    cargo xtask package windows --expected-version 1.28.8 --msvc-toolset v145
+    # cargo packager --release -f nsis
 
 ##### Sets up and builds the macos bundle and dmg
 mac-packager:
