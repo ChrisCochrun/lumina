@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
-members = [ "crates/lumina", "crates/fdsm_lumina" ]
+members = [ "crates/lumina", "crates/fdsm_lumina", "crates/xtask" ]
+
 
 [workspace.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
@@ -19,6 +20,7 @@ fdsm = { git = "https://git.tfcconnection.org/chris/fdsm", version = "0.8.0" }
 skrifa = "0.40.0"
 image = "0.25.8"
 tracing = "0.1.40"
+clap = { version = "4.5.20", features = ["derive"] }
 
 [patch.crates-io]
 rodio = { git = "https://github.com/RustAudio/rodio", rev = "0557a30a655b42016ddd961d0f69c5566f6e3f1e" }

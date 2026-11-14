@@ -1,0 +1,23 @@
+# Complete Windows-specific cargo-packager configuration.
+# Run cargo packager from crates/lumina so paths resolve correctly.
+product_name = "Lumina"
+version = "0.1.0"
+identifier = "xyz.cochrun.lumina"
+category = "Video"
+formats = ["nsis"]
+icons = ["../../res/icons/lumina.ico"]
+resources = [
+  "res",
+  { src = "packaging/windows/gst/dll/*.dll", target = "." },
+  { src = "packaging/windows/gst/plugins/*.dll", target = "gstreamer/plugins" },
+  { src = "packaging/windows/gst/gst-plugin-scanner.exe", target = "gst-plugin-scanner.exe" },
+]
+
+[windows]
+allow_downgrades = true
+certificate_thumbprint = "F434CF46ED148DB057B4188724E84548D2917957"
+digest_algorithm = "sha256"
+
+[nsis]
+installer_icon = "../../res/icons/lumina.ico"
+installer_mode = "perMachine"
