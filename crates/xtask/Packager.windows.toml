@@ -8,10 +8,10 @@ category = "Video"
 formats = ["nsis"]
 icons = ["../../res/icons/lumina.ico"]
 resources = [
-  "res",
-  { src = "packaging/windows/gst/dll/*.dll", target = "." },
-  { src = "packaging/windows/gst/plugins/*.dll", target = "gstreamer/plugins" },
-  { src = "packaging/windows/gst/gst-plugin-scanner.exe", target = "gst-plugin-scanner.exe" },
+  "../../res",
+  { src = "../../packaging/windows/gst/dll/*.dll", target = "." },
+  { src = "../../packaging/windows/gst/plugins/*.dll", target = "gstreamer/plugins" },
+  { src = "../../packaging/windows/gst/gst-plugin-scanner.exe", target = "gst-plugin-scanner.exe" },
 ]
 binaries = [
     { path = "lumina", main = true }
