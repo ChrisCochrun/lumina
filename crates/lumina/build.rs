@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut res = winresource::WindowsResource::new();
 
-        res.set_icon("res/icons/lumina.ico");
+        res.set_icon("../../res/icons/lumina.ico");
 
         // Windows executable properties
         res.set("FileDescription", "Lumina Presentation");
