@@ -983,7 +983,7 @@ impl<'a> Library {
             let library_toolbar = rowm!(
                 search_bar,
                 button::icon(icon::from_name("list-add-symbolic"))
-                    .icon_size(theme::spacing().space_l)
+                    .icon_size(theme::spacing().space_m)
                     .on_press(Message::AddItem)
             )
             .align_y(Vertical::Center);
