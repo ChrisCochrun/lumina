@@ -48,7 +48,7 @@ pub fn package(
     let config = package_root.join("Packager.windows.toml");
     ensure!(config.is_file(), "Missing packager config: {}", config.display());
 
-    let target = workspace.join("target").join("release");
+    let target = workspace.join("../").join("target").join("release");
     ensure!(
         target.join("lumina.exe").is_file(),
         "Lumina release executable not found"
