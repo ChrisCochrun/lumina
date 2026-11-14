@@ -77,6 +77,9 @@ version = "0.2.0"
 git = "https://git.tfcconnection.org/chris/iced_video_player.git"
 features = ["wgpu"]
 
+[build-dependencies]
+winresource = "0.1"
+
 [package.metadata.packager]
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"

@@ -1,3 +1,8 @@
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
+
 use lumina::run;
 use miette::{IntoDiagnostic, Result};
 mod gstreamer_runtime;
