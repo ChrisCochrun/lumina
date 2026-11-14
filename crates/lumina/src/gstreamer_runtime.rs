@@ -1,4 +1,5 @@
 #[cfg(windows)]
+#[allow(unsafe_code)]
 pub fn configure() -> std::io::Result<()> {
     use std::{env, io, path::PathBuf};
 
