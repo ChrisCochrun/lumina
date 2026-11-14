@@ -8,7 +8,7 @@ use nom::combinator::{all_consuming, rest};
 use nom::multi::many1;
 use nom::sequence::{delimited, pair};
 use nom::{IResult, Parser};
-use reqwest::header;
+use reqwest::header::{self, ACCEPT, ACCEPT_LANGUAGE, HeaderMap, HeaderValue};
 use scraper::{ElementRef, Node};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -217,6 +217,32 @@ fn parse_verse_name(line: &str) -> IResult<&str, VerseName> {
     Ok((input, verse_name))
 }
 
+fn genius_web_client() -> Result<reqwest::Client> {
+    let mut headers = HeaderMap::new();
+
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static(
+
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        ),
+    );
+    headers.insert(
+        ACCEPT_LANGUAGE,
+        HeaderValue::from_static("en-US,en;q=0.9"),
+    );
+
+    reqwest::Client::builder()
+        .user_agent(concat!(
+            "Lumina/",
+            env!("CARGO_PKG_VERSION"),
+        ))
+        .default_headers(headers)
+        .build()
+        .into_diagnostic()
+}
+
+
 pub async fn search_genius(query: String, auth_token: String) -> Result<Vec<OnlineSong>> {
     // let Some(auth_token) = option_env!("GENIUS_TOKEN") else {
     //     return Err(miette!("No Genius Token"));
@@ -249,6 +275,7 @@ pub async fn search_genius(query: String, auth_token: String) -> Result<Vec<Onli
         .ok_or_else(|| miette!("Couldn't parse json array"))?;
     let songs: Vec<Option<OnlineSong>> =
         cosmic::iced::futures::future::join_all(hits.iter().map(|hit| async {
+
             let result = hit.get("result").expect("result");
             let title = result
                 .get("title")
@@ -290,7 +317,9 @@ pub async fn search_genius(query: String, auth_token: String) -> Result<Vec<Onli
 }
 
 pub async fn get_genius_lyrics(mut song: OnlineSong) -> Result<OnlineSong> {
-    let html = reqwest::get(&song.link)
+    let client = genius_web_client()?;
+
+    let html = client.get(&song.link).send()
         .await
         .into_diagnostic()?
         .error_for_status()
