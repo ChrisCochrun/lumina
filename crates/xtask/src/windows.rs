@@ -48,6 +48,12 @@ pub fn package(
     let config = package_root.join("Packager.windows.toml");
     ensure!(config.is_file(), "Missing packager config: {}", config.display());
 
+    let target = workspace.join("target").join("release");
+    ensure!(
+        target.join("lumina.exe").is_file(),
+        "Lumina release executable not found"
+    );
+
     if !skip_build {
         let mut cmd = Command::new("cargo");
         cmd.args(["build", "-p", "lumina", "--locked"])
@@ -60,8 +66,12 @@ pub fn package(
     let mut cmd = Command::new("cargo");
     cmd.arg("packager")
         .arg("--config")
-        .arg("Packager.windows.toml")
-        .current_dir(&package_root);
+        .arg(&config)
+        .arg("--binaries-dir")
+        .arg(&target)
+        .arg("--out-dir")
+        .arg(&target)
+        .current_dir(&workspace);
     if !debug { cmd.arg("--release"); }
     configure_build_env(&mut cmd, &gst_root, msvc_toolset);
     command::run(&mut cmd, "Package Lumina NSIS installer")?;
