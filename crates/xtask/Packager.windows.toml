@@ -1,5 +1,6 @@
 # Complete Windows-specific cargo-packager configuration.
 # Run cargo packager from crates/lumina so paths resolve correctly.
+name = "lumina"
 product_name = "Lumina"
 version = "0.1.0"
 identifier = "xyz.cochrun.lumina"

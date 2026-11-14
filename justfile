@@ -47,7 +47,6 @@ alias c := clean
 ##### Sets up and builds the exe installer with nsis
 windows-packager:
     cargo install cargo-packager --locked
-    cargo build --release
     cargo xtask gstreamer stage --expected-version 1.28.8
     cargo xtask package windows --expected-version 1.28.8 --msvc-toolset v145
     # cargo packager --release -f nsis
