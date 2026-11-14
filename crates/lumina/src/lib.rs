@@ -11,6 +11,7 @@ use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, ConfigSet, CosmicConfigEntry};
+use cosmic::cosmic_theme::{self, Spacing};
 use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::core::text::Wrapping;
@@ -155,11 +156,16 @@ pub fn run() -> Result<()> {
         }
     };
 
+    let mut theme = cosmic::theme::system_preference().cosmic().clone();
+    theme.spacing = cosmic_theme::Density::Compact.into();
+    let theme = cosmic::theme::Theme::custom(Arc::new(theme));
+
     let settings = if args.command.is_some_and(|command| match command {
         Commands::Cli(_) => true,
     }) {
         debug!("window view");
         Settings::default()
+            .theme(theme)
             .debug(false)
             .no_main_window(true)
             .is_daemon(true)
