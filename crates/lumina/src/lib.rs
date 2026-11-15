@@ -103,6 +103,7 @@ pub fn run() -> Result<()> {
 
     let logs = {
         let mut app_dir = dirs::data_dir().expect("Should be on all OSes");
+        app_dir.push("lumina");
         app_dir.push("logs");
         app_dir
     };
