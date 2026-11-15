@@ -1,9 +1,10 @@
+# [windows]
+# set shell := ["nu", "-c"]
+
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
 
-[windows]
-set shell := ["nu", "-c"]
 # export RUSTC_WRAPPER := "sccache"
 # export RUST_LOG := "debug"
 
