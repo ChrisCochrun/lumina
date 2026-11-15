@@ -387,7 +387,7 @@ impl cosmic::Application for App {
         core::settings::PersistentState,
     );
     type Message = Message;
-    const APP_ID: &'static str = "lumina";
+    const APP_ID: &'static str = "xyz.cochrun.lumina";
     fn core(&self) -> &Core {
         &self.core
     }
