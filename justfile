@@ -16,7 +16,7 @@ build-release:
 build-offline:
     cargo build -p lumina --release --offline
 run:
-    cargo run -p lumina -- 
+    cargo run -p lumina -- {{verbose}}
 run-release:
     cargo run -p lumina --release -- {{verbose}}
 run-file:

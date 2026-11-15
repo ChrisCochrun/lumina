@@ -11,7 +11,7 @@ use core::service_items::ServiceItem;
 use core::slide::{Background, BackgroundKind, Slide, SlideBuilder, TextAlignment};
 use cosmic::app::{Core, Settings, Task};
 use cosmic::cosmic_config::{Config, ConfigSet, CosmicConfigEntry};
-use cosmic::cosmic_theme::{self, Spacing};
+use cosmic::cosmic_theme::{self};
 use cosmic::dialog::file_chooser::{open, save};
 use cosmic::iced::alignment::Vertical;
 use cosmic::iced::core::text::Wrapping;
@@ -41,6 +41,8 @@ use fdsm_lumina::cosmic_text::FontSystem;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::layer::SubscriberExt;
 // use crisp::types::Value;
 // use lisp::parse_lisp;
 use miette::{IntoDiagnostic, Result, miette};
@@ -51,7 +53,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, error, info, warn};
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{EnvFilter, Layer};
 use ui::EditorMode;
 use ui::library::{self, Library};
 use ui::presenter::{self, Presenter};
@@ -99,24 +101,50 @@ pub fn run() -> Result<()> {
     );
     let args = Cli::parse();
 
+    let logs = {
+        let mut app_dir = dirs::data_dir().expect("Should be on all OSes");
+        app_dir.push("logs");
+        app_dir
+    };
     let default_directive = if args.verbose {
         "lumina=debug,fdsm=debug"
     } else {
         "lumina=info"
     };
 
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::WARN.into())
-        .parse_lossy(default_directive);
+    let logfile = RollingFileAppender::builder()
+        .rotation(Rotation::WEEKLY)
+        .filename_prefix("lumina")
+        .filename_suffix("log")
+        .build(&logs)
+        .expect("Shouldn't");
 
-    tracing_subscriber::FmtSubscriber::builder()
+    let file_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::WARN.into())
+        .parse_lossy(&default_directive);
+    let logfile_layer = tracing_subscriber::fmt::layer()
+        .with_writer(logfile)
+        .with_line_number(true)
+        .with_level(true)
+        .with_target(true)
+        .with_ansi(false)
+        .with_timer(timer.clone())
+        .with_filter(file_filter);
+
+    let stdout_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::WARN.into())
+        .parse_lossy(&default_directive);
+
+    let stdout_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_line_number(true)
         .with_level(true)
-        .with_env_filter(filter)
         .with_target(true)
         .with_timer(timer)
-        .init();
+        .with_filter(stdout_filter);
+    let subscriber =
+        tracing_subscriber::registry().with(logfile_layer.and_then(stdout_layer));
+    tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
 
     let (config_handler, config) =
         match cosmic_config::Config::new(App::APP_ID, core::settings::SETTINGS_VERSION) {

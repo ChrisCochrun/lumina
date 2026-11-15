@@ -62,6 +62,7 @@ serde_with = "3.23.0"
 libcosmic = { workspace = true }
 iced_wgpu = { workspace = true }
 iced_graphics = { workspace = true }
+tracing-appender = "0.2.5"
 # iced_anim = { path = "../iced_anim/iced_anim", features = ["derive"] }
 
 # rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal"] }
