@@ -372,6 +372,8 @@ impl Presenter {
                 self.video_manager.pause(!self.video_manager.paused);
             }
             Message::LoadedService => {
+                self.current_item_index = 0;
+                self.current_slide_index = 0;
                 if let Some(slide) = self
                     .service
                     .first()
@@ -965,9 +967,17 @@ impl Presenter {
     }
 
     pub fn update_items(&mut self, items: Arc<Vec<ServiceItem>>) {
-        let total_slides: usize = items.iter().fold(0, |a, item| a + item.slides.len());
+        self.total_slides = items.iter().fold(0, |a, item| a + item.slides.len());
         self.service = items;
-        self.total_slides = total_slides;
+        if let Some(slide) = self
+            .service
+            .get(self.current_item_index)
+            .and_then(|item| item.slides.get(self.current_slide_index))
+            && slide.id == self.current_slide.id
+        {
+            self.current_slide = slide.clone();
+            self.set_prewarm_texts();
+        }
     }
 
     pub fn run_slide_actions(&self) -> Task<Message> {

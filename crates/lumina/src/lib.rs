@@ -1435,13 +1435,13 @@ impl cosmic::Application for App {
             }
             Message::AddSlideTextToItem(item_index, slide_index, slide_with_text) => {
                 let service = Arc::make_mut(&mut self.service);
-                if let Some(item) = service.get_mut(item_index) {
-                    if let Some(_old) = item.slides.get(slide_index) {
-                        let _ = item.slides.remove(slide_index);
-                        item.slides.insert(slide_index, slide_with_text);
-                    } else {
-                        item.slides.push(slide_with_text);
-                    }
+                if let Some(slide) = service
+                    .get_mut(item_index)
+                    .and_then(|item| item.slides.get_mut(slide_index))
+                    && slide.id == slide_with_text.id
+                {
+                    slide.styled_text = slide_with_text.styled_text;
+                    self.presenter.update_items(Arc::clone(&self.service));
                 }
                 Task::none()
             }
@@ -1954,6 +1954,7 @@ impl cosmic::Application for App {
                         }
                     }
                     LoadingState::Loaded => {
+                        self.current_item = (0, 0);
                         task = Task::batch([
                             Task::future(async {
                                 tokio::time::sleep(Duration::from_secs(5)).await;
