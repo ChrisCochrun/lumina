@@ -1,5 +1,4 @@
-[windows]
-set shell := ["nu", "-c"]
+set windows-shell := ["nu", "-c"]
 
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
