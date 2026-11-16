@@ -128,7 +128,7 @@
             pkgs.gst_all_1.gst-plugins-ugly
             pkgs.gst_all_1.gst-plugins-base
             pkgs.gst_all_1.gst-plugins-rs
-            pkgs.gst_all_1.gst-vaapi
+            # pkgs.gst_all_1.gst-vaapi
             pkgs.glib
             pkgs.fontconfig
             pkgs.vulkan-loader

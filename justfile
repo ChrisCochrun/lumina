@@ -1,9 +1,6 @@
 [windows]
 set shell := ["nu", "-c"]
 
-[unix]
-set shell := ["sh", "-cu"]
-
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
