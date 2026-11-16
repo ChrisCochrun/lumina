@@ -203,7 +203,7 @@ impl Model<Video> {
     }
 
     pub async fn load_from_db(&mut self, db: Arc<SqlitePool>) {
-        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time!: f32", end_time as "end_time!: f32", loop as "looping!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from videos"#).fetch_all(&*db).await;
+        let result = query_as!(Video, r#"SELECT title as "title!", file_path as "path!", start_time as "start_time: f32", end_time as "end_time: f32", loop as "looping!", id as "id: i32", accessed_at as "accessed_at!: DateTime<Local>", created_at as "created_at!: DateTime<Local>" from videos"#).fetch_all(&*db).await;
         match result {
             Ok(v) => {
                 for video in v {
@@ -301,6 +301,8 @@ pub async fn add_video(
         let accessed_at = Local::now();
         video.created_at = created_at;
         video.accessed_at = accessed_at;
+        video.end_time = None;
+        video.start_time = None;
 
         video.id = query!(
             r#"INSERT INTO videos (title, file_path, start_time, end_time, loop, created_at, accessed_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#,

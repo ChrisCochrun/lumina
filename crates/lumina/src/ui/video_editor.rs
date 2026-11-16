@@ -160,8 +160,16 @@ impl VideoEditor {
                 }
             }
             Message::SetEnd(time) => {
-                if let Some(video) = &mut self.core_video {
-                    video.end_time = Some(time);
+                if let Some(video) = &mut self.core_video
+                    && let Some(iced_video) = &self.video
+                {
+                    if time > 0.0 && time <= iced_video.duration().as_secs_f32() {
+                        video.end_time = Some(time);
+                    } else {
+                        video.end_time = None;
+                    };
+                    let end_time = &video.end_time;
+                    debug!(end_time, "Debugging end_time");
                     return Action::UpdateVideo(video.clone());
                 }
             }
@@ -176,89 +184,71 @@ impl VideoEditor {
     }
 
     pub fn view(&self) -> Element<Message> {
-        let video_elements = self.video.as_ref().map_or_else(
-            || container(horizontal()),
-            |video| {
-                let play_button = button::icon(if video.paused() {
-                    icon::from_name("media-playback-start-symbolic")
-                } else {
-                    icon::from_name("media-playback-pause-symbolic")
-                })
-                .icon_size(cosmic::theme::spacing().space_xxl)
-                .on_press(Message::PauseVideo)
-                .tooltip(if self.video.as_ref().is_some_and(|video| video.paused()) {
-                    "Play"
-                } else {
-                    "Pause"
-                })
-                .padding(
-                    Padding::ZERO
-                        .vertical(cosmic::theme::spacing().space_m)
-                        .horizontal(cosmic::theme::spacing().space_xxl),
-                )
-                .apply(container)
-                .center_x(Length::Fill);
-                let position_text = text(&self.timestamp_text);
-                let trim_controls: Element<Message> = if let Some(core_video) =
-                    &self.core_video
-                {
-                    let start_time = core_video.start_time.unwrap_or(0.0);
-                    let start_label = format_time(start_time as f64);
+        let video_elements = if let Some(video) = &self.video
+            && let Some(core_video) = &self.core_video
+        {
+            let play_button = button::icon(if video.paused() {
+                icon::from_name("media-playback-start-symbolic")
+            } else {
+                icon::from_name("media-playback-pause-symbolic")
+            })
+            .icon_size(cosmic::theme::spacing().space_xxl)
+            .on_press(Message::PauseVideo)
+            .tooltip(if self.video.as_ref().is_some_and(|video| video.paused()) {
+                "Play"
+            } else {
+                "Pause"
+            })
+            .padding(
+                Padding::ZERO
+                    .vertical(cosmic::theme::spacing().space_m)
+                    .horizontal(cosmic::theme::spacing().space_xxl),
+            )
+            .apply(container)
+            .center_x(Length::Fill);
+            let position_text = text(&self.timestamp_text);
+            let start_time = core_video.start_time.unwrap_or(0.0);
+            let start_label = format_time(start_time as f64);
 
-                    let start_spin = spinner(start_label, start_time, Message::SetStart);
-                    let end_time = core_video
-                        .end_time
-                        .unwrap_or(video.duration().as_secs_f32());
-                    let end_label = format_time(end_time as f64);
-                    let end_spin = spinner(end_label, end_time as f32, Message::SetEnd);
-                    row![start_spin, end_spin]
-                        .spacing(cosmic::theme::spacing().space_l)
-                        .apply(container)
-                        .padding(Padding::ZERO.right(cosmic::theme::spacing().space_m))
-                        .align_right(Length::Fill)
-                        .into()
-                } else {
-                    space::vertical().into()
-                };
-                let volume = slider(0.0..=1.0, video.volume(), Message::Volume)
-                    .step(0.01)
-                    .width(Length::Fill);
-                let left_controls = row![position_text, volume]
-                    .spacing(cosmic::theme::spacing().space_m)
-                    .apply(container)
-                    .padding(Padding::ZERO.left(cosmic::theme::spacing().space_m))
-                    .align_left(Length::Fill);
-                let controls_row = row![left_controls, play_button, trim_controls]
-                    .align_y(Vertical::Center)
-                    .spacing(cosmic::theme::spacing().space_m);
-                let video_timeline = VideoTimeline::new(video)
-                    .start(
-                        self.core_video
-                            .as_ref()
-                            .map_or(0.0, |video| video.start_time.unwrap_or_default()),
-                    )
-                    .end(self.core_video.as_ref().map_or_else(
-                        || video.duration().as_secs_f32(),
-                        |core_video| {
-                            core_video
-                                .end_time
-                                .unwrap_or_else(|| video.duration().as_secs_f32())
-                        },
-                    ))
-                    .on_event(|event| match event {
-                        TimelineEvent::TrimStart(trimmed_start) => {
-                            Message::SetStart(trimmed_start)
-                        }
-                        TimelineEvent::TrimEnd(trimmed_end) => {
-                            Message::SetEnd(trimmed_end)
-                        }
-                        TimelineEvent::Seek(pos) => Message::VideoPos(pos),
-                        TimelineEvent::Released(_handle) => todo!(),
-                    });
-                let column = column![video_timeline, controls_row];
-                column.apply(container)
-            },
-        );
+            let start_spin = spinner(start_label, start_time, Message::SetStart);
+            let end_time = core_video
+                .end_time
+                .and_then(|time| if time > 0.0 { Some(time) } else { None })
+                .unwrap_or(video.duration().as_secs_f32());
+            let end_label = format_time(end_time as f64);
+            let end_spin = spinner(end_label, end_time as f32, Message::SetEnd);
+            let trim_controls = row![start_spin, end_spin]
+                .spacing(cosmic::theme::spacing().space_l)
+                .apply(container)
+                .padding(Padding::ZERO.right(cosmic::theme::spacing().space_m))
+                .align_right(Length::Fill);
+            let volume = slider(0.0..=1.0, video.volume(), Message::Volume)
+                .step(0.01)
+                .width(Length::Fill);
+            let left_controls = row![position_text, volume]
+                .spacing(cosmic::theme::spacing().space_m)
+                .apply(container)
+                .padding(Padding::ZERO.left(cosmic::theme::spacing().space_m))
+                .align_left(Length::Fill);
+            let controls_row = row![left_controls, play_button, trim_controls]
+                .align_y(Vertical::Center)
+                .spacing(cosmic::theme::spacing().space_m);
+            let video_timeline = VideoTimeline::new(video)
+                .start(start_time)
+                .end(end_time)
+                .on_event(|event| match event {
+                    TimelineEvent::TrimStart(trimmed_start) => {
+                        Message::SetStart(trimmed_start)
+                    }
+                    TimelineEvent::TrimEnd(trimmed_end) => Message::SetEnd(trimmed_end),
+                    TimelineEvent::Seek(pos) => Message::VideoPos(pos),
+                    TimelineEvent::Released(_handle) => todo!(),
+                });
+            let column = column![video_timeline, controls_row];
+            column.apply(container)
+        } else {
+            container(horizontal())
+        };
 
         let video_player = self
             .video
@@ -333,7 +323,7 @@ impl VideoEditor {
         };
 
         player_video.set_paused(true);
-        let start = video.start_time.unwrap_or(0.0).apply(|time| {
+        let start = video.start_time.map_or(Duration::ZERO, |time| {
             if time < 0.0 {
                 Duration::ZERO
             } else {
