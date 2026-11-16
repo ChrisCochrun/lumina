@@ -9,7 +9,10 @@ I need to make some types that translate between shadows and outlines and other 
 * TODO [#A] Deployment pipeline and get a MVP going
 We are close on this. The main pipeline consists of needing some virtual machines to build the app on windows and macos, but we have versions for both sort of working. We still need the flatpak to be built properly tho.
 
-Nix and flatpak builds are working now
+- [X] nix
+- [X] flatpak
+- [X] windows
+- [ ] macos
 
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 
@@ -23,9 +26,12 @@ Someday we should make the saving and loading to be aware of the fonts on the sy
 * TODO [#B] Add a title/info slide system for songs
 This can include title, author, and ccli info so that it will be compliant and helpful. Basically some slides should be generated that show the song info and can be displayed as the song is starting.
 
-* TODO [#B] Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
+* DONE [#B] Make audio is song editor able to increase speed so the user can create the song a little faster if they desire.
+CLOSED: [2026-11-16 Mon 15:21]
 * TODO [#B] Font in the song editor doesn't always use the original version
 There seems to be some issue with fontdb not able to decipher all the versions of some fonts that are OTF and then end up loading the wrong ones in some issues.
+
+This is almost fixed, I need to move the font selector to not be using our old fontdb, but the FontSystem that comes from cosmic-text somehow instead. Then I can make sure that the fonts will be perfectly inline.
 
 * TODO [#B] Find a way to use auth-token in tests for ci
 If I can find out how to use my secrets in ci that would free up more tests, but I could also just turn that test off for the CI so that it won't constantly fail for now
@@ -44,7 +50,7 @@ We need to create a way for users to download youtube or other videos by URL.
 Some ideas for this, include a basic tooltip to show the full title of the item and maybe a little extra metadata. But after a certain time out period, maybe we can show a thumbnail version of some items, like thumbnails of the videos and thumbnails of the images, so you can preview it without opening it.
 
 * TODO [#C] Self signed cert for windows
-This was created in the VM on May 10 2026. It is valid for 2 years. Maybe this self signed cert will be ok till we get some reputation, then maybe consider buying a cert or similar.
+This was created in the VM on Nov 12 2026. It is valid for 2 years. Maybe this self signed cert will be ok till we get some reputation, then maybe consider buying a cert or similar.
 
 * TODO [#C] Rename menu actions to menu commands and build a reverse hashmap for settings to map commands to key-binding such that we can allow for remapping them on the fly.
 
