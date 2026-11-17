@@ -57,8 +57,10 @@ struct State {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TimelineEvent {
-    TrimStart(f32),
-    TrimEnd(f32),
+    TrimStartStarted(f32),
+    TrimStartEnded(f32),
+    TrimEndStarted(f32),
+    TrimEndEnded(f32),
     Seek(f32),
     Released(Handle),
 }
@@ -250,22 +252,23 @@ where
 
         let rail = self.rail(&bounds);
         let playhead_x = (self.position * rail.width / self.duration) + rail.x;
+        let Some(cursor_position) = cursor_position.position() else {
+            return;
+        };
+        if !bounds.contains(cursor_position) {
+            return;
+        }
+        let Some(on_event) = self.on_event else {
+            return;
+        };
+        let time = self.point_to_time(&rail, &cursor_position);
+        if time < 0.0 {
+            return;
+        }
+        let handle = self.point_to_handle(&rail, &cursor_position);
+
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                let Some(cursor_position) = cursor_position.position() else {
-                    return;
-                };
-                if !bounds.contains(cursor_position) {
-                    return;
-                }
-                let Some(on_event) = self.on_event else {
-                    return;
-                };
-                let time = self.point_to_time(&rail, &cursor_position);
-                if time < 0.0 {
-                    return;
-                }
-                let handle = self.point_to_handle(&rail, &cursor_position);
                 debug!(?handle);
                 match handle {
                     Some(Handle::Playhead) => {
@@ -274,11 +277,11 @@ where
                     }
                     Some(Handle::Start) => {
                         state.dragging = Some(Handle::Start);
-                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimStartStarted(time)));
                     }
                     Some(Handle::End) => {
                         state.dragging = Some(Handle::End);
-                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimEndStarted(time)));
                     }
                     None => {
                         state.dragging = Some(Handle::Playhead);
@@ -312,7 +315,7 @@ where
                         if time < 0.0 {
                             return;
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimEndStarted(time)));
                     }
                     Some(Handle::Start) => {
                         if !bounds.contains(position.clone()) {
@@ -325,7 +328,7 @@ where
                         if time < 0.0 {
                             return;
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimStartStarted(time)));
                     }
                     None => return,
                 }
@@ -345,6 +348,16 @@ where
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
                 state.dragging = None;
+                match handle {
+                    Some(Handle::Start) => {
+                        shell.publish((on_event)(TimelineEvent::TrimStartEnded(time)));
+                    }
+                    Some(Handle::End) => {
+                        shell.publish((on_event)(TimelineEvent::TrimEndEnded(time)));
+                    }
+                    Some(_) => return,
+                    None => return,
+                }
             }
             _ => (),
         }

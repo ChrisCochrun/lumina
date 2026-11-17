@@ -32,6 +32,7 @@ pub struct VideoEditor {
     position: f64,
     last_seek: Instant,
     timestamp_text: String,
+    pretrim_position: Option<f64>,
 }
 
 pub enum Action {
@@ -55,6 +56,9 @@ pub enum Message {
     SetEnd(f32),
     Volume(f64),
     NewFrame,
+    SetEndDragging(f32),
+    SetStartDragging(f32),
+    DoneTrimming,
 }
 
 impl VideoEditor {
@@ -68,6 +72,7 @@ impl VideoEditor {
             position: 0.0,
             last_seek: Instant::now(),
             timestamp_text: String::new(),
+            pretrim_position: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -84,7 +89,6 @@ impl VideoEditor {
                 }
             }
             Message::Edit(edit) => {
-                debug!(edit);
                 self.editing = edit;
             }
             Message::PauseVideo => {
@@ -94,7 +98,6 @@ impl VideoEditor {
                 }
             }
             Message::Update(video) => {
-                warn!(?video);
                 return Action::UpdateVideo(video);
             }
             Message::VideoPos(position) => {
@@ -159,6 +162,28 @@ impl VideoEditor {
                     return Action::UpdateVideo(video.clone());
                 }
             }
+            Message::DoneTrimming => {
+                if let Some(time) = self.pretrim_position {
+                    debug!(posttrim = time);
+                    self.pretrim_position = None;
+                    return self.update(Message::VideoPos(time as f32));
+                }
+            }
+            Message::SetStartDragging(time) => {
+                if self.pretrim_position.is_none() {
+                    debug!(pretrim = self.position);
+                    self.pretrim_position = Some(self.position);
+                }
+                let _ = self.update(Message::VideoPos(time));
+                return self.update(Message::SetStart(time));
+            }
+            Message::SetEndDragging(time) => {
+                if self.pretrim_position.is_none() {
+                    self.pretrim_position = Some(self.position);
+                }
+                let _ = self.update(Message::VideoPos(time));
+                return self.update(Message::SetEnd(time));
+            }
             Message::SetEnd(time) => {
                 if let Some(video) = &mut self.core_video
                     && let Some(iced_video) = &self.video
@@ -168,8 +193,6 @@ impl VideoEditor {
                     } else {
                         video.end_time = None;
                     };
-                    let end_time = &video.end_time;
-                    debug!(end_time, "Debugging end_time");
                     return Action::UpdateVideo(video.clone());
                 }
             }
@@ -236,13 +259,20 @@ impl VideoEditor {
             let video_timeline = VideoTimeline::new(video)
                 .start(start_time)
                 .end(end_time)
-                .on_event(|event| match event {
-                    TimelineEvent::TrimStart(trimmed_start) => {
-                        Message::SetStart(trimmed_start)
+                .on_event(|event| {
+                    debug!(?event);
+                    match event {
+                        TimelineEvent::TrimStartStarted(trimmed_start) => {
+                            Message::SetStartDragging(trimmed_start)
+                        }
+                        TimelineEvent::TrimEndStarted(trimmed_end) => {
+                            Message::SetEndDragging(trimmed_end)
+                        }
+                        TimelineEvent::TrimStartEnded(_) => Message::DoneTrimming,
+                        TimelineEvent::TrimEndEnded(_) => Message::DoneTrimming,
+                        TimelineEvent::Seek(pos) => Message::VideoPos(pos),
+                        TimelineEvent::Released(_handle) => todo!(),
                     }
-                    TimelineEvent::TrimEnd(trimmed_end) => Message::SetEnd(trimmed_end),
-                    TimelineEvent::Seek(pos) => Message::VideoPos(pos),
-                    TimelineEvent::Released(_handle) => todo!(),
                 });
             let column = column![video_timeline, controls_row];
             column.apply(container)
