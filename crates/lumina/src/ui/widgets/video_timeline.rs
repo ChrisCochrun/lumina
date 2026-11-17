@@ -8,8 +8,7 @@ use std::time::Duration;
 use cosmic::cosmic_theme::palette;
 use cosmic::iced::Padding;
 use cosmic::iced::{
-    Border, Color, ContentFit, Pixels, Point, Radius, Shadow, Size, advanced::svg,
-    border, core as iced_core, touch, widget as iced_widget,
+    Color, Pixels, Point, Size, advanced::svg, border, core as iced_core, touch,
 };
 use palette::WithAlpha;
 
@@ -23,7 +22,6 @@ use iced_video_player::Video;
 use iced_wgpu::core::renderer::Quad;
 use iced_wgpu::core::widget::tree;
 use iced_wgpu::primitive::Renderer as PrimitiveRenderer;
-use sqlx::types::chrono;
 use tracing::debug;
 
 const DEFAULT_HEIGHT: f32 = 82.0;
