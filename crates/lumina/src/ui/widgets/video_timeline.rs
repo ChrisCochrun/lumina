@@ -57,10 +57,9 @@ struct State {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TimelineEvent {
-    TrimStartStarted(f32),
-    TrimStartEnded(f32),
-    TrimEndStarted(f32),
-    TrimEndEnded(f32),
+    Pressed(Handle),
+    TrimStart(f32),
+    TrimEnd(f32),
     Seek(f32),
     Released(Handle),
 }
@@ -242,10 +241,10 @@ where
         event: &Event,
         layout: Layout<'_>,
         cursor_position: mouse::Cursor,
-        renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
+        _renderer: &Renderer,
+        _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        viewport: &Rectangle,
+        _viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_mut::<State>();
         let bounds = layout.bounds();
@@ -269,22 +268,29 @@ where
 
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
-                debug!(?handle);
                 match handle {
                     Some(Handle::Playhead) => {
                         state.dragging = Some(Handle::Playhead);
+                        shell.publish((on_event)(TimelineEvent::Pressed(
+                            Handle::Playhead,
+                        )));
                         shell.publish((on_event)(TimelineEvent::Seek(time)));
                     }
                     Some(Handle::Start) => {
                         state.dragging = Some(Handle::Start);
-                        shell.publish((on_event)(TimelineEvent::TrimStartStarted(time)));
+                        shell.publish((on_event)(TimelineEvent::Pressed(Handle::Start)));
+                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
                     }
                     Some(Handle::End) => {
                         state.dragging = Some(Handle::End);
-                        shell.publish((on_event)(TimelineEvent::TrimEndStarted(time)));
+                        shell.publish((on_event)(TimelineEvent::Pressed(Handle::End)));
+                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
                     }
                     None => {
                         state.dragging = Some(Handle::Playhead);
+                        shell.publish((on_event)(TimelineEvent::Pressed(
+                            Handle::Playhead,
+                        )));
                         shell.publish((on_event)(TimelineEvent::Seek(time)));
                     }
                 }
@@ -315,7 +321,7 @@ where
                         if time < 0.0 {
                             return;
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimEndStarted(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
                     }
                     Some(Handle::Start) => {
                         if !bounds.contains(position.clone()) {
@@ -328,7 +334,7 @@ where
                         if time < 0.0 {
                             return;
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimStartStarted(time)));
+                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
                     }
                     None => return,
                 }
@@ -350,12 +356,16 @@ where
                 state.dragging = None;
                 match handle {
                     Some(Handle::Start) => {
-                        shell.publish((on_event)(TimelineEvent::TrimStartEnded(time)));
+                        shell.publish((on_event)(TimelineEvent::Released(Handle::Start)));
                     }
                     Some(Handle::End) => {
-                        shell.publish((on_event)(TimelineEvent::TrimEndEnded(time)));
+                        shell.publish((on_event)(TimelineEvent::Released(Handle::End)));
                     }
-                    Some(_) => return,
+                    Some(Handle::Playhead) => {
+                        shell.publish((on_event)(TimelineEvent::Released(
+                            Handle::Playhead,
+                        )));
+                    }
                     None => return,
                 }
             }

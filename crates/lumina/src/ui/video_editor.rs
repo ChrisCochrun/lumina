@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::io;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -11,17 +10,17 @@ use cosmic::iced::widget::{column, row};
 use cosmic::iced::{Background, Border, Length, Padding};
 use cosmic::prelude::*;
 use cosmic::widget::space::{self, horizontal};
-use cosmic::widget::{
-    Space, button, container, icon, slider, spin_button, text, text_input,
-};
+use cosmic::widget::{Space, button, container, icon, slider, text, text_input};
 use cosmic::{Element, Task, theme};
 use iced_video_player::{Position, Video, VideoPlayer};
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 use url::Url;
 
 use crate::core::videos;
 use crate::ui::gst_video;
 use crate::ui::widgets::video_timeline::{TimelineEvent, VideoTimeline};
+
+use super::widgets::video_timeline;
 
 #[derive(Debug)]
 pub struct VideoEditor {
@@ -33,6 +32,7 @@ pub struct VideoEditor {
     last_seek: Instant,
     timestamp_text: String,
     pretrim_position: Option<f64>,
+    dragging: Option<video_timeline::Handle>,
 }
 
 pub enum Action {
@@ -56,9 +56,7 @@ pub enum Message {
     SetEnd(f32),
     Volume(f64),
     NewFrame,
-    SetEndDragging(f32),
-    SetStartDragging(f32),
-    DoneTrimming,
+    Timeline(TimelineEvent),
 }
 
 impl VideoEditor {
@@ -73,6 +71,7 @@ impl VideoEditor {
             last_seek: Instant::now(),
             timestamp_text: String::new(),
             pretrim_position: None,
+            dragging: None,
         }
     }
     pub fn update(&mut self, message: Message) -> Action {
@@ -107,6 +106,7 @@ impl VideoEditor {
                         .checked_add(Duration::from_millis(50))
                         .is_some_and(|time| Instant::now() > time)
                 {
+                    let state_position = position as f64;
                     let pausing = video.paused();
                     video.set_paused(true);
                     let position =
@@ -114,7 +114,7 @@ impl VideoEditor {
                     match video.seek(position, false) {
                         Ok(_) => {
                             self.last_seek = Instant::now();
-                            self.position = video.position().as_secs_f64();
+                            self.position = state_position;
                         }
                         Err(e) => {
                             error!(?e);
@@ -145,6 +145,7 @@ impl VideoEditor {
                     && video.position().as_secs_f64() != 0.0
                 {
                     self.position = video.position().as_secs_f64();
+                    debug!(current_position = self.position, "In NewFrame");
                 }
                 self.update_timestamp();
                 if self.core_video.as_ref().is_some_and(|core_video| {
@@ -162,28 +163,6 @@ impl VideoEditor {
                     return Action::UpdateVideo(video.clone());
                 }
             }
-            Message::DoneTrimming => {
-                if let Some(time) = self.pretrim_position {
-                    debug!(posttrim = time);
-                    self.pretrim_position = None;
-                    return self.update(Message::VideoPos(time as f32));
-                }
-            }
-            Message::SetStartDragging(time) => {
-                if self.pretrim_position.is_none() {
-                    debug!(pretrim = self.position);
-                    self.pretrim_position = Some(self.position);
-                }
-                let _ = self.update(Message::VideoPos(time));
-                return self.update(Message::SetStart(time));
-            }
-            Message::SetEndDragging(time) => {
-                if self.pretrim_position.is_none() {
-                    self.pretrim_position = Some(self.position);
-                }
-                let _ = self.update(Message::VideoPos(time));
-                return self.update(Message::SetEnd(time));
-            }
             Message::SetEnd(time) => {
                 if let Some(video) = &mut self.core_video
                     && let Some(iced_video) = &self.video
@@ -200,6 +179,42 @@ impl VideoEditor {
                 if let Some(video) = &mut self.video {
                     video.set_volume(volume);
                 }
+            }
+            Message::Timeline(TimelineEvent::Released(handle)) => match handle {
+                video_timeline::Handle::Start | video_timeline::Handle::End => {
+                    if self.dragging.is_some()
+                        && let Some(pretrim_position) = &self.pretrim_position
+                    {
+                        let _ = self.update(Message::VideoPos(*pretrim_position as f32));
+                    }
+                    self.dragging = None;
+                    self.pretrim_position = None;
+                }
+                video_timeline::Handle::Playhead => (),
+            },
+            Message::Timeline(TimelineEvent::TrimEnd(time)) => {
+                if self.dragging.is_some() && self.pretrim_position.is_some() {
+                    let _ = self.update(Message::VideoPos(time));
+                }
+                return self.update(Message::SetEnd(time));
+            }
+            Message::Timeline(TimelineEvent::TrimStart(time)) => {
+                if self.dragging.is_some() && self.pretrim_position.is_some() {
+                    let _ = self.update(Message::VideoPos(time));
+                }
+                return self.update(Message::SetStart(time));
+            }
+            Message::Timeline(TimelineEvent::Pressed(handle)) => match handle {
+                video_timeline::Handle::Start | video_timeline::Handle::End => {
+                    if self.dragging.is_none() && self.pretrim_position.is_none() {
+                        self.dragging = Some(handle);
+                        self.pretrim_position = Some(self.position);
+                    }
+                }
+                video_timeline::Handle::Playhead => (),
+            },
+            Message::Timeline(TimelineEvent::Seek(time)) => {
+                return self.update(Message::VideoPos(time));
             }
             Message::None => (),
         }
@@ -259,21 +274,7 @@ impl VideoEditor {
             let video_timeline = VideoTimeline::new(video)
                 .start(start_time)
                 .end(end_time)
-                .on_event(|event| {
-                    debug!(?event);
-                    match event {
-                        TimelineEvent::TrimStartStarted(trimmed_start) => {
-                            Message::SetStartDragging(trimmed_start)
-                        }
-                        TimelineEvent::TrimEndStarted(trimmed_end) => {
-                            Message::SetEndDragging(trimmed_end)
-                        }
-                        TimelineEvent::TrimStartEnded(_) => Message::DoneTrimming,
-                        TimelineEvent::TrimEndEnded(_) => Message::DoneTrimming,
-                        TimelineEvent::Seek(pos) => Message::VideoPos(pos),
-                        TimelineEvent::Released(_handle) => todo!(),
-                    }
-                });
+                .on_event(Message::Timeline);
             let column = column![video_timeline, controls_row];
             column.apply(container)
         } else {
