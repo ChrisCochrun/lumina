@@ -44,8 +44,8 @@
     {
         "type": "git",
         "url": "https://github.com/rustaudio/cpal",
-        "commit": "2c7acf8ed42b6523f319145a8be256c446df5939",
-        "dest": "flatpak-cargo/git/cpal-2c7acf8"
+        "commit": "40ff3adea81757326debba6b2befb747a6699d50",
+        "dest": "flatpak-cargo/git/cpal-40ff3ad"
     },
     {
         "type": "git",
@@ -379,27 +379,27 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/alsa/alsa-0.11.0.crate",
-        "sha256": "812947049edcd670a82cd5c73c3661d2e58468577ba8489de58e1a73c04cbd5d",
-        "dest": "cargo/vendor/alsa-0.11.0"
+        "url": "https://static.crates.io/crates/alsa/alsa-0.12.1.crate",
+        "sha256": "d3f93573e7ddb15145d27c58c0fa0a452faad9f5452ac17ed4554ea035ea9b71",
+        "dest": "cargo/vendor/alsa-0.12.1"
     },
     {
         "type": "inline",
-        "contents": "{\"package\": \"812947049edcd670a82cd5c73c3661d2e58468577ba8489de58e1a73c04cbd5d\", \"files\": {}}",
-        "dest": "cargo/vendor/alsa-0.11.0",
+        "contents": "{\"package\": \"d3f93573e7ddb15145d27c58c0fa0a452faad9f5452ac17ed4554ea035ea9b71\", \"files\": {}}",
+        "dest": "cargo/vendor/alsa-0.12.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/alsa-sys/alsa-sys-0.4.0.crate",
-        "sha256": "ad7569085a265dd3f607ebecce7458eaab2132a84393534c95b18dcbc3f31e04",
-        "dest": "cargo/vendor/alsa-sys-0.4.0"
+        "url": "https://static.crates.io/crates/alsa-sys/alsa-sys-0.6.1.crate",
+        "sha256": "f0320138053ef93099f168102c37b46ac0b9c53affc56ef7696633ad5477e2be",
+        "dest": "cargo/vendor/alsa-sys-0.6.1"
     },
     {
         "type": "inline",
-        "contents": "{\"package\": \"ad7569085a265dd3f607ebecce7458eaab2132a84393534c95b18dcbc3f31e04\", \"files\": {}}",
-        "dest": "cargo/vendor/alsa-sys-0.4.0",
+        "contents": "{\"package\": \"f0320138053ef93099f168102c37b46ac0b9c53affc56ef7696633ad5477e2be\", \"files\": {}}",
+        "dest": "cargo/vendor/alsa-sys-0.6.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -886,19 +886,6 @@
         "type": "inline",
         "contents": "{\"package\": \"2230e48787ed3eb4088996eab66a32ca20c0b67bbd4fd6cdfe79f04f1f04c9fc\", \"files\": {}}",
         "dest": "cargo/vendor/atspi-proxies-0.13.0",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/audio_thread_priority/audio_thread_priority-0.35.1.crate",
-        "sha256": "7b1b4a0adbf971420cca66a75361a1190f34a6762d66361e5cde03dda35d1ed3",
-        "dest": "cargo/vendor/audio_thread_priority-0.35.1"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"7b1b4a0adbf971420cca66a75361a1190f34a6762d66361e5cde03dda35d1ed3\", \"files\": {}}",
-        "dest": "cargo/vendor/audio_thread_priority-0.35.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -1489,19 +1476,6 @@
         "type": "inline",
         "contents": "{\"package\": \"a1dce859f0832a7d088c4f1119888ab94ef4b5d6795d1ce05afb7fe159d79f98\", \"files\": {}}",
         "dest": "cargo/vendor/cc-1.2.62",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/cesu8/cesu8-1.1.0.crate",
-        "sha256": "6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c",
-        "dest": "cargo/vendor/cesu8-1.1.0"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c\", \"files\": {}}",
-        "dest": "cargo/vendor/cesu8-1.1.0",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -2155,12 +2129,12 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/cpal-2c7acf8/.\" \"cargo/vendor/cpal\""
+            "cp -r --reflink=auto \"flatpak-cargo/git/cpal-40ff3ad/.\" \"cargo/vendor/cpal\""
         ]
     },
     {
         "type": "inline",
-        "contents": "[package]\nname = \"cpal\"\nversion = \"0.18.0\"\ndescription = \"Low-level cross-platform audio I/O library in pure Rust.\"\nrepository = \"https://github.com/RustAudio/cpal\"\ndocumentation = \"https://docs.rs/cpal\"\nlicense = \"Apache-2.0\"\nkeywords = [\"audio\", \"sound\"]\nedition = \"2021\"\nrust-version = \"1.78\"\n\n[package.metadata.docs.rs]\nall-features = true\nrustdoc-args = [\"--cfg\", \"docsrs\"]\ntargets = [\"x86_64-unknown-linux-gnu\", \"x86_64-pc-windows-msvc\", \"x86_64-apple-darwin\", \"aarch64-apple-darwin\", \"aarch64-apple-ios\", \"wasm32-unknown-unknown\", \"aarch64-linux-android\", \"x86_64-unknown-freebsd\", \"x86_64-unknown-netbsd\", \"x86_64-unknown-dragonfly\"]\n\n[features]\ndefault = [\"realtime-dbus\"]\nrealtime = [\"dep:audio_thread_priority\"]\nrealtime-dbus = [\"realtime\", \"audio_thread_priority/with_dbus\"]\nasio = [\"dep:asio-sys\", \"dep:num-traits\"]\naudioworklet = [\"wasm-bindgen\", \"web-sys/Blob\", \"web-sys/BlobPropertyBag\", \"web-sys/Url\", \"web-sys/AudioWorklet\", \"web-sys/AudioWorkletNode\", \"web-sys/AudioWorkletNodeOptions\"]\ncustom = []\njack = [\"dep:jack\"]\npipewire = [\"dep:pipewire\"]\npulseaudio = [\"dep:pulseaudio\", \"dep:futures\"]\nwasm-bindgen = [\"dep:wasm-bindgen\", \"dep:wasm-bindgen-futures\"]\n\n[dependencies]\ndasp_sample = \"0.11\"\n\n[dev-dependencies]\nanyhow = \"1.0\"\nhound = \"3.5\"\nringbuf = \"0.4\"\n\n[dev-dependencies.clap]\nversion = \">=4.0, <=4.5.57\"\nfeatures = [\"derive\"]\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.windows-core]\nversion = \">=0.61, <=0.62\"\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.windows]\nversion = \">=0.61, <=0.62\"\nfeatures = [\"Win32_Media\", \"Win32_Media_Audio\", \"Win32_Foundation\", \"Win32_Devices_Properties\", \"Win32_Media_KernelStreaming\", \"Win32_System_Com_StructuredStorage\", \"Win32_System_Threading\", \"Win32_System_Performance\", \"Win32_Security\", \"Win32_System_SystemServices\", \"Win32_System_Variant\", \"Win32_Media_Multimedia\", \"Win32_UI_Shell_PropertiesSystem\"]\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.audio_thread_priority]\nversion = \"0.35\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.asio-sys]\nversion = \"0.3.0\"\npath = \"asio-sys\"\noptional = true\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.num-traits]\nversion = \"0.2\"\noptional = true\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.jack]\nversion = \"0.13\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies]\nalsa = \"0.11\"\nlibc = \"0.2\"\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.audio_thread_priority]\nversion = \"0.35\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.jack]\nversion = \"0.13\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.pulseaudio]\nversion = \"0.3\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.futures]\nversion = \"0.3\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.pipewire]\nversion = \"0.9\"\noptional = true\nfeatures = [\"v0_3_53\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies]\nmach2 = \"0.6\"\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.coreaudio-rs]\nversion = \"0.14.2\"\ndefault-features = false\nfeatures = [\"core_audio\", \"audio_toolbox\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-audio]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AudioHardware\", \"AudioHardwareDeprecated\", \"objc2\", \"objc2-foundation\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-audio-toolbox]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AUComponent\", \"AudioUnitProperties\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-audio-types]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"CoreAudioBaseTypes\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-foundation]\nversion = \"0.3\"\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-foundation]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"NSArray\", \"NSString\", \"NSValue\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2]\nversion = \"0.6\"\n\n[target.\"cfg(target_os = \\\"macos\\\")\".dependencies.jack]\nversion = \"0.13\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\"))\".dependencies]\nblock2 = \"0.6\"\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\"))\".dependencies.objc2-foundation]\nversion = \"0.3\"\nfeatures = [\"block2\", \"NSDictionary\", \"NSNotification\", \"NSOperation\"]\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\"))\".dependencies.objc2-avf-audio]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AVAudioSession\", \"AVAudioSessionTypes\"]\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", target_os = \\\"unknown\\\"))\".dependencies.wasm-bindgen]\nversion = \"0.2\"\noptional = true\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", target_os = \\\"unknown\\\"))\".dependencies.wasm-bindgen-futures]\nversion = \"0.4\"\noptional = true\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", target_os = \\\"unknown\\\"))\".dependencies.js-sys]\nversion = \"0.3\"\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", target_os = \\\"unknown\\\"))\".dependencies.web-sys]\nversion = \"0.3\"\nfeatures = [\"AudioContext\", \"AudioContextOptions\", \"AudioBuffer\", \"AudioBufferSourceNode\", \"AudioNode\", \"AudioDestinationNode\", \"Window\", \"AudioContextState\"]\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies]\nndk-context = \"0.1\"\njni = \"0.21\"\nlibc = \"0.2\"\nnum-derive = \"0.4\"\nnum-traits = \"0.2\"\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies.audio_thread_priority]\nversion = \"0.35\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies.ndk]\nversion = \"0.9\"\ndefault-features = false\nfeatures = [\"audio\", \"api-level-26\"]\n\n[[example]]\nname = \"beep\"\n\n[[example]]\nname = \"enumerate\"\n\n[[example]]\nname = \"feedback\"\n\n[[example]]\nname = \"record_wav\"\n\n[[example]]\nname = \"synth_tones\"\n",
+        "contents": "[package]\nname = \"cpal\"\nversion = \"0.19.0\"\ndescription = \"Low-level cross-platform audio I/O library.\"\nrepository = \"https://github.com/RustAudio/cpal\"\ndocumentation = \"https://docs.rs/cpal\"\nlicense = \"Apache-2.0\"\nkeywords = [\"audio\", \"sound\", \"playback\", \"recording\", \"cross-platform\"]\ncategories = [\"multimedia::audio\"]\nedition = \"2024\"\nrust-version = \"1.85\"\n\n[package.metadata.docs.rs]\nfeatures = [\"asio\", \"audioworklet\", \"custom\", \"jack\", \"pulseaudio\", \"realtime\", \"realtime-dbus\", \"wasm-bindgen\"]\nrustdoc-args = [\"--cfg\", \"docsrs\"]\ntargets = [\"x86_64-unknown-linux-gnu\", \"x86_64-pc-windows-msvc\", \"x86_64-apple-darwin\", \"aarch64-apple-darwin\", \"aarch64-apple-ios\", \"wasm32-unknown-unknown\", \"aarch64-linux-android\", \"x86_64-unknown-freebsd\", \"x86_64-unknown-netbsd\", \"x86_64-unknown-dragonfly\"]\n\n[badges.maintenance]\nstatus = \"actively-developed\"\n\n[features]\ndefault = []\nrealtime = [\"dep:audio_thread_priority\", \"dep:alsa-sys\"]\nrealtime-dbus = [\"realtime\", \"audio_thread_priority/with_dbus\"]\nasio = [\"dep:asio-sys\", \"dep:num-traits\"]\naudioworklet = [\"dep:futures-channel\", \"dep:futures-util\", \"wasm-bindgen\", \"web-sys/Blob\", \"web-sys/BlobPropertyBag\", \"web-sys/Url\", \"web-sys/AudioWorklet\", \"web-sys/AudioWorkletNode\", \"web-sys/AudioWorkletNodeOptions\", \"web-sys/ChannelCountMode\", \"web-sys/Event\"]\ncustom = []\njack = [\"dep:jack\"]\npipewire = [\"dep:pipewire\"]\npulseaudio = [\"dep:pulseaudio\", \"dep:futures-executor\", \"dep:futures-util\", \"dep:portable-atomic\"]\nwasm-bindgen = [\"dep:wasm-bindgen\", \"dep:wasm-bindgen-futures\", \"dep:futures-channel\", \"dep:futures-util\", \"web-sys/Navigator\", \"web-sys/MediaDevices\", \"web-sys/MediaStream\", \"web-sys/MediaStreamConstraints\", \"web-sys/MediaStreamTrack\", \"web-sys/MediaStreamAudioSourceNode\", \"web-sys/ScriptProcessorNode\", \"web-sys/AudioProcessingEvent\", \"web-sys/GainNode\", \"web-sys/AudioParam\"]\n\n[dependencies]\ndasp_sample = \"0.11\"\n\n[dev-dependencies]\nanyhow = \"1.0\"\nhound = \"3.5\"\nringbuf = \"0.4\"\n\n[dev-dependencies.clap]\nversion = \"4.6\"\nfeatures = [\"derive\"]\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies]\nwindows-core = \"0.62\"\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.windows]\nversion = \"0.62\"\nfeatures = [\"Win32_Media\", \"Win32_Media_Audio\", \"Win32_Foundation\", \"Win32_Devices_Properties\", \"Win32_Media_KernelStreaming\", \"Win32_System_Com_StructuredStorage\", \"Win32_System_Threading\", \"Win32_System_Performance\", \"Win32_Security\", \"Win32_System_SystemServices\", \"Win32_System_Variant\", \"Win32_Media_Multimedia\", \"Win32_UI_Shell_PropertiesSystem\"]\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.audio_thread_priority]\nversion = \"0.36\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.asio-sys]\nversion = \"0.5.0\"\npath = \"asio-sys\"\noptional = true\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.num-traits]\nversion = \"0.2\"\noptional = true\n\n[target.\"cfg(target_os = \\\"windows\\\")\".dependencies.jack]\nversion = \"0.13.5\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies]\nalsa = \"0.12.1\"\nlibc = \"0.2\"\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.alsa-sys]\nversion = \"0.6.1\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.audio_thread_priority]\nversion = \"0.36\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.jack]\nversion = \"0.13.5\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.pulseaudio]\nversion = \"0.3\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.futures-executor]\nversion = \"0.3\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.futures-util]\nversion = \"0.3\"\ndefault-features = false\noptional = true\nfeatures = [\"alloc\"]\n\n[target.\"cfg(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"))\".dependencies.pipewire]\nversion = \"0.10\"\noptional = true\nfeatures = [\"v0_3_53\"]\n\n[target.\"cfg(all(any(target_os = \\\"linux\\\", target_os = \\\"dragonfly\\\", target_os = \\\"freebsd\\\", target_os = \\\"netbsd\\\"), not(target_has_atomic = \\\"64\\\")))\".dependencies.portable-atomic]\nversion = \"1\"\noptional = true\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies]\nmach2 = \"0.6\"\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.coreaudio-rs]\nversion = \"0.14.2\"\ndefault-features = false\nfeatures = [\"core_audio\", \"audio_toolbox\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-audio]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AudioHardware\", \"AudioHardwareDeprecated\", \"objc2\", \"objc2-foundation\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-audio-toolbox]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AUComponent\", \"AudioUnitProperties\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-audio-types]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"CoreAudioBaseTypes\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-core-foundation]\nversion = \"0.3.1\"\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2-foundation]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"NSArray\", \"NSString\", \"NSValue\"]\n\n[target.\"cfg(target_vendor = \\\"apple\\\")\".dependencies.objc2]\nversion = \"0.6\"\n\n[target.\"cfg(target_os = \\\"macos\\\")\".dependencies.jack]\nversion = \"0.13.5\"\noptional = true\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\", target_os = \\\"visionos\\\"))\".dependencies]\nblock2 = \"0.6\"\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\", target_os = \\\"visionos\\\"))\".dependencies.objc2-foundation]\nversion = \"0.3\"\nfeatures = [\"block2\", \"NSDictionary\", \"NSNotification\", \"NSOperation\"]\n\n[target.\"cfg(any(target_os = \\\"ios\\\", target_os = \\\"tvos\\\", target_os = \\\"visionos\\\"))\".dependencies.objc2-avf-audio]\nversion = \"0.3\"\ndefault-features = false\nfeatures = [\"std\", \"AVAudioSession\", \"AVAudioSessionTypes\"]\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.wasm-bindgen]\nversion = \"0.2.127\"\noptional = true\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.wasm-bindgen-futures]\nversion = \"0.4\"\noptional = true\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.futures-channel]\nversion = \"0.3\"\noptional = true\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.futures-util]\nversion = \"0.3\"\ndefault-features = false\noptional = true\nfeatures = [\"alloc\"]\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.js-sys]\nversion = \"0.3\"\n\n[target.\"cfg(all(target_arch = \\\"wasm32\\\", any(target_os = \\\"emscripten\\\", target_os = \\\"unknown\\\")))\".dependencies.web-sys]\nversion = \"0.3\"\nfeatures = [\"AudioContext\", \"AudioContextOptions\", \"AudioBuffer\", \"AudioBufferSourceNode\", \"AudioNode\", \"AudioDestinationNode\", \"Window\", \"AudioContextState\"]\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies]\nndk-context = \"0.1\"\njni = \"0.22\"\nlibc = \"0.2\"\nnum-derive = \"0.4\"\nnum-traits = \"0.2\"\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies.audio_thread_priority]\nversion = \"0.36\"\noptional = true\ndefault-features = false\n\n[target.\"cfg(target_os = \\\"android\\\")\".dependencies.ndk]\nversion = \"0.9\"\ndefault-features = false\nfeatures = [\"audio\", \"api-level-26\"]\n\n[[example]]\nname = \"beep\"\n\n[[example]]\nname = \"enumerate\"\n\n[[example]]\nname = \"duplex\"\n\n[[example]]\nname = \"feedback\"\n\n[[example]]\nname = \"record_wav\"\n\n[[example]]\nname = \"synth_tones\"\n\n[[example]]\nname = \"custom\"\nrequired-features = [\"custom\"]\n",
         "dest": "cargo/vendor/cpal",
         "dest-filename": "Cargo.toml"
     },
@@ -2251,6 +2225,19 @@
         "type": "inline",
         "contents": "{\"package\": null, \"files\": {}}",
         "dest": "cargo/vendor/crisp",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/crossbeam-channel/crossbeam-channel-0.5.17.crate",
+        "sha256": "98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1",
+        "dest": "cargo/vendor/crossbeam-channel-0.5.17"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1\", \"files\": {}}",
+        "dest": "cargo/vendor/crossbeam-channel-0.5.17",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -2555,19 +2542,6 @@
         "type": "inline",
         "contents": "{\"package\": \"be1e0bca6c3637f992fc1cc7cbc52a78c1ef6db076dbf1059c4323d6a2048376\", \"files\": {}}",
         "dest": "cargo/vendor/data-url-0.3.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/dbus/dbus-0.6.5.crate",
-        "sha256": "48b5f0f36f1eebe901b0e6bee369a77ed3396334bf3f09abd46454a576f71819",
-        "dest": "cargo/vendor/dbus-0.6.5"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"48b5f0f36f1eebe901b0e6bee369a77ed3396334bf3f09abd46454a576f71819\", \"files\": {}}",
-        "dest": "cargo/vendor/dbus-0.6.5",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -5780,19 +5754,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/jni/jni-0.21.1.crate",
-        "sha256": "1a87aa2bb7d2af34197c04845522473242e1aa17c12f4935d5856491a7fb8c97",
-        "dest": "cargo/vendor/jni-0.21.1"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"1a87aa2bb7d2af34197c04845522473242e1aa17c12f4935d5856491a7fb8c97\", \"files\": {}}",
-        "dest": "cargo/vendor/jni-0.21.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/jni/jni-0.22.4.crate",
         "sha256": "5efd9a482cf3a427f00d6b35f14332adc7902ce91efb778580e180ff90fa3498",
         "dest": "cargo/vendor/jni-0.22.4"
@@ -6092,19 +6053,6 @@
         "type": "inline",
         "contents": "{\"package\": null, \"files\": {}}",
         "dest": "cargo/vendor/libcosmic",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/libdbus-sys/libdbus-sys-0.2.7.crate",
-        "sha256": "328c4789d42200f1eeec05bd86c9c13c7f091d2ba9a6ea35acdf51f31bc0f043",
-        "dest": "cargo/vendor/libdbus-sys-0.2.7"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"328c4789d42200f1eeec05bd86c9c13c7f091d2ba9a6ea35acdf51f31bc0f043\", \"files\": {}}",
-        "dest": "cargo/vendor/libdbus-sys-0.2.7",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -6417,19 +6365,6 @@
         "type": "inline",
         "contents": "{\"package\": \"c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4\", \"files\": {}}",
         "dest": "cargo/vendor/mac-0.1.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/mach2/mach2-0.4.3.crate",
-        "sha256": "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44",
-        "dest": "cargo/vendor/mach2-0.4.3"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44\", \"files\": {}}",
-        "dest": "cargo/vendor/mach2-0.4.3",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -10492,6 +10427,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/symlink/symlink-0.1.0.crate",
+        "sha256": "a7973cce6668464ea31f176d85b13c7ab3bba2cb3b77a2ed26abd7801688010a",
+        "dest": "cargo/vendor/symlink-0.1.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"a7973cce6668464ea31f176d85b13c7ab3bba2cb3b77a2ed26abd7801688010a\", \"files\": {}}",
+        "dest": "cargo/vendor/symlink-0.1.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/symphonia/symphonia-0.5.5.crate",
         "sha256": "5773a4c030a19d9bfaa090f49746ff35c75dfddfa700df7a5939d5e076a57039",
         "dest": "cargo/vendor/symphonia-0.5.5"
@@ -11397,6 +11345,19 @@
         "type": "inline",
         "contents": "{\"package\": \"63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100\", \"files\": {}}",
         "dest": "cargo/vendor/tracing-0.1.44",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/tracing-appender/tracing-appender-0.2.5.crate",
+        "sha256": "050686193eb999b4bb3bc2acfa891a13da00f79734704c4b8b4ef1a10b368a3c",
+        "dest": "cargo/vendor/tracing-appender-0.2.5"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"050686193eb999b4bb3bc2acfa891a13da00f79734704c4b8b4ef1a10b368a3c\", \"files\": {}}",
+        "dest": "cargo/vendor/tracing-appender-0.2.5",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -12785,19 +12746,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows-sys/windows-sys-0.45.0.crate",
-        "sha256": "75283be5efb2831d37ea142365f009c02ec203cd29a3ebecbc093d52315b66d0",
-        "dest": "cargo/vendor/windows-sys-0.45.0"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"75283be5efb2831d37ea142365f009c02ec203cd29a3ebecbc093d52315b66d0\", \"files\": {}}",
-        "dest": "cargo/vendor/windows-sys-0.45.0",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/windows-sys/windows-sys-0.48.0.crate",
         "sha256": "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9",
         "dest": "cargo/vendor/windows-sys-0.48.0"
@@ -12858,19 +12806,6 @@
         "type": "inline",
         "contents": "{\"package\": \"ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc\", \"files\": {}}",
         "dest": "cargo/vendor/windows-sys-0.61.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows-targets/windows-targets-0.42.2.crate",
-        "sha256": "8e5180c00cd44c9b1c88adb3693291f1cd93605ded80c250a75d472756b4d071",
-        "dest": "cargo/vendor/windows-targets-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"8e5180c00cd44c9b1c88adb3693291f1cd93605ded80c250a75d472756b4d071\", \"files\": {}}",
-        "dest": "cargo/vendor/windows-targets-0.42.2",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -12941,19 +12876,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_aarch64_gnullvm/windows_aarch64_gnullvm-0.42.2.crate",
-        "sha256": "597a5118570b68bc08d8d59125332c54f1ba9d9adeedeef5b99b02ba2b0698f8",
-        "dest": "cargo/vendor/windows_aarch64_gnullvm-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"597a5118570b68bc08d8d59125332c54f1ba9d9adeedeef5b99b02ba2b0698f8\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_aarch64_gnullvm-0.42.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/windows_aarch64_gnullvm/windows_aarch64_gnullvm-0.48.5.crate",
         "sha256": "2b38e32f0abccf9987a4e3079dfb67dcd799fb61361e53e2882c3cbaf0d905d8",
         "dest": "cargo/vendor/windows_aarch64_gnullvm-0.48.5"
@@ -12993,19 +12915,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_aarch64_msvc/windows_aarch64_msvc-0.42.2.crate",
-        "sha256": "e08e8864a60f06ef0d0ff4ba04124db8b0fb3be5776a5cd47641e942e58c4d43",
-        "dest": "cargo/vendor/windows_aarch64_msvc-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"e08e8864a60f06ef0d0ff4ba04124db8b0fb3be5776a5cd47641e942e58c4d43\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_aarch64_msvc-0.42.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/windows_aarch64_msvc/windows_aarch64_msvc-0.48.5.crate",
         "sha256": "dc35310971f3b2dbbf3f0690a219f40e2d9afcf64f9ab7cc1be722937c26b4bc",
         "dest": "cargo/vendor/windows_aarch64_msvc-0.48.5"
@@ -13040,19 +12949,6 @@
         "type": "inline",
         "contents": "{\"package\": \"b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006\", \"files\": {}}",
         "dest": "cargo/vendor/windows_aarch64_msvc-0.53.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_i686_gnu/windows_i686_gnu-0.42.2.crate",
-        "sha256": "c61d927d8da41da96a81f029489353e68739737d3beca43145c8afec9a31a84f",
-        "dest": "cargo/vendor/windows_i686_gnu-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"c61d927d8da41da96a81f029489353e68739737d3beca43145c8afec9a31a84f\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_i686_gnu-0.42.2",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -13123,19 +13019,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_i686_msvc/windows_i686_msvc-0.42.2.crate",
-        "sha256": "44d840b6ec649f480a41c8d80f9c65108b92d89345dd94027bfe06ac444d1060",
-        "dest": "cargo/vendor/windows_i686_msvc-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"44d840b6ec649f480a41c8d80f9c65108b92d89345dd94027bfe06ac444d1060\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_i686_msvc-0.42.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/windows_i686_msvc/windows_i686_msvc-0.48.5.crate",
         "sha256": "8f55c233f70c4b27f66c523580f78f1004e8b5a8b659e05a4eb49d4166cca406",
         "dest": "cargo/vendor/windows_i686_msvc-0.48.5"
@@ -13170,19 +13053,6 @@
         "type": "inline",
         "contents": "{\"package\": \"1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2\", \"files\": {}}",
         "dest": "cargo/vendor/windows_i686_msvc-0.53.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_x86_64_gnu/windows_x86_64_gnu-0.42.2.crate",
-        "sha256": "8de912b8b8feb55c064867cf047dda097f92d51efad5b491dfb98f6bbb70cb36",
-        "dest": "cargo/vendor/windows_x86_64_gnu-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"8de912b8b8feb55c064867cf047dda097f92d51efad5b491dfb98f6bbb70cb36\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_x86_64_gnu-0.42.2",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -13227,19 +13097,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_x86_64_gnullvm/windows_x86_64_gnullvm-0.42.2.crate",
-        "sha256": "26d41b46a36d453748aedef1486d5c7a85db22e56aff34643984ea85514e94a3",
-        "dest": "cargo/vendor/windows_x86_64_gnullvm-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"26d41b46a36d453748aedef1486d5c7a85db22e56aff34643984ea85514e94a3\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_x86_64_gnullvm-0.42.2",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/windows_x86_64_gnullvm/windows_x86_64_gnullvm-0.48.5.crate",
         "sha256": "0b7b52767868a23d5bab768e390dc5f5c55825b6d30b86c844ff2dc7414044cc",
         "dest": "cargo/vendor/windows_x86_64_gnullvm-0.48.5"
@@ -13274,19 +13131,6 @@
         "type": "inline",
         "contents": "{\"package\": \"0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1\", \"files\": {}}",
         "dest": "cargo/vendor/windows_x86_64_gnullvm-0.53.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/windows_x86_64_msvc/windows_x86_64_msvc-0.42.2.crate",
-        "sha256": "9aec5da331524158c6d1a4ac0ab1541149c0b9505fde06423b02f5ef0106b9f0",
-        "dest": "cargo/vendor/windows_x86_64_msvc-0.42.2"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"9aec5da331524158c6d1a4ac0ab1541149c0b9505fde06423b02f5ef0106b9f0\", \"files\": {}}",
-        "dest": "cargo/vendor/windows_x86_64_msvc-0.42.2",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -13550,6 +13394,19 @@
         "type": "inline",
         "contents": "{\"package\": \"2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0\", \"files\": {}}",
         "dest": "cargo/vendor/winnow-1.0.2",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/winresource/winresource-0.1.34.crate",
+        "sha256": "a2bc6d36480b829272a5bdabf08e6dca8004761c1da7e35efef800540c66221b",
+        "dest": "cargo/vendor/winresource-0.1.34"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"a2bc6d36480b829272a5bdabf08e6dca8004761c1da7e35efef800540c66221b\", \"files\": {}}",
+        "dest": "cargo/vendor/winresource-0.1.34",
         "dest-filename": ".cargo-checksum.json"
     },
     {
