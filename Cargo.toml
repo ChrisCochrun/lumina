@@ -6,7 +6,7 @@ members = [ "crates/lumina", "crates/fdsm_lumina", "crates/xtask" ]
 [workspace.dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 default-features = false
-features = ["debug", "winit", "tokio", "rfd", "wgpu", "multi-window",]
+features = ["debug", "winit", "tokio", "wayland", "rfd", "wgpu", "multi-window",]
 
 [workspace.dependencies.iced_wgpu]
 git = "https://github.com/pop-os/libcosmic"
