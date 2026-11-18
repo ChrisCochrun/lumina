@@ -106,23 +106,8 @@ impl VideoEditor {
                         .checked_add(Duration::from_millis(50))
                         .is_some_and(|time| Instant::now() > time)
                 {
-                    let state_position = position as f64;
-                    let pausing = video.paused();
-                    video.set_paused(true);
-                    let position =
-                        Position::Time(std::time::Duration::from_secs_f32(position));
-                    match video.seek(position, false) {
-                        Ok(_) => {
-                            self.last_seek = Instant::now();
-                            self.position = state_position;
-                        }
-                        Err(e) => {
-                            error!(?e);
-                        }
-                    }
-                    video.set_paused(pausing);
+                    self.seek(position);
                 }
-                self.update_timestamp();
             }
             Message::PickVideo => {
                 let video_id = self.core_video.as_ref().map(|v| v.id).unwrap_or_default();
@@ -182,10 +167,8 @@ impl VideoEditor {
             }
             Message::Timeline(TimelineEvent::Released(handle)) => match handle {
                 video_timeline::Handle::Start | video_timeline::Handle::End => {
-                    if self.dragging.is_some()
-                        && let Some(pretrim_position) = &self.pretrim_position
-                    {
-                        let _ = self.update(Message::VideoPos(*pretrim_position as f32));
+                    if let Some(pretrim_position) = &self.pretrim_position {
+                        self.seek(*pretrim_position as f32);
                     }
                     self.dragging = None;
                     self.pretrim_position = None;
@@ -206,10 +189,8 @@ impl VideoEditor {
             }
             Message::Timeline(TimelineEvent::Pressed(handle)) => match handle {
                 video_timeline::Handle::Start | video_timeline::Handle::End => {
-                    if self.dragging.is_none() && self.pretrim_position.is_none() {
-                        self.dragging = Some(handle);
-                        self.pretrim_position = Some(self.position);
-                    }
+                    self.dragging = Some(handle);
+                    self.pretrim_position = Some(self.position);
                 }
                 video_timeline::Handle::Playhead => (),
             },
@@ -383,6 +364,28 @@ impl VideoEditor {
             self.timestamp_text = formatted;
         }
     }
+
+    fn seek(&mut self, mut position: f32) {
+        let Some(video) = &mut self.video else { return };
+        let state_position = position as f64;
+        let pausing = video.paused();
+        video.set_paused(true);
+        if position < 0.0 {
+            position = 0.0
+        }
+        let position = Position::Time(std::time::Duration::from_secs_f32(position));
+        match video.seek(position, false) {
+            Ok(_) => {
+                self.last_seek = Instant::now();
+                self.position = state_position;
+            }
+            Err(e) => {
+                error!(?e);
+            }
+        }
+        video.set_paused(pausing);
+        self.update_timestamp();
+    }
 }
 fn spinner<'a>(
     label: String,
@@ -506,4 +509,69 @@ async fn pick_video() -> Result<PathBuf, VideoError> {
 pub enum VideoError {
     DialogClosed,
     IOError(io::ErrorKind),
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use miette::{IntoDiagnostic, Result, miette};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_drag_seek() -> Result<()> {
+        let mut editor = VideoEditor::new();
+        let video = videos::Video {
+            title: "Hello World".into(),
+            path: PathBuf::from("../../res/bigbuckbunny.mp4")
+                .canonicalize()
+                .into_diagnostic()?,
+            ..Default::default()
+        };
+        editor.update(Message::ChangeVideo(video));
+        let _video = editor.video.as_ref().ok_or(miette!("No video."))?;
+        assert_eq!(editor.title, "Hello World".to_string());
+        // we need to wait, else seeking will not apply
+        std::thread::sleep(Duration::from_millis(100));
+        editor.update(Message::Timeline(TimelineEvent::Pressed(
+            video_timeline::Handle::Playhead,
+        )));
+        editor.update(Message::Timeline(TimelineEvent::Seek(32.0)));
+        assert_eq!(editor.position, 32.0);
+        editor.update(Message::Timeline(TimelineEvent::Released(
+            video_timeline::Handle::Playhead,
+        )));
+        // we need to wait, else seeking will not apply
+        std::thread::sleep(Duration::from_millis(100));
+        editor.update(Message::Timeline(TimelineEvent::Pressed(
+            video_timeline::Handle::Start,
+        )));
+        assert_eq!(editor.dragging, Some(video_timeline::Handle::Start));
+        assert_eq!(editor.pretrim_position, Some(32.0));
+        editor.update(Message::Timeline(TimelineEvent::TrimStart(5.0)));
+        assert_eq!(editor.dragging, Some(video_timeline::Handle::Start));
+        assert_eq!(editor.pretrim_position, Some(32.0));
+        assert_eq!(editor.position, 5.0);
+        editor.update(Message::Timeline(TimelineEvent::Released(
+            video_timeline::Handle::Start,
+        )));
+        assert_eq!(editor.position, 32.0);
+        // we need to wait, else seeking will not apply
+        std::thread::sleep(Duration::from_millis(100));
+        editor.update(Message::Timeline(TimelineEvent::Pressed(
+            video_timeline::Handle::End,
+        )));
+        assert_eq!(editor.dragging, Some(video_timeline::Handle::End));
+        assert_eq!(editor.pretrim_position, Some(32.0));
+        editor.update(Message::Timeline(TimelineEvent::TrimEnd(5.0)));
+        assert_eq!(editor.dragging, Some(video_timeline::Handle::End));
+        assert_eq!(editor.pretrim_position, Some(32.0));
+        assert_eq!(editor.position, 5.0);
+        editor.update(Message::Timeline(TimelineEvent::Released(
+            video_timeline::Handle::End,
+        )));
+        assert_eq!(editor.position, 32.0);
+        assert!(editor.dragging.is_none());
+        assert!(editor.pretrim_position.is_none());
+        Ok(())
+    }
 }

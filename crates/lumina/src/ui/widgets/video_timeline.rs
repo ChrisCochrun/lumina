@@ -6,10 +6,10 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use cosmic::cosmic_theme::palette;
-use cosmic::iced::Padding;
 use cosmic::iced::{
     Color, Pixels, Point, Size, advanced::svg, border, core as iced_core, touch,
 };
+use cosmic::iced::{Padding, window};
 use palette::WithAlpha;
 
 use cosmic::widget::Id;
@@ -249,23 +249,20 @@ where
 
         let rail = self.rail(&bounds);
         let playhead_x = (self.position * rail.width / self.duration) + rail.x;
-        let Some(cursor_position) = cursor_position.position() else {
+        let Some(cursor_position) = cursor_position.land().position() else {
             return;
         };
-        if !bounds.contains(cursor_position) {
-            return;
-        }
         let Some(on_event) = self.on_event else {
             return;
         };
         let time = self.point_to_time(&rail, &cursor_position);
-        if time < 0.0 {
-            return;
-        }
         let handle = self.point_to_handle(&rail, &cursor_position);
 
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                if !bounds.contains(cursor_position) {
+                    return;
+                }
                 match handle {
                     Some(Handle::Playhead) => {
                         state.dragging = Some(Handle::Playhead);
@@ -292,65 +289,72 @@ where
                         shell.publish((on_event)(TimelineEvent::Seek(time)));
                     }
                 }
+                shell.capture_event();
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) => {
                 match state.dragging {
                     Some(Handle::Playhead) => {
-                        if !bounds.contains(position.clone()) {
-                            return;
-                        }
                         let Some(on_event) = self.on_event else {
                             return;
                         };
                         let time = self.point_to_time(&rail, &position.clone());
                         if time < 0.0 {
+                            shell.publish((on_event)(TimelineEvent::Seek(0.0)));
                             return;
+                        } else if time > self.duration {
+                            shell.publish((on_event)(TimelineEvent::Seek(self.duration)));
+                            return;
+                        } else {
+                            shell.publish((on_event)(TimelineEvent::Seek(time)));
                         }
-                        shell.publish((on_event)(TimelineEvent::Seek(time)));
                     }
                     Some(Handle::End) => {
-                        if !bounds.contains(position.clone()) {
-                            return;
-                        }
                         let Some(on_event) = self.on_event else {
                             return;
                         };
                         let time = self.point_to_time(&rail, &position.clone());
-                        if time < 0.0 {
-                            return;
+                        if time < 0.0 || time < self.start {
+                            if self.start < 0.0 {
+                                shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                            } else {
+                                shell.publish((on_event)(TimelineEvent::TrimEnd(
+                                    self.start,
+                                )));
+                            }
+                        } else if time > self.duration {
+                            shell.publish((on_event)(TimelineEvent::TrimEnd(
+                                self.duration,
+                            )));
+                        } else {
+                            shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
                     }
                     Some(Handle::Start) => {
-                        if !bounds.contains(position.clone()) {
-                            return;
-                        }
                         let Some(on_event) = self.on_event else {
                             return;
                         };
                         let time = self.point_to_time(&rail, &position.clone());
                         if time < 0.0 {
-                            return;
+                            shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                        } else if time > self.end || time > self.duration {
+                            if self.end < 0.0 {
+                                shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                            } else {
+                                shell.publish((on_event)(TimelineEvent::TrimStart(
+                                    self.end,
+                                )));
+                            }
+                        } else {
+                            shell.publish((on_event)(TimelineEvent::TrimStart(time)));
                         }
-                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
                     }
                     None => return,
                 }
-                if state.dragging == Some(Handle::Playhead) {
-                    if !bounds.contains(position.clone()) {
-                        return;
-                    }
-                    let Some(on_event) = self.on_event else {
-                        return;
-                    };
-                    let time = self.point_to_time(&rail, &position.clone());
-                    if time < 0.0 {
-                        return;
-                    }
-                    shell.publish((on_event)(TimelineEvent::Seek(time)));
-                }
+                shell.capture_event();
             }
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+            | Event::Mouse(mouse::Event::CursorLeft)
+            | Event::Mouse(mouse::Event::CursorEntered) => {
                 state.dragging = None;
                 match handle {
                     Some(Handle::Start) => {
@@ -366,6 +370,7 @@ where
                     }
                     None => return,
                 }
+                shell.capture_event();
             }
             _ => (),
         }
