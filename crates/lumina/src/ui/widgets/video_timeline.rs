@@ -182,7 +182,7 @@ where
             .unwrap_or(86400.0 * (min_interval / 86400.0).ceil())
     }
 
-    fn time(&self, t: f32) -> f32 {
+    fn time_protect(&self, t: f32) -> f32 {
         if t.is_finite() {
             t.clamp(0.0, self.duration)
         } else {
@@ -248,14 +248,19 @@ where
         let bounds = layout.bounds();
 
         let rail = self.rail(&bounds);
-        let playhead_x = (self.position * rail.width / self.duration) + rail.x;
-        let Some(cursor_position) = cursor_position.land().position() else {
-            return;
-        };
         let Some(on_event) = self.on_event else {
             return;
         };
-        let time = self.point_to_time(&rail, &cursor_position);
+        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) = event {
+            if let Some(handle) = state.dragging.take() {
+                shell.publish(on_event(TimelineEvent::Released(handle)));
+            }
+            return;
+        }
+        let Some(cursor_position) = cursor_position.land().position() else {
+            return;
+        };
+        let time = self.time_protect(self.point_to_time(&rail, &cursor_position));
         let handle = self.point_to_handle(&rail, &cursor_position);
 
         match event {
@@ -266,111 +271,78 @@ where
                 match handle {
                     Some(Handle::Playhead) => {
                         state.dragging = Some(Handle::Playhead);
-                        shell.publish((on_event)(TimelineEvent::Pressed(
-                            Handle::Playhead,
-                        )));
-                        shell.publish((on_event)(TimelineEvent::Seek(time)));
+                        shell.publish(on_event(TimelineEvent::Pressed(Handle::Playhead)));
+                        shell.publish(on_event(TimelineEvent::Seek(time)));
                     }
                     Some(Handle::Start) => {
                         state.dragging = Some(Handle::Start);
-                        shell.publish((on_event)(TimelineEvent::Pressed(Handle::Start)));
-                        shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                        shell.publish(on_event(TimelineEvent::Pressed(Handle::Start)));
+                        shell.publish(on_event(TimelineEvent::TrimStart(time)));
                     }
                     Some(Handle::End) => {
                         state.dragging = Some(Handle::End);
-                        shell.publish((on_event)(TimelineEvent::Pressed(Handle::End)));
-                        shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                        shell.publish(on_event(TimelineEvent::Pressed(Handle::End)));
+                        shell.publish(on_event(TimelineEvent::TrimEnd(time)));
                     }
                     None => {
                         state.dragging = Some(Handle::Playhead);
-                        shell.publish((on_event)(TimelineEvent::Pressed(
-                            Handle::Playhead,
-                        )));
-                        shell.publish((on_event)(TimelineEvent::Seek(time)));
+                        shell.publish(on_event(TimelineEvent::Pressed(Handle::Playhead)));
+                        shell.publish(on_event(TimelineEvent::Seek(time)));
                     }
                 }
-                shell.capture_event();
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) => {
                 match state.dragging {
                     Some(Handle::Playhead) => {
-                        let Some(on_event) = self.on_event else {
-                            return;
-                        };
-                        let time = self.point_to_time(&rail, &position.clone());
+                        let time = self
+                            .time_protect(self.point_to_time(&rail, &position.clone()));
                         if time < 0.0 {
-                            shell.publish((on_event)(TimelineEvent::Seek(0.0)));
+                            shell.publish(on_event(TimelineEvent::Seek(0.0)));
                             return;
                         } else if time > self.duration {
-                            shell.publish((on_event)(TimelineEvent::Seek(self.duration)));
+                            shell.publish(on_event(TimelineEvent::Seek(self.duration)));
                             return;
                         } else {
-                            shell.publish((on_event)(TimelineEvent::Seek(time)));
+                            shell.publish(on_event(TimelineEvent::Seek(time)));
                         }
                     }
                     Some(Handle::End) => {
-                        let Some(on_event) = self.on_event else {
-                            return;
-                        };
-                        let time = self.point_to_time(&rail, &position.clone());
+                        let time = self
+                            .time_protect(self.point_to_time(&rail, &position.clone()));
                         if time < 0.0 || time < self.start {
                             if self.start < 0.0 {
-                                shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                                shell.publish(on_event(TimelineEvent::TrimStart(0.0)));
                             } else {
-                                shell.publish((on_event)(TimelineEvent::TrimEnd(
+                                shell.publish(on_event(TimelineEvent::TrimEnd(
                                     self.start,
                                 )));
                             }
                         } else if time > self.duration {
-                            shell.publish((on_event)(TimelineEvent::TrimEnd(
-                                self.duration,
-                            )));
+                            shell
+                                .publish(on_event(TimelineEvent::TrimEnd(self.duration)));
                         } else {
-                            shell.publish((on_event)(TimelineEvent::TrimEnd(time)));
+                            shell.publish(on_event(TimelineEvent::TrimEnd(time)));
                         }
                     }
                     Some(Handle::Start) => {
-                        let Some(on_event) = self.on_event else {
-                            return;
-                        };
-                        let time = self.point_to_time(&rail, &position.clone());
+                        let time = self
+                            .time_protect(self.point_to_time(&rail, &position.clone()));
                         if time < 0.0 {
-                            shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                            shell.publish(on_event(TimelineEvent::TrimStart(0.0)));
                         } else if time > self.end || time > self.duration {
                             if self.end < 0.0 {
-                                shell.publish((on_event)(TimelineEvent::TrimStart(0.0)));
+                                shell.publish(on_event(TimelineEvent::TrimStart(0.0)));
                             } else {
-                                shell.publish((on_event)(TimelineEvent::TrimStart(
+                                shell.publish(on_event(TimelineEvent::TrimStart(
                                     self.end,
                                 )));
                             }
                         } else {
-                            shell.publish((on_event)(TimelineEvent::TrimStart(time)));
+                            shell.publish(on_event(TimelineEvent::TrimStart(time)));
                         }
                     }
                     None => return,
                 }
-                shell.capture_event();
-            }
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
-            | Event::Mouse(mouse::Event::CursorLeft)
-            | Event::Mouse(mouse::Event::CursorEntered) => {
-                state.dragging = None;
-                match handle {
-                    Some(Handle::Start) => {
-                        shell.publish((on_event)(TimelineEvent::Released(Handle::Start)));
-                    }
-                    Some(Handle::End) => {
-                        shell.publish((on_event)(TimelineEvent::Released(Handle::End)));
-                    }
-                    Some(Handle::Playhead) => {
-                        shell.publish((on_event)(TimelineEvent::Released(
-                            Handle::Playhead,
-                        )));
-                    }
-                    None => return,
-                }
-                shell.capture_event();
             }
             _ => (),
         }
