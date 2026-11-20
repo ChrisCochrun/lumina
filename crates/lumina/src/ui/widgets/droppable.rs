@@ -613,7 +613,7 @@ pub fn zones_on_point<Message, MF>(
     point: Point,
     options: Option<Vec<Id>>,
     depth: Option<usize>,
-) -> cosmic::app::Task<Message>
+) -> cosmic::Task<Message>
 where
     Message: Send + 'static,
     MF: Fn(Vec<(Id, Rectangle)>) -> Message + MaybeSend + Sync + Clone + 'static,
@@ -624,7 +624,6 @@ where
         depth,
     ))
     .map(msg)
-    .map(cosmic::Action::App)
 }
 
 pub fn find_zones<Message, MF, F>(
@@ -632,7 +631,7 @@ pub fn find_zones<Message, MF, F>(
     filter: F,
     options: Option<Vec<Id>>,
     depth: Option<usize>,
-) -> cosmic::app::Task<Message>
+) -> cosmic::Task<Message>
 where
     Message: Send + 'static,
     MF: Fn(Vec<(Id, Rectangle)>) -> Message + MaybeSend + Sync + Clone + 'static,
@@ -642,5 +641,4 @@ where
         filter, options, depth,
     ))
     .map(msg)
-    .map(cosmic::Action::App)
 }

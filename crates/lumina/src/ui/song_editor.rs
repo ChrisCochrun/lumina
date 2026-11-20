@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{self};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use cosmic::cosmic_theme::Spacing;
@@ -13,7 +13,6 @@ use cosmic::dialog::file_chooser::FileFilter;
 use cosmic::dialog::file_chooser::open::Dialog;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
-use cosmic::iced::core::widget::tree;
 use cosmic::iced::font::{Style, Weight};
 use cosmic::iced::widget::scrollable::{
     self as iced_scrollable, AbsoluteOffset, Direction, Scrollbar,
@@ -24,15 +23,13 @@ use cosmic::iced::{
     Rectangle, Shadow, Vector, color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
-use cosmic::widget::dnd_destination::dnd_destination_for_data;
 use cosmic::widget::grid::{self};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    ColorPickerModel, Id, JustifyContent, RcElementWrapper, button, checkbox, combo_box,
-    container, divider, dnd_destination, dnd_source, dropdown, flex_row, icon,
-    indeterminate_circular, mouse_area, popover, scrollable, slider, text, text_editor,
-    text_input, tooltip,
+    ColorPickerModel, Id, JustifyContent, button, checkbox, combo_box, container,
+    divider, dropdown, flex_row, icon, indeterminate_circular, mouse_area, popover,
+    scrollable, slider, text, text_editor, text_input, tooltip,
 };
 use cosmic::{Apply, Element, Task, theme};
 use derive_more::Debug;
@@ -53,12 +50,14 @@ use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
 use crate::ui::slide_editor::SlideEditor;
 use crate::ui::widgets::draggable;
-use crate::ui::widgets::droppable::droppable;
+use crate::ui::widgets::droppable::{droppable, find_zones};
 use crate::ui::widgets::verse_editor::{self, VerseEditor};
 use crate::{Background, BackgroundKind};
 
 static AUDIO_SPEEDS: [&str; 3] = ["1x", "1.5x", "2x"];
 static AUDIO_SPEED_FACTORS: [f32; 3] = [1.0, 1.5, 2.0];
+static VERSE_SPACING: LazyLock<u16> =
+    std::sync::LazyLock::new(|| theme::spacing().space_s);
 
 // This should get refactored into holding a state machine
 // then each state of what is being edited can be caught by the compiler
@@ -100,9 +99,11 @@ pub struct SongEditor {
     stroke_color_model: ColorPickerModel,
     verses: Option<Vec<VerseEditor>>,
     verses_scroll_id: Id,
+    verse_drag_ids: Vec<Id>,
+    drag_session: Option<DragSession>,
+    verse_phantom_id: Id,
     hovered_verse_chip: Option<usize>,
     hovered_dnd_verse_chip: Option<usize>,
-    dragging_verse_chip: bool,
     update_slide_handle: Option<task::Handle>,
     shadow_color_model: ColorPickerModel,
     importing: bool,
@@ -153,7 +154,6 @@ pub enum Message {
     ChipDndHovered(Option<usize>),
     ChipDropped((usize, Option<VerseName>)),
     ChipReorder(Vec<usize>),
-    DraggingChipStart,
     ChipDroppedEnd((Vec<u8>, String)),
     AddVerse((VerseName, String)),
     RemoveVerse(usize),
@@ -177,10 +177,14 @@ pub enum Message {
     PlayPauseAudio,
     SeekAudio(f64),
     SetAudioSpeed(usize),
-    DragChip(Point, Rectangle),
+    DragChip(VerseName, Point, Rectangle),
     DragZonesFound(Vec<(Id, Rectangle)>),
-    DropZonesFound(Vec<(Id, Rectangle)>),
-    DropChip(Point, Rectangle),
+    DropZonesFound {
+        verse: VerseName,
+        zones: Vec<(Id, Rectangle)>,
+    },
+    DropChip(VerseName, Point, Rectangle),
+    DropCancel,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -206,6 +210,26 @@ impl State {
 
 #[derive(Debug, Clone)]
 pub struct Face(fontdb::FaceInfo);
+
+#[derive(Debug, Clone, PartialEq)]
+struct DragSession {
+    payload: DragPayload,
+    point: Point,
+    preview_bounds: Rectangle,
+    target: Option<DropTarget>,
+    zones: Vec<(usize, Rectangle)>,
+    phantom_bounds: Option<Rectangle>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum DragPayload {
+    Verse(VerseName),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum DropTarget {
+    VerseInsertion(usize),
+}
 
 impl Display for Face {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -400,9 +424,11 @@ impl SongEditor {
             verses: None,
             verses_scroll_id: Id::unique(),
             editing_verse_order: false,
+            drag_session: None,
+            verse_drag_ids: vec![Id::unique()],
+            verse_phantom_id: Id::unique(),
             hovered_dnd_verse_chip: None,
             hovered_verse_chip: None,
-            dragging_verse_chip: false,
             update_slide_handle: None,
             shadow_color_model: ColorPickerModel::new(
                 "hex",
@@ -450,6 +476,12 @@ impl SongEditor {
                         self.font = None;
                     }
                 }
+                self.verse_drag_ids = vec![Id::unique()];
+                if let Some(verses) = &song.verses {
+                    self.verse_drag_ids
+                        .resize_with(verses.len() + 1, Id::unique);
+                }
+
                 if let Some(font_size) = song.font_size {
                     self.font_size = usize::try_from(font_size)
                         .expect("There shouldn't be a negative font_size");
@@ -945,20 +977,126 @@ impl SongEditor {
                 // draggable::DragEvent::Picked { .. }
                 // | draggable::DragEvent::Canceled { .. } => (),
             }
-            Message::DragChip(point, rectangle) => {
-                todo!()
+            Message::DropCancel => {
+                self.drag_session = None;
+            }
+            Message::DragChip(verse, point, preview_bounds) => {
+                if let Some(session) = &mut self.drag_session {
+                    session.payload = DragPayload::Verse(verse);
+                    session.point = point;
+                    session.preview_bounds = preview_bounds;
+                    // session.target = verse_insertion_target(point, &session.zones);
+                    // Keep the current target until the zone result arrives.
+                } else {
+                    self.drag_session = Some(DragSession {
+                        payload: DragPayload::Verse(verse),
+                        point,
+                        preview_bounds,
+                        target: None,
+                        zones: Vec::new(),
+                        phantom_bounds: None,
+                    });
+                }
+                let mut ids = self.verse_drag_ids.clone();
+                ids.push(self.verse_phantom_id.clone());
+
+                return Action::Task(find_zones(
+                    Message::DragZonesFound,
+                    |_| true,
+                    Some(ids),
+                    None,
+                ));
             }
             Message::DragZonesFound(zones) => {
-                todo!()
+                let phantom_bounds = zones.iter().find_map(|(id, bounds)| {
+                    if id == &self.verse_phantom_id {
+                        Some(bounds)
+                    } else {
+                        None
+                    }
+                });
+                let chip_zones = zones
+                    .iter()
+                    .filter_map(|(id, bounds)| {
+                        self.verse_drag_ids
+                            .iter()
+                            .position(|target_id| target_id == id)
+                            .map(|index| (index, bounds.clone()))
+                    })
+                    .collect();
+
+                if let Some(session) = &mut self.drag_session {
+                    session.zones = chip_zones;
+                    session.phantom_bounds = phantom_bounds.copied();
+
+                    if let Some(target) =
+                        verse_insertion_target(session.point, &session.zones)
+                    {
+                        session.target = Some(target);
+                    } else if phantom_bounds.is_some_and(|bounds| {
+                        verse_hit_bounds(*bounds).contains(session.point)
+                    }) {
+                        // Over the phantom or its adjacent half-gap:
+                        // preserve the current insertion target.
+                    } else {
+                        session.target = None;
+                    }
+                }
             }
-            Message::DropZonesFound(zones) => {
-                todo!()
+            Message::DropZonesFound { verse, zones } => {
+                let Some(index) = zones.iter().find_map(|(id, _)| {
+                    self.verse_drag_ids
+                        .iter()
+                        .position(|target_id| target_id == id)
+                }) else {
+                    return Action::None;
+                };
+
+                let Some(mut song) = self.song.clone() else {
+                    return Action::None;
+                };
+
+                let order = song.verses.get_or_insert_with(Vec::new);
+                order.insert(index, verse);
+                self.drag_session = None;
+                return Action::Task(self.update_song(&song));
             }
-            Message::DropChip(point, rectangle) => {
-                todo!()
-            }
-            Message::DraggingChipStart => {
-                self.dragging_verse_chip = !self.dragging_verse_chip;
+            Message::DropChip(verse, point, _rectangle) => {
+                let target = self.drag_session.take().and_then(|session| {
+                    verse_insertion_target(point, &session.zones).or_else(|| {
+                        if session.phantom_bounds.is_some_and(|bounds| {
+                            verse_hit_bounds(bounds).contains(point)
+                        }) {
+                            session.target
+                        } else {
+                            None
+                        }
+                    })
+                });
+
+                let Some(DropTarget::VerseInsertion(index)) = target else {
+                    return Action::None;
+                };
+
+                let Some(mut song) = self.song.clone() else {
+                    return Action::None;
+                };
+
+                let order = song.verses.get_or_insert_with(Vec::new);
+
+                // Protect against the order changing during the drag.
+                if index > order.len() {
+                    return Action::None;
+                }
+
+                order.insert(index, verse);
+                return Action::Task(self.update_song(&song));
+                // return Action::Task(zones_on_point(
+                //     move |zones| Message::DropZonesFound { verse, zones },
+                //     point,
+                //     Some(self.verse_drag_ids.clone()),
+                //     None,
+                // ));
             }
             Message::ToggleAlignmentTools => {
                 self.state = match self.state {
@@ -1337,7 +1475,6 @@ impl SongEditor {
 
     fn left_column(&self) -> Element<Message> {
         let cosmic::cosmic_theme::Spacing {
-            space_xxs,
             space_s,
             space_m,
             space_l,
@@ -1378,34 +1515,16 @@ impl SongEditor {
                             let verse = *verse;
                             let chip = verse_chip(verse, None);
                             droppable(chip)
-                                .on_drag(Message::DragChip)
-                                .on_drop(Message::DropChip)
+                                .on_drag(move |point, bounds| {
+                                    Message::DragChip(verse, point, bounds)
+                                })
+                                .on_drop(move |point, bounds| {
+                                    Message::DropChip(verse, point, bounds)
+                                })
+                                .on_cancel(Message::DropCancel)
                                 .drag_center(true)
                                 .drag_hide(true)
                                 .into()
-                            // let verse_chip_wrapped =
-                            //     RcElementWrapper::<Message>::new(chip);
-                            // Element::from(
-                            //     dnd_source::<Message, Box<VerseName>>(
-                            //         verse_chip_wrapped.clone(),
-                            //     )
-                            //     .on_start(Some(Message::DraggingChipStart))
-                            //     .on_finish(Some(Message::DraggingChipStart))
-                            //     .on_cancel(Some(Message::DraggingChipStart))
-                            //     .drag_content(move || Box::new(verse))
-                            //     .drag_icon(move |_v| {
-                            //         let state: tree::State =
-                            //             cosmic::widget::Widget::<Message, _, _>::state(
-                            //                 &verse_chip_wrapped,
-                            //             );
-                            //         (
-                            //             Element::from(verse_chip_wrapped.clone())
-                            //                 .map(|_| ()),
-                            //             state,
-                            //             Vector::new(-15.0, -15.0),
-                            //         )
-                            //     }),
-                            // )
                         })
                         .collect()
                 })
@@ -1443,91 +1562,40 @@ impl SongEditor {
                                     .apply(mouse_area)
                                     .on_enter(Message::ChipHovered(Some(index)))
                                     .on_exit(Message::ChipHovered(None))
-                                    .into();
-                            if let Some(hovered_chip) = self.hovered_dnd_verse_chip
-                                && index == hovered_chip
-                            {
-                                let phantom_chip = space::horizontal()
-                                    .width(60)
-                                    .height(19)
                                     .apply(container)
-                                    .padding(
-                                        Padding::new(space_xxs.into())
-                                            .right(space_s)
-                                            .left(space_s),
-                                    )
-                                    .class(theme::Container::Custom(Box::new(
-                                        move |t| {
-                                            container::Style::default()
-                                                .background(ContainerBackground::Color(
-                                                    Color::from(
-                                                        t.cosmic().secondary(false).base,
-                                                    )
-                                                    .scale_alpha(0.5),
-                                                ))
-                                                .border(
-                                                    Border::default()
-                                                        .rounded(space_m as u8)
-                                                        .width(2),
-                                                )
-                                        },
-                                    )));
+                                    .id(self.verse_drag_ids[index].clone())
+                                    .into();
+                            if self.drag_session.as_ref().is_some_and(|session| {
+                                session.target.as_ref().is_some_and(|id| {
+                                    *id == DropTarget::VerseInsertion(index)
+                                })
+                            }) {
+                                let phantom_chip = phantom_chip()
+                                    .apply(container)
+                                    .id(self.verse_phantom_id.clone());
                                 chip = row![phantom_chip, chip].spacing(space_s).into();
                             }
-
-                            Element::from(
-                                dnd_destination_for_data::<VerseName, Message>(
-                                    chip,
-                                    move |data, _| {
-                                        debug!(?data);
-                                        Message::ChipDropped((index, data))
-                                    },
-                                )
-                                .on_enter(move |x, y, mimes| {
-                                    debug!(x, y, ?mimes);
-                                    Message::ChipDndHovered(Some(index))
-                                })
-                                .on_leave(|| {
-                                    debug!("Leaving");
-                                    Message::ChipDndHovered(None)
-                                })
-                                .on_drop(|x, y| {
-                                    debug!(x, y);
-                                    Message::None
-                                }),
-                            )
+                            chip
                         })
                         .collect()
                 })
             });
 
-        let _verse_order_length = verse_order_items.len();
-        let verse_order_items: Element<Message> = if self.dragging_verse_chip {
-            let ending_dnd_dest = dnd_destination(
-                space::horizontal().height(19),
-                vec!["application/verse".into()],
+        let end_index = verse_order_items.len();
+        if self.drag_session.as_ref().is_some_and(|session| {
+            session.target == Some(DropTarget::VerseInsertion(end_index))
+        }) {
+            verse_order_items.push(
+                phantom_chip()
+                    .apply(container)
+                    .id(self.verse_phantom_id.clone())
+                    .into(),
             )
-            .on_enter(|_, _, _| {
-                debug!("Entering the space");
-                Message::ChipDndHovered(None)
-            })
-            .on_leave(|| Message::ChipDndHovered(None))
-            .on_finish(move |mime, data, _action, _x, _y| {
-                Message::ChipDroppedEnd((data, mime))
-            });
-            verse_order_items.push(ending_dnd_dest.into());
-            flex_row(verse_order_items)
-                .justify_content(JustifyContent::START)
-                .align_items(cosmic::iced::Alignment::Start)
-                .spacing(space_s)
-                .into()
-        } else {
-            draggable::flex_row(Message::ChipReorder)
-                .extend(verse_order_items.into_iter().enumerate())
-                .width(Length::Fill)
-                .spacing(space_s)
-                .into()
-        };
+        }
+        let verse_order_items = draggable::flex_row(Message::ChipReorder)
+            .extend(verse_order_items.into_iter().enumerate())
+            .width(Length::Fill)
+            .spacing(*VERSE_SPACING);
 
         let verse_order = container(row![
             verse_order_items,
@@ -2259,6 +2327,12 @@ impl SongEditor {
 
     fn update_song(&mut self, song: &Song) -> Task<Message> {
         // I think this implementation is faster
+        self.verse_drag_ids = vec![Id::unique()];
+        if let Some(verses) = &song.verses {
+            self.verse_drag_ids
+                .resize_with(verses.len() + 1, Id::unique);
+        }
+
         let mut tasks = Vec::with_capacity(2);
         if let Ok(slides) = song.to_slides() {
             // let font_db = Arc::clone(&self.font_db);
@@ -2284,23 +2358,6 @@ impl SongEditor {
             let (task, handle) =
                 Task::stream(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
                     .abortable();
-
-            // let (task, handle) = Task::perform(
-            //     async move {
-            //         slides
-            //             .into_par_iter()
-            //             .map(|s| {
-            //                 text_svg::text_svg_generator(
-            //                     s.clone(),
-            //                     &font_db,
-            //                 )
-            //                 .unwrap_or(s)
-            //             })
-            //             .collect::<Vec<Slide>>()
-            //     },
-            //     Message::UpdateSlides,
-            // )
-            // .abortable();
 
             self.update_slide_handle = Some(handle);
             tasks.push(task);
@@ -2379,6 +2436,19 @@ impl SongEditor {
 
         self.audio_position = self.audio_duration.map(|duration| position.min(duration));
     }
+
+    // fn sync_verse_drop_targets(&mut self, order: &[VerseName]) {
+    //     if self.verse_drag_order.as_slice() == order {
+    //         return;
+    //     }
+
+    //     self.verse_drop_order = order.to_vec();
+    //     self.verse_drop_revision = self.verse_drop_revision.wrapping_add(1);
+
+    //     // Existing IDs continue to identify insertion positions.
+    //     // Additional positions get fresh IDs.
+    //     self.verse_drop_ids.resize_with(order.len() + 1, Id::unique);
+    // }
 }
 
 #[allow(clippy::unreadable_literal)]
@@ -2519,6 +2589,54 @@ async fn pick_background() -> Result<PathBuf, SongError> {
     //     .await
     //     .ok_or(SongError::BackgroundDialogClosed)
     //     .map(|file| file.path().to_owned())
+}
+
+fn verse_hit_bounds(bounds: Rectangle) -> Rectangle {
+    let half_gap = f32::from(*VERSE_SPACING) / 2.0;
+
+    Rectangle {
+        x: bounds.x - half_gap,
+        width: bounds.width + half_gap * 2.0,
+        ..bounds
+    }
+}
+
+fn verse_insertion_target(
+    point: Point,
+    zones: &[(usize, Rectangle)],
+) -> Option<DropTarget> {
+    zones.iter().find_map(|(index, bounds)| {
+        if !verse_hit_bounds(*bounds).contains(point) {
+            return None;
+        }
+
+        let split = bounds.x + bounds.width / 3.0;
+        let insertion = if point.x < split { *index } else { *index + 1 };
+
+        Some(DropTarget::VerseInsertion(insertion))
+    })
+}
+
+fn phantom_chip() -> Element<'static, Message> {
+    let Spacing {
+        space_xxs,
+        space_s,
+        space_m,
+        ..
+    } = theme::spacing();
+    space::horizontal()
+        .width(60)
+        .height(19)
+        .apply(container)
+        .padding(Padding::new(space_xxs.into()).right(space_s).left(space_s))
+        .class(theme::Container::Custom(Box::new(move |t| {
+            container::Style::default()
+                .background(ContainerBackground::Color(
+                    Color::from(t.cosmic().secondary(false).base).scale_alpha(0.5),
+                ))
+                .border(Border::default().rounded(space_m as u8).width(2))
+        })))
+        .into()
 }
 
 #[derive(Debug, Clone)]
