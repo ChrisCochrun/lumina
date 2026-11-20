@@ -2349,8 +2349,6 @@ impl SongEditor {
                     {
                         error!(?error);
                     }
-                    // let slide = text_svg::text_svg_generator(slide.clone(), &font_db)
-                    //     .unwrap_or(slide);
                     let _ = tx.send(Message::UpdateSlide((index, slide)));
                 }
             });
@@ -2596,7 +2594,7 @@ fn verse_hit_bounds(bounds: Rectangle) -> Rectangle {
 
     Rectangle {
         x: bounds.x - half_gap,
-        width: bounds.width + half_gap * 2.0,
+        width: bounds.width + f32::from(*VERSE_SPACING),
         ..bounds
     }
 }
