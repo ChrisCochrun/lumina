@@ -20,8 +20,8 @@ use cosmic::iced::widget::scrollable::{
 };
 use cosmic::iced::widget::{column, row, stack};
 use cosmic::iced::{
-    Background as ContainerBackground, Border, Color, ContentFit, Length, Padding,
-    Shadow, Vector, color, task,
+    Background as ContainerBackground, Border, Color, ContentFit, Length, Padding, Point,
+    Rectangle, Shadow, Vector, color, task,
 };
 use cosmic::widget::color_picker::ColorPickerUpdate;
 use cosmic::widget::dnd_destination::dnd_destination_for_data;
@@ -53,6 +53,7 @@ use crate::core::song_search::{self, OnlineSong};
 use crate::core::songs::{Song, VerseName};
 use crate::ui::slide_editor::SlideEditor;
 use crate::ui::widgets::draggable;
+use crate::ui::widgets::droppable::droppable;
 use crate::ui::widgets::verse_editor::{self, VerseEditor};
 use crate::{Background, BackgroundKind};
 
@@ -176,6 +177,10 @@ pub enum Message {
     PlayPauseAudio,
     SeekAudio(f64),
     SetAudioSpeed(usize),
+    DragChip(Point, Rectangle),
+    DragZonesFound(Vec<(Id, Rectangle)>),
+    DropZonesFound(Vec<(Id, Rectangle)>),
+    DropChip(Point, Rectangle),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -940,6 +945,18 @@ impl SongEditor {
                 // draggable::DragEvent::Picked { .. }
                 // | draggable::DragEvent::Canceled { .. } => (),
             }
+            Message::DragChip(point, rectangle) => {
+                todo!()
+            }
+            Message::DragZonesFound(zones) => {
+                todo!()
+            }
+            Message::DropZonesFound(zones) => {
+                todo!()
+            }
+            Message::DropChip(point, rectangle) => {
+                todo!()
+            }
             Message::DraggingChipStart => {
                 self.dragging_verse_chip = !self.dragging_verse_chip;
             }
@@ -1360,29 +1377,35 @@ impl SongEditor {
                         .map(|verse| {
                             let verse = *verse;
                             let chip = verse_chip(verse, None);
-                            let verse_chip_wrapped =
-                                RcElementWrapper::<Message>::new(chip);
-                            Element::from(
-                                dnd_source::<Message, Box<VerseName>>(
-                                    verse_chip_wrapped.clone(),
-                                )
-                                .on_start(Some(Message::DraggingChipStart))
-                                .on_finish(Some(Message::DraggingChipStart))
-                                .on_cancel(Some(Message::DraggingChipStart))
-                                .drag_content(move || Box::new(verse))
-                                .drag_icon(move |_v| {
-                                    let state: tree::State =
-                                        cosmic::widget::Widget::<Message, _, _>::state(
-                                            &verse_chip_wrapped,
-                                        );
-                                    (
-                                        Element::from(verse_chip_wrapped.clone())
-                                            .map(|_| ()),
-                                        state,
-                                        Vector::new(-15.0, -15.0),
-                                    )
-                                }),
-                            )
+                            droppable(chip)
+                                .on_drag(Message::DragChip)
+                                .on_drop(Message::DropChip)
+                                .drag_center(true)
+                                .drag_hide(true)
+                                .into()
+                            // let verse_chip_wrapped =
+                            //     RcElementWrapper::<Message>::new(chip);
+                            // Element::from(
+                            //     dnd_source::<Message, Box<VerseName>>(
+                            //         verse_chip_wrapped.clone(),
+                            //     )
+                            //     .on_start(Some(Message::DraggingChipStart))
+                            //     .on_finish(Some(Message::DraggingChipStart))
+                            //     .on_cancel(Some(Message::DraggingChipStart))
+                            //     .drag_content(move || Box::new(verse))
+                            //     .drag_icon(move |_v| {
+                            //         let state: tree::State =
+                            //             cosmic::widget::Widget::<Message, _, _>::state(
+                            //                 &verse_chip_wrapped,
+                            //             );
+                            //         (
+                            //             Element::from(verse_chip_wrapped.clone())
+                            //                 .map(|_| ()),
+                            //             state,
+                            //             Vector::new(-15.0, -15.0),
+                            //         )
+                            //     }),
+                            // )
                         })
                         .collect()
                 })
