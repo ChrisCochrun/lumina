@@ -8,14 +8,14 @@ use cosmic::iced::core::text::{Ellipsize, EllipsizeHeightLimit};
 use cosmic::iced::core::widget::tree::State as TreeState;
 use cosmic::iced::keyboard::Modifiers;
 use cosmic::iced::widget::{column, row as rowm, text as textm};
-use cosmic::iced::{Background, Border, Color, Length, Point};
-use cosmic::widget::menu;
+use cosmic::iced::{Background, Border, Color, Length, Point, Rectangle, id, mouse};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
     Container, DndSource, Space, button, container, divider, dnd_destination, icon,
     indeterminate_circular, mouse_area, popover, row, scrollable, text, text_input,
 };
+use cosmic::widget::{Id, menu};
 use cosmic::{Apply, Element, Task, theme};
 use itertools::Itertools;
 use miette::{Context, IntoDiagnostic, Result};
@@ -35,6 +35,7 @@ use crate::core::presentations::{self, Presentation};
 use crate::core::service_items::ServiceItem;
 use crate::core::songs::{self, Song, insert_song};
 use crate::core::videos::{self, Video};
+use crate::ui::widgets::droppable::{droppable, find_zones};
 
 #[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone)]
@@ -63,6 +64,7 @@ pub struct Library {
     pub potential_videos: Option<Vec<Video>>,
     pub potential_images: Option<Vec<Image>>,
     pub potential_presentations: Option<Vec<Presentation>>,
+    pub(crate) drag_session: Option<DragSession>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -80,6 +82,22 @@ pub enum Action {
     CreateSong,
     None,
     SplitPresentationFinished((Presentation, Presentation)),
+    DragZonesFound(Vec<(Id, Rectangle)>),
+    DropItem((usize, LibraryKind), Point, Rectangle),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct DragSession {
+    pub(crate) item_id: (usize, LibraryKind),
+    pub(crate) target: Option<DropTarget>,
+    pub(crate) point: Point,
+    pub(crate) bounds: Rectangle,
+    pub(crate) zones: Vec<(usize, Rectangle)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum DropTarget {
+    Service(usize),
 }
 
 #[derive(Clone, Debug)]
@@ -94,7 +112,6 @@ pub enum Message {
     HoverItem(Option<(LibraryKind, i32)>),
     SelectItem(Option<(LibraryKind, i32)>),
     SearchLibrary(String),
-    DragItem(ServiceItem),
     UpdateSong(Song),
     SongChanged,
     UpdateImage(Image),
@@ -125,6 +142,10 @@ pub enum Message {
     AddVideosFinished(Vec<Video>),
     UpdateVideoFinished(Video),
     RemoveVideoIdsFinished(Vec<i32>),
+    DragItem((usize, LibraryKind), Point, Rectangle),
+    DragZonesFound(Vec<(Id, Rectangle)>),
+    DropItem((usize, LibraryKind), Point, Rectangle),
+    DragCancel,
 }
 
 impl Action {
@@ -178,6 +199,7 @@ impl<'a> Library {
             potential_videos: None,
             potential_images: None,
             potential_presentations: None,
+            drag_session: None,
         }
     }
 
@@ -565,10 +587,36 @@ impl<'a> Library {
                     self.selected_items = Some(items.clone());
                 }
             }
-            Message::DragItem(item) => {
-                debug!(?item);
+            Message::DragItem(item_id, point, bounds) => {
+                if let Some(session) = &mut self.drag_session {
+                    session.point = point;
+                    session.bounds = bounds;
+                    session.item_id = item_id;
+                } else {
+                    self.drag_session = Some(DragSession {
+                        item_id,
+                        target: None,
+                        point,
+                        bounds,
+                        zones: Vec::new(),
+                    })
+                }
                 // self.dragged_item = item;
-                return Action::DraggedItem(item);
+                return Action::Task(find_zones(
+                    Message::DragZonesFound,
+                    |_| true,
+                    None,
+                    None,
+                ));
+            }
+            Message::DropItem(item_id, point, bounds) => {
+                return Action::DropItem(item_id, point, bounds);
+            }
+            Message::DragCancel => {
+                self.drag_session = None;
+            }
+            Message::DragZonesFound(zones) => {
+                return Action::DragZonesFound(zones);
             }
             Message::UpdateSong(song) => {
                 let Some((kind, _index)) = self.editing_item else {
@@ -904,49 +952,61 @@ impl<'a> Library {
                                 i32::try_from(index).expect("shouldn't be negative");
                             let kind = model.kind;
                             let visual_item = self.single_item(index, item, model);
+                            let item_id = (index, kind);
+                            let item = visual_item
+                                .apply(droppable)
+                                .interaction(mouse::Interaction::default())
+                                .on_click(Message::SelectItem(Some((
+                                    model.kind, i32_index,
+                                ))))
+                                .on_drop(move |point, bounds| {
+                                    Message::DropItem(item_id, point, bounds)
+                                })
+                                .on_drag(move |point, bounds| {
+                                    Message::DragItem(item_id, point, bounds)
+                                })
+                                .on_cancel(Message::DragCancel)
+                                .drag_center(true)
+                                .drag_hide(false);
+                            let item = mouse_area(item)
+                                .on_move(Message::HoverPoint)
+                                .on_enter(Message::HoverItem(Some((
+                                    model.kind, i32_index,
+                                ))))
+                                .on_double_click(Message::AccessItem(Some((
+                                    model.kind, i32_index,
+                                ))))
+                                .on_right_press(Message::OpenContext(Some(i32_index)))
+                                .on_exit(Message::HoverItem(None));
 
-                            let item = DndSource::<Message, KindWrapper>::new({
-                                let mouse_area = mouse_area(visual_item);
-                                let mouse_area = mouse_area
-                                    .on_move(Message::HoverPoint)
-                                    .on_enter(Message::HoverItem(Some((
-                                        model.kind, i32_index,
-                                    ))))
-                                    .on_double_click(Message::AccessItem(Some((
-                                        model.kind, i32_index,
-                                    ))))
-                                    .on_right_press(Message::OpenContext(Some(i32_index)))
-                                    .on_exit(Message::HoverItem(None))
-                                    .on_press(Message::SelectItem(Some((
-                                        model.kind, i32_index,
-                                    ))));
+                            // let item = DndSource::<Message, KindWrapper>::new({
 
-                                Element::from(mouse_area)
-                            })
-                            .action(DndAction::Copy)
-                            .drag_icon({
-                                let model = model.kind;
-                                move |i| {
-                                    let state = TreeState::None;
-                                    let icon = match model {
-                                        LibraryKind::Song => {
-                                            icon::from_name("folder-music-symbolic")
-                                                .symbolic(true)
-                                        }
-                                        LibraryKind::Video => {
-                                            icon::from_name("folder-videos-symbolic")
-                                        }
-                                        LibraryKind::Image => {
-                                            icon::from_name("folder-pictures-symbolic")
-                                        }
-                                        LibraryKind::Presentation => icon::from_name(
-                                            "x-office-presentation-symbolic",
-                                        ),
-                                    };
-                                    (icon.into(), state, i)
-                                }
-                            })
-                            .drag_content(move || KindWrapper((kind, i32_index)));
+                            //     Element::from(mouse_area)
+                            // })
+                            // .action(DndAction::Copy)
+                            // .drag_icon({
+                            //     let model = model.kind;
+                            //     move |i| {
+                            //         let state = TreeState::None;
+                            //         let icon = match model {
+                            //             LibraryKind::Song => {
+                            //                 icon::from_name("folder-music-symbolic")
+                            //                     .symbolic(true)
+                            //             }
+                            //             LibraryKind::Video => {
+                            //                 icon::from_name("folder-videos-symbolic")
+                            //             }
+                            //             LibraryKind::Image => {
+                            //                 icon::from_name("folder-pictures-symbolic")
+                            //             }
+                            //             LibraryKind::Presentation => icon::from_name(
+                            //                 "x-office-presentation-symbolic",
+                            //             ),
+                            //         };
+                            //         (icon.into(), state, i)
+                            //     }
+                            // })
+                            // .drag_content(move || KindWrapper((kind, i32_index)));
 
                             self.context_menu(item.into(), kind, i32_index)
                         })

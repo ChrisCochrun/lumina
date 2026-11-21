@@ -19,7 +19,7 @@ use cosmic::iced::keyboard::{Key, Modifiers};
 use cosmic::iced::widget::{column, progress_bar, row, stack};
 use cosmic::iced::window::Position;
 use cosmic::iced::{
-    self, Background as IcedBackground, Border, Color, Length, Padding, Point,
+    self, Background as IcedBackground, Border, Color, Length, Padding, Point, Rectangle,
     Subscription, event, window,
 };
 use cosmic::widget::dnd_destination::dnd_destination;
@@ -29,7 +29,7 @@ use cosmic::widget::menu::{ItemWidth, KeyBind};
 use cosmic::widget::nav_bar::nav_bar_style;
 use cosmic::widget::space::{self, horizontal};
 use cosmic::widget::{
-    Container, Space, button, container, divider, icon, menu, mouse_area, nav_bar,
+    Container, Id, Space, button, container, divider, icon, menu, mouse_area, nav_bar,
     nav_bar_toggle, popover, responsive, scrollable, search_input, settings, slider,
     text, text_input, tooltip,
 };
@@ -223,6 +223,7 @@ struct App {
     current_item: (usize, usize),
     hovered_item: Option<usize>,
     hovered_dnd: Option<usize>,
+    service_drag_zones: Vec<cosmic::widget::Id>,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -504,6 +505,7 @@ impl cosmic::Application for App {
             font_system,
             fdsm_context,
             menu_keys,
+            service_drag_zones: Vec::new(),
             hovered_item: None,
             hovered_dnd: None,
             context_menu: None,
@@ -1303,8 +1305,61 @@ impl cosmic::Application for App {
                             }
                         },
                         library::Action::DraggedItem(service_item) => {
-                            debug!("hi");
                             self.library_dragged_item = Some(service_item);
+                        }
+                        library::Action::DragZonesFound(zones) => {
+                            let zones: Vec<(usize, Rectangle)> = zones
+                                .into_iter()
+                                .filter_map(|(id, bounds)| {
+                                    self.service_drag_zones
+                                        .iter()
+                                        .position(|target_id| *target_id == id)
+                                        .map(|index| (index, bounds))
+                                })
+                                .collect();
+                            if let Some(library) = &mut self.library
+                                && let Some(session) = &mut library.drag_session
+                            {
+                                session.target = zones.iter().find_map(|(id, bounds)| {
+                                    if !bounds.contains(session.point) {
+                                        None
+                                    } else {
+                                        Some(library::DropTarget::Service(*id))
+                                    }
+                                });
+                                session.zones = zones;
+                            }
+                        }
+                        library::Action::DropItem((item_index, kind), point, bounds) => {
+                            let Some(library) = &mut self.library else {
+                                return Task::none();
+                            };
+
+                            let target =
+                                library.drag_session.take().and_then(|session| {
+                                    session.zones.iter().find_map(|(id, bounds)| {
+                                        if !bounds.contains(point) {
+                                            None
+                                        } else {
+                                            Some(library::DropTarget::Service(*id))
+                                        }
+                                    })
+                                });
+                            let Some(library::DropTarget::Service(service_index)) =
+                                target
+                            else {
+                                return Task::none();
+                            };
+
+                            return self.update(Message::AddServiceItemKind(
+                                service_index,
+                                KindWrapper((
+                                    kind,
+                                    item_index
+                                        .try_into()
+                                        .expect("library ids should easily cast"),
+                                )),
+                            ));
                         }
                     }
                 }
@@ -1518,6 +1573,8 @@ impl cosmic::Application for App {
                 }
 
                 Arc::make_mut(&mut self.service).insert(index, item.clone());
+                self.service_drag_zones
+                    .resize_with(self.service.len() + 1, Id::unique);
                 self.presenter.update_items(self.service.clone());
                 self.hovered_dnd = None;
 
@@ -1754,6 +1811,8 @@ impl cosmic::Application for App {
                     tasks.push(task);
                 }
                 Arc::make_mut(&mut self.service).push(item);
+                self.service_drag_zones
+                    .resize_with(self.service.len() + 1, Id::unique);
                 self.presenter.update_items(Arc::clone(&self.service));
                 Task::batch(tasks)
             }
@@ -2657,16 +2716,39 @@ where
                 Container::new(
                     column![divider, container].spacing(theme::spacing().space_s),
                 )
+            } else if self.library.as_ref().is_some_and(|library| {
+                library.drag_session.as_ref().is_some_and(|session| {
+                    session.target.as_ref().is_some_and(|target| {
+                        target == &library::DropTarget::Service(index)
+                    })
+                })
+            }) {
+                let divider = divider::horizontal::default()
+                    .class(theme::Rule::custom(|t| {
+                        let color = t.cosmic().accent_color();
+                        cosmic::iced::widget::rule::Style {
+                            color: color.into(),
+                            snap: true,
+                            radius: t.cosmic().corner_radii.radius_xs.into(),
+                            fill_mode: cosmic::iced::widget::rule::FillMode::Full,
+                        }
+                    }))
+                    .width(2);
+                Container::new(
+                    column![divider, container].spacing(theme::spacing().space_s),
+                )
             } else {
                 container
             };
-            let mouse_area = mouse_area(visual_item)
-                .on_move(Message::ContextPoint)
-                .on_enter(Message::HoveredServiceItem(Some(index)))
-                .on_exit(Message::HoveredServiceItem(None))
-                .on_double_press(Message::ChangeServiceItem(index))
-                .on_right_press(Message::ContextMenuItem(Some(index)))
-                .on_release(Message::SelectServiceItem(index));
+            let mouse_area =
+                mouse_area(visual_item.id(self.service_drag_zones[index].clone()))
+                    .on_move(Message::ContextPoint)
+                    .on_enter(Message::HoveredServiceItem(Some(index)))
+                    .on_exit(Message::HoveredServiceItem(None))
+                    .on_double_press(Message::ChangeServiceItem(index))
+                    .on_right_press(Message::ContextMenuItem(Some(index)))
+                    .on_release(Message::SelectServiceItem(index));
+
             let single_item = if let Some(context_menu_item) = self.context_menu {
                 let menu_item = |label, message| {
                     menu::menu_button(vec![
@@ -2697,6 +2779,7 @@ where
             } else {
                 Element::from(mouse_area)
             };
+
             let tooltip = tooltip(
                 single_item,
                 text::body(item.kind.to_string()),

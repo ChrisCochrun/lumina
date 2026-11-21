@@ -33,6 +33,7 @@ where
     drag_center: bool,
     drag_size: Option<Size>,
     reset_delay: usize,
+    interaction: Option<mouse::Interaction>,
     status: Option<Status>,
 }
 
@@ -59,6 +60,7 @@ where
             drag_size: None,
             reset_delay: 0,
             status: None,
+            interaction: None,
         }
     }
 
@@ -162,6 +164,13 @@ where
     /// [`Droppable`] returns to its original size before it's moved to its new location.
     pub fn reset_delay(mut self, reset_delay: usize) -> Self {
         self.reset_delay = reset_delay;
+        self
+    }
+
+    /// The [`mouse::Interaction`] to use when hovering the area.
+    #[must_use]
+    pub fn interaction(mut self, interaction: mouse::Interaction) -> Self {
+        self.interaction = Some(interaction);
         self
     }
 }
@@ -451,6 +460,10 @@ where
         _renderer: &Renderer,
     ) -> mouse::Interaction {
         let state = tree.state.downcast_ref::<State>();
+
+        if let Some(interaction) = self.interaction {
+            return interaction;
+        }
 
         if let Action::Drag(_, _) = state.action {
             return mouse::Interaction::Grabbing;

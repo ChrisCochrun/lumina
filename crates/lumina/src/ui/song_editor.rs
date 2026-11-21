@@ -959,23 +959,6 @@ impl SongEditor {
                 debug!(?reordered);
                 song.verses = Some(reordered);
                 return Action::Task(self.update_song(&song));
-
-                // draggable::DragEvent::Dropped {
-                //     index,
-                //     target_index,
-                //     drop_position: _,
-                // } => {
-                //     if let Some(mut song) = self.song.clone()
-                //         && let Some(verses) = song.verses.as_mut()
-                //     {
-                //         let verse = verses.remove(index);
-                //         verses.insert(target_index, verse);
-                //         debug!(?verses);
-                //         return Action::Task(self.update_song(&song));
-                //     }
-                // }
-                // draggable::DragEvent::Picked { .. }
-                // | draggable::DragEvent::Canceled { .. } => (),
             }
             Message::DropCancel => {
                 self.drag_session = None;
