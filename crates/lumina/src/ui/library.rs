@@ -65,6 +65,7 @@ pub struct Library {
     pub potential_images: Option<Vec<Image>>,
     pub potential_presentations: Option<Vec<Presentation>>,
     pub(crate) drag_session: Option<DragSession>,
+    pub(crate) service_drag_zones: Vec<(Id)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,6 +99,7 @@ pub(crate) struct DragSession {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum DropTarget {
     Service(usize),
+    ServiceEnd,
 }
 
 #[derive(Clone, Debug)]
@@ -200,6 +202,7 @@ impl<'a> Library {
             potential_images: None,
             potential_presentations: None,
             drag_session: None,
+            service_drag_zones: Vec::new(),
         }
     }
 
@@ -1238,6 +1241,10 @@ impl<'a> Library {
         } else {
             item
         }
+    }
+
+    pub(crate) fn service_drag_zones(&mut self, zones: Vec<Id>) {
+        self.service_drag_zones = zones;
     }
 
     #[allow(clippy::unused_async)]

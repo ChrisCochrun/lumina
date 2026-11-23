@@ -50,7 +50,7 @@ use rayon::prelude::*;
 use resvg::usvg::fontdb;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use tracing::level_filters::LevelFilter;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::{EnvFilter, Layer};
@@ -224,6 +224,7 @@ struct App {
     hovered_item: Option<usize>,
     hovered_dnd: Option<usize>,
     service_drag_zones: Vec<cosmic::widget::Id>,
+    service_list_end_id: cosmic::widget::Id,
     presentation_open: bool,
     cli_mode: bool,
     library: Option<Library>,
@@ -256,6 +257,9 @@ struct App {
     hovered_point: iced::Point,
     context_point: iced::Point,
 }
+
+static SERVICE_LIST_SPACING: LazyLock<u16> =
+    LazyLock::new(|| cosmic::theme::spacing().space_s);
 
 #[derive(Debug, Clone)]
 enum LoadingState {
@@ -506,6 +510,7 @@ impl cosmic::Application for App {
             fdsm_context,
             menu_keys,
             service_drag_zones: Vec::new(),
+            service_list_end_id: cosmic::widget::Id::unique(),
             hovered_item: None,
             hovered_dnd: None,
             context_menu: None,
@@ -1308,7 +1313,18 @@ impl cosmic::Application for App {
                             self.library_dragged_item = Some(service_item);
                         }
                         library::Action::DragZonesFound(zones) => {
-                            let zones: Vec<(usize, Rectangle)> = zones
+                            let Some(library) = &mut self.library else {
+                                return Task::none();
+                            };
+                            let Some(session) = &mut library.drag_session else {
+                                return Task::none();
+                            };
+                            let end_bounds = zones
+                                .iter()
+                                .find(|(id, _)| id == &self.service_list_end_id)
+                                .map(|(_, bounds)| *bounds);
+
+                            let mut insertion_zones: Vec<(usize, Rectangle)> = zones
                                 .into_iter()
                                 .filter_map(|(id, bounds)| {
                                     self.service_drag_zones
@@ -1317,49 +1333,112 @@ impl cosmic::Application for App {
                                         .map(|index| (index, bounds))
                                 })
                                 .collect();
-                            if let Some(library) = &mut self.library
-                                && let Some(session) = &mut library.drag_session
-                            {
-                                session.target = zones.iter().find_map(|(id, bounds)| {
-                                    if !bounds.contains(session.point) {
-                                        None
+
+                            if let Some(bounds) = end_bounds {
+                                insertion_zones.push((self.service.len(), bounds))
+                            }
+                            let insertion_zones: Vec<(usize, Rectangle)> =
+                                insertion_zones
+                                    .into_iter()
+                                    .map(|(index, bounds)| {
+                                        let bounds =
+                                            bounds.expand(Padding::ZERO.vertical(
+                                                f32::from(*SERVICE_LIST_SPACING) / 2.0,
+                                            ));
+                                        (index, bounds)
+                                    })
+                                    .collect();
+
+                            session.target = insertion_zones
+                                .iter()
+                                .find(|(_, bounds)| bounds.contains(session.point))
+                                .map(|(index, _)| {
+                                    if *index == self.service.len() {
+                                        library::DropTarget::ServiceEnd
                                     } else {
-                                        Some(library::DropTarget::Service(*id))
+                                        library::DropTarget::Service(*index)
                                     }
                                 });
-                                session.zones = zones;
-                            }
+                            session.zones = insertion_zones;
                         }
                         library::Action::DropItem((item_index, kind), point, bounds) => {
                             let Some(library) = &mut self.library else {
                                 return Task::none();
                             };
-
-                            let target =
-                                library.drag_session.take().and_then(|session| {
-                                    session.zones.iter().find_map(|(id, bounds)| {
-                                        if !bounds.contains(point) {
-                                            None
-                                        } else {
-                                            Some(library::DropTarget::Service(*id))
-                                        }
-                                    })
-                                });
-                            let Some(library::DropTarget::Service(service_index)) =
-                                target
-                            else {
+                            let Some(session) = library.drag_session.take() else {
                                 return Task::none();
                             };
 
-                            return self.update(Message::AddServiceItemKind(
-                                service_index,
-                                KindWrapper((
-                                    kind,
-                                    item_index
-                                        .try_into()
-                                        .expect("library ids should easily cast"),
-                                )),
-                            ));
+                            let Some(target) = session.target else {
+                                // potentially do manual rechecking
+                                return Task::none();
+                            };
+                            match target {
+                                library::DropTarget::ServiceEnd => {
+                                    return self.update(Message::AddServiceItemKind(
+                                        self.service.len(),
+                                        KindWrapper((
+                                            kind,
+                                            item_index
+                                                .try_into()
+                                                .expect("library ids should easily cast"),
+                                        )),
+                                    ));
+                                }
+                                library::DropTarget::Service(index) => {
+                                    return self.update(Message::AddServiceItemKind(
+                                        index,
+                                        KindWrapper((
+                                            kind,
+                                            item_index
+                                                .try_into()
+                                                .expect("library ids should easily cast"),
+                                        )),
+                                    ));
+                                }
+                            }
+
+                            // // do end of service first
+                            // if Some(library::DropTarget::ServiceEnd) == session.target
+                            //     && session
+                            //         .zones
+                            //         .iter()
+                            //         .find(|(id, bounds)| {
+                            //             bounds.contains(point)
+                            //                 && *id == self.service.len()
+                            //         })
+                            //         .is_some()
+                            // {
+                            //     return self.update(Message::AddServiceItemKind(
+                            //         self.service.len(),
+                            //         KindWrapper((
+                            //             kind,
+                            //             item_index
+                            //                 .try_into()
+                            //                 .expect("library ids should easily cast"),
+                            //         )),
+                            //     ));
+                            // }
+                            // let target = session.zones.iter().find_map(|(id, bounds)| {
+                            //     if !bounds.contains(point) {
+                            //         None
+                            //     } else {
+                            //         Some(library::DropTarget::Service(*id))
+                            //     }
+                            // });
+                            // if let Some(library::DropTarget::Service(service_index)) =
+                            //     target
+                            // {
+                            //     return self.update(Message::AddServiceItemKind(
+                            //         service_index,
+                            //         KindWrapper((
+                            //             kind,
+                            //             item_index
+                            //                 .try_into()
+                            //                 .expect("library ids should easily cast"),
+                            //         )),
+                            //     ));
+                            // };
                         }
                     }
                 }
@@ -1575,6 +1654,11 @@ impl cosmic::Application for App {
                 Arc::make_mut(&mut self.service).insert(index, item.clone());
                 self.service_drag_zones
                     .resize_with(self.service.len() + 1, Id::unique);
+                if let Some(library) = self.library.as_mut() {
+                    let mut zones = self.service_drag_zones.clone();
+                    zones.push(self.service_list_end_id.clone());
+                    library.service_drag_zones(zones)
+                };
                 self.presenter.update_items(self.service.clone());
                 self.hovered_dnd = None;
 
@@ -1813,6 +1897,11 @@ impl cosmic::Application for App {
                 Arc::make_mut(&mut self.service).push(item);
                 self.service_drag_zones
                     .resize_with(self.service.len() + 1, Id::unique);
+                if let Some(library) = self.library.as_mut() {
+                    let mut zones = self.service_drag_zones.clone();
+                    zones.push(self.service_list_end_id.clone());
+                    library.service_drag_zones(zones)
+                };
                 self.presenter.update_items(Arc::clone(&self.service));
                 Task::batch(tasks)
             }
@@ -2712,7 +2801,7 @@ where
                             fill_mode: cosmic::iced::widget::rule::FillMode::Full,
                         }
                     }))
-                    .width(2);
+                    .height(2);
                 Container::new(
                     column![divider, container].spacing(theme::spacing().space_s),
                 )
@@ -2733,9 +2822,31 @@ where
                             fill_mode: cosmic::iced::widget::rule::FillMode::Full,
                         }
                     }))
-                    .width(2);
+                    .height(2);
                 Container::new(
                     column![divider, container].spacing(theme::spacing().space_s),
+                )
+            } else if self.library.as_ref().is_some_and(|library| {
+                library.drag_session.as_ref().is_some_and(|session| {
+                    session
+                        .target
+                        .as_ref()
+                        .is_some_and(|target| target == &library::DropTarget::ServiceEnd)
+                }) && Some(index) == self.service.len().checked_sub(1)
+            }) {
+                let divider = divider::horizontal::default()
+                    .class(theme::Rule::custom(|t| {
+                        let color = t.cosmic().accent_color();
+                        cosmic::iced::widget::rule::Style {
+                            color: color.into(),
+                            snap: true,
+                            radius: t.cosmic().corner_radii.radius_xs.into(),
+                            fill_mode: cosmic::iced::widget::rule::FillMode::Full,
+                        }
+                    }))
+                    .height(2);
+                Container::new(
+                    column![container, divider].spacing(theme::spacing().space_s),
                 )
             } else {
                 container
@@ -2834,7 +2945,7 @@ where
 
         let scrollable = scrollable(
             draggable::column::column(list)
-                .spacing(10)
+                .spacing(*SERVICE_LIST_SPACING)
                 .on_drag(|event| match event {
                     draggable::DragEvent::Picked { .. }
                     | draggable::DragEvent::Canceled { .. } => Message::None,
@@ -2907,6 +3018,7 @@ where
                 _ => Message::None,
             }),
         )
+        .id(self.service_list_end_id.clone())
         .style(nav_bar_style);
 
         container.center(Length::FillPortion(2)).into()
