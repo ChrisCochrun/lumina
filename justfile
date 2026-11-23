@@ -54,11 +54,56 @@ windows-packager:
 
 ##### Sets up and builds the macos bundle and dmg
 mac-packager:
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo install cargo-packager --locked
-    export PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig
-    export PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/bin:$PATH
-    cargo build --release
-    install_name_tool -add_rpath @executable_path/../Frameworks/GStreamer.framework/Libraries target/release/lumina
+
+    GST="/Library/Frameworks/GStreamer.framework/Versions/1.0"
+    BIN="target/release/lumina"
+    RPATH="@executable_path/../Frameworks/GStreamer.framework/Libraries"
+
+    # Use the official GStreamer SDK, not MacPorts.
+    export PATH="$GST/bin:$PATH"
+    export PKG_CONFIG_PATH="$GST/lib/pkgconfig"
+    export PKG_CONFIG_LIBDIR="$GST/lib/pkgconfig"
+
+    # Verify GStreamer configuration.
+    echo "Using pkg-config:"
+    command -v pkg-config
+
+    echo "GStreamer pkg-config location:"
+    pkg-config --variable=pcfiledir gstreamer-1.0
+
+    echo "GStreamer library directory:"
+    pkg-config --variable=libdir gstreamer-1.0
+
+    echo "GStreamer linker flags:"
+    pkg-config --libs gstreamer-1.0
+
+    # Make sure we're not using the wrong SDK.
+    GST_LIBDIR="$(pkg-config --variable=libdir gstreamer-1.0)"
+
+    if [[ "$GST_LIBDIR" != "$GST/lib" ]]; then
+        echo "ERROR: Unexpected GStreamer library directory:"
+        echo "$GST_LIBDIR"
+        exit 1
+    fi
+
+    # Build Lumina.
+    cargo build -p lumina --release
+
+    # Check for accidental MacPorts dependencies.
+    if otool -L "$BIN" | grep -F "/opt/local/lib/"; then
+        echo "ERROR: Lumina still references MacPorts libraries."
+        exit 1
+    fi
+
+    # Add the bundled framework's library search path.
+    if ! otool -l "$BIN" | grep -Fq "path $RPATH ("; then
+        install_name_tool -add_rpath "$RPATH" "$BIN"
+    fi
+
+    # Create the DMG using the existing Cargo.toml config.
     cargo packager --release -f dmg
 
 ##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
