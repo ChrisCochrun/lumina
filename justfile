@@ -53,6 +53,7 @@ windows-packager:
     # cargo packager --release -f nsis
 
 ##### Sets up and builds the macos bundle and dmg
+[script("bash")]
 mac-packager:
     #!/usr/bin/env bash
     set -euo pipefail
