@@ -59,6 +59,13 @@ mac-packager:
     cargo install cargo-packager --locked
 
     GST="/Library/Frameworks/GStreamer.framework/Versions/1.0"
+
+    export PKG_CONFIG="$GST/bin/pkg-config"
+    export PKG_CONFIG_PATH="$GST/lib/pkgconfig"
+    export PKG_CONFIG_LIBDIR="$GST/lib/pkgconfig"
+    export PATH="$GST/bin:$PATH"
+    unset PKG_CONFIG_ALL_STATIC
+    export PKG_CONFIG_ALL_DYNAMIC=1
     BIN="target/release/lumina"
     RPATH="@executable_path/../Frameworks/GStreamer.framework/Libraries"
 
