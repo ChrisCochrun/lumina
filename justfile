@@ -80,13 +80,15 @@ mac-packager:
     echo "GStreamer linker flags:"
     pkg-config --libs gstreamer-1.0
 
-    # Make sure we're not using the wrong SDK.
-    GST_LIBDIR="$(pkg-config --variable=libdir gstreamer-1.0)"
 
-    if [[ "$GST_LIBDIR" != "$GST/lib" ]]; then
-        echo "ERROR: Unexpected GStreamer library directory:"
-        echo "$GST_LIBDIR"
-        exit 1
+    GST_LIBDIR="$(cd "$(pkg-config --variable=libdir gstreamer-1.0)" && pwd -P)"
+    EXPECTED_LIBDIR="$(cd "$GST/lib" && pwd -P)"
+    
+    if [[ "$GST_LIBDIR" != "$EXPECTED_LIBDIR" ]]; then
+      echo "ERROR: Unexpected GStreamer library directory:"
+      echo "$GST_LIBDIR"
+      echo "Expected: $EXPECTED_LIBDIR"
+      exit 1
     fi
 
     # Build Lumina.
