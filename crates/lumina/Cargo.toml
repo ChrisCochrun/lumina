@@ -95,6 +95,7 @@ digest_algorithm = "sha256"
 
 [package.metadata.packager.macos]
 frameworks = ["GStreamer"]
+minimum_system_version = "15.2"
 
 # [package.metadata.packager.nsis]
 # installer_icon = "../../res/icons/lumina.ico"
