@@ -1,6 +1,3 @@
-[windows]
-set shell := ["nu", "-c"]
-
 verbose := "-v"
 file := "~/dev/lumina-iced/test_presentation.lisp"
 sdk-version := "25.08"
@@ -97,6 +94,7 @@ mac-packager:
       echo "Expected: $EXPECTED_LIBDIR"
       exit 1
     fi
+    DATABASE_URL="sqlite://test.db"
     
     TARGET="aarch64-apple-darwin"
     BIN="target/$TARGET/release/lumina"
