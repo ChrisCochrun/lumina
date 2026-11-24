@@ -53,7 +53,7 @@ windows-packager:
     # cargo packager --release -f nsis
 
 ##### Sets up and builds the macos bundle and dmg
-[script("zsh")]
+[script("bash")]
 mac-packager:
     set -euo pipefail
     cargo install cargo-packager --locked
