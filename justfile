@@ -53,12 +53,12 @@ windows-packager:
     # cargo packager --release -f nsis
 
 ##### Sets up and builds the macos bundle and dmg
-gst := "/Library/Frameworks/GStreamer.framework/Versions/1.0"
-[env("PKG_CONFIG", gst + "/bin/pkg-config")]
-[env("PKG_CONFIG_PATH", gst + "/lib/pkgconfig")]
-[env("PKG_CONFIG_LIBDIR", gst + "/lib/pkgconfig")]
+[env("GST", "/Library/Frameworks/GStreamer.framework/Versions/1.0")]
+[env("PKG_CONFIG", env("GST") + "/bin/pkg-config")]
+[env("PKG_CONFIG_PATH", env("GST") + "/lib/pkgconfig")]
+[env("PKG_CONFIG_LIBDIR", env("GST") + "/lib/pkgconfig")]
 [env("PKG_CONFIG_ALL_DYNAMIC", "1")]
-[env("PATH", gst + "/bin:" + env("PATH"))]
+[env("PATH", env("GST") + "/bin:" + env("PATH"))]
 [env("BIN", "target/release/lumina")]
 [env("RPATH", "@executable_path/../Frameworks/GStreamer.framework/Libraries")]
 mac-packager:
