@@ -1,0 +1,13 @@
+*** MuPDF
+
+Lumina incorporates MuPDF, developed by Artifex Software, Inc., and the `mupdf-rs` Rust bindings developed by their respective contributors.
+
+MuPDF is licensed under the GNU Affero General Public License, version 3 or later. The `mupdf-rs` Rust bindings are licensed under the GNU Affero General Public License, version 3.
+
+Lumina's original source code is licensed under the GNU General Public License, version 3 or later.
+
+These components are combined under the permissions provided by Section 13 of the GNU GPLv3 and GNU AGPLv3. The AGPLv3 network-interaction provisions apply to the combined work where applicable.
+
+The applicable license texts are provided with this application.
+
+Source code, including the components and build materials corresponding to each Lumina release, is available from the release's source distribution.
