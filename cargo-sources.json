@@ -25,6 +25,12 @@
     },
     {
         "type": "git",
+        "url": "https://github.com/pop-os/cosmic-protocols",
+        "commit": "815b2c5df84a4a82eb8fb505343f8ebde6aefc38",
+        "dest": "flatpak-cargo/git/cosmic-protocols-815b2c5"
+    },
+    {
+        "type": "git",
         "url": "https://github.com/pop-os/freedesktop-icons",
         "commit": "ab4c57b8e416c6af9297cb04d101889896fd9a92",
         "dest": "flatpak-cargo/git/freedesktop-icons-ab4c57b"
@@ -1964,6 +1970,24 @@
     {
         "type": "shell",
         "commands": [
+            "cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-815b2c5/client-toolkit\" \"cargo/vendor/cosmic-client-toolkit\""
+        ]
+    },
+    {
+        "type": "inline",
+        "contents": "[package]\nname = \"cosmic-client-toolkit\"\nversion = \"0.2.0\"\nedition = \"2024\"\nrepository = \"https://github.com/pop-os/cosmic-protocols\"\nlicense = \"MIT\"\ndescription = \"Helpers for implement clients with COSMIC Wayland protocols\"\n\n[dependencies]\nlibc = \"0.2.175\"\nbitflags = \"2.13\"\n\n[dependencies.cosmic-protocols]\nversion = \"0.2.0\"\npath = \"../\"\n\n[dependencies.sctk]\npackage = \"smithay-client-toolkit\"\nversion = \"0.20.0\"\n\n[dependencies.wayland-client]\nversion = \"0.31.11\"\n\n[dependencies.wayland-protocols]\nversion = \"0.32.9\"\nfeatures = [\"client\", \"staging\"]\n\n[dev-dependencies]\npng = \"0.18.0\"\ngbm = \"0.18.0\"\nxkbcommon = \"0.7.0\"\n\n[dev-dependencies.wayland-backend]\nversion = \"0.3.11\"\nfeatures = [\"client_system\"]\n\n[dev-dependencies.smithay]\nversion = \"0.7.0\"\ndefault-features = false\nfeatures = [\"renderer_gl\", \"backend_drm\"]\n\n[features]\ndefault = []\n",
+        "dest": "cargo/vendor/cosmic-client-toolkit",
+        "dest-filename": "Cargo.toml"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": null, \"files\": {}}",
+        "dest": "cargo/vendor/cosmic-client-toolkit",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "shell",
+        "commands": [
             "cp -r --reflink=auto \"flatpak-cargo/git/libcosmic-ecc5fe4/cosmic-config\" \"cargo/vendor/cosmic-config\""
         ]
     },
@@ -2031,6 +2055,24 @@
         "type": "inline",
         "contents": "{\"package\": null, \"files\": {}}",
         "dest": "cargo/vendor/cosmic-launch",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "shell",
+        "commands": [
+            "cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-815b2c5/.\" \"cargo/vendor/cosmic-protocols\""
+        ]
+    },
+    {
+        "type": "inline",
+        "contents": "[package]\nname = \"cosmic-protocols\"\nversion = \"0.2.0\"\nedition = \"2024\"\ndocumentation = \"https://pop-os.github.io/cosmic-protocols/\"\nrepository = \"https://github.com/pop-os/cosmic-protocols\"\nauthors = [\"Victoria Brekenfeld <github@drakulix.de>\"]\nlicense = \"MIT\"\nkeywords = [\"wayland\", \"client\", \"server\", \"protocol\", \"extension\"]\ndescription = \"Generated API for the COSMIC wayland protocol extensions\"\ncategories = [\"gui\", \"api-bindings\"]\nreadme = \"README.md\"\n\n[dependencies]\nwayland-scanner = \"0.31.7\"\nwayland-backend = \"0.3.11\"\nwayland-protocols-wlr = \"0.3.9\"\nbitflags = \"2.13\"\n\n[dependencies.wayland-protocols]\nversion = \"0.32.9\"\nfeatures = [\"staging\"]\n\n[dependencies.wayland-client]\nversion = \"0.31.11\"\noptional = true\n\n[dependencies.wayland-server]\nversion = \"0.31.10\"\noptional = true\n\n[dev-dependencies.wayland-backend]\nversion = \"0.3.11\"\nfeatures = [\"client_system\"]\n\n[features]\ndefault = [\"client\", \"server\"]\nclient = [\"wayland-client\", \"wayland-protocols/client\", \"wayland-protocols-wlr/client\"]\nserver = [\"wayland-server\", \"wayland-protocols/server\", \"wayland-protocols-wlr/server\"]\n\n[workspace]\nmembers = [\"client-toolkit\"]\n",
+        "dest": "cargo/vendor/cosmic-protocols",
+        "dest-filename": "Cargo.toml"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": null, \"files\": {}}",
+        "dest": "cargo/vendor/cosmic-protocols",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -6474,6 +6516,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/memmap2/memmap2-0.8.0.crate",
+        "sha256": "43a5a03cefb0d953ec0be133036f14e109412fa594edc2f77227249db66cc3ed",
+        "dest": "cargo/vendor/memmap2-0.8.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"43a5a03cefb0d953ec0be133036f14e109412fa594edc2f77227249db66cc3ed\", \"files\": {}}",
+        "dest": "cargo/vendor/memmap2-0.8.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/memmap2/memmap2-0.9.10.crate",
         "sha256": "714098028fe011992e1c3962653c96b2d578c4b4bce9036e15ff220319b1e0e3",
         "dest": "cargo/vendor/memmap2-0.9.10"
@@ -10279,32 +10334,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/strum/strum-0.26.3.crate",
-        "sha256": "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06",
-        "dest": "cargo/vendor/strum-0.26.3"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06\", \"files\": {}}",
-        "dest": "cargo/vendor/strum-0.26.3",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/strum_macros/strum_macros-0.26.4.crate",
-        "sha256": "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be",
-        "dest": "cargo/vendor/strum_macros-0.26.4"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be\", \"files\": {}}",
-        "dest": "cargo/vendor/strum_macros-0.26.4",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/subtle/subtle-2.6.1.crate",
         "sha256": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292",
         "dest": "cargo/vendor/subtle-2.6.1"
@@ -12221,6 +12250,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/wayland-server/wayland-server-0.31.14.crate",
+        "sha256": "0dde9c29be0f723a573977de51ee455bf3dfa03652730a74f9dd3b337e374d75",
+        "dest": "cargo/vendor/wayland-server-0.31.14"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"0dde9c29be0f723a573977de51ee455bf3dfa03652730a74f9dd3b337e374d75\", \"files\": {}}",
+        "dest": "cargo/vendor/wayland-server-0.31.14",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/wayland-sys/wayland-sys-0.31.11.crate",
         "sha256": "d8eab23fefc9e41f8e841df4a9c707e8a8c4ed26e944ef69297184de2785e3be",
         "dest": "cargo/vendor/wayland-sys-0.31.11"
@@ -13607,6 +13649,32 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/xkbcommon/xkbcommon-0.7.0.crate",
+        "sha256": "13867d259930edc7091a6c41b4ce6eee464328c6ff9659b7e4c668ca20d4c91e",
+        "dest": "cargo/vendor/xkbcommon-0.7.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"13867d259930edc7091a6c41b4ce6eee464328c6ff9659b7e4c668ca20d4c91e\", \"files\": {}}",
+        "dest": "cargo/vendor/xkbcommon-0.7.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/xkbcommon/xkbcommon-0.8.0.crate",
+        "sha256": "8d66ca9352cbd4eecbbc40871d8a11b4ac8107cfc528a6e14d7c19c69d0e1ac9",
+        "dest": "cargo/vendor/xkbcommon-0.8.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"8d66ca9352cbd4eecbbc40871d8a11b4ac8107cfc528a6e14d7c19c69d0e1ac9\", \"files\": {}}",
+        "dest": "cargo/vendor/xkbcommon-0.8.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/xkbcommon/xkbcommon-0.9.0.crate",
         "sha256": "a7a974f48060a14e95705c01f24ad9c3345022f4d97441b8a36beb7ed5c4a02d",
         "dest": "cargo/vendor/xkbcommon-0.9.0"
@@ -14178,7 +14246,7 @@
     },
     {
         "type": "inline",
-        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/wash2/accesskit\"]\ngit = \"https://github.com/wash2/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"6c20249\"\n\n[source.\"https://github.com/jackpot51/rust-atomicwrites\"]\ngit = \"https://github.com/jackpot51/rust-atomicwrites\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/libcosmic\"]\ngit = \"https://github.com/pop-os/libcosmic\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/window_clipboard\"]\ngit = \"https://github.com/pop-os/window_clipboard\"\nreplace-with = \"vendored-sources\"\ntag = \"sctk-0.20\"\n\n[source.\"https://github.com/pop-os/freedesktop-icons\"]\ngit = \"https://github.com/pop-os/freedesktop-icons\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/cosmic-settings-daemon\"]\ngit = \"https://github.com/pop-os/cosmic-settings-daemon\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/dbus-settings-bindings\"]\ngit = \"https://github.com/pop-os/dbus-settings-bindings\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/rustaudio/cpal\"]\ngit = \"https://github.com/rustaudio/cpal\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/crisp\"]\ngit = \"https://git.tfcconnection.org/chris/crisp\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/iced-rs/cryoglyph\"]\ngit = \"https://github.com/iced-rs/cryoglyph\"\nreplace-with = \"vendored-sources\"\nrev = \"e429a025df36ab8145708acb309080ae3deec17a\"\n\n[source.\"https://github.com/pop-os/winit\"]\ngit = \"https://github.com/pop-os/winit\"\nreplace-with = \"vendored-sources\"\nrev = \"9567503\"\n\n[source.\"https://git.tfcconnection.org/chris/fdsm\"]\ngit = \"https://git.tfcconnection.org/chris/fdsm\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/iced_video_player\"]\ngit = \"https://git.tfcconnection.org/chris/iced_video_player\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/messense/mupdf-rs\"]\ngit = \"https://github.com/messense/mupdf-rs\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/orgize\"]\ngit = \"https://git.tfcconnection.org/chris/orgize\"\nreplace-with = \"vendored-sources\"\nbranch = \"v0.11\"\n\n[source.\"https://github.com/rustaudio/rodio\"]\ngit = \"https://github.com/rustaudio/rodio\"\nreplace-with = \"vendored-sources\"\nrev = \"0557a30a655b42016ddd961d0f69c5566f6e3f1e\"\n\n[source.\"https://github.com/pop-os/smithay-clipboard\"]\ngit = \"https://github.com/pop-os/smithay-clipboard\"\nreplace-with = \"vendored-sources\"\ntag = \"sctk-0.20\"\n\n[source.\"https://github.com/pop-os/softbuffer\"]\ngit = \"https://github.com/pop-os/softbuffer\"\nreplace-with = \"vendored-sources\"\ntag = \"cosmic-4.0\"\n",
+        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/wash2/accesskit\"]\ngit = \"https://github.com/wash2/accesskit\"\nreplace-with = \"vendored-sources\"\nrev = \"6c20249\"\n\n[source.\"https://github.com/jackpot51/rust-atomicwrites\"]\ngit = \"https://github.com/jackpot51/rust-atomicwrites\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/libcosmic\"]\ngit = \"https://github.com/pop-os/libcosmic\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/window_clipboard\"]\ngit = \"https://github.com/pop-os/window_clipboard\"\nreplace-with = \"vendored-sources\"\ntag = \"sctk-0.20\"\n\n[source.\"https://github.com/pop-os/cosmic-protocols\"]\ngit = \"https://github.com/pop-os/cosmic-protocols\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/freedesktop-icons\"]\ngit = \"https://github.com/pop-os/freedesktop-icons\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/cosmic-settings-daemon\"]\ngit = \"https://github.com/pop-os/cosmic-settings-daemon\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/pop-os/dbus-settings-bindings\"]\ngit = \"https://github.com/pop-os/dbus-settings-bindings\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/rustaudio/cpal\"]\ngit = \"https://github.com/rustaudio/cpal\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/crisp\"]\ngit = \"https://git.tfcconnection.org/chris/crisp\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/iced-rs/cryoglyph\"]\ngit = \"https://github.com/iced-rs/cryoglyph\"\nreplace-with = \"vendored-sources\"\nrev = \"e429a025df36ab8145708acb309080ae3deec17a\"\n\n[source.\"https://github.com/pop-os/winit\"]\ngit = \"https://github.com/pop-os/winit\"\nreplace-with = \"vendored-sources\"\nrev = \"9567503\"\n\n[source.\"https://git.tfcconnection.org/chris/fdsm\"]\ngit = \"https://git.tfcconnection.org/chris/fdsm\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/iced_video_player\"]\ngit = \"https://git.tfcconnection.org/chris/iced_video_player\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://github.com/messense/mupdf-rs\"]\ngit = \"https://github.com/messense/mupdf-rs\"\nreplace-with = \"vendored-sources\"\n\n[source.\"https://git.tfcconnection.org/chris/orgize\"]\ngit = \"https://git.tfcconnection.org/chris/orgize\"\nreplace-with = \"vendored-sources\"\nbranch = \"v0.11\"\n\n[source.\"https://github.com/rustaudio/rodio\"]\ngit = \"https://github.com/rustaudio/rodio\"\nreplace-with = \"vendored-sources\"\nrev = \"0557a30a655b42016ddd961d0f69c5566f6e3f1e\"\n\n[source.\"https://github.com/pop-os/smithay-clipboard\"]\ngit = \"https://github.com/pop-os/smithay-clipboard\"\nreplace-with = \"vendored-sources\"\ntag = \"sctk-0.20\"\n\n[source.\"https://github.com/pop-os/softbuffer\"]\ngit = \"https://github.com/pop-os/softbuffer\"\nreplace-with = \"vendored-sources\"\ntag = \"cosmic-4.0\"\n",
         "dest": "cargo",
         "dest-filename": "config"
     }
