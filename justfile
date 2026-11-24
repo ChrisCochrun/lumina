@@ -53,27 +53,16 @@ windows-packager:
     # cargo packager --release -f nsis
 
 ##### Sets up and builds the macos bundle and dmg
-[script("bash")]
+gst := "/Library/Frameworks/GStreamer.framework/Versions/1.0"
+[env("PKG_CONFIG", gst + "/bin/pkg-config")]
+[env("PKG_CONFIG_PATH", gst + "/lib/pkgconfig")]
+[env("PKG_CONFIG_LIBDIR", gst + "/lib/pkgconfig")]
+[env("PKG_CONFIG_ALL_DYNAMIC", "1")]
+[env("PATH", gst + "/bin:" + env("PATH"))]
+[env("BIN", "target/release/lumina")]
+[env("RPATH", "@executable_path/../Frameworks/GStreamer.framework/Libraries")]
 mac-packager:
-    set -euo pipefail
     cargo install cargo-packager --locked
-
-    GST="/Library/Frameworks/GStreamer.framework/Versions/1.0"
-
-    export PKG_CONFIG="$GST/bin/pkg-config"
-    export PKG_CONFIG_PATH="$GST/lib/pkgconfig"
-    export PKG_CONFIG_LIBDIR="$GST/lib/pkgconfig"
-    export PATH="$GST/bin:$PATH"
-    unset PKG_CONFIG_ALL_STATIC
-    export PKG_CONFIG_ALL_DYNAMIC=1
-    BIN="target/release/lumina"
-    RPATH="@executable_path/../Frameworks/GStreamer.framework/Libraries"
-
-    # Use the official GStreamer SDK, not MacPorts.
-    export PATH="$GST/bin:$PATH"
-    export PKG_CONFIG_PATH="$GST/lib/pkgconfig"
-    export PKG_CONFIG_LIBDIR="$GST/lib/pkgconfig"
-
     # Verify GStreamer configuration.
     echo "Using pkg-config:"
     command -v pkg-config
@@ -87,31 +76,17 @@ mac-packager:
     echo "GStreamer linker flags:"
     pkg-config --libs gstreamer-1.0
 
-
-    GST_LIBDIR="$(cd "$(pkg-config --variable=libdir gstreamer-1.0)" && pwd -P)"
-    EXPECTED_LIBDIR="$(cd "$GST/lib" && pwd -P)"
-    
-    if [[ "$GST_LIBDIR" != "$EXPECTED_LIBDIR" ]]; then
-      echo "ERROR: Unexpected GStreamer library directory:"
-      echo "$GST_LIBDIR"
-      echo "Expected: $EXPECTED_LIBDIR"
-      exit 1
-    fi
-
     # Build Lumina.
     cargo build -p lumina --release
-
     # Check for accidental MacPorts dependencies.
     if otool -L "$BIN" | grep -F "/opt/local/lib/"; then
         echo "ERROR: Lumina still references MacPorts libraries."
         exit 1
     fi
-
     # Add the bundled framework's library search path.
     if ! otool -l "$BIN" | grep -Fq "path $RPATH ("; then
         install_name_tool -add_rpath "$RPATH" "$BIN"
     fi
-
     # Create the DMG using the existing Cargo.toml config.
     cargo packager --release -f dmg
 
