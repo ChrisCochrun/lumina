@@ -69,6 +69,7 @@ mac-packager:
     BIN="target/release/lumina"
     RPATH="@executable_path/../Frameworks/GStreamer.framework/Libraries"
 
+    echo $GST $PKG_CONFIG
     # Use the official GStreamer SDK, not MacPorts.
     export PATH="$GST/bin:$PATH"
     export PKG_CONFIG_PATH="$GST/lib/pkgconfig"
