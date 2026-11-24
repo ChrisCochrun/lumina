@@ -78,14 +78,16 @@ mac-packager:
 
     # Build Lumina.
     cargo build -p lumina --release
+    
     # Check for accidental MacPorts dependencies.
     if otool -L "$BIN" | grep -F "/opt/local/lib/"; then
-        echo "ERROR: Lumina still references MacPorts libraries."
-        exit 1
+    echo "ERROR: Lumina still references MacPorts libraries."
+    exit 1
     fi
+    
     # Add the bundled framework's library search path.
     if ! otool -l "$BIN" | grep -Fq "path $RPATH ("; then
-        install_name_tool -add_rpath "$RPATH" "$BIN"
+    install_name_tool -add_rpath "$RPATH" "$BIN"
     fi
     # Create the DMG using the existing Cargo.toml config.
     cargo packager --release -f dmg
