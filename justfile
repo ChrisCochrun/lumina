@@ -52,6 +52,7 @@ windows-packager:
     cargo xtask package windows --expected-version 1.28.8 --msvc-toolset v145
     # cargo packager --release -f nsis
 
+set export
 ##### Sets up and builds the macos bundle and dmg
 [env("GST", "/Library/Frameworks/GStreamer.framework/Versions/1.0")]
 [env("PKG_CONFIG", env("GST") + "/bin/pkg-config")]
