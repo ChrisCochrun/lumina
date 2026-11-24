@@ -13,6 +13,7 @@ We are close on this. The main pipeline consists of needing some virtual machine
 - [X] flatpak
 - [X] windows
 - [ ] macos
+  - This is really close, I just now need to build the app for each architecture and then test it on real hardware, but... I don't have real hardware.
 
 * TODO [#A] Find a way to check if an item is in the library on load so that we can import it into the library
 

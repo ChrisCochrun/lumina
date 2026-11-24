@@ -66,7 +66,6 @@ mac-packager:
     export PATH="$GST/bin:$PATH"
     unset PKG_CONFIG_ALL_STATIC
     export PKG_CONFIG_ALL_DYNAMIC=1
-    BIN="target/release/lumina"
     RPATH="@executable_path/../Frameworks/GStreamer.framework/Libraries"
 
     echo $GST $PKG_CONFIG
@@ -98,23 +97,36 @@ mac-packager:
       echo "Expected: $EXPECTED_LIBDIR"
       exit 1
     fi
-
-    # Build Lumina.
-    cargo build -p lumina --release
-
+    
+    TARGET="aarch64-apple-darwin"
+    BIN="target/$TARGET/release/lumina"
+    cargo build -p lumina --release --target "$TARGET"
     # Check for accidental MacPorts dependencies.
     if otool -L "$BIN" | grep -F "/opt/local/lib/"; then
         echo "ERROR: Lumina still references MacPorts libraries."
         exit 1
     fi
-
     # Add the bundled framework's library search path.
     if ! otool -l "$BIN" | grep -Fq "path $RPATH ("; then
         install_name_tool -add_rpath "$RPATH" "$BIN"
     fi
-
     # Create the DMG using the existing Cargo.toml config.
-    cargo packager --release -f dmg
+    cargo packager --release -f dmg --target "$TARGET"
+
+
+    TARGET="x86_64-apple-darwin"
+    BIN="target/$TARGET/release/lumina"
+    cargo build -p lumina --release --target "$TARGET"
+    # Check for accidental MacPorts dependencies.
+    if otool -L "$BIN" | grep -F "/opt/local/lib/"; then
+        echo "ERROR: Lumina still references MacPorts libraries."
+        exit 1
+    fi
+    # Add the bundled framework's library search path.
+    if ! otool -l "$BIN" | grep -Fq "path $RPATH ("; then
+        install_name_tool -add_rpath "$RPATH" "$BIN"
+    fi
+    cargo packager --release -f dmg --target "$TARGET"
 
 ##### Sets up flatpak to be able to build the lumina flatpak using all the latest pieces
 flatpak-setup: flatpak-install-sdk install-flatpak-builder-tools
