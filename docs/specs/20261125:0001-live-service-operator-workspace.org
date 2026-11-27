@@ -1,0 +1,94 @@
+#+TITLE: Live Service Operator Workspace
+#+DATE: 2026-11-25
+#+FILETAGS: :ready-for-agent:
+
+* Problem Statement
+
+Operators who use Lumina only occasionally need to run a service under changing conditions without relying on technical knowledge or remembering hidden workflows. A worship leader may change song order, or a pastor may skip a service section. Meanwhile the operator needs to keep slides moving, make quick corrections, avoid accidentally changing what the audience sees, and understand the live presentation and OBS scene from Lumina.
+
+The workspace already has a flexible layout and continuous slide preview row/grid. The feature should improve operator awareness and safe control while preserving this established navigation model.
+
+* Solution
+
+Improve the existing main workspace for Sunday-only, non-technical operators. Keep live status visible while they inspect other content; make previews informative but concise; allow direct jumps when the service deviates from its plan; and make editing changes to the live item explicitly applicable, without adding that extra step to other items.
+
+Reuse the existing editors, with compact presentation controls that always operate the live presentation. Add a Lumina-only blackout, an explicit way to show output again, and read-only awareness of OBS's confirmed active scene. Preserve the existing row/grid and OBS integration behavior.
+
+* User Stories
+
+1. As an occasional operator, I want the workspace to make the live item and live slide obvious, so that I know what the audience currently sees.
+2. As an operator, I want live output clearly distinguished from the selected preview, so that inspecting content does not make me think it is already on screen.
+3. As an operator, I want the live/preview distinction not to rely on color alone, so that it remains understandable in varied viewing conditions.
+4. As an operator, I want to retain the existing continuous slide row and configurable grid, so that I can use the navigation style I already know.
+5. As an operator, I want upcoming slide previews to identify their item boundaries, so that slides from adjacent songs or service items are not confused.
+6. As an operator, I want concise metadata appropriate to each content type, so that I can identify a slide without cluttering the workspace.
+7. As an operator, I want song previews to identify their section (for example, Verse 2 or Chorus), so that I can find the intended part quickly.
+8. As an operator, I want video previews to show duration, so that I can understand the media item at a glance.
+9. As an operator, I want scripture previews to show their passage reference, so that I can identify the reading.
+10. As an operator, I want other previews to show a useful title or short identifying excerpt, so that unfamiliar content remains findable.
+11. As an operator, I want to jump directly to a later service item when the service order changes, so that I can follow the people leading the service without first editing the plan.
+12. As an operator, I want inspecting another service item not to interrupt live output, so that I can prepare or verify upcoming content safely.
+13. As an operator, I want selecting slides within the live song to retain its existing immediate-navigation behavior, so that I can move quickly between verses and choruses.
+14. As an operator, I want a jump to leave the service plan unchanged, so that an unexpected live deviation does not silently reorder the planned service or mark skipped items complete.
+15. As an operator, I want to edit a future item with its existing editor, so that I can correct content without learning a second editing workflow.
+16. As an operator, I want compact presentation controls available in editors during a live service, so that I can keep the presentation moving while making a correction.
+17. As an operator editing a future item, I want those presentation controls to continue operating the live item, so that I cannot accidentally present the item merely because I am editing it.
+18. As an operator, I want editor text entry not to trigger presentation shortcuts, so that typing corrections cannot accidentally advance or change slides.
+19. As an operator, I want changes to non-live items to take effect through normal save behavior, so that fixing future content does not require an unnecessary Apply to live step.
+20. As an operator, I want saved changes to the live item held back until I explicitly apply them, so that mistakes are not automatically shown to the audience.
+21. As an operator, I want unsaved edits visually distinguished from saved but unapplied live changes, so that I know what remains to be saved or applied.
+22. As an operator, I want live-item protection determined at save time, so that an item becoming live while its editor is open is protected from subsequent saved edits.
+23. As an operator, I want changes saved before an item becomes live included when it is taken live, so that content I already corrected does not require redundant approval.
+24. As an operator, I want unfinished unsaved edits excluded when taking an item live, so that work in progress is not silently published.
+25. As an operator, I want applying corrections to preserve the current slide or song section where possible, so that the audience experiences no unnecessary jump or restart.
+26. As an operator, I want an edited current slide updated in place when I apply changes, so that corrections feel invisible to the audience.
+27. As an operator, I want applying a structural edit that removes the current slide to require an explicit replacement choice, so that Lumina does not surprise me by choosing a new position.
+28. As an operator, I want the current output preserved until I choose a replacement after such a structural edit, so that the audience is not shown an arbitrary slide.
+29. As an operator, I want to black out Lumina's presentation without changing OBS scenes, so that I can temporarily clear the projected presentation while OBS behavior remains unchanged.
+30. As an operator, I want blackout to remain active while I edit, save, or apply corrections, so that those actions do not unexpectedly reveal content.
+31. As an operator, I want applied corrections to update the content underneath blackout, so that showing output later reveals the corrected slide.
+32. As an operator, I want a Show output action that reveals the current slide without advancing, so that I can end blackout and resume exactly where I intend.
+33. As an operator, I want intentional presentation navigation to end blackout and show the resulting content, so that I can resume by advancing, going back, or deliberately taking a slide live.
+34. As an operator, I want browsing and editing not to end blackout, so that inspecting content cannot accidentally reveal it.
+35. As an operator, I want blackout state and the content ready to be revealed clearly indicated, so that I know what the audience will see when I resume.
+36. As an operator, I want the confirmed active OBS scene name visible in Lumina, so that I do not need OBS open just to identify the scene.
+37. As an operator, I want OBS status to show disconnected or unavailable when confirmation is absent, so that stale scene information is not mistaken for current state.
+38. As an operator, I want OBS scene switching behavior to remain as it is, so that adding awareness does not unexpectedly change our existing production workflow.
+39. As an operator, I want service status kept focused on live item/slide, blackout, unapplied live changes, upcoming slide sequence, and OBS scene status, so that useful information does not become a distracting dashboard.
+
+* Implementation Decisions
+
+- Preserve the existing flexible main workspace and continuous slide row/grid. Do not add a redundant next-item panel; upcoming content is already present in the slide sequence.
+- Keep live status visible independently of the selected preview. Provide explicit live and preview indicators that do not depend on color alone.
+- Keep current item separators initially. Compact item headings may be considered if evaluation in row and grid views shows the separators are insufficient; redesigning boundaries is not required.
+- Attach concise type-specific information to slide previews: song section, video duration, scripture reference, or a useful title/short excerpt for other content. Avoid dense or repetitive metadata.
+- Preserve existing navigation semantics: selecting within the live song presents that slide immediately; inspecting another service item does not interrupt output; taking another item live is deliberate. Direct jumps do not rewrite the service plan or mark skipped items complete.
+- Reuse the existing editors initially. Add consistent compact controls for live item/slide identification, previous/next navigation, blackout or Show output as appropriate, and return to the main presentation workspace. These controls always address the live presentation, not the item being edited.
+- Ensure editor text input does not trigger presentation shortcuts. Consider a separate quick-edit experience only if the existing editors prove too cumbersome in actual use.
+- Saving non-live item edits uses normal save behavior and makes those changes available when the item is next presented. Saving edits to the currently live item does not automatically alter live output; an explicit Apply to live is required. Which item is live at save time determines whether this protection applies, not which item was live when the editor opened.
+- Taking an item live includes its saved edits. Do not silently include unfinished unsaved edits. Keep unsaved edits distinct from saved, unapplied live changes in the UI.
+- Applying live changes preserves the current slide/section where possible. If the current slide is removed or its replacement is ambiguous, do not guess or jump to the first slide; preserve output until the operator chooses a replacement.
+- Blackout is solid black over Lumina's presentation only. It must not command an OBS scene change or stop audio. Editing, saving, and applying changes never dismiss blackout. Applying updates content underneath blackout.
+- Show output reveals the current slide without advancing. Intentional presentation navigation (previous, next, or deliberately taking a slide live) ends blackout and shows the resulting content. Browsing and editing do not. Make blackout state and ready-to-reveal content apparent.
+- Preserve the existing relationship between Lumina's projector presentation and what OBS receives. Add only read-only active-scene awareness based on confirmed OBS state, with explicit unavailable/disconnected status; do not add scene control or a live video preview.
+- Defer service timers, estimated finish times, and broader service metrics.
+
+* Testing Decisions
+
+- Test the feature through the existing main workspace as one high-level operator workflow seam. Verify externally visible behavior rather than internal widgets, types, or implementation details.
+- Cover the key workflow paths: inspect/edit a future item while advancing the live item; save an edit to the live item and verify output remains unchanged until apply; preserve position on apply; blackout, edit/apply underneath, and Show output; navigate while blacked out; handle removal of the live slide without an automatic jump; and reflect unavailable OBS status without stale scene claims.
+- Also verify preview labels/boundaries in both row and grid layouts and distinguish live from preview without color alone.
+- No prior UI test conventions or comparable tests have been established for this spec. During implementation, inspect the existing main-workspace test setup and follow its conventions; prefer the highest existing integration seam and add no new test seam unless necessary.
+
+* Out of Scope
+
+- Recovery from application crashes or general device failure.
+- Reordering or rewriting the service plan automatically when the operator jumps to a different item; explicit plan editing is separate.
+- A separate broadcast output, Lumina-driven OBS blackout, new OBS scene controls, or OBS live video preview.
+- Replacing the existing row/grid navigation model.
+- A second dedicated quick-edit system unless later usability evaluation demonstrates that reuse of existing editors is inadequate.
+- Service timers, estimated completion times, or a general service analytics dashboard.
+
+* Further Notes
+
+This spec records the agreed operator experience, not a claim about existing implementation capability or a prescribed technical architecture. The existing editors, live content application/version behavior, slide identity through structural edits, and OBS confirmation/status mechanisms need verification during implementation. See the related decision in [[file:../adr/20261125:0001-live-service-operator-workspace.org][Live Service Operator Workspace ADR]].

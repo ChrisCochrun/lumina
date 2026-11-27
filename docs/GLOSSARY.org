@@ -1,0 +1,94 @@
+#+TITLE: Glossary
+#+DESCRIPTION: For language of contributors and agents both.
+
+* Lumina
+Lumina is a church presentation application: an operator drives a planned service from a Lumina-controlled screen while the audience sees Lumina's presentation.
+
+** Decisions
+Look in [[file:adr/][docs/adr/]] for decisions. Most of the time, the feature currently being implemented should be recorded there. Current feature:
+
+- [[file:adr/20261125:0001-live-service-operator-workspace.org][Live Service Operator Workspace]]: live navigation, safe editing, blackout, and operator awareness.
+
+** Language
+
+*** People
+
+*Operator*:
+The person running Lumina during a service.
+_Avoid_: User, presenter
+
+*** Service and content
+
+*Service*:
+A single live occasion run from a service plan, such as a Sunday morning gathering.
+_Avoid_: Event, meeting, session
+
+*Service plan*:
+The ordered list of service items prepared for a service.
+_Avoid_: Playlist, setlist, running order, queue
+
+*Service item*:
+One unit of presentable content in a service plan, such as a song, video, scripture reading, or sermon.
+_Avoid_: Slide, clip, entry, cue
+
+*Slide*:
+A single displayable unit of content within a service item.
+_Avoid_: Page, frame, screen
+
+*Section*:
+A named subdivision of a service item that groups its slides, such as a verse or chorus.
+_Avoid_: Part, segment, block
+
+*** Presentation
+
+*Presentation*:
+Lumina's visual presentation shown to the audience.
+_Avoid_: Show, display, output window
+
+*Live item*:
+The service item currently being presented.
+_Avoid_: Current item, active item, now playing
+
+*Live slide*:
+The slide currently being presented to the audience.
+_Avoid_: Current slide
+
+*Live output*:
+What the audience currently sees from Lumina, including solid black during a blackout.
+_Avoid_: Screen, projector, what's up
+
+*Preview*:
+Content the operator is inspecting or preparing, which may not be what the audience sees.
+_Avoid_: Next slide, selection, staged
+
+*Blackout*:
+A temporary covering of the presentation with solid black; it affects Lumina's presentation only, never OBS.
+_Avoid_: Blank screen, clear, mute, stop
+
+*Show output*:
+The action that reveals the current live slide again without advancing the presentation.
+_Avoid_: Unblank, resume, restore, unhide
+
+*** Editing
+
+*Unsaved edit*:
+A change still being entered in an editor and not yet saved.
+_Avoid_: Pending change
+
+*Unapplied live changes*:
+Saved corrections to the live item that have not been applied to its live output.
+_Avoid_: Unsaved changes, pending changes, saved changes
+
+*Apply to live*:
+The explicit action that publishes unapplied live changes to the live output.
+_Avoid_: Save, publish, push, update
+
+*** OBS
+
+*OBS*:
+The external streaming application that receives Lumina's presentation as a source.
+_Avoid_: Streaming software, broadcast app
+
+*Active OBS scene*:
+The OBS scene that OBS confirms it is currently showing.
+_Avoid_: Current scene, requested scene, next scene

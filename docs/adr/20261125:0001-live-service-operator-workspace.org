@@ -1,0 +1,3 @@
+#+TITLE: Live Service Operator Workspace
+
+The live workspace must let an operator keep presentation controls moving while editing, without accidental changes reaching the audience. Save edits to non-live items normally; edits to the live item require an explicit *Apply to live*, preserving its displayed position where possible. Blackout remains until an intentional presentation action reveals output, while editing and applying corrections update content underneath without clearing it. This makes protection exceptional—only changes to the live item need an extra action—while keeping the operator in control of what is shown.

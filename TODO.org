@@ -3,6 +3,9 @@
 #+CATEGORY: dev
 
 
+* TODO [#B] [ready-for-agent] Live service operator workspace
+See [[file:docs/specs/20261125:0001-live-service-operator-workspace.org][spec]]. Improve the operator workspace with clear live/preview status, concise slide metadata, safe live-item editing, blackout controls, and confirmed OBS scene status.
+
 * TODO [#A] Better architecture for using text style that map to FDSM text styles
 I need to make some types that translate between shadows and outlines and other things to turn into FDSM styles. It'll refactor a lot of things and end up giving me easier types to work with in the UI too.
 
